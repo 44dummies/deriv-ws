@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+build/
+.env.local
+.env
+data/
+coverage/
+.DS_Store
+.turbo
+*.log
+/.idea/
+.vscode/
+/.parcel-cache/
+/.cache/
+node_modules
+node_modules
