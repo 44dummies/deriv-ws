@@ -3,71 +3,82 @@ import { useNavigate } from 'react-router-dom';
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 
-const Dashboard = () => {
+interface Account {
+  account_type: string;
+  created_at: number;
+  currency: string;
+  is_disabled: number;
+  is_virtual: number;
+  landing_company_name: string;
+  loginid: string;
+}
+
+interface UserInfo {
+  balance: number;
+  country: string;
+  currency: string;
+  email: string;
+  fullname: string;
+  loginid: string;
+  [key: string]: any;
+}
+
+interface BalanceInfo {
+  balance: number;
+  currency: string;
+  loginid: string;
+  [key: string]: any;
+}
+
+interface BalanceMap {
+  [loginid: string]: BalanceInfo;
+}
+
+const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
-  const [accountList, setAccountList] = useState([]);
-  const [balances, setBalances] = useState({});
+  const [error, setError] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [accountList, setAccountList] = useState<Account[]>([]);
+  const [balances, setBalances] = useState<BalanceMap>({});
 
   useEffect(() => {
     const initializeDashboard = async () => {
       try {
-        // Check if user is authenticated
         if (!TokenService.isAuthenticated()) {
           navigate('/');
           return;
         }
 
         const tokens = TokenService.getTokens();
+        if (!tokens) {
+          navigate('/');
+          return;
+        }
         
-        // Connect to WebSocket if not already connected
-        if (!websocketService.ws || websocketService.ws.readyState !== WebSocket.OPEN) {
-          await websocketService.connect();
-          const authResponse = await websocketService.authorize(tokens.token);
-          
-          if (authResponse.authorize) {
-            setUserInfo(authResponse.authorize);
-            TokenService.setAccount(authResponse.authorize);
-          }
-        } else {
-          const account = TokenService.getAccount();
-          setUserInfo(account);
+        await websocketService.connect();
+        const authResponse = await websocketService.authorize(tokens.token);
+        
+        if (authResponse.authorize) {
+          setUserInfo(authResponse.authorize as UserInfo);
+          TokenService.setAccount(authResponse.authorize);
         }
 
-        // Get account list
         const accountsResponse = await websocketService.getAccountList();
         if (accountsResponse.account_list) {
-          setAccountList(accountsResponse.account_list);
+          setAccountList(accountsResponse.account_list as Account[]);
           
-          // Get balance for each account
-          const balancePromises = accountsResponse.account_list.map(async (account) => {
-            try {
-              const balanceResponse = await websocketService.getBalance();
-              return {
-                loginid: account.loginid,
-                balance: balanceResponse.balance,
-              };
-            } catch (err) {
-              console.error(`Failed to get balance for ${account.loginid}:`, err);
-              return {
-                loginid: account.loginid,
-                balance: null,
-              };
-            }
-          });
-
-          const balanceResults = await Promise.all(balancePromises);
-          const balanceMap = {};
-          balanceResults.forEach(result => {
-            balanceMap[result.loginid] = result.balance;
-          });
-          setBalances(balanceMap);
+          const balanceResponse = await websocketService.getBalance();
+          if (balanceResponse.balance) {
+            const balanceMap: BalanceMap = {
+              [balanceResponse.balance.loginid]: balanceResponse.balance as BalanceInfo,
+            };
+            setBalances(balanceMap);
+          }
         }
 
         setLoading(false);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Dashboard initialization error:', err);
         setError(err.message || 'Failed to load dashboard');
         setLoading(false);
@@ -85,10 +96,12 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={styles.spinner}></div>
-          <p>Loading dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
+        <div className="card max-w-md w-full">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 border-4 border-deriv-red/20 border-t-deriv-red rounded-full animate-spin"></div>
+          </div>
+          <p className="text-center text-gray-700 font-medium text-lg">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -96,12 +109,20 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={styles.errorTitle}>Error</h2>
-          <p style={styles.errorMessage}>{error}</p>
-          <button onClick={handleLogout} style={styles.button}>
-            Back to Login
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
+        <div className="card max-w-md w-full text-center">
+          <div className="mb-6">
+            <svg className="w-16 h-16 mx-auto text-deriv-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Error Loading Dashboard</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary w-full"
+          >
+            Retry
           </button>
         </div>
       </div>
@@ -109,68 +130,99 @@ const Dashboard = () => {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.dashboard}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>Dashboard</h1>
-          <button onClick={handleLogout} style={styles.logoutButton}>
-            Logout
-          </button>
+    <div className="min-h-screen p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
+      <div className="max-w-6xl mx-auto">
+        <div className="card mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-deriv-red to-red-400 bg-clip-text text-transparent mb-2">
+                Dashboard
+              </h1>
+              <p className="text-gray-600">Welcome back, {userInfo?.fullname || 'Trader'}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-xl transition-all duration-200 hover:shadow-lg"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
-        {/* User Information */}
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>Account Information</h2>
-          <div style={styles.infoCard}>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Name:</span>
-              <span style={styles.value}>
-                {userInfo?.fullname || 'N/A'}
-              </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="card">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-deriv-red to-red-500 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Login ID</p>
+                <p className="font-semibold text-gray-800">{userInfo?.loginid || 'N/A'}</p>
+              </div>
             </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Email:</span>
-              <span style={styles.value}>
-                {userInfo?.email || 'N/A'}
-              </span>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Email</p>
+                <p className="font-semibold text-gray-800 truncate">{userInfo?.email || 'N/A'}</p>
+              </div>
             </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Account ID:</span>
-              <span style={styles.value}>
-                {userInfo?.loginid || 'N/A'}
-              </span>
-            </div>
-            <div style={styles.infoRow}>
-              <span style={styles.label}>Currency:</span>
-              <span style={styles.value}>
-                {userInfo?.currency || 'N/A'}
-              </span>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Currency</p>
+                <p className="font-semibold text-gray-800">{userInfo?.currency || 'N/A'}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Wallets/Accounts */}
-        <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>Wallets & Balances</h2>
+        <div className="card">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Accounts & Balances</h2>
           {accountList.length === 0 ? (
-            <p style={styles.noData}>No accounts found</p>
+            <p className="text-gray-500 text-center py-8">No accounts found</p>
           ) : (
-            <div style={styles.walletGrid}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {accountList.map((account) => (
-                <div key={account.loginid} style={styles.walletCard}>
-                  <div style={styles.walletHeader}>
-                    <span style={styles.walletType}>
+                <div
+                  key={account.loginid}
+                  className="p-4 rounded-xl border-2 border-gray-200 hover:border-deriv-red/30 transition-all duration-200 bg-gradient-to-br from-white to-gray-50"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <span className="text-sm font-semibold text-gray-700 px-3 py-1 bg-gray-200 rounded-lg">
                       {account.account_type || 'Account'}
                     </span>
-                    <span style={styles.walletCurrency}>
+                    <span className="text-lg font-bold text-deriv-red">
                       {account.currency}
                     </span>
                   </div>
-                  <div style={styles.walletId}>{account.loginid}</div>
-                  <div style={styles.walletBalance}>
-                    {balances[account.loginid] !== undefined && balances[account.loginid] !== null
-                      ? `${balances[account.loginid].currency} ${balances[account.loginid].balance}`
-                      : 'Loading...'}
+                  <div className="mb-2">
+                    <p className="text-xs text-gray-500">Login ID</p>
+                    <p className="font-mono text-sm text-gray-700">{account.loginid}</p>
+                  </div>
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Balance</p>
+                    <p className="text-xl font-bold text-gray-800">
+                      {balances[account.loginid]
+                        ? `${balances[account.loginid].currency} ${balances[account.loginid].balance.toFixed(2)}`
+                        : 'Loading...'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -180,151 +232,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-    padding: '20px',
-  },
-  dashboard: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-  },
-  card: {
-    backgroundColor: 'white',
-    padding: '40px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    textAlign: 'center',
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px',
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-  },
-  title: {
-    fontSize: '32px',
-    color: '#333',
-    margin: 0,
-  },
-  logoutButton: {
-    backgroundColor: '#ff444f',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    fontSize: '16px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-  },
-  section: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    marginBottom: '20px',
-  },
-  sectionTitle: {
-    fontSize: '24px',
-    color: '#333',
-    marginBottom: '20px',
-  },
-  infoCard: {
-    backgroundColor: '#f9f9f9',
-    padding: '20px',
-    borderRadius: '4px',
-  },
-  infoRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '10px 0',
-    borderBottom: '1px solid #e0e0e0',
-  },
-  label: {
-    fontWeight: 'bold',
-    color: '#666',
-  },
-  value: {
-    color: '#333',
-  },
-  walletGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '20px',
-  },
-  walletCard: {
-    backgroundColor: '#f9f9f9',
-    padding: '20px',
-    borderRadius: '8px',
-    border: '2px solid #e0e0e0',
-  },
-  walletHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '10px',
-  },
-  walletType: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#666',
-    textTransform: 'capitalize',
-  },
-  walletCurrency: {
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#ff444f',
-  },
-  walletId: {
-    fontSize: '12px',
-    color: '#999',
-    marginBottom: '10px',
-  },
-  walletBalance: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#999',
-    padding: '20px',
-  },
-  spinner: {
-    border: '4px solid #f3f3f3',
-    borderTop: '4px solid #ff444f',
-    borderRadius: '50%',
-    width: '50px',
-    height: '50px',
-    animation: 'spin 1s linear infinite',
-    margin: '0 auto 20px',
-  },
-  button: {
-    backgroundColor: '#ff444f',
-    color: 'white',
-    border: 'none',
-    padding: '12px 30px',
-    fontSize: '16px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-  },
-  errorTitle: {
-    fontSize: '24px',
-    color: '#333',
-    marginBottom: '10px',
-  },
-  errorMessage: {
-    fontSize: '16px',
-    color: '#666',
-    marginBottom: '20px',
-  },
 };
 
 export default Dashboard;
