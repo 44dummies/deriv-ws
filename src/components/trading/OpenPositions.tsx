@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   TrendingUp, TrendingDown, Clock, X, 
   RefreshCw, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
-import websocketService, { OpenContract } from '../../services/websocketService';
+import websocketService from '../../services/websocketService';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -13,6 +13,15 @@ const OpenPositions: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedContract, setExpandedContract] = useState<number | null>(null);
   const [sellingContract, setSellingContract] = useState<number | null>(null);
+
+  const formatCurrency = useCallback((value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      signDisplay: 'exceptZero',
+    }).format(value);
+  }, [currency]);
 
   useEffect(() => {
     const loadPositions = async () => {
@@ -58,7 +67,7 @@ const OpenPositions: React.FC = () => {
     };
 
     loadPositions();
-  }, []);
+  }, [setOpenContracts, removeOpenContract, updateOpenContract, formatCurrency]);
 
   const handleSell = async (contractId: number, price: number) => {
     setSellingContract(contractId);
@@ -70,15 +79,6 @@ const OpenPositions: React.FC = () => {
     } finally {
       setSellingContract(null);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      signDisplay: 'exceptZero',
-    }).format(value);
   };
 
   const getTimeRemaining = (expiryTime: number) => {
@@ -114,9 +114,9 @@ const OpenPositions: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden">
+    <div className="glass-panel overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+      <div className="flex items-center justify-between p-4 border-b border-white/5">
         <div className="flex items-center gap-3">
           <h3 className="text-lg font-bold text-white">Open Positions</h3>
           <span className="px-2 py-0.5 bg-gray-800 rounded-full text-xs text-gray-400">
@@ -129,14 +129,14 @@ const OpenPositions: React.FC = () => {
       </div>
 
       {/* Positions List */}
-      <div className="divide-y divide-gray-800 max-h-[400px] overflow-y-auto custom-scrollbar">
+      <div className="divide-y divide-white/5 max-h-[400px] overflow-y-auto custom-scrollbar">
         {openContracts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             No open positions
           </div>
         ) : (
           openContracts.map((contract) => (
-            <div key={contract.contract_id} className="bg-gray-900 hover:bg-gray-800/50 transition-colors">
+            <div key={contract.contract_id} className="bg-transparent hover:bg-white/5 transition-colors">
               {/* Main Row */}
               <div 
                 className="p-4 cursor-pointer"

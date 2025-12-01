@@ -226,6 +226,7 @@ const PriceChart: React.FC = () => {
         websocketService.unsubscribe(subscriptionId);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSymbol, selectedTimeFrame, chartType]);
 
   const formatPrice = (price: number) => {
@@ -235,8 +236,8 @@ const PriceChart: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
+    <div className="glass-panel flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-white/5">
         <div className="flex items-center gap-4">
           {selectedSymbol ? (
             <div>
@@ -294,7 +295,7 @@ const PriceChart: React.FC = () => {
       </div>
 
       {currentTick && (
-        <div className="flex gap-4 px-4 py-2 bg-gray-800/50">
+        <div className="flex flex-wrap gap-4 px-4 py-2 bg-white/5 border-b border-white/5">
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-500">BID</span>
             <span className="text-sm font-mono text-red-400">{formatPrice(currentTick.bid)}</span>
@@ -316,7 +317,7 @@ const PriceChart: React.FC = () => {
 
       <div className="flex-1 relative">
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 backdrop-blur z-10">
             <div className="w-8 h-8 border-2 border-deriv-red/20 border-t-deriv-red rounded-full animate-spin" />
           </div>
         )}

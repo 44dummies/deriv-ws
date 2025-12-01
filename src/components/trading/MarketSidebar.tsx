@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, Star, ChevronDown, ChevronRight, 
   TrendingUp, Coins, Gem, Bitcoin, BarChart3,
@@ -40,6 +40,7 @@ const MarketSidebar: React.FC = () => {
     activeSymbols, 
     selectedSymbol, 
     setSelectedSymbol,
+    lastSelectedSymbol,
     favorites,
     toggleFavorite,
     sidebarCollapsed,
@@ -50,6 +51,20 @@ const MarketSidebar: React.FC = () => {
   const [expandedMarkets, setExpandedMarkets] = useState<string[]>(['synthetic_index']);
   const [expandedSubmarkets, setExpandedSubmarkets] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  useEffect(() => {
+    if (selectedSymbol || activeSymbols.length === 0) return;
+
+    const persisted = lastSelectedSymbol
+      ? activeSymbols.find(symbol => symbol.symbol === lastSelectedSymbol)
+      : null;
+
+    const fallback = activeSymbols.find(
+      (symbol) => symbol.exchange_is_open && !symbol.is_trading_suspended
+    ) || activeSymbols[0];
+
+    setSelectedSymbol(persisted || fallback || null);
+  }, [activeSymbols, lastSelectedSymbol, selectedSymbol, setSelectedSymbol]);
 
   // Group symbols by market and submarket
   const groupedSymbols = useMemo(() => {
@@ -119,10 +134,10 @@ const MarketSidebar: React.FC = () => {
 
   if (sidebarCollapsed) {
     return (
-      <div className="w-12 bg-gray-900 border-r border-gray-800 flex flex-col items-center py-4">
+      <div className="w-12 bg-gray-900/70 backdrop-blur border-r border-white/10 flex flex-col items-center py-4">
         <button
           onClick={() => setSidebarCollapsed(false)}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
         >
           <Menu className="w-5 h-5 text-gray-400" />
         </button>
@@ -131,16 +146,19 @@ const MarketSidebar: React.FC = () => {
   }
 
   return (
-    <div className="w-72 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+    <div className="w-72 bg-gray-900/60 backdrop-blur-xl border-r border-white/10 flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
+      <div className="p-5 border-b border-white/5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Markets</h2>
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.5em] text-gray-500">Watchlists</p>
+            <h2 className="text-lg font-bold text-white">Markets</h2>
+          </div>
           <button
             onClick={() => setSidebarCollapsed(true)}
-            className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
           >
-            <X className="w-4 h-4 text-gray-400" />
+            <X className="w-4 h-4 text-gray-300" />
           </button>
         </div>
 
@@ -152,20 +170,20 @@ const MarketSidebar: React.FC = () => {
             placeholder="Search markets..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-deriv-red"
+            className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-deriv-red/70"
           />
         </div>
 
         {/* Favorites Toggle */}
         <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className={`mt-3 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+          className={`mt-4 flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm transition-colors border ${
             showFavoritesOnly 
-              ? 'bg-yellow-500/20 text-yellow-400' 
-              : 'bg-gray-800 text-gray-400 hover:text-white'
+              ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/40' 
+              : 'bg-white/5 text-gray-300 hover:text-white border-white/5'
           }`}
         >
-          <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-400' : ''}`} />
+          <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-yellow-300 text-yellow-300' : 'text-gray-400'}`} />
           Favorites ({favorites.length})
         </button>
       </div>
@@ -173,11 +191,11 @@ const MarketSidebar: React.FC = () => {
       {/* Markets List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {groupedSymbols.map(marketGroup => (
-          <div key={marketGroup.market} className="border-b border-gray-800">
+          <div key={marketGroup.market} className="border-b border-white/5">
             {/* Market Header */}
             <button
               onClick={() => toggleMarket(marketGroup.market)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
             >
               <span className={marketColors[marketGroup.market] || 'text-gray-400'}>
                 {marketIcons[marketGroup.market] || <BarChart3 className="w-4 h-4" />}
@@ -196,7 +214,7 @@ const MarketSidebar: React.FC = () => {
 
             {/* Submarkets */}
             {expandedMarkets.includes(marketGroup.market) && (
-              <div className="bg-gray-800/30">
+              <div className="bg-white/5">
                 {marketGroup.submarkets.map(submarket => (
                   <div key={submarket.submarket}>
                     {/* Submarket Header */}
@@ -225,8 +243,8 @@ const MarketSidebar: React.FC = () => {
                             onClick={() => setSelectedSymbol(symbol)}
                             className={`flex items-center gap-2 px-8 py-2 cursor-pointer transition-colors ${
                               selectedSymbol?.symbol === symbol.symbol
-                                ? 'bg-deriv-red/20 border-l-2 border-deriv-red'
-                                : 'hover:bg-gray-800/50'
+                                ? 'bg-gradient-to-r from-deriv-red/25 to-transparent border-l-2 border-deriv-red/70 shadow-inner'
+                                : 'hover:bg-white/5'
                             }`}
                           >
                             {/* Status Dot */}
@@ -247,7 +265,7 @@ const MarketSidebar: React.FC = () => {
                                 e.stopPropagation();
                                 toggleFavorite(symbol.symbol);
                               }}
-                              className="p-1 hover:bg-gray-700 rounded transition-colors"
+                              className="p-1 hover:bg-white/10 rounded transition-colors"
                             >
                               <Star 
                                 className={`w-3.5 h-3.5 ${

@@ -26,6 +26,7 @@ interface TradingStore {
   setActiveSymbols: (symbols: ActiveSymbol[]) => void;
   selectedSymbol: ActiveSymbol | null;
   setSelectedSymbol: (symbol: ActiveSymbol | null) => void;
+  lastSelectedSymbol: string | null;
   
   // Favorites
   favorites: string[];
@@ -87,7 +88,11 @@ export const useTradingStore = create<TradingStore>()(
       activeSymbols: [],
       setActiveSymbols: (symbols) => set({ activeSymbols: symbols }),
       selectedSymbol: null,
-      setSelectedSymbol: (symbol) => set({ selectedSymbol: symbol }),
+      lastSelectedSymbol: null,
+      setSelectedSymbol: (symbol) => set({ 
+        selectedSymbol: symbol,
+        lastSelectedSymbol: symbol?.symbol || null,
+      }),
       
       // Favorites
       favorites: [],
@@ -155,6 +160,7 @@ export const useTradingStore = create<TradingStore>()(
         theme: state.theme,
         defaultStake: state.defaultStake,
         sidebarCollapsed: state.sidebarCollapsed,
+        lastSelectedSymbol: state.lastSelectedSymbol,
       }),
     }
   )

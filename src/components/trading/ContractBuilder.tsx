@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle,
-  Clock, DollarSign, Target, AlertCircle, Loader2, Check
+  Clock, DollarSign, Target, AlertCircle, Loader2
 } from 'lucide-react';
 import { useTradingStore } from '../../store/tradingStore';
 import websocketService, { Contract, Proposal } from '../../services/websocketService';
@@ -57,12 +57,12 @@ const durationUnits = [
 const ContractBuilder: React.FC = () => {
   const { selectedSymbol, currentTick, balance, currency, defaultStake, addOpenContract } = useTradingStore();
   
-  const [availableContracts, setAvailableContracts] = useState<Contract[]>([]);
+  const [, setAvailableContracts] = useState<Contract[]>([]);
   const [selectedContractType, setSelectedContractType] = useState<string>('CALL');
   const [duration, setDuration] = useState<number>(5);
   const [durationUnit, setDurationUnit] = useState<string>('t');
   const [stake, setStake] = useState<number>(defaultStake);
-  const [basis, setBasis] = useState<'stake' | 'payout'>('stake');
+  const [basis] = useState<'stake' | 'payout'>('stake');
   const [barrier, setBarrier] = useState<string>('');
   
   const [proposal, setProposal] = useState<Proposal | null>(null);
@@ -140,6 +140,7 @@ const ContractBuilder: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSymbol, selectedContractType, duration, durationUnit, stake, basis, barrier]);
 
   // Cleanup on unmount
@@ -196,7 +197,7 @@ const ContractBuilder: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl p-4 h-full flex flex-col">
+    <div className="glass-panel p-5 h-full flex flex-col">
       <h3 className="text-lg font-bold text-white mb-4">Trade</h3>
 
       {!selectedSymbol ? (
@@ -253,13 +254,13 @@ const ContractBuilder: React.FC = () => {
                 type="number"
                 value={duration}
                 onChange={(e) => setDuration(Math.max(1, parseInt(e.target.value) || 1))}
-                className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-deriv-red"
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-deriv-red"
                 min="1"
               />
               <select
                 value={durationUnit}
                 onChange={(e) => setDurationUnit(e.target.value)}
-                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-deriv-red"
+                className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-deriv-red"
               >
                 {durationUnits.map((unit) => (
                   <option key={unit.value} value={unit.value}>
@@ -282,7 +283,7 @@ const ContractBuilder: React.FC = () => {
                 value={barrier}
                 onChange={(e) => setBarrier(e.target.value)}
                 placeholder={currentTick ? currentTick.quote.toString() : 'Enter barrier'}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-deriv-red"
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-deriv-red"
               />
             </div>
           )}
@@ -294,14 +295,14 @@ const ContractBuilder: React.FC = () => {
               Stake
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 {currency}
               </span>
               <input
                 type="number"
                 value={stake}
                 onChange={(e) => setStake(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full pl-14 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-deriv-red"
+                className="w-full pl-14 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-deriv-red"
                 min="0"
                 step="0.01"
               />
@@ -324,7 +325,7 @@ const ContractBuilder: React.FC = () => {
           </div>
 
           {/* Proposal Preview */}
-          <div className="mb-4 p-4 bg-gray-800 rounded-lg">
+          <div className="mb-4 p-4 bg-white/5 rounded-2xl border border-white/10">
             {isLoadingProposal ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-6 h-6 text-deriv-red animate-spin" />

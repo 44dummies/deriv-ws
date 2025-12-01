@@ -70,10 +70,10 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="h-16 bg-gray-900 border-b border-gray-800 px-4 flex items-center justify-between">
+    <header className="h-20 bg-gray-900/60 backdrop-blur border-b border-white/5 px-6 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-deriv-red to-red-600 rounded-xl flex items-center justify-center">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-deriv-red to-fuchsia-600 flex items-center justify-center shadow-lg shadow-deriv-red/30">
           <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
@@ -89,7 +89,7 @@ const Header: React.FC = () => {
       {/* Right Section */}
       <div className="flex items-center gap-4">
         {/* Balance */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-xl">
+        <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-2xl border border-white/10">
           <Wallet className="w-5 h-5 text-deriv-red" />
           <div>
             <p className="text-xs text-gray-500">Balance</p>
@@ -97,7 +97,7 @@ const Header: React.FC = () => {
           </div>
           <button
             onClick={refreshBalance}
-            className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
             disabled={isRefreshing}
           >
             <RefreshCw className={`w-4 h-4 text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -107,7 +107,7 @@ const Header: React.FC = () => {
         {/* Theme Toggle */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="p-2.5 hover:bg-gray-800 rounded-xl transition-colors"
+          className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
         >
           {theme === 'dark' ? (
             <Sun className="w-5 h-5 text-gray-400" />
@@ -120,7 +120,7 @@ const Header: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative p-2.5 hover:bg-gray-800 rounded-xl transition-colors"
+            className="relative p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
           >
             <Bell className="w-5 h-5 text-gray-400" />
             {notifications.length > 0 && (
@@ -131,8 +131,8 @@ const Header: React.FC = () => {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden z-50">
-              <div className="p-3 border-b border-gray-700">
+            <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900/90 backdrop-blur rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-50">
+              <div className="p-3 border-b border-white/5">
                 <h3 className="font-medium text-white">Notifications</h3>
               </div>
               <div className="max-h-80 overflow-y-auto">
@@ -140,7 +140,7 @@ const Header: React.FC = () => {
                   <p className="p-4 text-center text-gray-500 text-sm">No notifications</p>
                 ) : (
                   notifications.map((notification) => (
-                    <div key={notification.id} className="p-3 border-b border-gray-700/50 hover:bg-gray-700/50">
+                    <div key={notification.id} className="p-3 border-b border-white/5 hover:bg-white/5">
                       <p className="text-sm text-white">{notification.title}</p>
                       <p className="text-xs text-gray-400 mt-1">{notification.message}</p>
                     </div>
@@ -155,7 +155,7 @@ const Header: React.FC = () => {
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-2 hover:bg-gray-800 rounded-xl transition-colors"
+            className="flex items-center gap-2 p-2 bg-white/5 hover:bg-white/10 rounded-xl transition-colors"
           >
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <User className="w-4 h-4 text-white" />
@@ -168,22 +168,22 @@ const Header: React.FC = () => {
           </button>
 
           {showUserMenu && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 rounded-xl shadow-xl border border-gray-700 overflow-hidden z-50">
-              <div className="p-3 border-b border-gray-700">
+            <div className="absolute right-0 top-full mt-2 w-48 bg-gray-900/90 backdrop-blur rounded-2xl shadow-2xl border border-white/10 overflow-hidden z-50">
+              <div className="p-3 border-b border-white/5">
                 <p className="text-sm font-medium text-white">{userInfo?.email}</p>
                 <p className="text-xs text-gray-500">{userInfo?.loginid}</p>
               </div>
               <div className="p-1">
                 <button
                   onClick={() => navigate('/settings')}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 rounded-lg transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                   Settings
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                 >
                   <LogOut className="w-4 h-4" />
                   Logout

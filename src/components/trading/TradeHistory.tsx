@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, Download, Filter, ChevronLeft, ChevronRight,
+  Calendar, Download, ChevronRight,
   TrendingUp, TrendingDown, RefreshCw
 } from 'lucide-react';
 import websocketService from '../../services/websocketService';
@@ -103,6 +103,7 @@ const TradeHistory: React.FC = () => {
 
   useEffect(() => {
     loadHistory(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, dateFrom, dateTo]);
 
   const formatCurrency = (value: number) => {
@@ -138,14 +139,14 @@ const TradeHistory: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl overflow-hidden">
+    <div className="glass-panel overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
+      <div className="p-5 border-b border-white/5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-white">Trade History</h3>
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-gray-300 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-colors"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -158,8 +159,8 @@ const TradeHistory: React.FC = () => {
             onClick={() => setActiveTab('profit')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'profit'
-                ? 'bg-deriv-red text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-r from-deriv-red to-rose-500 text-white shadow-lg shadow-deriv-red/30'
+                : 'bg-white/5 text-gray-400 hover:text-white'
             }`}
           >
             Profit Table
@@ -168,8 +169,8 @@ const TradeHistory: React.FC = () => {
             onClick={() => setActiveTab('statement')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === 'statement'
-                ? 'bg-deriv-red text-white'
-                : 'bg-gray-800 text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-r from-deriv-red to-rose-500 text-white shadow-lg shadow-deriv-red/30'
+                : 'bg-white/5 text-gray-400 hover:text-white'
             }`}
           >
             Statement
@@ -184,14 +185,14 @@ const TradeHistory: React.FC = () => {
               type="date"
               value={format(dateFrom, 'yyyy-MM-dd')}
               onChange={(e) => setDateFrom(new Date(e.target.value))}
-              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-deriv-red"
+              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-deriv-red"
             />
             <span className="text-gray-500">to</span>
             <input
               type="date"
               value={format(dateTo, 'yyyy-MM-dd')}
               onChange={(e) => setDateTo(new Date(e.target.value))}
-              className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-deriv-red"
+              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-deriv-red"
             />
           </div>
         </div>
@@ -199,7 +200,7 @@ const TradeHistory: React.FC = () => {
 
       {/* Stats Summary */}
       {activeTab === 'profit' && profitRecords.length > 0 && (
-        <div className="grid grid-cols-4 gap-4 p-4 border-b border-gray-800 bg-gray-800/30">
+        <div className="grid grid-cols-4 gap-4 p-4 border-b border-white/5 bg-white/5">
           <div>
             <p className="text-xs text-gray-500 mb-1">Total P/L</p>
             <p className={`text-lg font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -239,8 +240,8 @@ const TradeHistory: React.FC = () => {
           </div>
         ) : activeTab === 'profit' ? (
           <table className="w-full">
-            <thead className="bg-gray-800/50 sticky top-0">
-              <tr className="text-left text-xs text-gray-500">
+            <thead className="bg-white/5 sticky top-0 backdrop-blur">
+              <tr className="text-left text-xs text-gray-400">
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Contract</th>
                 <th className="px-4 py-3 text-right">Buy</th>
@@ -248,9 +249,9 @@ const TradeHistory: React.FC = () => {
                 <th className="px-4 py-3 text-right">P/L</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-white/5">
               {(records as ProfitRecord[]).map((record) => (
-                <tr key={record.contract_id} className="hover:bg-gray-800/30">
+                <tr key={record.contract_id} className="hover:bg-white/5">
                   <td className="px-4 py-3 text-sm text-gray-400">
                     {format(new Date(record.purchase_time * 1000), 'MMM dd, HH:mm')}
                   </td>
@@ -283,8 +284,8 @@ const TradeHistory: React.FC = () => {
           </table>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-800/50 sticky top-0">
-              <tr className="text-left text-xs text-gray-500">
+            <thead className="bg-white/5 sticky top-0 backdrop-blur">
+              <tr className="text-left text-xs text-gray-400">
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Ref</th>
@@ -292,9 +293,9 @@ const TradeHistory: React.FC = () => {
                 <th className="px-4 py-3 text-right">Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-white/5">
               {(records as TradeRecord[]).map((record) => (
-                <tr key={record.transaction_id} className="hover:bg-gray-800/30">
+                <tr key={record.transaction_id} className="hover:bg-white/5">
                   <td className="px-4 py-3 text-sm text-gray-400">
                     {format(new Date(record.transaction_time * 1000), 'MMM dd, HH:mm')}
                   </td>
@@ -329,11 +330,11 @@ const TradeHistory: React.FC = () => {
 
       {/* Load More */}
       {hasMore && records.length > 0 && (
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-white/5">
           <button
             onClick={() => loadHistory()}
             disabled={isLoading}
-            className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            className="w-full py-2 bg-white/5 hover:bg-white/10 text-gray-200 rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           >
             {isLoading ? (
               <RefreshCw className="w-4 h-4 animate-spin" />
