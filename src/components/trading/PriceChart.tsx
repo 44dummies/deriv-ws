@@ -20,13 +20,15 @@ const PriceChart: React.FC = () => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<any> | null>(null);
+  const subscriptionIdRef = useRef<string | null>(null);
+  const currentSymbolRef = useRef<string | null>(null);
+  const isLoadingRef = useRef(false);
   
   const { selectedSymbol, currentTick, setCurrentTick } = useTradingStore();
   
   const [chartType, setChartType] = useState<ChartType>('candles');
   const [selectedTimeFrame, setSelectedTimeFrame] = useState<TimeFrame>(timeFrames[0]);
   const [priceChange, setPriceChange] = useState<{ value: number; percent: number }>({ value: 0, percent: 0 });
-  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [previousClose, setPreviousClose] = useState<number | null>(null);
 
@@ -113,12 +115,34 @@ const PriceChart: React.FC = () => {
 
   useEffect(() => {
     if (!selectedSymbol || !seriesRef.current) return;
+    
+    // Prevent duplicate loads
+    if (isLoadingRef.current) return;
+    if (currentSymbolRef.current === selectedSymbol.symbol && subscriptionIdRef.current) return;
 
     const loadData = async () => {
+      isLoadingRef.current = true;
       setIsLoading(true);
       
-      if (subscriptionId) {
-        await websocketService.unsubscribe(subscriptionId);
+      // Forget previous subscription if exists
+      if (subscriptionIdRef.current) {
+        try {
+          await websocketService.unsubscribe(subscriptionIdRef.current);
+        } catch (e) {
+          // Ignore unsubscribe errors
+        }
+        subscriptionIdRef.current = null;
+      }
+      
+      // Forget all ticks/candles before subscribing to new ones
+      try {
+        if (chartType === 'candles') {
+          await websocketService.forgetAllCandles();
+        } else {
+          await websocketService.forgetAllTicks();
+        }
+      } catch (e) {
+        // Ignore forget errors
       }
 
       try {
@@ -189,7 +213,8 @@ const PriceChart: React.FC = () => {
               }
             }
           );
-          setSubscriptionId(subId);
+          subscriptionIdRef.current = subId;
+          currentSymbolRef.current = selectedSymbol.symbol;
         } else {
           const subId = await websocketService.subscribeTicks(
             selectedSymbol.symbol,
@@ -210,11 +235,13 @@ const PriceChart: React.FC = () => {
               }
             }
           );
-          setSubscriptionId(subId);
+          subscriptionIdRef.current = subId;
+          currentSymbolRef.current = selectedSymbol.symbol;
         }
       } catch (error) {
         console.error('Error loading chart data:', error);
       } finally {
+        isLoadingRef.current = false;
         setIsLoading(false);
       }
     };
@@ -222,12 +249,14 @@ const PriceChart: React.FC = () => {
     loadData();
 
     return () => {
-      if (subscriptionId) {
-        websocketService.unsubscribe(subscriptionId);
+      if (subscriptionIdRef.current) {
+        websocketService.unsubscribe(subscriptionIdRef.current).catch(() => {});
+        subscriptionIdRef.current = null;
       }
+      currentSymbolRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSymbol, selectedTimeFrame, chartType]);
+  }, [selectedSymbol?.symbol, selectedTimeFrame.granularity, chartType]);
 
   const formatPrice = (price: number) => {
     if (!selectedSymbol) return '0.00';

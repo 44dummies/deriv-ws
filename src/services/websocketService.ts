@@ -263,6 +263,14 @@ class DerivWebSocket {
     return this.send({ forget_all: ['ticks', 'candles', 'proposal', 'proposal_open_contract', 'balance'] });
   }
 
+  forgetAllTicks(): Promise<DerivResponse> {
+    return this.send({ forget_all: 'ticks' });
+  }
+
+  forgetAllCandles(): Promise<DerivResponse> {
+    return this.send({ forget_all: 'candles' });
+  }
+
   // === Authentication ===
   async authorize(token: string): Promise<DerivResponse> {
     return await this.send({ authorize: token });
