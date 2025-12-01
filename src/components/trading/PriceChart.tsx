@@ -88,7 +88,7 @@ const PriceChart: React.FC = () => {
     }
 
     if (chartType === 'candles') {
-      seriesRef.current = (chartRef.current as any).addCandlestickSeries({
+      seriesRef.current = chartRef.current.addCandlestickSeries({
         upColor: '#22c55e',
         downColor: '#ef4444',
         borderUpColor: '#22c55e',
@@ -97,12 +97,12 @@ const PriceChart: React.FC = () => {
         wickDownColor: '#ef4444',
       });
     } else if (chartType === 'line') {
-      seriesRef.current = (chartRef.current as any).addLineSeries({ 
+      seriesRef.current = chartRef.current.addLineSeries({ 
         color: '#ff444f', 
-        lineWidth: 2 
+        lineWidth: 2,
       });
     } else {
-      seriesRef.current = (chartRef.current as any).addAreaSeries({
+      seriesRef.current = chartRef.current.addAreaSeries({
         topColor: 'rgba(255, 68, 79, 0.4)',
         bottomColor: 'rgba(255, 68, 79, 0.0)',
         lineColor: '#ff444f',
