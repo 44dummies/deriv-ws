@@ -1,31 +1,40 @@
+interface TokenData {
+  token: string;
+  account: string;
+}
+
+interface AccountData {
+  [key: string]: any;
+}
+
 const TOKEN_KEY = 'deriv_tokens';
 const ACCOUNT_KEY = 'deriv_account';
 
 export const TokenService = {
-  setTokens: (tokens) => {
+  setTokens: (tokens: TokenData): void => {
     localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
   },
 
-  getTokens: () => {
+  getTokens: (): TokenData | null => {
     const tokens = localStorage.getItem(TOKEN_KEY);
     return tokens ? JSON.parse(tokens) : null;
   },
 
-  clearTokens: () => {
+  clearTokens: (): void => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ACCOUNT_KEY);
   },
 
-  setAccount: (account) => {
+  setAccount: (account: AccountData): void => {
     localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
   },
 
-  getAccount: () => {
+  getAccount: (): AccountData | null => {
     const account = localStorage.getItem(ACCOUNT_KEY);
     return account ? JSON.parse(account) : null;
   },
 
-  isAuthenticated: () => {
+  isAuthenticated: (): boolean => {
     return !!TokenService.getTokens();
   }
 };
