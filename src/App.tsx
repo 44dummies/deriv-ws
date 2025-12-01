@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Callback from './pages/Callback';
@@ -6,9 +6,9 @@ import Dashboard from './pages/Dashboard';
 import { TokenService } from './services/tokenService';
 
 // Protected Route component
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
   const isAuthenticated = TokenService.isAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/" replace />;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;
 };
 
 function App() {

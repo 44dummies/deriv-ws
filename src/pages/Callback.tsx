@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 
-const Callback = () => {
+const Callback: React.FC = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('Processing authentication...');
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -52,7 +52,7 @@ const Callback = () => {
           navigate('/dashboard');
         }, 500);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error('Callback error:', err);
         setError(err.message || 'Authentication failed');
         TokenService.clearTokens();
@@ -67,75 +67,41 @@ const Callback = () => {
   }, [navigate]);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
+      <div className="card max-w-md w-full">
         {error ? (
           <>
-            <div style={styles.errorIcon}>✗</div>
-            <h2 style={styles.errorTitle}>Authentication Failed</h2>
-            <p style={styles.errorMessage}>{error}</p>
-            <p style={styles.redirect}>Redirecting to login...</p>
+            <div className="flex justify-center mb-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-center text-gray-800 mb-2">
+              Authentication Failed
+            </h2>
+            <p className="text-center text-red-600 mb-4">{error}</p>
+            <p className="text-center text-gray-500 text-sm">Redirecting to login...</p>
           </>
         ) : (
           <>
-            <div style={styles.spinner}></div>
-            <p style={styles.status}>{status}</p>
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-deriv-red/20 border-t-deriv-red rounded-full animate-spin"></div>
+              </div>
+            </div>
+            <p className="text-center text-gray-700 font-medium text-lg">{status}</p>
+            <div className="mt-6 flex justify-center gap-1">
+              <div className="w-2 h-2 bg-deriv-red rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-2 h-2 bg-deriv-red rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-2 h-2 bg-deriv-red rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
           </>
         )}
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#f5f5f5',
-  },
-  card: {
-    backgroundColor: 'white',
-    padding: '40px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    textAlign: 'center',
-    maxWidth: '400px',
-    width: '100%',
-  },
-  spinner: {
-    border: '4px solid #f3f3f3',
-    borderTop: '4px solid #ff444f',
-    borderRadius: '50%',
-    width: '50px',
-    height: '50px',
-    animation: 'spin 1s linear infinite',
-    margin: '0 auto 20px',
-  },
-  status: {
-    fontSize: '16px',
-    color: '#666',
-  },
-  errorIcon: {
-    fontSize: '60px',
-    color: '#ff444f',
-    marginBottom: '20px',
-  },
-  errorTitle: {
-    fontSize: '24px',
-    color: '#333',
-    marginBottom: '10px',
-  },
-  errorMessage: {
-    fontSize: '16px',
-    color: '#666',
-    marginBottom: '10px',
-  },
-  redirect: {
-    fontSize: '14px',
-    color: '#999',
-  },
 };
 
 export default Callback;
