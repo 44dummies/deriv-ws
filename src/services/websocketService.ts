@@ -293,6 +293,18 @@ class DerivWebSocket {
     return await this.send({ get_account_status: 1 });
   }
 
+  async getSettings(): Promise<DerivResponse> {
+    return await this.send({ get_settings: 1 });
+  }
+
+  async getWalletList(): Promise<DerivResponse> {
+    return await this.send({ wallet_list: 1 });
+  }
+
+  async getLandingCompanyDetails(landingCompany: string): Promise<DerivResponse> {
+    return await this.send({ landing_company_details: landingCompany });
+  }
+
   async getStatement(options: { limit?: number; offset?: number; date_from?: number; date_to?: number } = {}): Promise<DerivResponse> {
     return await this.send({ statement: 1, ...options });
   }
