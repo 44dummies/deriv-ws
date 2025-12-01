@@ -50,6 +50,14 @@ const Dashboard: React.FC = () => {
         await websocketService.connect();
         const authResponse = await websocketService.authorize(tokens.token);
 
+        // Check for authorization errors (expired/invalid token)
+        if (authResponse.error) {
+          console.error('Authorization error:', authResponse.error);
+          TokenService.clearTokens();
+          navigate('/');
+          return;
+        }
+
         if (authResponse.authorize) {
           setUserInfo({
             balance: authResponse.authorize.balance,
@@ -61,6 +69,11 @@ const Dashboard: React.FC = () => {
           });
           setBalance(authResponse.authorize.balance, authResponse.authorize.currency);
           TokenService.setAccount(authResponse.authorize);
+        } else {
+          // No authorize response - token invalid
+          TokenService.clearTokens();
+          navigate('/');
+          return;
         }
 
         const symbolsResponse = await websocketService.getActiveSymbols('brief');
@@ -71,6 +84,12 @@ const Dashboard: React.FC = () => {
         setIsLoading(false);
       } catch (err: any) {
         console.error('Dashboard error:', err);
+        // If error indicates invalid token, redirect to login
+        if (err.code === 'InvalidToken' || err.message?.includes('token')) {
+          TokenService.clearTokens();
+          navigate('/');
+          return;
+        }
         setError(err.message || 'Failed to load dashboard');
         setIsLoading(false);
       }
