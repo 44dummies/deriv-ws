@@ -3,7 +3,8 @@ import CONFIG from '../config';
 
 const Login: React.FC = () => {
   const handleLogin = () => {
-    const authUrl = `${CONFIG.OAUTH_URL}?app_id=${CONFIG.APP_ID}&l=EN&brand=deriv`;
+    const authUrl = `${CONFIG.OAUTH_URL}?app_id=${CONFIG.APP_ID}&l=EN&brand=deriv&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URL)}`;
+    console.log('OAuth URL:', authUrl);
     window.location.href = authUrl;
   };
 

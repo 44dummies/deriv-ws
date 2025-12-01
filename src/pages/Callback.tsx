@@ -11,43 +11,40 @@ const Callback: React.FC = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Get URL parameters from hash (Deriv returns tokens in hash fragment)
-        const hash = window.location.hash.substring(1); // Remove the '#'
+        console.log('Full URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
+        
+        const hash = window.location.hash.substring(1);
         const urlParams = new URLSearchParams(hash);
         const token1 = urlParams.get('token1');
         const acct1 = urlParams.get('acct1');
+
+        console.log('Extracted token1:', token1);
+        console.log('Extracted acct1:', acct1);
 
         if (!token1 || !acct1) {
           throw new Error('No valid tokens or code found in callback URL');
         }
 
-        // Store tokens in localStorage
         TokenService.setTokens({
           token: token1,
           account: acct1,
         });
 
         setStatus('Connecting to Deriv...');
-
-        // Connect to WebSocket
         await websocketService.connect();
 
         setStatus('Authorizing...');
-
-        // Authorize with the token
         const authResponse = await websocketService.authorize(token1);
 
         if (authResponse.authorize) {
-          // Store account info
           TokenService.setAccount(authResponse.authorize);
         }
 
-        // Clear tokens from URL
         window.history.replaceState({}, document.title, window.location.pathname);
 
         setStatus('Success! Redirecting...');
-
-        // Redirect to dashboard
         setTimeout(() => {
           navigate('/dashboard');
         }, 500);
