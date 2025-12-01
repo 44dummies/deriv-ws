@@ -423,6 +423,10 @@ class DerivWebSocket {
     return await this.send({ portfolio: 1 });
   }
 
+  async getPortfolio(): Promise<DerivResponse> {
+    return await this.send({ portfolio: 1 });
+  }
+
   async getContractInfo(contractId: number): Promise<DerivResponse> {
     return await this.send({ proposal_open_contract: 1, contract_id: contractId });
   }

@@ -1,97 +1,65 @@
 import React from 'react';
-import { Sparkles, Lock, ArrowRight } from 'lucide-react';
 import CONFIG from '../config';
 
 const Login: React.FC = () => {
   const handleLogin = () => {
-    const authUrl = `${CONFIG.OAUTH_URL}?app_id=${CONFIG.APP_ID}&l=EN&brand=deriv&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URL)}`;
-    window.location.href = authUrl;
+    const redirectUri = encodeURIComponent(CONFIG.REDIRECT_URL);
+    const oauthUrl = `${CONFIG.OAUTH_URL}?app_id=${CONFIG.APP_ID}&l=EN&brand=deriv&redirect_uri=${redirectUri}`;
+    window.location.href = oauthUrl;
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-gray-950 text-white">
-      {/* Background effects */}
-      <div className="absolute inset-0">
-        <div className="absolute -top-32 -left-16 h-80 w-80 rounded-full bg-deriv-red/30 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-pink-500/20 blur-3xl" />
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-gray-950 via-gray-950/60 to-transparent" />
-      </div>
-
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-10">
-        {/* Header */}
-        <header className="flex items-center gap-3 mb-16">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-deriv-red to-fuchsia-600 flex items-center justify-center shadow-2xl shadow-deriv-red/30">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold">Deriv Trading</h1>
-            <p className="text-xs text-gray-400">Professional Trading Platform</p>
-          </div>
-        </header>
-
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Hero Content */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-4xl md:text-5xl font-bold leading-tight">
-                Trade with confidence
-              </h2>
-              <p className="mt-4 text-lg text-gray-400">
-                Access markets with real-time data, advanced charts, and secure authentication.
-              </p>
+    <div className="min-h-screen bg-[#0e0e0e] flex items-center justify-center p-4">
+      {/* Subtle gradient background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-[#0e0e0e] via-[#1a1a1a] to-[#0e0e0e]" />
+      
+      <div className="relative z-10 w-full max-w-md">
+        {/* Login Card */}
+        <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-white/5">
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             </div>
-
-            <div className="space-y-3">
-              {[
-                'Secure OAuth 2.0 authentication',
-                'Real-time market data',
-                'Advanced trading tools',
-              ].map((item) => (
-                <p key={item} className="flex items-center gap-3 text-sm text-gray-300">
-                  <span className="h-6 w-6 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs font-bold">✓</span>
-                  {item}
-                </p>
-              ))}
-            </div>
+            <span className="text-xl font-semibold text-white">TradeSync</span>
           </div>
 
-          {/* Login Card */}
-          <div className="relative">
-            <div className="absolute inset-0 blur-3xl bg-gradient-to-br from-deriv-red/20 via-fuchsia-500/10 to-transparent" />
-            <div className="relative rounded-3xl border border-white/10 bg-gray-900/80 backdrop-blur-xl p-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center gap-3 text-gray-400 text-sm mb-8">
-                <div className="h-10 w-10 rounded-2xl bg-white/5 flex items-center justify-center">
-                  <Lock className="w-5 h-5" />
-                </div>
-                Secured by Deriv OAuth
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-2xl font-semibold">Connect your account</h3>
-                  <p className="text-gray-400 mt-2 text-sm">
-                    Login securely with your Deriv credentials
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleLogin}
-                  className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-deriv-red via-rose-600 to-orange-500 py-4 text-lg font-semibold shadow-lg shadow-deriv-red/40"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-3">
-                    Login with Deriv
-                    <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
-                  </span>
-                  <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
-
-                <p className="text-center text-xs text-gray-500">
-                  By continuing you agree to Deriv's Terms & Privacy Policy
-                </p>
-              </div>
-            </div>
+          {/* Welcome Text */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
+            <p className="text-gray-500 text-sm">Connect with your Deriv account to continue</p>
           </div>
+
+          {/* Login Button */}
+          <button
+            onClick={handleLogin}
+            className="w-full py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            Continue with Deriv
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-6">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs text-gray-600">Powered by Deriv API</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+
+          {/* Info */}
+          <p className="text-center text-xs text-gray-600">
+            By continuing, you agree to sync your trading data securely
+          </p>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-xs text-gray-600 mt-6">
+          © 2024 TradeSync • Partner Application
+        </p>
       </div>
     </div>
   );
