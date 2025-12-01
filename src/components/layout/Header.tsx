@@ -70,7 +70,7 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="h-20 bg-gray-900/60 backdrop-blur border-b border-white/5 px-6 flex items-center justify-between">
+    <header className="relative z-10 h-20 bg-gray-900/60 backdrop-blur border-b border-white/5 px-6 flex items-center justify-between">
       {/* Logo */}
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-deriv-red to-fuchsia-600 flex items-center justify-center shadow-lg shadow-deriv-red/30">
