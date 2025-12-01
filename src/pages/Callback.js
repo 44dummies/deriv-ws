@@ -11,13 +11,14 @@ const Callback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Get URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
+        // Get URL parameters from hash (Deriv returns tokens in hash fragment)
+        const hash = window.location.hash.substring(1); // Remove the '#'
+        const urlParams = new URLSearchParams(hash);
         const token1 = urlParams.get('token1');
         const acct1 = urlParams.get('acct1');
 
         if (!token1 || !acct1) {
-          throw new Error('Missing authentication tokens');
+          throw new Error('No valid tokens or code found in callback URL');
         }
 
         // Store tokens in localStorage
