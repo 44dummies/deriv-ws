@@ -1,46 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { BarChart3, Briefcase, History } from 'lucide-react';
+
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
+import { useTradingStore } from '../store/tradingStore';
 
-interface Account {
-  account_type: string;
-  created_at: number;
-  currency: string;
-  is_disabled: number;
-  is_virtual: number;
-  landing_company_name: string;
-  loginid: string;
-}
-
-interface UserInfo {
-  balance: number;
-  country: string;
-  currency: string;
-  email: string;
-  fullname: string;
-  loginid: string;
-  [key: string]: any;
-}
-
-interface BalanceInfo {
-  balance: number;
-  currency: string;
-  loginid: string;
-  [key: string]: any;
-}
-
-interface BalanceMap {
-  [loginid: string]: BalanceInfo;
-}
+import Header from '../components/layout/Header';
+import MarketSidebar from '../components/trading/MarketSidebar';
+import PriceChart from '../components/trading/PriceChart';
+import ContractBuilder from '../components/trading/ContractBuilder';
+import OpenPositions from '../components/trading/OpenPositions';
+import TradeHistory from '../components/trading/TradeHistory';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const { 
+    setUserInfo, 
+    setBalance, 
+    setActiveSymbols,
+    activeTab,
+    setActiveTab,
+  } = useTradingStore();
+
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [accountList, setAccountList] = useState<Account[]>([]);
-  const [balances, setBalances] = useState<BalanceMap>({});
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -55,53 +40,49 @@ const Dashboard: React.FC = () => {
           navigate('/');
           return;
         }
-        
+
         await websocketService.connect();
         const authResponse = await websocketService.authorize(tokens.token);
-        
+
         if (authResponse.authorize) {
-          setUserInfo(authResponse.authorize as UserInfo);
+          setUserInfo({
+            balance: authResponse.authorize.balance,
+            currency: authResponse.authorize.currency,
+            email: authResponse.authorize.email,
+            fullname: authResponse.authorize.fullname,
+            loginid: authResponse.authorize.loginid,
+            is_virtual: authResponse.authorize.is_virtual,
+          });
+          setBalance(authResponse.authorize.balance, authResponse.authorize.currency);
           TokenService.setAccount(authResponse.authorize);
         }
 
-        const accountsResponse = await websocketService.getAccountList();
-        if (accountsResponse.account_list) {
-          setAccountList(accountsResponse.account_list as Account[]);
-          
-          const balanceResponse = await websocketService.getBalance();
-          if (balanceResponse.balance) {
-            const balanceMap: BalanceMap = {
-              [balanceResponse.balance.loginid]: balanceResponse.balance as BalanceInfo,
-            };
-            setBalances(balanceMap);
-          }
+        const symbolsResponse = await websocketService.getActiveSymbols('brief');
+        if (symbolsResponse.active_symbols) {
+          setActiveSymbols(symbolsResponse.active_symbols);
         }
 
-        setLoading(false);
+        setIsLoading(false);
       } catch (err: any) {
         console.error('Dashboard initialization error:', err);
         setError(err.message || 'Failed to load dashboard');
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     initializeDashboard();
-  }, [navigate]);
 
-  const handleLogout = () => {
-    websocketService.disconnect();
-    TokenService.clearTokens();
-    navigate('/');
-  };
+    return () => {
+      websocketService.unsubscribeAll().catch(() => {});
+    };
+  }, [navigate, setUserInfo, setBalance, setActiveSymbols]);
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
-        <div className="card max-w-md w-full">
-          <div className="flex justify-center mb-6">
-            <div className="w-16 h-16 border-4 border-deriv-red/20 border-t-deriv-red rounded-full animate-spin"></div>
-          </div>
-          <p className="text-center text-gray-700 font-medium text-lg">Loading dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-deriv-red/20 border-t-deriv-red rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">Loading trading platform...</p>
         </div>
       </div>
     );
@@ -109,18 +90,18 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
-        <div className="card max-w-md w-full text-center">
-          <div className="mb-6">
-            <svg className="w-16 h-16 mx-auto text-deriv-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-950 p-4">
+        <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Error Loading Dashboard</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-xl font-bold text-white mb-2">Error Loading Dashboard</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="btn-primary w-full"
+            className="px-6 py-3 bg-deriv-red hover:bg-red-600 text-white font-medium rounded-xl transition-colors"
           >
             Retry
           </button>
@@ -130,105 +111,129 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 bg-gradient-to-br from-gray-900 via-deriv-dark to-black">
-      <div className="max-w-6xl mx-auto">
-        <div className="card mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-deriv-red to-red-400 bg-clip-text text-transparent mb-2">
-                Dashboard
-              </h1>
-              <p className="text-gray-600">Welcome back, {userInfo?.fullname || 'Trader'}</p>
-            </div>
+    <div className="h-screen flex flex-col bg-gray-950 overflow-hidden">
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#1f2937',
+            color: '#fff',
+            border: '1px solid #374151',
+          },
+        }}
+      />
+      
+      <Header />
+
+      <div className="flex-1 flex overflow-hidden">
+        <MarketSidebar />
+
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Tab Bar */}
+          <div className="flex md:hidden border-b border-gray-800 bg-gray-900">
             <button
-              onClick={handleLogout}
-              className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-xl transition-all duration-200 hover:shadow-lg"
+              onClick={() => setActiveTab('chart')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'chart' ? 'text-deriv-red border-b-2 border-deriv-red' : 'text-gray-500'
+              }`}
             >
-              Logout
+              <BarChart3 className="w-4 h-4" />
+              Chart
+            </button>
+            <button
+              onClick={() => setActiveTab('positions')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'positions' ? 'text-deriv-red border-b-2 border-deriv-red' : 'text-gray-500'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              Positions
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${
+                activeTab === 'history' ? 'text-deriv-red border-b-2 border-deriv-red' : 'text-gray-500'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              History
             </button>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <div className="card">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-deriv-red to-red-500 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+          {/* Desktop Layout */}
+          <div className="hidden md:flex flex-1 gap-4 p-4 overflow-hidden">
+            <div className="flex-1 flex flex-col gap-4 min-w-0">
+              <div className="flex-1 min-h-0">
+                <PriceChart />
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Login ID</p>
-                <p className="font-semibold text-gray-800">{userInfo?.loginid || 'N/A'}</p>
+              <div className="h-72">
+                <OpenPositions />
               </div>
+            </div>
+
+            <div className="w-80 flex-shrink-0">
+              <ContractBuilder />
             </div>
           </div>
 
-          <div className="card">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Email</p>
-                <p className="font-semibold text-gray-800 truncate">{userInfo?.email || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Currency</p>
-                <p className="font-semibold text-gray-800">{userInfo?.currency || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Accounts & Balances</h2>
-          {accountList.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No accounts found</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {accountList.map((account) => (
-                <div
-                  key={account.loginid}
-                  className="p-4 rounded-xl border-2 border-gray-200 hover:border-deriv-red/30 transition-all duration-200 bg-gradient-to-br from-white to-gray-50"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-sm font-semibold text-gray-700 px-3 py-1 bg-gray-200 rounded-lg">
-                      {account.account_type || 'Account'}
-                    </span>
-                    <span className="text-lg font-bold text-deriv-red">
-                      {account.currency}
-                    </span>
-                  </div>
-                  <div className="mb-2">
-                    <p className="text-xs text-gray-500">Login ID</p>
-                    <p className="font-mono text-sm text-gray-700">{account.loginid}</p>
-                  </div>
-                  <div className="pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 mb-1">Balance</p>
-                    <p className="text-xl font-bold text-gray-800">
-                      {balances[account.loginid]
-                        ? `${balances[account.loginid].currency} ${balances[account.loginid].balance.toFixed(2)}`
-                        : 'Loading...'}
-                    </p>
-                  </div>
+          {/* Mobile Layout */}
+          <div className="flex md:hidden flex-1 overflow-hidden">
+            {activeTab === 'chart' && (
+              <div className="flex-1 flex flex-col">
+                <div className="flex-1 min-h-0 p-2">
+                  <PriceChart />
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="p-2">
+                  <ContractBuilder />
+                </div>
+              </div>
+            )}
+            {activeTab === 'positions' && (
+              <div className="flex-1 p-4 overflow-y-auto">
+                <OpenPositions />
+              </div>
+            )}
+            {activeTab === 'history' && (
+              <div className="flex-1 p-4 overflow-y-auto">
+                <TradeHistory />
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Desktop Bottom Tab */}
+      <div className="hidden md:block border-t border-gray-800 bg-gray-900">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('chart')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-t-2 ${
+              activeTab === 'chart' 
+                ? 'border-deriv-red text-deriv-red' 
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            Trading
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors border-t-2 ${
+              activeTab === 'history' 
+                ? 'border-deriv-red text-deriv-red' 
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <History className="w-4 h-4" />
+            Trade History
+          </button>
+        </div>
+
+        {activeTab === 'history' && (
+          <div className="p-4 max-h-96 overflow-y-auto border-t border-gray-800">
+            <TradeHistory />
+          </div>
+        )}
       </div>
     </div>
   );

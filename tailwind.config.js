@@ -14,7 +14,14 @@ module.exports = {
             DEFAULT: '#999999',
             dark: '#333333',
           }
+        },
+        gray: {
+          950: '#0a0a0f',
         }
+      },
+      animation: {
+        'spin-slow': 'spin 3s linear infinite',
+        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       }
     },
   },
