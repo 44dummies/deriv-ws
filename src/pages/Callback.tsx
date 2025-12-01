@@ -15,8 +15,8 @@ const Callback: React.FC = () => {
         console.log('Hash:', window.location.hash);
         console.log('Search:', window.location.search);
         
-        const hash = window.location.hash.substring(1);
-        const urlParams = new URLSearchParams(hash);
+        // Deriv returns tokens in query parameters (after ?)
+        const urlParams = new URLSearchParams(window.location.search);
         const token1 = urlParams.get('token1');
         const acct1 = urlParams.get('acct1');
 
