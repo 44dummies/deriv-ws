@@ -133,6 +133,8 @@ const Dashboard = () => {
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
   const sidebarRef = useRef(null);
+  const isInitialized = useRef(false); // Prevent double initialization
+  const profileSynced = useRef(false); // Prevent profile sync loop
 
   // Logout handler (defined early for inactivity hook)
   const handleLogout = useCallback(() => { 
@@ -310,14 +312,25 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    // Prevent double initialization (React StrictMode or re-renders)
+    if (isInitialized.current) return;
+    
     const initializeDashboard = async () => {
       try {
         if (!TokenService.isAuthenticated()) { navigate('/'); return; }
         const tokens = TokenService.getTokens();
         if (!tokens) { navigate('/'); return; }
+        
+        isInitialized.current = true; // Mark as initialized
+        
         await websocketService.connect();
         const authResponse = await websocketService.authorize(tokens.token);
-        if (authResponse.error) { TokenService.clearTokens(); navigate('/'); return; }
+        if (authResponse.error) { 
+          isInitialized.current = false;
+          TokenService.clearTokens(); 
+          navigate('/'); 
+          return; 
+        }
         if (authResponse.authorize) {
           const userData = {
             balance: authResponse.authorize.balance,
@@ -329,22 +342,33 @@ const Dashboard = () => {
           };
           setUserInfo(userData);
           
-          // Create/update user profile in Supabase (required for foreign key constraints)
-          if (supabaseService.isSupabaseConfigured()) {
+          // Create/update user profile in Supabase ONCE (required for foreign key constraints)
+          if (supabaseService.isSupabaseConfigured() && !profileSynced.current) {
+            profileSynced.current = true;
             const { error } = await supabaseService.upsertUserProfile(userData);
             if (error) {
               console.error('Failed to create Supabase profile:', error);
-            } else {
-              console.log('Supabase profile created/updated');
+              profileSynced.current = false; // Allow retry on error
             }
           }
         }
-        loadFromStorage();
         setIsLoading(false);
-      } catch (err) { console.error('Dashboard error:', err); TokenService.clearTokens(); navigate('/'); }
+      } catch (err) { 
+        console.error('Dashboard error:', err); 
+        isInitialized.current = false;
+        TokenService.clearTokens(); 
+        navigate('/'); 
+      }
     };
     initializeDashboard();
-  }, [navigate, loadFromStorage]);
+  }, [navigate]); // Remove loadFromStorage from dependencies
+
+  // Load data after userInfo is set
+  useEffect(() => {
+    if (userInfo?.loginid && !isLoading) {
+      loadFromStorage();
+    }
+  }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
   const handleSync = async () => {
     setSyncing(true);

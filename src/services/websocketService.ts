@@ -139,6 +139,7 @@ class DerivWebSocket {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private isConnecting: boolean = false;
+  private isAuthorized: boolean = false; // Track authorization state
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -273,7 +274,22 @@ class DerivWebSocket {
 
   // === Authentication ===
   async authorize(token: string): Promise<DerivResponse> {
-    return await this.send({ authorize: token });
+    // Prevent multiple authorize calls (rate limit protection)
+    if (this.isAuthorized) {
+      console.log('Already authorized, skipping');
+      return { msg_type: 'authorize', authorize: { cached: true } };
+    }
+    
+    const response = await this.send({ authorize: token });
+    if (!response.error) {
+      this.isAuthorized = true;
+    }
+    return response;
+  }
+  
+  // Reset authorization state (call on disconnect/logout)
+  resetAuth(): void {
+    this.isAuthorized = false;
   }
 
   // === Account ===
@@ -460,6 +476,7 @@ class DerivWebSocket {
     }
     this.pendingRequests.clear();
     this.subscriptions.clear();
+    this.isAuthorized = false; // Reset auth on disconnect
   }
 
   isConnected(): boolean {
