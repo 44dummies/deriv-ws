@@ -743,10 +743,21 @@ const Dashboard = () => {
   }, [fullAnalytics, userInfo]);
 
   const enterChatRoom = useCallback((room) => {
-    setActiveChatRoom(room);
-    const messages = chatroomService.getMessages(room.id);
-    setChatMessages(messages);
-  }, []);
+    // Enter room and start live activity
+    const result = chatroomService.enterRoom(room.id, userInfo?.loginid);
+    if (result.success) {
+      setActiveChatRoom({
+        ...room,
+        activeTraders: result.room.activeTraders
+      });
+      setChatMessages(result.room.messages);
+    } else {
+      // Fallback
+      setActiveChatRoom(room);
+      const messages = chatroomService.getMessages(room.id);
+      setChatMessages(messages);
+    }
+  }, [userInfo]);
 
   const sendChatMessage = useCallback(() => {
     if (!chatInput.trim() || !activeChatRoom) return;
@@ -772,9 +783,13 @@ const Dashboard = () => {
   }, [chatInput, activeChatRoom, userInfo, fullAnalytics]);
 
   const leaveChatRoom = useCallback(() => {
+    // Stop live activity simulation when leaving
+    if (activeChatRoom) {
+      chatroomService.exitRoom(activeChatRoom.id);
+    }
     setActiveChatRoom(null);
     setChatMessages([]);
-  }, []);
+  }, [activeChatRoom]);
 
   const createCommunityPost = useCallback(() => {
     if (!newPostContent.trim()) return;
@@ -1592,17 +1607,40 @@ const Dashboard = () => {
                   <Card className="overflow-hidden">
                     <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--card-border)' }}>
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl relative" style={{ backgroundColor: 'var(--accent-bg)' }}>
                           {activeChatRoom.icon}
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
                         </div>
                         <div>
                           <h3 className="font-bold text-lg flex items-center gap-2">
                             {activeChatRoom.name}
                             {activeChatRoom.isPremium && <Crown className="w-4 h-4 text-yellow-500" />}
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500">LIVE</span>
                           </h3>
                           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{activeChatRoom.description}</p>
                         </div>
                       </div>
+                      
+                      {/* Active Traders */}
+                      {activeChatRoom.activeTraders && (
+                        <div className="flex items-center gap-2">
+                          <div className="flex -space-x-2">
+                            {activeChatRoom.activeTraders.slice(0, 5).map((trader, idx) => (
+                              <div 
+                                key={trader.id} 
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 border-[var(--card-bg)]"
+                                style={{ backgroundColor: 'var(--accent-bg)' }}
+                                title={`${trader.name} - ${trader.winRate}% WR`}
+                              >
+                                {trader.avatar}
+                              </div>
+                            ))}
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            {activeChatRoom.activeTraders.length}+ online
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Chat Messages */}
@@ -1610,8 +1648,7 @@ const Dashboard = () => {
                       {chatMessages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <MessageSquare className="w-12 h-12 mb-4" style={{ color: 'var(--text-secondary)' }} />
-                          <p style={{ color: 'var(--text-secondary)' }}>No messages yet. Start the conversation!</p>
-                          <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Your messages are saved locally</p>
+                          <p style={{ color: 'var(--text-secondary)' }}>Loading chat history...</p>
                         </div>
                       ) : (
                         chatMessages.map((msg, idx) => (
@@ -1620,12 +1657,22 @@ const Dashboard = () => {
                               {msg.isAI ? <Bot className="w-4 h-4 text-white" /> : <span className="text-sm">{msg.avatar || msg.userName?.[0] || '?'}</span>}
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-medium text-sm">{msg.userName}</span>
                                 {msg.isAI && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff3355]">AI Coach</span>}
+                                {msg.traderInfo && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--text-secondary)' }}>
+                                    {msg.traderInfo.winRate}% WR • {msg.traderInfo.trades} trades
+                                  </span>
+                                )}
                                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{msg.time}</span>
                               </div>
                               <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: msg.isAI ? 'white' : 'var(--text-secondary)' }}>{msg.content}</p>
+                              {msg.type && msg.type !== 'chat' && (
+                                <span className="inline-block text-xs px-2 py-0.5 rounded mt-1" style={{ backgroundColor: msg.type === 'tip' ? 'rgba(34,197,94,0.2)' : msg.type === 'question' ? 'rgba(59,130,246,0.2)' : 'var(--accent-bg)' }}>
+                                  {msg.type === 'tip' ? '💡 Tip' : msg.type === 'question' ? '❓ Question' : msg.type === 'milestone' ? '🎉 Milestone' : msg.type === 'share' ? '📢 Share' : msg.type}
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))
@@ -1711,19 +1758,42 @@ const Dashboard = () => {
                               enterChatRoom(room);
                             }}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                            <div className="flex items-start gap-3">
+                              <div className="w-12 h-12 rounded-lg flex items-center justify-center text-2xl relative" style={{ backgroundColor: 'var(--accent-bg)' }}>
                                 {room.icon}
+                                {/* Live indicator */}
+                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-[var(--card-bg)]" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium text-sm group-hover:text-[#ff3355] transition-colors truncate">{room.name}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-medium text-sm group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
                                   {room.isPremium && <Crown className="w-3 h-3 text-yellow-500 shrink-0" />}
-                                  {room.fitScore && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-500 shrink-0">{room.fitScore}%</span>}
+                                  {room.fitScore && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-500 shrink-0">{room.fitScore}% match</span>}
                                 </div>
-                                <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                
+                                {/* Live activity indicators */}
+                                <div className="flex items-center gap-3 mt-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                  <span className="flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {room.activeNow || room.members} online
+                                  </span>
+                                  {room.messageCount > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <MessageSquare className="w-3 h-3" />
+                                      {room.messageCount} messages
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Last message preview */}
+                                {room.lastMessage && (
+                                  <p className="text-xs mt-1.5 py-1.5 px-2 rounded truncate" style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--text-secondary)' }}>
+                                    💬 {room.lastMessage}
+                                  </p>
+                                )}
                               </div>
-                              <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-secondary)' }} />
+                              <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1" style={{ color: 'var(--text-secondary)' }} />
                             </div>
                           </Card>
                         ))}
