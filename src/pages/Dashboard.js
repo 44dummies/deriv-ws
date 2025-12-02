@@ -319,14 +319,25 @@ const Dashboard = () => {
         const authResponse = await websocketService.authorize(tokens.token);
         if (authResponse.error) { TokenService.clearTokens(); navigate('/'); return; }
         if (authResponse.authorize) {
-          setUserInfo({
+          const userData = {
             balance: authResponse.authorize.balance,
             currency: authResponse.authorize.currency,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
             loginid: authResponse.authorize.loginid,
             is_virtual: authResponse.authorize.is_virtual === 1,
-          });
+          };
+          setUserInfo(userData);
+          
+          // Create/update user profile in Supabase (required for foreign key constraints)
+          if (supabaseService.isSupabaseConfigured()) {
+            const { error } = await supabaseService.upsertUserProfile(userData);
+            if (error) {
+              console.error('Failed to create Supabase profile:', error);
+            } else {
+              console.log('Supabase profile created/updated');
+            }
+          }
         }
         loadFromStorage();
         setIsLoading(false);
@@ -360,6 +371,9 @@ const Dashboard = () => {
 
         // Sync trades to Supabase if configured
         if (useSupabase && userInfo?.loginid) {
+          // Ensure profile exists before syncing trades (foreign key requirement)
+          await supabaseService.upsertUserProfile(userInfo);
+          
           const { error } = await supabaseService.syncTradeHistory(userInfo.loginid, trades);
           if (error) {
             console.error('Supabase sync error:', error);

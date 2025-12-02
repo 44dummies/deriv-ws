@@ -290,23 +290,3 @@ CREATE POLICY "Users can update session logs" ON session_logs
 -- Index for faster queries
 CREATE INDEX IF NOT EXISTS idx_session_logs_login ON session_logs(deriv_login_id);
 CREATE INDEX IF NOT EXISTS idx_session_logs_time ON session_logs(login_time DESC);
-
--- ============================================
--- DONE!
--- ============================================
--- After running this SQL:
--- 1. Get your Supabase URL and Anon Key from Settings > API
--- 2. Add them to your .env file:
---    REACT_APP_SUPABASE_URL=your_supabase_url
---    REACT_APP_SUPABASE_ANON_KEY=your_anon_key
--- 3. Restart your development server
---
--- TABLE SUMMARY:
--- - profiles: User account info (linked to Deriv login)
--- - journal_entries: Trading journal entries
--- - friends: Friend list
--- - trades: Synced trade history
--- - user_settings: App preferences
--- - analytics_cache: Computed stats
--- - digit_stats: Digit analysis data
--- - session_logs: Login/logout tracking
