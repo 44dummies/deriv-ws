@@ -5,7 +5,7 @@ import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
   LogOut, Sun, Moon, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
-  Share2, Wallet, ExternalLink, Shield
+  Wallet, ExternalLink, Shield
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
@@ -66,12 +66,25 @@ const SettingRow = ({ icon, label, value, action }) => (
   </div>
 );
 
-const mockCommunityPosts = [
-  { id: '1', user: 'TraderPro', avatar: '🎯', content: 'Just hit 75% win rate this week! Volatility indices are on fire 🔥', likes: 42, comments: 8, time: '2h ago' },
-  { id: '2', user: 'CryptoKing', avatar: '👑', content: 'New strategy for BOOM/CRASH working great. Will share analysis soon.', likes: 28, comments: 15, time: '4h ago' },
-  { id: '3', user: 'RiskMaster', avatar: '🛡️', content: 'Remember: Never risk more than 2% per trade. Consistency > big wins', likes: 156, comments: 23, time: '6h ago' },
-  { id: '4', user: 'DigiAnalyst', avatar: '📊', content: 'Digit 7 showing unusual patterns on R_100. Anyone else noticing this?', likes: 19, comments: 31, time: '8h ago' },
-];
+// Deriv Community Forum API (Discourse)
+const DERIV_COMMUNITY_URL = 'https://community.deriv.com';
+
+// Helper to calculate time ago
+const timeAgo = (date) => {
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+  const intervals = [
+    { label: 'y', seconds: 31536000 },
+    { label: 'mo', seconds: 2592000 },
+    { label: 'd', seconds: 86400 },
+    { label: 'h', seconds: 3600 },
+    { label: 'm', seconds: 60 },
+  ];
+  for (const interval of intervals) {
+    const count = Math.floor(seconds / interval.seconds);
+    if (count >= 1) return `${count}${interval.label} ago`;
+  }
+  return 'just now';
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -94,6 +107,9 @@ const Dashboard = () => {
   const [newJournalMood, setNewJournalMood] = useState('neutral');
   const [newFriendName, setNewFriendName] = useState('');
   const [newFriendId, setNewFriendId] = useState('');
+  const [communityPosts, setCommunityPosts] = useState([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [communityError, setCommunityError] = useState(null);
 
   const loadFromStorage = useCallback(() => {
     const savedJournal = localStorage.getItem(STORAGE_KEYS.JOURNAL);
@@ -240,6 +256,50 @@ const Dashboard = () => {
 
   const toggleTheme = () => { setIsDarkMode(!isDarkMode); localStorage.setItem(STORAGE_KEYS.THEME, !isDarkMode ? 'dark' : 'light'); };
   const handleLogout = () => { TokenService.clearTokens(); websocketService.disconnect(); navigate('/'); };
+
+  // Fetch posts from Deriv Community Forum
+  const fetchCommunityPosts = useCallback(async () => {
+    setCommunityLoading(true);
+    setCommunityError(null);
+    try {
+      // Fetch latest topics from Deriv Community (Discourse API)
+      const response = await fetch(`${DERIV_COMMUNITY_URL}/latest.json`);
+      if (!response.ok) throw new Error('Failed to fetch community posts');
+      const data = await response.json();
+      
+      const posts = data.topic_list?.topics?.slice(0, 15).map(topic => ({
+        id: topic.id.toString(),
+        title: topic.title,
+        user: topic.last_poster_username || 'Anonymous',
+        avatar: topic.last_poster_username?.[0]?.toUpperCase() || '?',
+        content: topic.excerpt || topic.title,
+        likes: topic.like_count || 0,
+        comments: topic.posts_count - 1 || 0,
+        views: topic.views || 0,
+        time: timeAgo(topic.last_posted_at || topic.created_at),
+        url: `${DERIV_COMMUNITY_URL}/t/${topic.slug}/${topic.id}`,
+        category: topic.category_id,
+        pinned: topic.pinned || false,
+      })) || [];
+      
+      setCommunityPosts(posts);
+    } catch (err) {
+      console.error('Community fetch error:', err);
+      setCommunityError('Unable to load community posts. The forum may be unavailable.');
+      // Set fallback posts
+      setCommunityPosts([
+        { id: '1', title: 'Welcome to Deriv Community', user: 'Deriv', avatar: 'D', content: 'Join discussions about trading strategies, API development, and more!', likes: 100, comments: 50, views: 1000, time: 'pinned', url: DERIV_COMMUNITY_URL, pinned: true },
+      ]);
+    }
+    setCommunityLoading(false);
+  }, []);
+
+  // Load community posts when tab is active
+  useEffect(() => {
+    if (activeTab === 'community' && communityPosts.length === 0) {
+      fetchCommunityPosts();
+    }
+  }, [activeTab, communityPosts.length, fetchCommunityPosts]);
 
   const tabs = [
     { id: 'sync', icon: <RefreshCw className="w-5 h-5" />, label: 'Sync Data' },
@@ -476,25 +536,78 @@ const Dashboard = () => {
           {/* Community Tab */}
           {activeTab === 'community' && (
             <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Community</h1><p className="text-gray-400">Connect with other NexaTrade traders</p></div>
-              <div className="space-y-4">
-                {mockCommunityPosts.map(post => (
-                  <Card key={post.id}>
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl">{post.avatar}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2"><span className="font-medium">{post.user}</span><span className="text-sm text-gray-500">{post.time}</span></div>
-                        <p className="text-gray-300 mb-4">{post.content}</p>
-                        <div className="flex items-center gap-6 text-sm text-gray-500">
-                          <button className="flex items-center gap-2 hover:text-[#ff5f6d] transition-colors"><Heart className="w-4 h-4" /> {post.likes}</button>
-                          <button className="flex items-center gap-2 hover:text-blue-400 transition-colors"><MessageCircle className="w-4 h-4" /> {post.comments}</button>
-                          <button className="flex items-center gap-2 hover:text-green-400 transition-colors"><Share2 className="w-4 h-4" /> Share</button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold">Deriv Community</h1>
+                  <p className="text-gray-400">Latest discussions from community.deriv.com</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={fetchCommunityPosts} disabled={communityLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm">
+                    <RefreshCw className={`w-4 h-4 ${communityLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                  <a href={DERIV_COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity">
+                    <ExternalLink className="w-4 h-4" />
+                    Visit Forum
+                  </a>
+                </div>
+              </div>
+              
+              {communityError && (
+                <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm">
+                  {communityError}
+                </div>
+              )}
+
+              {communityLoading ? (
+                <div className="space-y-4">
+                  {[1,2,3].map(i => (
+                    <Card key={i} className="animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-white/10" />
+                        <div className="flex-1 space-y-3">
+                          <div className="h-4 bg-white/10 rounded w-1/4" />
+                          <div className="h-4 bg-white/10 rounded w-3/4" />
+                          <div className="h-4 bg-white/10 rounded w-1/2" />
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : communityPosts.length === 0 ? (
+                <Card>
+                  <EmptyState icon={<Users className="w-8 h-8" />} title="No posts available" description="Unable to load community posts. Try refreshing." />
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {communityPosts.map(post => (
+                    <a key={post.id} href={post.url} target="_blank" rel="noopener noreferrer" className="block">
+                      <Card className="hover:border-white/20 hover:bg-white/[0.08] transition-all cursor-pointer">
+                        <div className="flex items-start gap-4">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold ${post.pinned ? 'bg-gradient-to-br from-[#ff3355] to-[#ff8042] text-white' : 'bg-white/10'}`}>
+                            {post.avatar}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-medium">{post.user}</span>
+                              {post.pinned && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff5f6d]">Pinned</span>}
+                              <span className="text-sm text-gray-500">{post.time}</span>
+                            </div>
+                            <h3 className="font-medium text-white mb-2 line-clamp-1">{post.title}</h3>
+                            <p className="text-gray-400 text-sm mb-3 line-clamp-2">{post.content}</p>
+                            <div className="flex items-center gap-6 text-sm text-gray-500">
+                              <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" /> {post.likes}</span>
+                              <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {post.comments} replies</span>
+                              <span className="flex items-center gap-1.5"><Activity className="w-4 h-4" /> {post.views} views</span>
+                            </div>
+                          </div>
+                          <ExternalLink className="w-5 h-5 text-gray-500 shrink-0" />
+                        </div>
+                      </Card>
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
