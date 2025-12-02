@@ -1,7 +1,14 @@
 /**
  * NexaTrade Chatroom & Community Service
  * Handles chatrooms, community feed, auto-assignment, and moderation
+ * All data is stored locally - no demo/sample data
  */
+
+const STORAGE_KEYS = {
+  MESSAGES: 'nexatrade_chat_messages',
+  COMMUNITY_POSTS: 'nexatrade_community_posts',
+  USER_REPUTATION: 'nexatrade_user_reputation'
+};
 
 // Chatroom Types
 const ROOM_TYPES = {
@@ -57,48 +64,89 @@ class ChatroomService {
   constructor() {
     this.rooms = this.loadRooms();
     this.userRooms = new Map(); // userId -> [roomIds]
-    this.messages = new Map(); // roomId -> [messages]
-    this.userReputation = new Map(); // userId -> score
-    this.initializeSampleMessages();
+    this.messages = this.loadMessagesFromStorage(); // roomId -> [messages]
+    this.userReputation = this.loadReputationFromStorage(); // userId -> score
+    this.communityPosts = this.loadCommunityPostsFromStorage();
+  }
+
+  // Load messages from localStorage
+  loadMessagesFromStorage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.MESSAGES);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (e) {
+      console.error('Failed to load messages from storage:', e);
+    }
+    return new Map();
+  }
+
+  // Save messages to localStorage
+  saveMessagesToStorage() {
+    try {
+      const obj = Object.fromEntries(this.messages);
+      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(obj));
+    } catch (e) {
+      console.error('Failed to save messages to storage:', e);
+    }
+  }
+
+  // Load community posts from localStorage
+  loadCommunityPostsFromStorage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.COMMUNITY_POSTS);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Failed to load community posts from storage:', e);
+    }
+    return [];
+  }
+
+  // Save community posts to localStorage
+  saveCommunityPostsToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.COMMUNITY_POSTS, JSON.stringify(this.communityPosts));
+    } catch (e) {
+      console.error('Failed to save community posts to storage:', e);
+    }
+  }
+
+  // Load reputation from localStorage
+  loadReputationFromStorage() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.USER_REPUTATION);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return new Map(Object.entries(parsed));
+      }
+    } catch (e) {
+      console.error('Failed to load reputation from storage:', e);
+    }
+    return new Map();
+  }
+
+  // Save reputation to localStorage
+  saveReputationToStorage() {
+    try {
+      const obj = Object.fromEntries(this.userReputation);
+      localStorage.setItem(STORAGE_KEYS.USER_REPUTATION, JSON.stringify(obj));
+    } catch (e) {
+      console.error('Failed to save reputation to storage:', e);
+    }
   }
 
   loadRooms() {
     const allRooms = {};
     Object.entries(DEFAULT_ROOMS).forEach(([category, rooms]) => {
       rooms.forEach(room => {
-        allRooms[room.id] = { ...room, members: [], messageCount: 0, activeNow: Math.floor(Math.random() * 50) + 10 };
+        allRooms[room.id] = { ...room, members: [], messageCount: 0, activeNow: 0 };
       });
     });
     return allRooms;
-  }
-
-  initializeSampleMessages() {
-    // Sample messages for AI coaching room
-    this.messages.set('ai-coaching', [
-      { id: '1', userName: 'NexaTrade AI', content: 'Welcome to AI Coaching! I analyze your trading patterns and provide personalized guidance. Ask me anything about your trading behavior.', time: 'Pinned', isAI: true, reactions: { likes: 45 } },
-      { id: '2', userName: 'TraderMike', avatar: 'T', content: 'Hey AI, I keep losing on Volatility 75. What am I doing wrong?', time: '2h ago', isAI: false, reactions: { likes: 3 } },
-      { id: '3', userName: 'NexaTrade AI', content: 'Based on typical patterns, V75 losses often come from: 1) Trading during high volatility spikes without proper stop loss, 2) Over-leveraging with multipliers, 3) Revenge trading after losses. Try setting strict 2% risk limits per trade.', time: '2h ago', isAI: true, reactions: { likes: 12 } },
-    ]);
-    
-    // Sample messages for general room
-    this.messages.set('general', [
-      { id: '1', userName: 'CommunityBot', content: '👋 Welcome to General Discussion! Please be respectful and share your trading experiences.', time: 'Pinned', isAI: true, reactions: { likes: 89 } },
-      { id: '2', userName: 'EarlyBird', avatar: 'E', content: 'Good morning traders! Ready for another profitable day?', time: '1h ago', isAI: false, reactions: { likes: 15 } },
-      { id: '3', userName: 'NightOwl', avatar: 'N', content: 'Asian session is looking volatile today. Be careful out there!', time: '45m ago', isAI: false, reactions: { likes: 8 } },
-    ]);
-    
-    // Sample messages for FOMO rehab
-    this.messages.set('fomo-rehab', [
-      { id: '1', userName: 'NexaTrade AI', content: 'This is a safe space to discuss FOMO (Fear Of Missing Out) trading. Remember: Missing a trade is better than taking a bad one!', time: 'Pinned', isAI: true, reactions: { likes: 67 } },
-      { id: '2', userName: 'RecoveringFOMO', avatar: 'R', content: 'Day 5 without chasing trades! The urge is real but staying strong 💪', time: '3h ago', isAI: false, reactions: { likes: 23 } },
-      { id: '3', userName: 'ZenTrader', avatar: 'Z', content: 'Proud of you! I used to chase every spike. Now I wait for MY setups only.', time: '2h ago', isAI: false, reactions: { likes: 11 } },
-    ]);
-    
-    // Sample messages for discipline room
-    this.messages.set('discipline', [
-      { id: '1', userName: 'NexaTrade AI', content: 'Trading discipline is the foundation of success. Share your discipline tips and hold each other accountable!', time: 'Pinned', isAI: true, reactions: { likes: 78 } },
-      { id: '2', userName: 'DisciplineCoach', avatar: 'D', content: 'Rule #1: Always set your stop loss BEFORE entering a trade. No exceptions!', time: '4h ago', isAI: false, reactions: { likes: 34 } },
-    ]);
   }
 
   // ========== AUTO-ASSIGNMENT LOGIC ==========
@@ -323,10 +371,11 @@ class ChatroomService {
       roomId,
       userId,
       userName,
-      userAvatar: userAvatar || userName?.[0]?.toUpperCase() || '?',
+      avatar: userAvatar || userName?.[0]?.toUpperCase() || '?',
       content: moderationResult.cleanContent,
+      time: 'Just now',
       timestamp: new Date().toISOString(),
-      reactions: {},
+      reactions: { likes: 0 },
       isAI: false
     };
 
@@ -334,11 +383,12 @@ class ChatroomService {
       this.messages.set(roomId, []);
     }
     this.messages.get(roomId).push(message);
+    this.saveMessagesToStorage();
 
     // Update user reputation
     this.updateReputation(userId, 1);
 
-    return { success: true, message };
+    return message; // Return message directly for easier use
   }
 
   /**
@@ -427,6 +477,7 @@ class ChatroomService {
   updateReputation(userId, delta) {
     const current = this.userReputation.get(userId) || 50;
     this.userReputation.set(userId, Math.max(0, Math.min(100, current + delta)));
+    this.saveReputationToStorage();
   }
 
   /**
@@ -615,77 +666,7 @@ class ChatroomService {
   // ========== COMMUNITY FEED ==========
 
   /**
-   * Community feed posts storage with sample data
-   */
-  communityPosts = [
-    { 
-      id: '1', 
-      userId: 'user_1',
-      userName: 'TraderJoe', 
-      avatar: '🎯', 
-      content: 'Just hit a 10-trade winning streak on Volatility 75! The key is patience and proper risk management. Never risk more than 2% per trade.', 
-      time: '2 hours ago', 
-      likes: 45, 
-      comments: 12, 
-      views: 234,
-      tags: ['winning-streak', 'volatility-75', 'risk-management'],
-      badge: 'Pro Trader'
-    },
-    { 
-      id: '2', 
-      userId: 'user_2',
-      userName: 'CryptoQueen', 
-      avatar: '👑', 
-      content: 'Sharing my multiplier strategy for beginners: Start with 10x multiplier, set stop loss at 5%, take profit at 20%. Simple but effective!', 
-      time: '4 hours ago', 
-      likes: 89, 
-      comments: 34, 
-      views: 567,
-      tags: ['multipliers', 'beginner-friendly', 'strategy'],
-      badge: 'Strategy Master'
-    },
-    { 
-      id: '3', 
-      userId: 'user_3',
-      userName: 'DisciplinedTrader', 
-      avatar: '🧘', 
-      content: 'Day 30 of no revenge trading! The FOMO Rehab room really helped me overcome my worst habit. Thank you to everyone for the support!', 
-      time: '6 hours ago', 
-      likes: 123, 
-      comments: 45, 
-      views: 890,
-      tags: ['discipline', 'milestone', 'recovery'],
-      badge: 'Recovery Champion'
-    },
-    { 
-      id: '4', 
-      userId: 'user_4',
-      userName: 'NewbieTrader', 
-      avatar: '🌱', 
-      content: 'First profitable week ever! Small gains but consistent. Learning a lot from the beginner room. What was your first winning week like?', 
-      time: '8 hours ago', 
-      likes: 67, 
-      comments: 28, 
-      views: 345,
-      tags: ['milestone', 'beginner', 'first-win']
-    },
-    { 
-      id: '5', 
-      userId: 'user_5',
-      userName: 'AIEnthusiast', 
-      avatar: '🤖', 
-      content: 'The AI coaching room just helped me identify my overtrading pattern. It suggested I limit myself to 5 trades per session. Game changer!', 
-      time: '12 hours ago', 
-      likes: 56, 
-      comments: 19, 
-      views: 278,
-      tags: ['ai-coaching', 'overtrading', 'improvement'],
-      badge: 'AI Pioneer'
-    }
-  ];
-
-  /**
-   * Get community posts (alias for getCommunityFeed with sample data)
+   * Get community posts from localStorage
    */
   getCommunityPosts(limit = 20) {
     return this.communityPosts.slice(0, limit);
@@ -694,7 +675,7 @@ class ChatroomService {
   /**
    * Create a community post
    */
-  createPost(userId, userName, userAvatar, content, type = 'text', attachments = []) {
+  createPost(userId, userName, userAvatar, content, type = 'text', tags = []) {
     const moderationResult = this.moderateMessage(content);
     if (!moderationResult.allowed) {
       return { success: false, error: moderationResult.reason };
@@ -704,18 +685,19 @@ class ChatroomService {
       id: Date.now().toString(),
       userId,
       userName,
-      userAvatar: userAvatar || userName?.[0]?.toUpperCase() || '?',
+      avatar: userAvatar || userName?.[0]?.toUpperCase() || '?',
       content: moderationResult.cleanContent,
-      type, // text, trade-screenshot, strategy, victory, loss
-      attachments,
+      type, // text, trade-share, strategy, milestone
+      tags,
+      time: 'Just now',
       timestamp: new Date().toISOString(),
-      likes: [],
-      comments: [],
-      helpfulVotes: 0,
-      isVerified: false
+      likes: 0,
+      comments: 0,
+      views: 0
     };
 
     this.communityPosts.unshift(post);
+    this.saveCommunityPostsToStorage();
     this.updateReputation(userId, 2);
 
     return { success: true, post };

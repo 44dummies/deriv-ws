@@ -151,6 +151,8 @@ const Dashboard = () => {
   const [userReputation, setUserReputation] = useState({ score: 0, level: 'Newbie', badges: [] });
   const [chatroomLoading, setChatroomLoading] = useState(false);
   const [chatroomSubTab, setChatroomSubTab] = useState('my-rooms');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [newPostTags, setNewPostTags] = useState([]);
   
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
@@ -774,9 +776,28 @@ const Dashboard = () => {
     setChatMessages([]);
   }, []);
 
+  const createCommunityPost = useCallback(() => {
+    if (!newPostContent.trim()) return;
+    
+    const userId = userInfo?.loginid || 'demo_user';
+    const userName = userInfo?.fullname || 'Trader';
+    const userAvatar = userName?.[0]?.toUpperCase() || '?';
+    
+    const result = chatroomService.createPost(userId, userName, userAvatar, newPostContent, 'text', newPostTags);
+    
+    if (result.success) {
+      setCommunityFeed(chatroomService.getCommunityPosts());
+      setNewPostContent('');
+      setNewPostTags([]);
+      toast.success('Post shared with the community!');
+    } else {
+      toast.error(result.error || 'Failed to create post');
+    }
+  }, [newPostContent, newPostTags, userInfo]);
+
   // Load chatrooms when tab is active
   useEffect(() => {
-    if (activeTab === 'chatrooms' && assignedRooms.length === 0) {
+    if (activeTab === 'community' && assignedRooms.length === 0) {
       initializeChatrooms();
     }
   }, [activeTab, assignedRooms.length, initializeChatrooms]);
@@ -793,7 +814,6 @@ const Dashboard = () => {
     { id: 'analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics' },
     { id: 'digit', icon: <Hash className="w-5 h-5" />, label: 'Digit Analyzer' },
     { id: 'timeline', icon: <Clock className="w-5 h-5" />, label: 'Trade Timeline' },
-    { id: 'chatrooms', icon: <MessageSquare className="w-5 h-5" />, label: 'Chatrooms' },
     { id: 'community', icon: <Users className="w-5 h-5" />, label: 'Community' },
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
     { id: 'friends', icon: <UserPlus className="w-5 h-5" />, label: 'Friends' },
@@ -1537,17 +1557,17 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Chatrooms Tab */}
-          {activeTab === 'chatrooms' && (
+          {/* Community Tab - Combined Chatrooms & Community */}
+          {activeTab === 'community' && (
             <div className="space-y-6">
               {/* Header with User Rep */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
-                    <MessageSquare className="w-6 h-6 text-[#ff3355]" />
-                    Trading Chatrooms
+                    <Users className="w-6 h-6 text-[#ff3355]" />
+                    NexaTrade Community
                   </h1>
-                  <p style={{ color: 'var(--text-secondary)' }}>Auto-assigned rooms based on your trading behavior</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Connect with traders, join chatrooms, share insights</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
@@ -1649,11 +1669,12 @@ const Dashboard = () => {
                   <div className="flex items-center gap-2 overflow-x-auto pb-2">
                     {[
                       { id: 'my-rooms', label: 'My Rooms', icon: <Star className="w-4 h-4" /> },
+                      { id: 'feed', label: 'Posts', icon: <Activity className="w-4 h-4" /> },
                       { id: 'behavior', label: 'Behavior', icon: <Brain className="w-4 h-4" /> },
                       { id: 'strategy', label: 'Strategy', icon: <Target className="w-4 h-4" /> },
                       { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
-                      { id: 'premium', label: 'Premium AI', icon: <Crown className="w-4 h-4" /> },
-                      { id: 'feed', label: 'Global Feed', icon: <Activity className="w-4 h-4" /> },
+                      { id: 'premium', label: 'AI Coach', icon: <Crown className="w-4 h-4" /> },
+                      { id: 'deriv-forum', label: 'Deriv Forum', icon: <ExternalLink className="w-4 h-4" /> },
                     ].map(tab => (
                       <button
                         key={tab.id}
@@ -1892,9 +1913,48 @@ const Dashboard = () => {
                           <div className="flex items-center justify-between">
                             <h2 className="text-lg font-bold flex items-center gap-2">
                               <Activity className="w-5 h-5 text-[#ff3355]" />
-                              Community Feed
+                              Community Posts
                             </h2>
                           </div>
+                          
+                          {/* Create Post */}
+                          <Card>
+                            <div className="space-y-3">
+                              <textarea
+                                value={newPostContent}
+                                onChange={(e) => setNewPostContent(e.target.value)}
+                                placeholder="Share your trading insights, strategies, or milestones..."
+                                rows={3}
+                                className="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-[#ff3355]/50 outline-none transition-all resize-none"
+                                style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
+                              />
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {['strategy', 'milestone', 'question', 'tip'].map(tag => (
+                                    <button
+                                      key={tag}
+                                      onClick={() => setNewPostTags(prev => 
+                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                      )}
+                                      className={`text-xs px-2 py-1 rounded-full transition-all ${newPostTags.includes(tag) ? 'bg-[#ff3355] text-white' : ''}`}
+                                      style={{ backgroundColor: newPostTags.includes(tag) ? undefined : 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
+                                    >
+                                      #{tag}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={createCommunityPost}
+                                  disabled={!newPostContent.trim()}
+                                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+                                >
+                                  <Send className="w-4 h-4" />
+                                  Post
+                                </button>
+                              </div>
+                            </div>
+                          </Card>
+
                           {communityFeed.length === 0 ? (
                             <Card>
                               <EmptyState
@@ -1948,86 +2008,69 @@ const Dashboard = () => {
                           )}
                         </div>
                       )}
+
+                      {/* Deriv Forum */}
+                      {chatroomSubTab === 'deriv-forum' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <ExternalLink className="w-5 h-5 text-[#ff3355]" />
+                              Deriv Community Forum
+                            </h2>
+                            <a href={DERIV_COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity">
+                              <ExternalLink className="w-4 h-4" />
+                              Open Forum
+                            </a>
+                          </div>
+                          
+                          {communityLoading ? (
+                            <div className="space-y-4">
+                              {[1,2,3].map(i => (
+                                <Card key={i} className="animate-pulse">
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }} />
+                                    <div className="flex-1 space-y-3">
+                                      <div className="h-4 rounded w-1/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
+                                      <div className="h-4 rounded w-3/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              {communityPosts.map(post => (
+                                <a key={post.id} href={post.url} target="_blank" rel="noopener noreferrer" className="block">
+                                  <Card className="hover:border-[#ff3355]/50 transition-all">
+                                    <div className="flex items-start gap-4">
+                                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${post.pinned ? 'bg-gradient-to-br from-[#ff3355] to-[#ff8042] text-white' : ''}`} style={!post.pinned ? { backgroundColor: 'var(--accent-bg)' } : {}}>
+                                        {post.avatar}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                          <span className="font-medium">{post.user}</span>
+                                          {post.pinned && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff5f6d]">Pinned</span>}
+                                          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
+                                        </div>
+                                        <h3 className="font-medium mb-2 line-clamp-1">{post.title}</h3>
+                                        <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
+                                        <div className="flex items-center gap-4 sm:gap-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                                          <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" /> {post.likes}</span>
+                                          <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {post.comments}</span>
+                                          <span className="hidden sm:flex items-center gap-1.5"><Activity className="w-4 h-4" /> {post.views}</span>
+                                        </div>
+                                      </div>
+                                      <ExternalLink className="w-5 h-5 shrink-0" style={{ color: 'var(--text-secondary)' }} />
+                                    </div>
+                                  </Card>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Community Tab */}
-          {activeTab === 'community' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold">Deriv Community</h1>
-                  <p style={{ color: 'var(--text-secondary)' }}>Latest discussions from community.deriv.com</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={fetchCommunityPosts} disabled={communityLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}>
-                    <RefreshCw className={`w-4 h-4 ${communityLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-                  </button>
-                  <a href={DERIV_COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity">
-                    <ExternalLink className="w-4 h-4" />
-                    Visit Forum
-                  </a>
-                </div>
-              </div>
-              
-              {communityError && (
-                <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 text-sm">
-                  {communityError}
-                </div>
-              )}
-
-              {communityLoading ? (
-                <div className="space-y-4">
-                  {[1,2,3].map(i => (
-                    <Card key={i} className="animate-pulse">
-                      <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                        <div className="flex-1 space-y-3">
-                          <div className="h-4 rounded w-1/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                          <div className="h-4 rounded w-3/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                          <div className="h-4 rounded w-1/2" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              ) : communityPosts.length === 0 ? (
-                <Card>
-                  <EmptyState icon={<Users className="w-8 h-8" />} title="No posts available" description="Unable to load community posts. Try refreshing." />
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  {communityPosts.map(post => (
-                    <a key={post.id} href={post.url} target="_blank" rel="noopener noreferrer" className="block">
-                      <Card>
-                        <div className="flex items-start gap-4">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${post.pinned ? 'bg-gradient-to-br from-[#ff3355] to-[#ff8042] text-white' : ''}`} style={!post.pinned ? { backgroundColor: 'var(--accent-bg)' } : {}}>
-                            {post.avatar}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="font-medium">{post.user}</span>
-                              {post.pinned && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff5f6d]">Pinned</span>}
-                              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
-                            </div>
-                            <h3 className="font-medium mb-2 line-clamp-1">{post.title}</h3>
-                            <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
-                            <div className="flex items-center gap-4 sm:gap-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                              <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" /> {post.likes}</span>
-                              <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {post.comments}</span>
-                              <span className="hidden sm:flex items-center gap-1.5"><Activity className="w-4 h-4" /> {post.views}</span>
-                            </div>
-                          </div>
-                          <ExternalLink className="w-5 h-5 shrink-0" style={{ color: 'var(--text-secondary)' }} />
-                        </div>
-                      </Card>
-                    </a>
-                  ))}
                 </div>
               )}
             </div>
