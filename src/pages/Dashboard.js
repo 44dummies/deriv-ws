@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
   LogOut, Sun, Moon, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
-  Wallet, ExternalLink, Shield
+  Wallet, ExternalLink, Shield, Menu, PanelLeftClose, Cloud, CloudOff, Database
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
+import supabaseService from '../services/supabaseService';
 
 const STORAGE_KEYS = {
   JOURNAL: 'nexatrade_journal',
@@ -110,12 +111,100 @@ const Dashboard = () => {
   const [communityPosts, setCommunityPosts] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityError, setCommunityError] = useState(null);
+  const [useSupabase, setUseSupabase] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState('checking'); // 'checking', 'connected', 'offline'
+  
+  const sidebarRef = useRef(null);
 
-  const loadFromStorage = useCallback(() => {
+  // Check if Supabase is configured on mount
+  useEffect(() => {
+    const checkSupabase = () => {
+      const isConfigured = supabaseService.isSupabaseConfigured();
+      setUseSupabase(isConfigured);
+      setSupabaseStatus(isConfigured ? 'connected' : 'offline');
+    };
+    checkSupabase();
+  }, []);
+
+  // Close sidebar when clicking outside (only when expanded on mobile/tablet)
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && !sidebarCollapsed) {
+        // Check if the click target is NOT the toggle button
+        const isToggleButton = event.target.closest('[data-sidebar-toggle]');
+        if (!isToggleButton) {
+          setSidebarCollapsed(true);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sidebarCollapsed]);
+
+  // Load data from Supabase or localStorage
+  const loadFromStorage = useCallback(async () => {
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
+    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
+
+    // If Supabase is configured and we have userInfo, load from Supabase
+    if (useSupabase && userInfo?.loginid) {
+      try {
+        // Load journal entries from Supabase
+        const { data: journalData } = await supabaseService.getJournalEntries(userInfo.loginid);
+        if (journalData) {
+          setJournalEntries(journalData.map(e => ({
+            id: e.id,
+            date: e.created_at,
+            title: e.title,
+            content: e.content,
+            mood: e.mood,
+            tags: e.tags || []
+          })));
+        }
+
+        // Load friends from Supabase
+        const { data: friendsData } = await supabaseService.getFriends(userInfo.loginid);
+        if (friendsData) {
+          setFriends(friendsData.map(f => ({
+            id: f.id,
+            name: f.friend_name,
+            loginid: f.friend_login_id,
+            winRate: Math.random() * 40 + 50,
+            status: Math.random() > 0.5 ? 'online' : 'offline',
+            addedAt: f.created_at
+          })));
+        }
+
+        // Load trades from Supabase
+        const { data: tradesData } = await supabaseService.getTradeHistory(userInfo.loginid);
+        if (tradesData && tradesData.length > 0) {
+          const trades = tradesData.map(t => ({
+            id: t.id,
+            contract_id: t.contract_id,
+            symbol: t.symbol,
+            buy_price: parseFloat(t.buy_price),
+            sell_price: parseFloat(t.sell_price),
+            profit: parseFloat(t.profit),
+            purchase_time: new Date(t.purchase_time).getTime() / 1000,
+            sell_time: new Date(t.sell_time).getTime() / 1000,
+            shortcode: t.shortcode
+          }));
+          setTradeHistory(trades);
+          calculateAnalytics(trades);
+          calculateDigitStats(trades);
+        }
+        return;
+      } catch (err) {
+        console.error('Supabase load error:', err);
+        // Fall through to localStorage
+      }
+    }
+
+    // Fallback to localStorage
     const savedJournal = localStorage.getItem(STORAGE_KEYS.JOURNAL);
     const savedFriends = localStorage.getItem(STORAGE_KEYS.FRIENDS);
     const savedTrades = localStorage.getItem(STORAGE_KEYS.TRADES);
-    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
     if (savedJournal) setJournalEntries(JSON.parse(savedJournal));
     if (savedFriends) setFriends(JSON.parse(savedFriends));
     if (savedTrades) {
@@ -124,8 +213,7 @@ const Dashboard = () => {
       calculateAnalytics(trades);
       calculateDigitStats(trades);
     }
-    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
-  }, []);
+  }, [useSupabase, userInfo]);
 
   const saveToStorage = useCallback((key, data) => {
     localStorage.setItem(key, JSON.stringify(data));
@@ -214,15 +302,46 @@ const Dashboard = () => {
         saveToStorage(STORAGE_KEYS.TRADES, trades);
         calculateAnalytics(trades);
         calculateDigitStats(trades);
+
+        // Sync trades to Supabase if configured
+        if (useSupabase && userInfo?.loginid) {
+          const { error } = await supabaseService.syncTradeHistory(userInfo.loginid, trades);
+          if (error) {
+            console.error('Supabase sync error:', error);
+            toast.success('Data synced locally (cloud sync failed)');
+            return;
+          }
+        }
       }
-      toast.success('Data synced successfully!');
+      toast.success(useSupabase ? 'Data synced to cloud!' : 'Data synced locally!');
     } catch (err) { console.error('Sync error:', err); toast.error('Failed to sync data'); }
     setSyncing(false);
   };
 
-  const addJournalEntry = () => {
+  const addJournalEntry = async () => {
     if (!newJournalTitle.trim() || !newJournalContent.trim()) { toast.error('Please fill in title and content'); return; }
-    const entry = { id: Date.now().toString(), date: new Date().toISOString(), title: newJournalTitle, content: newJournalContent, mood: newJournalMood, tags: [] };
+    
+    const entry = { 
+      id: Date.now().toString(), 
+      date: new Date().toISOString(), 
+      title: newJournalTitle, 
+      content: newJournalContent, 
+      mood: newJournalMood, 
+      tags: [] 
+    };
+
+    // Save to Supabase if configured
+    if (useSupabase && userInfo?.loginid) {
+      const { data, error } = await supabaseService.createJournalEntry(userInfo.loginid, entry);
+      if (error) {
+        console.error('Supabase error:', error);
+        toast.error('Failed to save to cloud, saved locally');
+      } else if (data) {
+        entry.id = data.id;
+        entry.date = data.created_at;
+      }
+    }
+
     const updated = [entry, ...journalEntries];
     setJournalEntries(updated);
     saveToStorage(STORAGE_KEYS.JOURNAL, updated);
@@ -230,16 +349,42 @@ const Dashboard = () => {
     toast.success('Journal entry added!');
   };
 
-  const deleteJournalEntry = (id) => {
+  const deleteJournalEntry = async (id) => {
+    // Delete from Supabase if configured
+    if (useSupabase && userInfo?.loginid) {
+      const { error } = await supabaseService.deleteJournalEntry(id, userInfo.loginid);
+      if (error) console.error('Supabase delete error:', error);
+    }
+
     const updated = journalEntries.filter(e => e.id !== id);
     setJournalEntries(updated);
     saveToStorage(STORAGE_KEYS.JOURNAL, updated);
     toast.success('Entry deleted');
   };
 
-  const addFriend = () => {
+  const addFriend = async () => {
     if (!newFriendName.trim() || !newFriendId.trim()) { toast.error('Please fill in name and login ID'); return; }
-    const friend = { id: Date.now().toString(), name: newFriendName, loginid: newFriendId, winRate: Math.random() * 40 + 50, status: Math.random() > 0.5 ? 'online' : 'offline', addedAt: new Date().toISOString() };
+    
+    const friend = { 
+      id: Date.now().toString(), 
+      name: newFriendName, 
+      loginid: newFriendId, 
+      winRate: Math.random() * 40 + 50, 
+      status: Math.random() > 0.5 ? 'online' : 'offline', 
+      addedAt: new Date().toISOString() 
+    };
+
+    // Save to Supabase if configured
+    if (useSupabase && userInfo?.loginid) {
+      const { data, error } = await supabaseService.addFriend(userInfo.loginid, friend);
+      if (error) {
+        console.error('Supabase error:', error);
+        toast.error('Failed to save to cloud, saved locally');
+      } else if (data) {
+        friend.id = data.id;
+      }
+    }
+
     const updated = [friend, ...friends];
     setFriends(updated);
     saveToStorage(STORAGE_KEYS.FRIENDS, updated);
@@ -247,7 +392,13 @@ const Dashboard = () => {
     toast.success('Friend added!');
   };
 
-  const removeFriend = (id) => {
+  const removeFriend = async (id) => {
+    // Delete from Supabase if configured
+    if (useSupabase && userInfo?.loginid) {
+      const { error } = await supabaseService.removeFriend(id, userInfo.loginid);
+      if (error) console.error('Supabase delete error:', error);
+    }
+
     const updated = friends.filter(f => f.id !== id);
     setFriends(updated);
     saveToStorage(STORAGE_KEYS.FRIENDS, updated);
@@ -334,12 +485,25 @@ const Dashboard = () => {
       </div>
 
       <div className="relative z-10 flex">
+        {/* Sidebar Overlay (for mobile) */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-20 lg:hidden" 
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} min-h-screen border-r border-white/10 bg-black/20 backdrop-blur-xl transition-all duration-300 flex flex-col`}>
+        <aside 
+          ref={sidebarRef}
+          className={`${
+            sidebarCollapsed ? 'w-0 lg:w-20' : 'w-64'
+          } fixed lg:relative z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex flex-col overflow-hidden`}
+        >
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white">N</div>
-              {!sidebarCollapsed && <span className="font-semibold text-lg">NexaTrade</span>}
+              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap">NexaTrade</span>}
             </div>
           </div>
 
@@ -379,13 +543,56 @@ const Dashboard = () => {
             </button>
           </div>
 
-          <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-[#ff3355] flex items-center justify-center text-white shadow-lg">
+          {/* Desktop toggle button */}
+          <button 
+            data-sidebar-toggle
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+            className="hidden lg:flex absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-[#ff3355] items-center justify-center text-white shadow-lg hover:scale-110 transition-transform z-40"
+          >
             {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto min-h-screen">
+        <main className={`flex-1 overflow-auto min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-0'}`}>
+          {/* Top Header Bar with Hamburger Menu (like ChatGPT) */}
+          <div className="sticky top-0 z-20 flex items-center gap-4 p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
+            <button 
+              data-sidebar-toggle
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all"
+              title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+            >
+              {sidebarCollapsed ? <Menu className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+            <div className="flex-1">
+              <h2 className="font-semibold text-lg">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Supabase Status Indicator */}
+              <div 
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                  supabaseStatus === 'connected' 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-gray-500/20 text-gray-400'
+                }`}
+                title={supabaseStatus === 'connected' ? 'Cloud sync enabled' : 'Local storage only'}
+              >
+                {supabaseStatus === 'connected' ? <Cloud className="w-3 h-3" /> : <CloudOff className="w-3 h-3" />}
+                <span className="hidden sm:inline">{supabaseStatus === 'connected' ? 'Cloud' : 'Local'}</span>
+              </div>
+              {userInfo && (
+                <>
+                  <span className={`text-xs px-2 py-1 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-400' : 'bg-green-500/20 text-green-400'}`}>
+                    {userInfo.is_virtual ? 'Demo' : 'Real'}
+                  </span>
+                  <span className="text-sm font-medium">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="p-6">
           {/* Sync Tab */}
           {activeTab === 'sync' && (
             <div className="space-y-6">
@@ -692,6 +899,32 @@ const Dashboard = () => {
                 <SettingRow icon={<DollarSign className="w-5 h-5" />} label="Currency" value={userInfo?.currency} />
               </Card>
               <Card>
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <Database className="w-5 h-5" /> Cloud Storage
+                </h3>
+                <SettingRow 
+                  icon={supabaseStatus === 'connected' ? <Cloud className="w-5 h-5 text-green-400" /> : <CloudOff className="w-5 h-5" />} 
+                  label="Supabase Status" 
+                  value={supabaseStatus === 'connected' ? 'Connected - Data syncs to cloud' : 'Not configured - Data stored locally'} 
+                  action={
+                    <span className={`text-xs px-3 py-1.5 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                      {supabaseStatus === 'connected' ? 'Active' : 'Offline'}
+                    </span>
+                  }
+                />
+                {supabaseStatus !== 'connected' && (
+                  <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <p className="text-sm text-blue-300 mb-2">To enable cloud storage:</p>
+                    <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                      <li>Create a Supabase project at supabase.com</li>
+                      <li>Run the SQL schema from <code className="text-[#ff5f6d]">supabase_schema.sql</code></li>
+                      <li>Add your credentials to <code className="text-[#ff5f6d]">.env</code> file</li>
+                      <li>Restart the application</li>
+                    </ol>
+                  </div>
+                )}
+              </Card>
+              <Card>
                 <h3 className="text-lg font-medium mb-4">Appearance</h3>
                 <SettingRow icon={isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />} label="Theme" value={isDarkMode ? 'Dark Mode' : 'Light Mode'} action={
                   <button onClick={toggleTheme} className={`w-14 h-8 rounded-full transition-colors ${isDarkMode ? 'bg-[#ff3355]' : 'bg-gray-600'}`}>
@@ -714,6 +947,7 @@ const Dashboard = () => {
               </Card>
             </div>
           )}
+          </div>
         </main>
       </div>
     </div>
