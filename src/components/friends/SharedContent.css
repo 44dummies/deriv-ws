@@ -1,0 +1,344 @@
+/* Shared Content Styles (Notes & Watchlists) */
+
+.shared-notes,
+.shared-watchlist {
+  padding: 10px 0;
+}
+
+.shared-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.shared-header h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.add-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 20px;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Empty State */
+.shared-empty,
+.shared-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #8892b0;
+}
+
+.shared-empty .empty-icon {
+  font-size: 3rem;
+  opacity: 0.5;
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* Notes List */
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.note-card:hover {
+  border-color: rgba(100, 255, 218, 0.2);
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.note-header h4 {
+  color: #fff;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.note-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.edit-btn,
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+  padding: 4px;
+}
+
+.edit-btn:hover,
+.delete-btn:hover {
+  opacity: 1;
+}
+
+.note-content {
+  color: #ccc;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  margin-bottom: 10px;
+}
+
+.note-meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Watchlist Grid */
+.watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.watchlist-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.watchlist-card:hover {
+  border-color: rgba(100, 255, 218, 0.2);
+}
+
+.watchlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.watchlist-header h4 {
+  color: #fff;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.watchlist-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.watchlist-description {
+  color: #8892b0;
+  font-size: 0.85rem;
+  margin: 0 0 12px 0;
+}
+
+.watchlist-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.asset-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(100, 255, 218, 0.1);
+  border: 1px solid rgba(100, 255, 218, 0.2);
+  border-radius: 15px;
+  color: #64ffda;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.asset-tag button {
+  background: none;
+  border: none;
+  color: #64ffda;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+.asset-tag button:hover {
+  opacity: 1;
+}
+
+.no-assets {
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.watchlist-meta {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Editor Modal */
+.editor-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.editor-content {
+  background: #1a1a2e;
+  border-radius: 16px;
+  padding: 30px;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.editor-content .close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.editor-content h3 {
+  color: #fff;
+  margin: 0 0 25px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  color: #8892b0;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #64ffda;
+}
+
+.asset-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.asset-input-row input {
+  flex: 1;
+}
+
+.add-asset-btn {
+  width: 45px;
+  background: #64ffda;
+  border: none;
+  border-radius: 8px;
+  color: #1a1a2e;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-asset-btn:hover {
+  transform: scale(1.05);
+}
+
+.asset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.save-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .watchlist-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-content {
+    padding: 20px;
+    margin: 10px;
+  }
+}

@@ -1,0 +1,92 @@
+/* Friends Page Styles */
+.friends-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 100%);
+  padding: 20px;
+}
+
+.friends-login-required {
+  max-width: 500px;
+  margin: 100px auto;
+  text-align: center;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.friends-login-required h2 {
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.friends-login-required p {
+  color: #8892b0;
+}
+
+/* Navigation */
+.friends-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.friends-nav .nav-btn {
+  padding: 12px 24px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 25px;
+  color: #8892b0;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.friends-nav .nav-btn:hover {
+  background: rgba(100, 255, 218, 0.1);
+  border-color: rgba(100, 255, 218, 0.3);
+  color: #64ffda;
+}
+
+.friends-nav .nav-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Page Content */
+.friends-page-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.leaderboard-section {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .friends-page {
+    padding: 10px;
+  }
+
+  .friends-nav {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .friends-nav .nav-btn {
+    width: 100%;
+    text-align: center;
+  }
+}

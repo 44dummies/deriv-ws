@@ -20,6 +20,7 @@ import realtimeService from '../services/realtimeService';
 import aiInsightsService from '../services/aiInsightsService';
 import realtimeSocket from '../services/realtimeSocket';
 import apiClient from '../services/apiClient';
+import { FriendsCenter, FriendsLeaderboard, UserProfile } from '../components/friends';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
@@ -2698,37 +2699,15 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Friends Tab */}
+          {/* Friends Tab - New Friends Center */}
           {activeTab === 'friends' && (
-            <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Friends</h1><p style={{ color: 'var(--text-secondary)' }}>Your trading network</p></div>
-              <Card>
-                <h3 className="text-lg font-medium mb-4">Add Friend</h3>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <input type="text" value={newFriendName} onChange={(e) => setNewFriendName(e.target.value)} placeholder="Friend's name..." className="flex-1 px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
-                  <input type="text" value={newFriendId} onChange={(e) => setNewFriendId(e.target.value)} placeholder="Deriv Login ID..." className="flex-1 px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
-                  <button onClick={addFriend} className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity text-white"><UserPlus className="w-5 h-5" /> Add</button>
-                </div>
-              </Card>
-              {friends.length === 0 ? <Card><EmptyState icon={<Users className="w-8 h-8" />} title="No friends yet" description="Add friends to see their trading stats" /></Card> : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {friends.map(friend => (
-                    <Card key={friend.id}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="relative">
-                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-xl font-bold text-white">{friend.name[0]}</div>
-                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full ${friend.status === 'online' ? 'bg-green-400' : 'bg-gray-400'}`} style={{ border: '2px solid var(--card-bg)' }} />
-                          </div>
-                          <div><p className="font-medium">{friend.name}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{friend.loginid}</p><div className="flex items-center gap-2 mt-1"><Award className="w-4 h-4 text-yellow-500" /><span className="text-sm">{friend.winRate.toFixed(1)}% Win Rate</span></div></div>
-                        </div>
-                        <button onClick={() => removeFriend(friend.id)} className="p-2 rounded-lg hover:bg-red-500/10 hover:text-red-400 transition-colors" style={{ color: 'var(--text-secondary)' }}><Trash2 className="w-5 h-5" /></button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
+            <FriendsCenter 
+              user={{ 
+                deriv_account_id: userInfo?.loginid,
+                username: userInfo?.fullname || userInfo?.loginid 
+              }} 
+              token={TokenService.getToken()}
+            />
           )}
 
           {/* Settings Tab */}
