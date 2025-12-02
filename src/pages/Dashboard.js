@@ -5,7 +5,8 @@ import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
   LogOut, Sun, Moon, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
-  Wallet, ExternalLink, Shield, Cloud, CloudOff, Database, Menu, Timer
+  Wallet, ExternalLink, Shield, Cloud, CloudOff, Database, Menu, Timer,
+  Flame, Zap, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
@@ -128,13 +129,34 @@ const Dashboard = () => {
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityError, setCommunityError] = useState(null);
   const [useSupabase, setUseSupabase] = useState(false);
-  const [supabaseStatus, setSupabaseStatus] = useState('checking'); // 'checking', 'connected', 'offline'
+  const [supabaseStatus, setSupabaseStatus] = useState('checking');
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
+  // Advanced Analytics State
+  const [liveBalance, setLiveBalance] = useState(null);
+  const [previousBalance, setPreviousBalance] = useState(null);
+  const [balanceSubscribed, setBalanceSubscribed] = useState(false);
+  const [animatingBalance, setAnimatingBalance] = useState(false);
+  const [profitCurve, setProfitCurve] = useState([]);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState({
+    byHour: {}, byMarket: {}, byContractType: {}, streakData: []
+  });
+  const [digitHeatmap, setDigitHeatmap] = useState({
+    counts: {0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0},
+    hotColdStatus: {}
+  });
+  const [timelineInsights, setTimelineInsights] = useState({
+    biggestLoss: null, fastestWin: null, riskStreaks: []
+  });
+  const [journalTags, setJournalTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [availableTags] = useState(['#overtrading', '#perfect-entry', '#bad-day', '#strategyA', '#scalping', '#martingale']);
+  const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
+  
   const sidebarRef = useRef(null);
-  const isInitialized = useRef(false); // Prevent double initialization
-  const profileSynced = useRef(false); // Prevent profile sync loop
+  const isInitialized = useRef(false);
+  const profileSynced = useRef(false);
 
   // Logout handler (defined early for inactivity hook)
   const handleLogout = useCallback(() => { 
@@ -142,6 +164,24 @@ const Dashboard = () => {
     websocketService.disconnect(); 
     navigate('/'); 
   }, [navigate]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch(e.key.toLowerCase()) {
+          case 'j': e.preventDefault(); setActiveTab('journal'); break;
+          case 'd': e.preventDefault(); setActiveTab('digit'); break;
+          case 't': e.preventDefault(); setActiveTab('timeline'); break;
+          case 'a': e.preventDefault(); setActiveTab('analytics'); break;
+          case 's': e.preventDefault(); setActiveTab('sync'); break;
+          default: break;
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Auto-logout on inactivity
   useEffect(() => {
@@ -279,16 +319,79 @@ const Dashboard = () => {
   const calculateAnalytics = (trades) => {
     if (trades.length === 0) {
       setAnalytics({ totalTrades: 0, winRate: 0, totalProfit: 0, avgProfit: 0, bestTrade: 0, worstTrade: 0, winStreak: 0, lossStreak: 0 });
+      setProfitCurve([]);
+      setAdvancedAnalytics({ byHour: {}, byMarket: {}, byContractType: {}, streakData: [] });
+      setTimelineInsights({ biggestLoss: null, fastestWin: null, riskStreaks: [] });
       return;
     }
     const wins = trades.filter(t => t.profit > 0);
     const totalProfit = trades.reduce((sum, t) => sum + t.profit, 0);
     const profits = trades.map(t => t.profit);
     let currentWinStreak = 0, maxWinStreak = 0, currentLossStreak = 0, maxLossStreak = 0;
-    trades.forEach(t => {
+    const streakData = [];
+    trades.forEach((t, i) => {
       if (t.profit > 0) { currentWinStreak++; currentLossStreak = 0; maxWinStreak = Math.max(maxWinStreak, currentWinStreak); }
       else { currentLossStreak++; currentWinStreak = 0; maxLossStreak = Math.max(maxLossStreak, currentLossStreak); }
+      streakData.push({ index: i, winStreak: currentWinStreak, lossStreak: currentLossStreak });
     });
+    
+    // Build profit curve (cumulative)
+    let cumulative = 0;
+    const curve = trades.map((t, i) => {
+      cumulative += t.profit;
+      return { index: i, profit: cumulative, date: t.purchase_time };
+    });
+    setProfitCurve(curve);
+    
+    // Advanced analytics by hour
+    const byHour = {};
+    const byMarket = {};
+    const byContractType = {};
+    trades.forEach(t => {
+      const hour = new Date(t.purchase_time * 1000).getHours();
+      if (!byHour[hour]) byHour[hour] = { wins: 0, losses: 0, profit: 0 };
+      byHour[hour].profit += t.profit;
+      if (t.profit > 0) byHour[hour].wins++;
+      else byHour[hour].losses++;
+      
+      const market = t.underlying || 'Unknown';
+      if (!byMarket[market]) byMarket[market] = { wins: 0, losses: 0, profit: 0 };
+      byMarket[market].profit += t.profit;
+      if (t.profit > 0) byMarket[market].wins++;
+      else byMarket[market].losses++;
+      
+      const cType = t.contract_type || 'Unknown';
+      if (!byContractType[cType]) byContractType[cType] = { wins: 0, losses: 0, profit: 0 };
+      byContractType[cType].profit += t.profit;
+      if (t.profit > 0) byContractType[cType].wins++;
+      else byContractType[cType].losses++;
+    });
+    setAdvancedAnalytics({ byHour, byMarket, byContractType, streakData });
+    
+    // Timeline insights
+    const sortedByProfit = [...trades].sort((a, b) => a.profit - b.profit);
+    const biggestLoss = sortedByProfit[0]?.profit < 0 ? sortedByProfit[0] : null;
+    const sortedByDuration = [...trades].filter(t => t.profit > 0).sort((a, b) => 
+      (a.sell_time - a.purchase_time) - (b.sell_time - b.purchase_time)
+    );
+    const fastestWin = sortedByDuration[0] || null;
+    
+    // Find risk streaks (3+ consecutive losses)
+    const riskStreaks = [];
+    let currentRiskStreak = [];
+    trades.forEach((t, i) => {
+      if (t.profit < 0) {
+        currentRiskStreak.push({ ...t, index: i });
+      } else {
+        if (currentRiskStreak.length >= 3) {
+          riskStreaks.push([...currentRiskStreak]);
+        }
+        currentRiskStreak = [];
+      }
+    });
+    if (currentRiskStreak.length >= 3) riskStreaks.push(currentRiskStreak);
+    setTimelineInsights({ biggestLoss, fastestWin, riskStreaks });
+    
     setAnalytics({
       totalTrades: trades.length,
       winRate: (wins.length / trades.length) * 100,
@@ -309,6 +412,18 @@ const Dashboard = () => {
       stats[lastDigit]++;
     });
     setDigitStats(stats);
+    
+    // Calculate hot/cold status for heatmap
+    const total = Object.values(stats).reduce((a, b) => a + b, 0);
+    const avg = total / 10;
+    const hotColdStatus = {};
+    Object.entries(stats).forEach(([digit, count]) => {
+      const deviation = (count - avg) / (avg || 1);
+      if (deviation > 0.3) hotColdStatus[digit] = 'hot';
+      else if (deviation < -0.3) hotColdStatus[digit] = 'cold';
+      else hotColdStatus[digit] = 'neutral';
+    });
+    setDigitHeatmap({ counts: stats, hotColdStatus });
   };
 
   useEffect(() => {
@@ -370,6 +485,71 @@ const Dashboard = () => {
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
+  // Live balance subscription
+  useEffect(() => {
+    if (!userInfo?.loginid || balanceSubscribed) return;
+    
+    const subscribeToBalance = async () => {
+      try {
+        const response = await websocketService.subscribeBalance((balanceData) => {
+          if (balanceData.balance) {
+            setPreviousBalance(liveBalance);
+            setLiveBalance(balanceData.balance.balance);
+            setAnimatingBalance(true);
+            setTimeout(() => setAnimatingBalance(false), 1000);
+            setUserInfo(prev => prev ? { ...prev, balance: balanceData.balance.balance } : null);
+          }
+        });
+        if (!response.error) {
+          setBalanceSubscribed(true);
+          if (response.balance) {
+            setLiveBalance(response.balance.balance);
+          }
+        }
+      } catch (err) {
+        console.error('Balance subscription error:', err);
+      }
+    };
+    subscribeToBalance();
+  }, [userInfo?.loginid, balanceSubscribed, liveBalance]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!keyboardShortcutsEnabled) return;
+    
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key.toLowerCase()) {
+          case 'j':
+            e.preventDefault();
+            setActiveTab('journal');
+            break;
+          case 'd':
+            e.preventDefault();
+            setActiveTab('digit');
+            break;
+          case 't':
+            e.preventDefault();
+            setActiveTab('timeline');
+            break;
+          case 's':
+            e.preventDefault();
+            setActiveTab('sync');
+            break;
+          case 'a':
+            e.preventDefault();
+            setActiveTab('analytics');
+            break;
+          default:
+            break;
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [keyboardShortcutsEnabled]);
+
   const handleSync = async () => {
     setSyncing(true);
     try {
@@ -420,7 +600,7 @@ const Dashboard = () => {
       title: newJournalTitle, 
       content: newJournalContent, 
       mood: newJournalMood, 
-      tags: [] 
+      tags: journalTags 
     };
 
     // Save to Supabase if configured
@@ -438,7 +618,7 @@ const Dashboard = () => {
     const updated = [entry, ...journalEntries];
     setJournalEntries(updated);
     saveToStorage(STORAGE_KEYS.JOURNAL, updated);
-    setNewJournalTitle(''); setNewJournalContent(''); setNewJournalMood('neutral');
+    setNewJournalTitle(''); setNewJournalContent(''); setNewJournalMood('neutral'); setJournalTags([]);
     toast.success('Journal entry added!');
   };
 
@@ -644,7 +824,7 @@ const Dashboard = () => {
                   <p className={`text-sm truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo.loginid}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>{userInfo.is_virtual ? 'Demo' : 'Real'}</span>
-                    <span className="text-sm font-medium">{userInfo.currency} {userInfo.balance.toFixed(2)}</span>
+                    <span className="text-sm font-medium">{userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}</span>
                   </div>
                 </>
               )}
@@ -733,11 +913,37 @@ const Dashboard = () => {
                   {syncing ? 'Syncing...' : 'Sync Now'}
                 </button>
               </div>
+              
+              {/* Live Balance Display */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-yellow-500" />
+                    Live Balance
+                  </h3>
+                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${balanceSubscribed ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
+                    <div className={`w-2 h-2 rounded-full ${balanceSubscribed ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
+                    {balanceSubscribed ? 'Live' : 'Connecting...'}
+                  </div>
+                </div>
+                <div className="text-center py-6">
+                  <p className={`text-5xl font-bold transition-all duration-500 ${animatingBalance ? 'scale-110 text-[#ff5f6d]' : ''}`}>
+                    {userInfo?.currency || 'USD'} {(liveBalance || userInfo?.balance || 0).toFixed(2)}
+                  </p>
+                  {previousBalance !== null && liveBalance !== null && previousBalance !== liveBalance && (
+                    <p className={`text-lg mt-2 flex items-center justify-center gap-1 ${liveBalance > previousBalance ? 'text-green-500' : 'text-red-500'}`}>
+                      {liveBalance > previousBalance ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                      {liveBalance > previousBalance ? '+' : ''}{(liveBalance - previousBalance).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </Card>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<Wallet className="w-5 h-5 text-white" />} label="Balance" value={`${userInfo?.currency || ''} ${userInfo?.balance?.toFixed(2) || '0.00'}`} color="from-green-500 to-emerald-500" />
                 <StatCard icon={<Activity className="w-5 h-5 text-white" />} label="Total Trades" value={tradeHistory.length} color="from-blue-500 to-cyan-500" />
-                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${analytics.winRate.toFixed(1)}%`} trend={analytics.winRate >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={`${analytics.totalProfit.toFixed(2)}`} trend={analytics.totalProfit >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
+                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
+                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={`${(analytics.totalProfit ?? 0).toFixed(2)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
               </div>
               <Card>
                 <h3 className="text-lg font-medium mb-4">Sync Status</h3>
@@ -756,9 +962,9 @@ const Dashboard = () => {
               <div><h1 className="text-2xl font-bold">Analytics</h1><p style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<Activity className="w-5 h-5 text-white" />} label="Total Trades" value={analytics.totalTrades} color="from-blue-500 to-cyan-500" />
-                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${analytics.winRate.toFixed(1)}%`} trend={analytics.winRate >= 50 ? 'up' : 'down'} color="from-green-500 to-emerald-500" />
-                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={analytics.totalProfit.toFixed(2)} trend={analytics.totalProfit >= 0 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Avg Profit/Trade" value={analytics.avgProfit.toFixed(2)} color="from-orange-500 to-red-500" />
+                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-green-500 to-emerald-500" />
+                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={(analytics.totalProfit ?? 0).toFixed(2)} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
+                <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Avg Profit/Trade" value={(analytics.avgProfit ?? 0).toFixed(2)} color="from-orange-500 to-red-500" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
@@ -770,7 +976,7 @@ const Dashboard = () => {
                         <circle cx="64" cy="64" r="56" stroke="url(#winGradient)" strokeWidth="12" fill="none" strokeLinecap="round" strokeDasharray={`${analytics.winRate * 3.52} 352`} />
                         <defs><linearGradient id="winGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#ff3355" /><stop offset="100%" stopColor="#ff8042" /></linearGradient></defs>
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-2xl font-bold">{analytics.winRate.toFixed(0)}%</span></div>
+                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-2xl font-bold">{(analytics.winRate ?? 0).toFixed(0)}%</span></div>
                     </div>
                   </div>
                 </Card>
@@ -779,11 +985,78 @@ const Dashboard = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20"><p className="text-3xl font-bold text-green-500">{analytics.winStreak}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Best Win Streak</p></div>
                     <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20"><p className="text-3xl font-bold text-red-500">{analytics.lossStreak}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Loss Streak</p></div>
-                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"><p className="text-3xl font-bold text-blue-500">{analytics.bestTrade.toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Best Trade</p></div>
-                    <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20"><p className="text-3xl font-bold text-purple-500">{analytics.worstTrade.toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Trade</p></div>
+                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"><p className="text-3xl font-bold text-blue-500">{(analytics.bestTrade ?? 0).toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Best Trade</p></div>
+                    <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20"><p className="text-3xl font-bold text-purple-500">{(analytics.worstTrade ?? 0).toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Trade</p></div>
                   </div>
                 </Card>
               </div>
+              
+              {/* Profit Curve */}
+              {profitCurve.length > 0 && (
+                <Card>
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-[#ff5f6d]" />
+                    Profit Curve
+                  </h3>
+                  <div className="h-48 relative">
+                    <svg className="w-full h-full" viewBox="0 0 100 50" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="profitGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                        </linearGradient>
+                      </defs>
+                      {(() => {
+                        const maxProfit = Math.max(...profitCurve.map(p => p.profit), 1);
+                        const minProfit = Math.min(...profitCurve.map(p => p.profit), 0);
+                        const range = maxProfit - minProfit || 1;
+                        const baseline = 50 - ((0 - minProfit) / range) * 50;
+                        const points = profitCurve.map((p, i) => {
+                          const x = (i / (profitCurve.length - 1 || 1)) * 100;
+                          const y = 50 - ((p.profit - minProfit) / range) * 50;
+                          return `${x},${y}`;
+                        }).join(' ');
+                        const areaPoints = `0,${baseline} ${points} 100,${baseline}`;
+                        return (
+                          <>
+                            <line x1="0" y1={baseline} x2="100" y2={baseline} stroke={isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb'} strokeWidth="0.5" strokeDasharray="2,2" />
+                            <polygon points={areaPoints} fill="url(#profitGradient)" />
+                            <polyline points={points} fill="none" stroke="#22c55e" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </>
+                        );
+                      })()}
+                    </svg>
+                    <div className="absolute bottom-0 left-0 text-xs" style={{ color: 'var(--text-secondary)' }}>Start</div>
+                    <div className="absolute bottom-0 right-0 text-xs" style={{ color: 'var(--text-secondary)' }}>Now</div>
+                    <div className="absolute top-0 right-0 text-sm font-medium text-green-500">
+                      {profitCurve.length > 0 && `${(profitCurve[profitCurve.length - 1]?.profit ?? 0) >= 0 ? '+' : ''}${(profitCurve[profitCurve.length - 1]?.profit ?? 0).toFixed(2)}`}
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {/* Performance by Hour */}
+              {Object.keys(advancedAnalytics.byHour).length > 0 && (
+                <Card>
+                  <h3 className="text-lg font-medium mb-4">Performance by Hour</h3>
+                  <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
+                    {Array.from({ length: 24 }, (_, hour) => {
+                      const data = advancedAnalytics.byHour[hour] || { wins: 0, losses: 0, profit: 0 };
+                      const total = data.wins + data.losses;
+                      const winRate = total > 0 ? (data.wins / total) * 100 : 0;
+                      const bgColor = total === 0 ? 'bg-gray-500/20' : winRate >= 60 ? 'bg-green-500/40' : winRate >= 40 ? 'bg-yellow-500/40' : 'bg-red-500/40';
+                      return (
+                        <div key={hour} className={`p-2 rounded text-center ${bgColor}`} title={`${hour}:00 - WR: ${winRate.toFixed(0)}% (${total} trades)`}>
+                          <p className="text-xs font-mono">{hour.toString().padStart(2, '0')}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{total}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Green = &gt;60% WR, Yellow = 40-60%, Red = &lt;40%</p>
+                </Card>
+              )}
+              
               {analytics.totalTrades === 0 && <Card><EmptyState icon={<BarChart3 className="w-8 h-8" />} title="No analytics data" description="Sync your trades to see analytics" /></Card>}
             </div>
           )}
@@ -792,6 +1065,42 @@ const Dashboard = () => {
           {activeTab === 'digit' && (
             <div className="space-y-6">
               <div><h1 className="text-2xl font-bold">Digit Analyzer</h1><p style={{ color: 'var(--text-secondary)' }}>Analyze digit patterns in your trades</p></div>
+              
+              {/* Digit Heatmap */}
+              <Card>
+                <h3 className="text-lg font-medium mb-6 flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-orange-500" />
+                  Digit Heatmap
+                </h3>
+                <div className="grid grid-cols-5 md:grid-cols-10 gap-3">
+                  {Object.entries(digitHeatmap.counts).map(([digit, count]) => {
+                    const status = digitHeatmap.hotColdStatus[digit] || 'neutral';
+                    const total = Object.values(digitHeatmap.counts).reduce((a, b) => a + b, 0);
+                    const percentage = total > 0 ? (count / total) * 100 : 10;
+                    const bgClass = status === 'hot' ? 'bg-gradient-to-br from-orange-500/30 to-red-500/30 border-orange-500/50' 
+                                  : status === 'cold' ? 'bg-gradient-to-br from-blue-500/30 to-cyan-500/30 border-blue-500/50' 
+                                  : 'border-gray-500/30';
+                    return (
+                      <div key={digit} className={`relative p-4 rounded-2xl border-2 ${bgClass} transition-all duration-300 hover:scale-105`} style={{ backgroundColor: status === 'neutral' ? 'var(--accent-bg)' : undefined }}>
+                        {status === 'hot' && <Flame className="absolute top-1 right-1 w-4 h-4 text-orange-500 animate-pulse" />}
+                        {status === 'cold' && <Snowflake className="absolute top-1 right-1 w-4 h-4 text-blue-500" />}
+                        <div className="text-center">
+                          <p className="text-3xl font-bold">{digit}</p>
+                          <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{count}</p>
+                          <p className={`text-xs font-medium ${status === 'hot' ? 'text-orange-500' : status === 'cold' ? 'text-blue-500' : 'text-gray-500'}`}>
+                            {percentage.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+                  <div className="flex items-center gap-2"><Flame className="w-4 h-4 text-orange-500" /> Hot (&gt;30% above avg)</div>
+                  <div className="flex items-center gap-2"><Snowflake className="w-4 h-4 text-blue-500" /> Cold (&gt;30% below avg)</div>
+                </div>
+              </Card>
+              
               <Card>
                 <h3 className="text-lg font-medium mb-6">Digit Frequency Distribution</h3>
                 <div className="grid grid-cols-5 md:grid-cols-10 gap-2 sm:gap-4">
@@ -843,28 +1152,92 @@ const Dashboard = () => {
           {/* Timeline Tab */}
           {activeTab === 'timeline' && (
             <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Trade Timeline</h1><p style={{ color: 'var(--text-secondary)' }}>Your recent trading activity</p></div>
-              {tradeHistory.length === 0 ? <Card><EmptyState icon={<Clock className="w-8 h-8" />} title="No trades yet" description="Sync your data to see your trade timeline" /></Card> : (
-                <div className="space-y-4">
-                  {tradeHistory.slice(0, 20).map((trade) => (
-                    <Card key={trade.id}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${trade.profit >= 0 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>{trade.profit >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}</div>
-                          <div className="min-w-0"><p className="font-medium truncate">{trade.symbol}</p><p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{trade.shortcode?.slice(0, 30)}...</p></div>
+              <div><h1 className="text-2xl font-bold">Trade Timeline</h1><p style={{ color: 'var(--text-secondary)' }}>Your recent trading activity with insights</p></div>
+              
+              {/* Timeline Insights */}
+              {(timelineInsights.biggestLoss || timelineInsights.fastestWin || timelineInsights.riskStreaks.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {timelineInsights.biggestLoss && (
+                    <Card>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                          <AlertTriangle className="w-6 h-6 text-red-500" />
                         </div>
-                        <div className="text-left sm:text-right">
-                          <p className={`text-lg font-bold ${trade.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>{trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}</p>
-                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{new Date(trade.sell_time * 1000).toLocaleDateString()}</p>
+                        <div>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Biggest Loss</p>
+                          <p className="text-xl font-bold text-red-500">{(timelineInsights.biggestLoss?.profit ?? 0).toFixed(2)}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{timelineInsights.biggestLoss.symbol}</p>
                         </div>
-                      </div>
-                      <div className="mt-4 pt-4 grid grid-cols-3 gap-4 text-sm" style={{ borderTop: '1px solid var(--card-border)' }}>
-                        <div><p style={{ color: 'var(--text-secondary)' }}>Buy Price</p><p className="font-medium">{trade.buy_price.toFixed(2)}</p></div>
-                        <div><p style={{ color: 'var(--text-secondary)' }}>Sell Price</p><p className="font-medium">{trade.sell_price.toFixed(2)}</p></div>
-                        <div><p style={{ color: 'var(--text-secondary)' }}>Time</p><p className="font-medium">{new Date(trade.sell_time * 1000).toLocaleTimeString()}</p></div>
                       </div>
                     </Card>
-                  ))}
+                  )}
+                  {timelineInsights.fastestWin && (
+                    <Card>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                          <Zap className="w-6 h-6 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Fastest Win</p>
+                          <p className="text-xl font-bold text-green-500">+{(timelineInsights.fastestWin?.profit ?? 0).toFixed(2)}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            {Math.round((timelineInsights.fastestWin.sell_time - timelineInsights.fastestWin.purchase_time) / 60)}min
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                  {timelineInsights.riskStreaks.length > 0 && (
+                    <Card>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                          <Flame className="w-6 h-6 text-orange-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Risk Streaks</p>
+                          <p className="text-xl font-bold text-orange-500">{timelineInsights.riskStreaks.length}</p>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>3+ loss streaks detected</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+              
+              {tradeHistory.length === 0 ? <Card><EmptyState icon={<Clock className="w-8 h-8" />} title="No trades yet" description="Sync your data to see your trade timeline" /></Card> : (
+                <div className="space-y-4">
+                  {tradeHistory.slice(0, 20).map((trade, idx) => {
+                    const isBiggestLoss = timelineInsights.biggestLoss?.id === trade.id;
+                    const isFastestWin = timelineInsights.fastestWin?.id === trade.id;
+                    return (
+                      <Card key={trade.id} className={isBiggestLoss ? 'ring-2 ring-red-500/50' : isFastestWin ? 'ring-2 ring-green-500/50' : ''}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${trade.profit >= 0 ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                              {trade.profit >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium truncate">{trade.symbol}</p>
+                                {isBiggestLoss && <span className="px-2 py-0.5 text-xs rounded-full bg-red-500/20 text-red-500">Biggest Loss</span>}
+                                {isFastestWin && <span className="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-500">Fastest Win</span>}
+                              </div>
+                              <p className="text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{trade.shortcode?.slice(0, 30)}...</p>
+                            </div>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <p className={`text-lg font-bold ${(trade.profit ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>{(trade.profit ?? 0) >= 0 ? '+' : ''}{(trade.profit ?? 0).toFixed(2)}</p>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{new Date(trade.sell_time * 1000).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-4 grid grid-cols-3 gap-4 text-sm" style={{ borderTop: '1px solid var(--card-border)' }}>
+                          <div><p style={{ color: 'var(--text-secondary)' }}>Buy Price</p><p className="font-medium">{(trade.buy_price ?? 0).toFixed(2)}</p></div>
+                          <div><p style={{ color: 'var(--text-secondary)' }}>Sell Price</p><p className="font-medium">{(trade.sell_price ?? 0).toFixed(2)}</p></div>
+                          <div><p style={{ color: 'var(--text-secondary)' }}>Duration</p><p className="font-medium">{Math.round(((trade.sell_time ?? 0) - (trade.purchase_time ?? 0)) / 60)}min</p></div>
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -957,6 +1330,36 @@ const Dashboard = () => {
                 <div className="space-y-4">
                   <input type="text" value={newJournalTitle} onChange={(e) => setNewJournalTitle(e.target.value)} placeholder="Entry title..." className="w-full px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
                   <textarea value={newJournalContent} onChange={(e) => setNewJournalContent(e.target.value)} placeholder="What did you learn today? What went well? What could improve?" rows={4} className="w-full px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors resize-none" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
+                  
+                  {/* Tags Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Tags:</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {availableTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setJournalTags(prev => 
+                            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                          )}
+                          className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+                            journalTags.includes(tag) 
+                              ? 'bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white' 
+                              : ''
+                          }`}
+                          style={{ 
+                            backgroundColor: journalTags.includes(tag) ? undefined : 'var(--accent-bg)',
+                            border: journalTags.includes(tag) ? undefined : '1px solid var(--card-border)'
+                          }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Mood:</span>
@@ -968,15 +1371,54 @@ const Dashboard = () => {
                   </div>
                 </div>
               </Card>
+              
+              {/* Tag Filter */}
+              {journalEntries.length > 0 && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Filter:</span>
+                  </div>
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-all ${selectedTags.length === 0 ? 'bg-[#ff5f6d] text-white' : ''}`}
+                    style={{ backgroundColor: selectedTags.length === 0 ? undefined : 'var(--accent-bg)', border: selectedTags.length === 0 ? undefined : '1px solid var(--card-border)' }}
+                  >
+                    All
+                  </button>
+                  {availableTags.map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedTags(prev => 
+                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                      )}
+                      className={`px-3 py-1.5 rounded-full text-sm transition-all ${selectedTags.includes(tag) ? 'bg-[#ff5f6d] text-white' : ''}`}
+                      style={{ backgroundColor: selectedTags.includes(tag) ? undefined : 'var(--accent-bg)', border: selectedTags.includes(tag) ? undefined : '1px solid var(--card-border)' }}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
               {journalEntries.length === 0 ? <Card><EmptyState icon={<BookOpen className="w-8 h-8" />} title="No journal entries yet" description="Start documenting your trading journey" /></Card> : (
                 <div className="space-y-4">
-                  {journalEntries.map(entry => (
+                  {journalEntries
+                    .filter(entry => selectedTags.length === 0 || (entry.tags && entry.tags.some(t => selectedTags.includes(t))))
+                    .map(entry => (
                     <Card key={entry.id}>
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-3"><span className="text-2xl">{moodEmojis[entry.mood]}</span><div><h4 className="font-medium">{entry.title}</h4><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{new Date(entry.date).toLocaleDateString()}</p></div></div>
                         <button onClick={() => deleteJournalEntry(entry.id)} className="p-2 rounded-lg hover:bg-red-500/10 hover:text-red-400 transition-colors" style={{ color: 'var(--text-secondary)' }}><Trash2 className="w-5 h-5" /></button>
                       </div>
                       <p className="whitespace-pre-wrap">{entry.content}</p>
+                      {entry.tags && entry.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4 pt-4" style={{ borderTop: '1px solid var(--card-border)' }}>
+                          {entry.tags.map(tag => (
+                            <span key={tag} className="px-2 py-1 rounded-full text-xs bg-[#ff5f6d]/20 text-[#ff5f6d]">{tag}</span>
+                          ))}
+                        </div>
+                      )}
                     </Card>
                   ))}
                 </div>
@@ -1062,6 +1504,41 @@ const Dashboard = () => {
                   </button>
                 } />
               </Card>
+              
+              {/* Keyboard Shortcuts */}
+              <Card>
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                  <Keyboard className="w-5 h-5" /> Keyboard Shortcuts
+                </h3>
+                <SettingRow 
+                  icon={<Keyboard className="w-5 h-5" />} 
+                  label="Enable Shortcuts" 
+                  value="Use keyboard shortcuts for navigation" 
+                  action={
+                    <button 
+                      onClick={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)} 
+                      className={`w-14 h-8 rounded-full transition-colors ${keyboardShortcutsEnabled ? 'bg-[#ff3355]' : 'bg-gray-600'}`}
+                    >
+                      <div className={`w-6 h-6 rounded-full bg-white transition-transform mx-1 ${keyboardShortcutsEnabled ? 'translate-x-6' : ''}`} />
+                    </button>
+                  }
+                />
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { keys: 'Ctrl+S', action: 'Sync Data' },
+                    { keys: 'Ctrl+A', action: 'Analytics' },
+                    { keys: 'Ctrl+D', action: 'Digit Analyzer' },
+                    { keys: 'Ctrl+T', action: 'Timeline' },
+                    { keys: 'Ctrl+J', action: 'Journal' },
+                  ].map(shortcut => (
+                    <div key={shortcut.keys} className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                      <kbd className="px-2 py-1 rounded text-xs font-mono bg-black/30">{shortcut.keys}</kbd>
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{shortcut.action}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              
               <Card>
                 <h3 className="text-lg font-medium mb-4">Quick Links</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

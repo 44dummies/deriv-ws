@@ -24,6 +24,12 @@ export const isSupabaseConfigured = () => {
 export const upsertUserProfile = async (derivUser) => {
   if (!supabase) return { data: null, error: new Error('Supabase not configured') };
   
+  // Validate required field
+  if (!derivUser?.loginid) {
+    console.error('Cannot create profile: deriv_login_id is null or undefined');
+    return { data: null, error: new Error('Missing required field: loginid') };
+  }
+  
   const { data, error } = await supabase
     .from('profiles')
     .upsert({
