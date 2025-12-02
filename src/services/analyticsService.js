@@ -1,5 +1,5 @@
 /**
- * NexaTrade Analytics Service
+ * TraderMind Analytics Service
  * Comprehensive trading analytics engine with AI-driven emotional analysis
  */
 

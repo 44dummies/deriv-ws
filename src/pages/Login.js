@@ -39,7 +39,7 @@ const Login = () => {
   ];
 
   const testimonials = [
-    { name: 'Sarah K.', role: 'Professional Trader', content: 'NexaTrade transformed how I analyze my trades. The digit analyzer alone has improved my win rate by 15%.', avatar: '👩‍💼' },
+    { name: 'Sarah K.', role: 'Professional Trader', content: 'TraderMind transformed how I analyze my trades. The digit analyzer alone has improved my win rate by 15%.', avatar: '👩‍💼' },
     { name: 'Michael R.', role: 'Day Trader', content: 'Finally a tool that syncs perfectly with Deriv. The analytics are incredible and the UI is beautiful.', avatar: '👨‍💻' },
     { name: 'Emma L.', role: 'Binary Options Trader', content: 'The trading journal feature helped me understand my patterns. Now I make more informed decisions.', avatar: '👩‍🔬' },
   ];
@@ -60,9 +60,9 @@ const Login = () => {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-xl font-bold shadow-lg shadow-[#ff3355]/20">
-              N
+              T
             </div>
-            <span className="text-xl font-bold">NexaTrade</span>
+            <span className="text-xl font-bold">TraderMind</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
             <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -273,7 +273,7 @@ const Login = () => {
               Ready to Transform Your Trading?
             </h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
-              Join thousands of traders who use NexaTrade to analyze, track, and improve their trading performance.
+              Join thousands of traders who use TraderMind to analyze, track, and improve their trading performance.
             </p>
             <button
               onClick={handleLogin}
@@ -293,12 +293,12 @@ const Login = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center font-bold">
-                N
+                T
               </div>
-              <span className="font-semibold">NexaTrade</span>
+              <span className="font-semibold">TraderMind</span>
             </div>
             <p className="text-gray-500 text-sm">
-              © 2025 NexaTrade. A 44 Dummies Company.
+              © 2025 TraderMind. A 44 Dummies Company.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-400">
               <a href="https://deriv.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Deriv.com</a>

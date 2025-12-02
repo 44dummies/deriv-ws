@@ -1,15 +1,15 @@
 /**
- * NexaTrade Chatroom & Community Service
+ * TraderMind Chatroom & Community Service
  * Real-time chatrooms with live activity, AI coaching, and community features
  * Fetches real trading tips and simulates active trading community
  */
 
 const STORAGE_KEYS = {
-  MESSAGES: 'nexatrade_chat_messages',
-  COMMUNITY_POSTS: 'nexatrade_community_posts',
-  USER_REPUTATION: 'nexatrade_user_reputation',
-  LIVE_TRADERS: 'nexatrade_live_traders',
-  MARKET_TIPS: 'nexatrade_market_tips'
+  MESSAGES: 'tradermind_chat_messages',
+  COMMUNITY_POSTS: 'tradermind_community_posts',
+  USER_REPUTATION: 'tradermind_user_reputation',
+  LIVE_TRADERS: 'tradermind_live_traders',
+  MARKET_TIPS: 'tradermind_market_tips'
 };
 
 // Chatroom Types
@@ -1005,7 +1005,7 @@ class ChatroomService {
       id: `ai-${Date.now()}`,
       roomId,
       userId: 'ai-coach',
-      userName: 'NexaTrade AI',
+      userName: 'TraderMind AI',
       userAvatar: '🤖',
       content: response,
       time: 'Just now',

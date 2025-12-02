@@ -18,14 +18,14 @@ import analyticsService from '../services/analyticsService';
 import chatroomService from '../services/chatroomService';
 
 const STORAGE_KEYS = {
-  JOURNAL: 'nexatrade_journal',
-  FRIENDS: 'nexatrade_friends',
-  TRADES: 'nexatrade_trades',
-  THEME: 'nexatrade_theme',
+  JOURNAL: 'tradermind_journal',
+  FRIENDS: 'tradermind_friends',
+  TRADES: 'tradermind_trades',
+  THEME: 'tradermind_theme',
 };
 
 const Card = ({ children, className = '' }) => (
-  <div className={`rounded-2xl border backdrop-blur-xl p-6 
+  <div className={`rounded-xl sm:rounded-2xl border backdrop-blur-xl p-4 sm:p-6 
     border-white/10 dark-mode:bg-white/5 
     light-card ${className}`}
     style={{ 
@@ -37,13 +37,13 @@ const Card = ({ children, className = '' }) => (
 );
 
 const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-500' }) => (
-  <div className="rounded-2xl border p-5 stat-card"
+  <div className="rounded-xl sm:rounded-2xl border p-3 sm:p-5 stat-card"
     style={{ 
       backgroundColor: 'var(--card-bg)',
       borderColor: 'var(--card-border)'
     }}>
-    <div className="flex items-center justify-between mb-3">
-      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center`}>
+    <div className="flex items-center justify-between mb-2 sm:mb-3">
+      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br ${color} flex items-center justify-center`}>
         {icon}
       </div>
       {trend && (
@@ -52,8 +52,8 @@ const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-
         </div>
       )}
     </div>
-    <p className="text-2xl font-bold">{value}</p>
-    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+    <p className="text-lg sm:text-2xl font-bold truncate">{value}</p>
+    <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{label}</p>
   </div>
 );
 
@@ -69,18 +69,18 @@ const EmptyState = ({ icon, title, description }) => (
 );
 
 const SettingRow = ({ icon, label, value, action }) => (
-  <div className="flex items-center justify-between py-4 border-b last:border-0" style={{ borderColor: 'var(--card-border)' }}>
-    <div className="flex items-center gap-3">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center" 
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 border-b last:border-0 gap-2 sm:gap-0" style={{ borderColor: 'var(--card-border)' }}>
+    <div className="flex items-center gap-2 sm:gap-3">
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0" 
         style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-secondary)' }}>
         {icon}
       </div>
-      <div>
-        <p className="font-medium">{label}</p>
-        {value && <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{value}</p>}
+      <div className="min-w-0">
+        <p className="font-medium text-sm sm:text-base">{label}</p>
+        {value && <p className="text-xs sm:text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{value}</p>}
       </div>
     </div>
-    {action}
+    {action && <div className="ml-10 sm:ml-0">{action}</div>}
   </div>
 );
 
@@ -153,6 +153,13 @@ const Dashboard = () => {
   const [chatroomSubTab, setChatroomSubTab] = useState('assigned');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostTags, setNewPostTags] = useState([]);
+  
+  // Auto-sync state
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [nextSyncTime, setNextSyncTime] = useState(null);
+  const autoSyncIntervalRef = useRef(null);
+  const AUTO_SYNC_INTERVAL = 60000; // 1 minute auto-sync
   
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
@@ -559,6 +566,43 @@ const Dashboard = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [keyboardShortcutsEnabled]);
 
+  // Silent sync for auto-sync (no toast notifications)
+  const handleSilentSync = useCallback(async () => {
+    if (syncing) return; // Prevent concurrent syncs
+    try {
+      const balanceRes = await websocketService.getBalance();
+      if (balanceRes.balance) setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
+      const profitRes = await websocketService.getProfitTable({ limit: 100 });
+      if (profitRes.profit_table?.transactions) {
+        const trades = profitRes.profit_table.transactions.map((t) => ({
+          id: t.transaction_id?.toString() || Math.random().toString(),
+          contract_id: t.contract_id?.toString() || '',
+          symbol: t.shortcode?.split('_')[0] || 'Unknown',
+          buy_price: t.buy_price || 0,
+          sell_price: t.sell_price || 0,
+          profit: (t.sell_price || 0) - (t.buy_price || 0),
+          purchase_time: t.purchase_time || 0,
+          sell_time: t.sell_time || 0,
+          shortcode: t.shortcode || '',
+        }));
+        setTradeHistory(trades);
+        saveToStorage(STORAGE_KEYS.TRADES, trades);
+        calculateAnalytics(trades);
+        calculateDigitStats(trades);
+        runFullAnalytics(trades);
+
+        if (useSupabase && userInfo?.loginid) {
+          await supabaseService.upsertUserProfile(userInfo);
+          await supabaseService.syncTradeHistory(userInfo.loginid, trades);
+        }
+      }
+      setLastSyncTime(new Date());
+      setNextSyncTime(new Date(Date.now() + AUTO_SYNC_INTERVAL));
+    } catch (err) { 
+      console.error('Auto-sync error:', err);
+    }
+  }, [syncing, useSupabase, userInfo, saveToStorage, calculateAnalytics, calculateDigitStats, runFullAnalytics]);
+
   const handleSync = async () => {
     setSyncing(true);
     try {
@@ -594,14 +638,36 @@ const Dashboard = () => {
           if (error) {
             console.error('Supabase sync error:', error);
             toast.success('Data synced locally (cloud sync failed)');
+            setSyncing(false);
             return;
           }
         }
       }
-      toast.success(useSupabase ? 'Data synced to cloud!' : 'Data synced locally!');
+      setLastSyncTime(new Date());
+      setNextSyncTime(new Date(Date.now() + AUTO_SYNC_INTERVAL));
+      toast.success(useSupabase ? 'Data synced to cloud!' : 'Data synced!');
     } catch (err) { console.error('Sync error:', err); toast.error('Failed to sync data'); }
     setSyncing(false);
   };
+
+  // Auto-sync effect
+  useEffect(() => {
+    if (autoSyncEnabled && userInfo && !isLoading) {
+      // Initial sync
+      handleSilentSync();
+      
+      // Set up interval
+      autoSyncIntervalRef.current = setInterval(() => {
+        handleSilentSync();
+      }, AUTO_SYNC_INTERVAL);
+      
+      return () => {
+        if (autoSyncIntervalRef.current) {
+          clearInterval(autoSyncIntervalRef.current);
+        }
+      };
+    }
+  }, [autoSyncEnabled, userInfo, isLoading, handleSilentSync]);
 
   const addJournalEntry = async () => {
     if (!newJournalTitle.trim() || !newJournalContent.trim()) { toast.error('Please fill in title and content'); return; }
@@ -841,8 +907,8 @@ const Dashboard = () => {
     return (
       <div className="min-h-screen bg-[#040404] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-4 animate-pulse text-white">N</div>
-          <p className="text-gray-400">Loading NexaTrade...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-4 animate-pulse text-white">T</div>
+          <p className="text-gray-400">Loading TraderMind...</p>
         </div>
       </div>
     );
@@ -916,10 +982,10 @@ const Dashboard = () => {
                 }}
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white cursor-pointer hover:scale-105 transition-transform active:scale-95"
               >
-                N
+                T
               </div>
-              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap hidden lg:inline">NexaTrade</span>}
-              <span className="font-semibold text-lg whitespace-nowrap lg:hidden">NexaTrade</span>
+              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap hidden lg:inline">TraderMind</span>}
+              <span className="font-semibold text-lg whitespace-nowrap lg:hidden">TraderMind</span>
             </div>
           </div>
 
@@ -1008,26 +1074,86 @@ const Dashboard = () => {
           {/* Sync Tab */}
           {activeTab === 'sync' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div><h1 className="text-2xl font-bold">Sync Data</h1><p style={{ color: 'var(--text-secondary)' }}>Synchronize your Deriv trading data</p></div>
-                <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-white">
-                  <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
-                  {syncing ? 'Syncing...' : 'Sync Now'}
-                </button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold">Live Sync</h1>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your data syncs automatically every minute</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {/* Auto-sync toggle */}
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Auto-sync</span>
+                    <button 
+                      onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
+                      className={`w-10 h-5 rounded-full transition-colors relative ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${autoSyncEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                  <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-white text-sm sm:text-base">
+                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${syncing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Now'}</span>
+                  </button>
+                </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<Wallet className="w-5 h-5 text-white" />} label="Balance" value={`${userInfo?.currency || ''} ${userInfo?.balance?.toFixed(2) || '0.00'}`} color="from-green-500 to-emerald-500" />
-                <StatCard icon={<Activity className="w-5 h-5 text-white" />} label="Total Trades" value={tradeHistory.length} color="from-blue-500 to-cyan-500" />
-                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={`${(analytics.totalProfit ?? 0).toFixed(2)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
+              {/* Auto-sync status */}
+              {autoSyncEnabled && (
+                <div className="flex flex-wrap items-center gap-4 p-3 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-green-500 text-sm font-medium">Auto-sync active</span>
+                  </div>
+                  {lastSyncTime && (
+                    <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      Last synced: {lastSyncTime.toLocaleTimeString()}
+                    </span>
+                  )}
+                  {nextSyncTime && (
+                    <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      Next sync: {nextSyncTime.toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <StatCard icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Balance" value={`${userInfo?.currency || ''} ${userInfo?.balance?.toFixed(2) || '0.00'}`} color="from-green-500 to-emerald-500" />
+                <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Trades" value={tradeHistory.length} color="from-blue-500 to-cyan-500" />
+                <StatCard icon={<Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
+                <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Profit" value={`${(analytics.totalProfit ?? 0).toFixed(2)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
               </div>
               <Card>
-                <h3 className="text-lg font-medium mb-4">Sync Status</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" /><span>Balance</span></div><span className="text-green-500">Connected</span></div>
-                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" /><span>Trade History</span></div><span className="text-green-500">{tradeHistory.length} trades synced</span></div>
-                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}><div className="flex items-center gap-3"><div className="w-3 h-3 rounded-full bg-green-400 animate-pulse" /><span>Account</span></div><span className="text-green-500">{userInfo?.loginid}</span></div>
+                <h3 className="text-base sm:text-lg font-medium mb-4">Connection Status</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-sm sm:text-base">Deriv API</span>
+                    </div>
+                    <span className="text-green-500 text-sm">Connected</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-sm sm:text-base">Trade History</span>
+                    </div>
+                    <span className="text-green-500 text-sm">{tradeHistory.length} trades</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${useSupabase ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
+                      <span className="text-sm sm:text-base">Cloud Storage</span>
+                    </div>
+                    <span className={`text-sm ${useSupabase ? 'text-green-500' : 'text-yellow-500'}`}>{useSupabase ? 'Enabled' : 'Local only'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-sm sm:text-base">Account</span>
+                    </div>
+                    <span className="text-green-500 text-sm truncate max-w-[120px] sm:max-w-none">{userInfo?.loginid}</span>
+                  </div>
                 </div>
               </Card>
             </div>
@@ -1035,33 +1161,33 @@ const Dashboard = () => {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Analytics</h1><p style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<Activity className="w-5 h-5 text-white" />} label="Total Trades" value={analytics.totalTrades} color="from-blue-500 to-cyan-500" />
-                <StatCard icon={<Target className="w-5 h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-green-500 to-emerald-500" />
-                <StatCard icon={<DollarSign className="w-5 h-5 text-white" />} label="Total Profit" value={(analytics.totalProfit ?? 0).toFixed(2)} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                <StatCard icon={<TrendingUp className="w-5 h-5 text-white" />} label="Avg Profit/Trade" value={(analytics.avgProfit ?? 0).toFixed(2)} color="from-orange-500 to-red-500" />
+            <div className="space-y-4 sm:space-y-6">
+              <div><h1 className="text-xl sm:text-2xl font-bold">Analytics</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Trades" value={analytics.totalTrades} color="from-blue-500 to-cyan-500" />
+                <StatCard icon={<Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-green-500 to-emerald-500" />
+                <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Profit" value={(analytics.totalProfit ?? 0).toFixed(2)} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
+                <StatCard icon={<TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Avg Profit/Trade" value={(analytics.avgProfit ?? 0).toFixed(2)} color="from-orange-500 to-red-500" />
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card>
-                  <h3 className="text-lg font-medium mb-4">Win Rate Visualization</h3>
-                  <div className="relative h-32 flex items-center justify-center">
-                    <div className="relative w-32 h-32">
-                      <svg className="w-full h-full transform -rotate-90">
+                  <h3 className="text-base sm:text-lg font-medium mb-4">Win Rate Visualization</h3>
+                  <div className="relative h-28 sm:h-32 flex items-center justify-center">
+                    <div className="relative w-28 h-28 sm:w-32 sm:h-32">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 128 128">
                         <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
                         <circle cx="64" cy="64" r="56" stroke="url(#winGradient)" strokeWidth="12" fill="none" strokeLinecap="round" strokeDasharray={`${analytics.winRate * 3.52} 352`} />
                         <defs><linearGradient id="winGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#ff3355" /><stop offset="100%" stopColor="#ff8042" /></linearGradient></defs>
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-2xl font-bold">{(analytics.winRate ?? 0).toFixed(0)}%</span></div>
+                      <div className="absolute inset-0 flex items-center justify-center"><span className="text-xl sm:text-2xl font-bold">{(analytics.winRate ?? 0).toFixed(0)}%</span></div>
                     </div>
                   </div>
                 </Card>
                 <Card>
-                  <h3 className="text-lg font-medium mb-4">Trading Streaks</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20"><p className="text-3xl font-bold text-green-500">{analytics.winStreak}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Best Win Streak</p></div>
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20"><p className="text-3xl font-bold text-red-500">{analytics.lossStreak}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Loss Streak</p></div>
+                  <h3 className="text-base sm:text-lg font-medium mb-4">Trading Streaks</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                    <div className="p-3 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/20"><p className="text-2xl sm:text-3xl font-bold text-green-500">{analytics.winStreak}</p><p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Best Win Streak</p></div>
+                    <div className="p-3 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/20"><p className="text-2xl sm:text-3xl font-bold text-red-500">{analytics.lossStreak}</p><p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Loss Streak</p></div>
                     <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"><p className="text-3xl font-bold text-blue-500">{(analytics.bestTrade ?? 0).toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Best Trade</p></div>
                     <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20"><p className="text-3xl font-bold text-purple-500">{(analytics.worstTrade ?? 0).toFixed(2)}</p><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Worst Trade</p></div>
                   </div>
@@ -1921,28 +2047,28 @@ const Dashboard = () => {
 
           {/* Journal Tab */}
           {activeTab === 'journal' && (
-            <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Trading Journal</h1><p style={{ color: 'var(--text-secondary)' }}>Document your trading journey</p></div>
+            <div className="space-y-4 sm:space-y-6">
+              <div><h1 className="text-xl sm:text-2xl font-bold">Trading Journal</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Document your trading journey</p></div>
               <Card>
-                <h3 className="text-lg font-medium mb-4">New Entry</h3>
-                <div className="space-y-4">
-                  <input type="text" value={newJournalTitle} onChange={(e) => setNewJournalTitle(e.target.value)} placeholder="Entry title..." className="w-full px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
-                  <textarea value={newJournalContent} onChange={(e) => setNewJournalContent(e.target.value)} placeholder="What did you learn today? What went well? What could improve?" rows={4} className="w-full px-4 py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors resize-none" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
+                <h3 className="text-base sm:text-lg font-medium mb-4">New Entry</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  <input type="text" value={newJournalTitle} onChange={(e) => setNewJournalTitle(e.target.value)} placeholder="Entry title..." className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors text-sm sm:text-base" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
+                  <textarea value={newJournalContent} onChange={(e) => setNewJournalContent(e.target.value)} placeholder="What did you learn today? What went well? What could improve?" rows={3} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors resize-none text-sm sm:text-base" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
                   
                   {/* Tags Section */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Tag className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Tags:</span>
+                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Tags:</span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {availableTags.map(tag => (
                         <button
                           key={tag}
                           onClick={() => setJournalTags(prev => 
                             prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
                           )}
-                          className={`px-3 py-1.5 rounded-full text-sm transition-all ${
+                          className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm transition-all ${
                             journalTags.includes(tag) 
                               ? 'bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white' 
                               : ''
@@ -1958,14 +2084,14 @@ const Dashboard = () => {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Mood:</span>
+                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Mood:</span>
                       {['great', 'good', 'neutral', 'bad'].map(mood => (
-                        <button key={mood} onClick={() => setNewJournalMood(mood)} className={`w-10 h-10 rounded-xl text-lg transition-all ${newJournalMood === mood ? 'scale-110' : ''}`} style={{ backgroundColor: newJournalMood === mood ? 'var(--card-border)' : 'var(--accent-bg)' }}>{moodEmojis[mood]}</button>
+                        <button key={mood} onClick={() => setNewJournalMood(mood)} className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl text-base sm:text-lg transition-all ${newJournalMood === mood ? 'scale-110' : ''}`} style={{ backgroundColor: newJournalMood === mood ? 'var(--card-border)' : 'var(--accent-bg)' }}>{moodEmojis[mood]}</button>
                       ))}
                     </div>
-                    <button onClick={addJournalEntry} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity text-white"><Plus className="w-5 h-5" /> Add Entry</button>
+                    <button onClick={addJournalEntry} className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity text-white text-sm sm:text-base w-full sm:w-auto justify-center"><Plus className="w-4 h-4 sm:w-5 sm:h-5" /> Add Entry</button>
                   </div>
                 </div>
               </Card>
@@ -2059,25 +2185,25 @@ const Dashboard = () => {
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <div><h1 className="text-2xl font-bold">Settings</h1><p style={{ color: 'var(--text-secondary)' }}>Manage your NexaTrade preferences</p></div>
+            <div className="space-y-4 sm:space-y-6">
+              <div><h1 className="text-xl sm:text-2xl font-bold">Settings</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage your TraderMind preferences</p></div>
               <Card>
-                <h3 className="text-lg font-medium mb-4">Account Information</h3>
-                <SettingRow icon={<Users className="w-5 h-5" />} label="Full Name" value={userInfo?.fullname || 'Not set'} />
-                <SettingRow icon={<Shield className="w-5 h-5" />} label="Login ID" value={userInfo?.loginid} />
-                <SettingRow icon={<Wallet className="w-5 h-5" />} label="Account Type" value={userInfo?.is_virtual ? 'Demo Account' : 'Real Account'} />
-                <SettingRow icon={<DollarSign className="w-5 h-5" />} label="Currency" value={userInfo?.currency} />
+                <h3 className="text-base sm:text-lg font-medium mb-4">Account Information</h3>
+                <SettingRow icon={<Users className="w-4 h-4 sm:w-5 sm:h-5" />} label="Full Name" value={userInfo?.fullname || 'Not set'} />
+                <SettingRow icon={<Shield className="w-4 h-4 sm:w-5 sm:h-5" />} label="Login ID" value={userInfo?.loginid} />
+                <SettingRow icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />} label="Account Type" value={userInfo?.is_virtual ? 'Demo Account' : 'Real Account'} />
+                <SettingRow icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />} label="Currency" value={userInfo?.currency} />
               </Card>
               <Card>
-                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                  <Cloud className="w-5 h-5" /> Cloud Sync
+                <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
+                  <Cloud className="w-4 h-4 sm:w-5 sm:h-5" /> Cloud Sync
                 </h3>
                 <SettingRow 
-                  icon={supabaseStatus === 'connected' ? <Cloud className="w-5 h-5 text-green-500" /> : <CloudOff className="w-5 h-5" />} 
+                  icon={supabaseStatus === 'connected' ? <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" /> : <CloudOff className="w-4 h-4 sm:w-5 sm:h-5" />} 
                   label="Cloud Status" 
-                  value={supabaseStatus === 'connected' ? 'Your data syncs to the cloud automatically' : 'Data stored locally on this device'} 
+                  value={supabaseStatus === 'connected' ? 'Cloud sync enabled' : 'Local storage only'} 
                   action={
-                    <span className={`text-xs px-3 py-1.5 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20'}`} style={{ color: supabaseStatus !== 'connected' ? 'var(--text-secondary)' : undefined }}>
+                    <span className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20'}`} style={{ color: supabaseStatus !== 'connected' ? 'var(--text-secondary)' : undefined }}>
                       {supabaseStatus === 'connected' ? 'Synced' : 'Local'}
                     </span>
                   }
@@ -2085,51 +2211,51 @@ const Dashboard = () => {
               </Card>
               
               {/* Keyboard Shortcuts */}
-              <Card>
-                <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                  <Keyboard className="w-5 h-5" /> Keyboard Shortcuts
+              <Card className="hidden sm:block">
+                <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
+                  <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" /> Keyboard Shortcuts
                 </h3>
                 <SettingRow 
-                  icon={<Keyboard className="w-5 h-5" />} 
+                  icon={<Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />} 
                   label="Enable Shortcuts" 
                   value="Use keyboard shortcuts for navigation" 
                   action={
                     <button 
                       onClick={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)} 
-                      className={`w-14 h-8 rounded-full transition-colors ${keyboardShortcutsEnabled ? 'bg-[#ff3355]' : 'bg-gray-600'}`}
+                      className={`w-12 sm:w-14 h-6 sm:h-8 rounded-full transition-colors ${keyboardShortcutsEnabled ? 'bg-[#ff3355]' : 'bg-gray-600'}`}
                     >
-                      <div className={`w-6 h-6 rounded-full bg-white transition-transform mx-1 ${keyboardShortcutsEnabled ? 'translate-x-6' : ''}`} />
+                      <div className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-white transition-transform mx-0.5 sm:mx-1 ${keyboardShortcutsEnabled ? 'translate-x-5 sm:translate-x-6' : ''}`} />
                     </button>
                   }
                 />
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                   {[
-                    { keys: 'Ctrl+S', action: 'Sync Data' },
+                    { keys: 'Ctrl+S', action: 'Sync' },
                     { keys: 'Ctrl+A', action: 'Analytics' },
-                    { keys: 'Ctrl+D', action: 'Digit Analyzer' },
+                    { keys: 'Ctrl+D', action: 'Digits' },
                     { keys: 'Ctrl+T', action: 'Timeline' },
                     { keys: 'Ctrl+J', action: 'Journal' },
                   ].map(shortcut => (
                     <div key={shortcut.keys} className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                      <kbd className="px-2 py-1 rounded text-xs font-mono bg-black/30">{shortcut.keys}</kbd>
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{shortcut.action}</span>
+                      <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-mono bg-black/30">{shortcut.keys}</kbd>
+                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>{shortcut.action}</span>
                     </div>
                   ))}
                 </div>
               </Card>
               
               <Card>
-                <h3 className="text-lg font-medium mb-4">Quick Links</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <a href="https://deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"><ExternalLink className="w-5 h-5 text-[#ff5f6d]" /><span>Deriv Website</span></a>
-                  <a href="https://app.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"><ExternalLink className="w-5 h-5 text-[#ff5f6d]" /><span>Deriv Trading Platform</span></a>
-                  <a href="https://api.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"><ExternalLink className="w-5 h-5 text-[#ff5f6d]" /><span>API Documentation</span></a>
-                  <a href="https://community.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"><ExternalLink className="w-5 h-5 text-[#ff5f6d]" /><span>Community Forum</span></a>
+                <h3 className="text-base sm:text-lg font-medium mb-4">Quick Links</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <a href="https://deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Deriv Website</span></a>
+                  <a href="https://app.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Trading Platform</span></a>
+                  <a href="https://api.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>API Docs</span></a>
+                  <a href="https://community.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Community</span></a>
                 </div>
               </Card>
               <Card>
-                <h3 className="text-lg font-medium mb-4 text-red-400">Danger Zone</h3>
-                <button onClick={handleLogout} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"><LogOut className="w-5 h-5" /> Sign Out</button>
+                <h3 className="text-base sm:text-lg font-medium mb-4 text-red-400">Danger Zone</h3>
+                <button onClick={handleLogout} className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"><LogOut className="w-4 h-4 sm:w-5 sm:h-5" /> Sign Out</button>
               </Card>
             </div>
           )}
