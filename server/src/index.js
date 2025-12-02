@@ -25,10 +25,15 @@ const { initializeDefaultChatrooms } = require('./services/assignment');
 const app = express();
 const server = http.createServer(app);
 
+// CORS origins - support multiple origins for production
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+  : ['http://localhost:3000', 'https://www.tradermind.site', 'https://tradermind.site'];
+
 // Socket.IO setup with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: corsOrigins,
     methods: ['GET', 'POST'],
     credentials: true
   },
@@ -38,7 +43,7 @@ const io = new Server(server, {
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -56,6 +61,19 @@ app.use('/api/community', communityRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    name: 'TraderMind Real-time Server',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      api: '/api'
+    }
+  });
 });
 
 // Make io accessible to routes
@@ -92,10 +110,10 @@ async function startServer() {
     // Initialize default chatrooms
     await initializeDefaultChatrooms();
     
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 TraderMind Real-time Server running on port ${PORT}`);
       console.log(`📡 WebSocket ready for connections`);
-      console.log(`🔗 API: http://localhost:${PORT}/api`);
+      console.log(`🔗 CORS origins: ${corsOrigins.join(', ')}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
