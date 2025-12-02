@@ -181,6 +181,9 @@ const Dashboard = () => {
   const [realtimeMode, setRealtimeMode] = useState(USE_REALTIME_BACKEND);
   const socketUnsubsRef = useRef([]);
   
+  // Deriv WebSocket connection state
+  const [derivWsConnected, setDerivWsConnected] = useState(false);
+  
   // Auto-sync state
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -512,13 +515,19 @@ const Dashboard = () => {
         isInitialized.current = true; // Mark as initialized
         
         await websocketService.connect();
+        setDerivWsConnected(true);
+        console.log('Deriv WebSocket connected');
+        
         const authResponse = await websocketService.authorize(tokens.token);
         if (authResponse.error) { 
           isInitialized.current = false;
+          setDerivWsConnected(false);
           TokenService.clearTokens(); 
           navigate('/'); 
           return; 
         }
+        console.log('Deriv WebSocket authorized');
+        
         if (authResponse.authorize) {
           const userData = {
             balance: authResponse.authorize.balance,
@@ -600,7 +609,10 @@ const Dashboard = () => {
 
   // Silent sync for auto-sync (no toast notifications)
   const handleSilentSync = useCallback(async () => {
-    if (syncing) return; // Prevent concurrent syncs
+    if (syncing || !derivWsConnected) {
+      console.log('Skipping sync - syncing:', syncing, 'wsConnected:', derivWsConnected);
+      return; // Prevent concurrent syncs or sync without connection
+    }
     
     // Check minimum gap between syncs
     const now = Date.now();
@@ -610,12 +622,15 @@ const Dashboard = () => {
     }
     lastSyncAttempt.current = now;
     
+    console.log('Starting auto-sync...');
+    
     try {
       // Only fetch balance if we don't have recent data
       try {
         const balanceRes = await websocketService.getBalance();
         if (balanceRes.balance) {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
+          console.log('Balance updated:', balanceRes.balance.balance);
         }
       } catch (balanceErr) {
         // Handle rate limit for balance - just skip it, not critical
@@ -643,6 +658,7 @@ const Dashboard = () => {
         calculateAnalytics(trades);
         calculateDigitStats(trades);
         runFullAnalytics(trades);
+        console.log('Synced', trades.length, 'trades');
 
         if (useSupabase && userInfo?.loginid) {
           await supabaseService.upsertUserProfile(userInfo);
@@ -654,6 +670,7 @@ const Dashboard = () => {
       syncBackoffTime.current = AUTO_SYNC_INTERVAL;
       setLastSyncTime(new Date());
       setNextSyncTime(new Date(Date.now() + AUTO_SYNC_INTERVAL));
+      console.log('Auto-sync completed successfully');
     } catch (err) { 
       // Handle rate limit errors with exponential backoff
       if (err?.code === 'RateLimit' || err?.message?.includes('rate limit')) {
@@ -664,7 +681,7 @@ const Dashboard = () => {
         console.error('Auto-sync error:', err);
       }
     }
-  }, [syncing, useSupabase, userInfo, saveToStorage, calculateAnalytics, calculateDigitStats, runFullAnalytics]);
+  }, [syncing, derivWsConnected, useSupabase, userInfo, saveToStorage, calculateAnalytics, calculateDigitStats, runFullAnalytics]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -715,7 +732,9 @@ const Dashboard = () => {
 
   // Auto-sync effect with dynamic backoff
   useEffect(() => {
-    if (autoSyncEnabled && userInfo && !isLoading) {
+    if (autoSyncEnabled && userInfo && !isLoading && derivWsConnected) {
+      console.log('Auto-sync enabled, starting sync schedule...');
+      
       // Initial sync after a short delay
       const initialTimeout = setTimeout(() => {
         handleSilentSync();
@@ -742,7 +761,7 @@ const Dashboard = () => {
         }
       };
     }
-  }, [autoSyncEnabled, userInfo, isLoading, handleSilentSync]);
+  }, [autoSyncEnabled, userInfo, isLoading, derivWsConnected, handleSilentSync]);
 
   const addJournalEntry = async () => {
     if (!newJournalTitle.trim() || !newJournalContent.trim()) { toast.error('Please fill in title and content'); return; }
@@ -1256,9 +1275,12 @@ const Dashboard = () => {
   // Watch websocket connection state; if ws disconnects then reconnects, force login
   useEffect(() => {
     const unsub = websocketService.onConnectionChange((state) => {
+      console.log('Deriv WS state changed:', state);
       if (state === 'closed') {
         hadWsDisconnectedRef.current = true;
+        setDerivWsConnected(false);
       } else if (state === 'open') {
+        setDerivWsConnected(true);
         if (hadWsDisconnectedRef.current) {
           // WebSocket was disconnected and just re-opened. Force login flow.
           hadWsDisconnectedRef.current = false;
@@ -1498,10 +1520,12 @@ const Dashboard = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
-                      <span className="text-sm sm:text-base">Deriv API</span>
+                      <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${derivWsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                      <span className="text-sm sm:text-base">Deriv WebSocket</span>
                     </div>
-                    <span className="text-green-500 text-sm">Connected</span>
+                    <span className={`text-sm ${derivWsConnected ? 'text-green-500' : 'text-red-500'}`}>
+                      {derivWsConnected ? 'Connected' : 'Disconnected'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
                     <div className="flex items-center gap-3">
@@ -1516,6 +1540,15 @@ const Dashboard = () => {
                       <span className="text-sm sm:text-base">Cloud Storage</span>
                     </div>
                     <span className={`text-sm ${useSupabase ? 'text-green-500' : 'text-yellow-500'}`}>{useSupabase ? 'Enabled' : 'Local only'}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${realtimeConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                      <span className="text-sm sm:text-base">Chat Server</span>
+                    </div>
+                    <span className={`text-sm ${realtimeConnected ? 'text-green-500' : 'text-gray-500'}`}>
+                      {realtimeConnected ? 'Connected' : 'Offline'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
                     <div className="flex items-center gap-3">

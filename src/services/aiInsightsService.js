@@ -166,6 +166,136 @@ class AIInsightsService {
 
     return { emotion: 'neutral', confidence: 0.6 };
   }
+
+  /**
+   * Generate personalized room recommendations based on user analytics
+   */
+  generatePersonalizedRecommendations(userAnalytics = {}, allRooms = []) {
+    const recommendations = [];
+    const { winRate = 50, totalTrades = 0, behaviorScore = 70, recentLosses = 0 } = userAnalytics;
+
+    // Determine user level based on stats
+    let userLevel = 1;
+    if (totalTrades >= 100 && winRate >= 55) userLevel = 3;
+    else if (totalTrades >= 50 && winRate >= 50) userLevel = 2;
+
+    // Filter and score rooms based on user profile
+    const scoredRooms = allRooms.map(room => {
+      let score = 0;
+      let reason = '';
+
+      // Match by performance level
+      if (room.type === 'performance') {
+        if (winRate < 50 && room.id === 'beginners') {
+          score += 30;
+          reason = 'Perfect for building fundamentals';
+        } else if (winRate >= 50 && winRate < 60 && room.id === 'intermediate') {
+          score += 30;
+          reason = 'Level up your consistency';
+        } else if (winRate >= 60 && room.id === 'pro-traders') {
+          score += 30;
+          reason = 'Join fellow consistent traders';
+        }
+        if (recentLosses >= 3 && room.id === 'recovery-room') {
+          score += 40;
+          reason = 'Get back on track together';
+        }
+      }
+
+      // Match by behavior needs
+      if (room.type === 'behavior') {
+        if (behaviorScore < 50 && room.id === 'discipline') {
+          score += 35;
+          reason = 'Build stronger trading habits';
+        }
+        if (recentLosses >= 3 && room.id === 'revenge-recovery') {
+          score += 40;
+          reason = 'Avoid revenge trading patterns';
+        }
+      }
+
+      // AI rooms for insights
+      if (room.type === 'ai') {
+        if (totalTrades < 50) {
+          score += 25;
+          reason = 'AI coaching for faster learning';
+        }
+        if (behaviorScore < 60 && room.id === 'emotional-support') {
+          score += 30;
+          reason = 'Get emotional trading alerts';
+        }
+      }
+
+      // Strategy rooms based on experience
+      if (room.type === 'strategy' && userLevel >= 2) {
+        score += 15;
+        reason = 'Explore new strategies';
+      }
+
+      // Base score for accessible rooms
+      if (room.level <= userLevel) {
+        score += 10;
+      }
+
+      return { ...room, score, reason };
+    });
+
+    // Sort by score and take top recommendations
+    const topRecs = scoredRooms
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    // Add personalized messages
+    if (recentLosses >= 3) {
+      recommendations.push({
+        type: 'alert',
+        icon: '⚠️',
+        message: 'Consider taking a break. The Recovery Room has traders who understand.',
+        roomId: 'recovery-room'
+      });
+    }
+
+    if (winRate >= 55 && totalTrades >= 100) {
+      recommendations.push({
+        type: 'achievement',
+        icon: '🏆',
+        message: 'You qualify for the Pro Traders Room!',
+        roomId: 'pro-traders'
+      });
+    }
+
+    if (totalTrades < 20) {
+      recommendations.push({
+        type: 'tip',
+        icon: '💡',
+        message: 'Start in the Beginner Room to learn from experienced traders.',
+        roomId: 'beginners'
+      });
+    }
+
+    return {
+      rooms: topRecs,
+      messages: recommendations,
+      userLevel,
+      suggestedAction: this._getSuggestedAction(userAnalytics)
+    };
+  }
+
+  _getSuggestedAction(analytics) {
+    const { winRate = 50, recentLosses = 0, behaviorScore = 70 } = analytics;
+
+    if (recentLosses >= 3) {
+      return 'Take a 15-minute break before your next trade';
+    }
+    if (behaviorScore < 50) {
+      return 'Focus on following your trading plan today';
+    }
+    if (winRate < 45) {
+      return 'Consider paper trading to refine your strategy';
+    }
+    return 'Stay disciplined and stick to your plan';
+  }
 }
 
 const aiInsightsService = new AIInsightsService();
