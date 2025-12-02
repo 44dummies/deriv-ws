@@ -478,7 +478,8 @@ const Dashboard = () => {
           setUserInfo(userData);
           
           // Create/update user profile in Supabase ONCE (required for foreign key constraints)
-          if (supabaseService.isSupabaseConfigured() && !profileSynced.current) {
+          // Only proceed if loginid is valid
+          if (supabaseService.isSupabaseConfigured() && !profileSynced.current && userData.loginid) {
             profileSynced.current = true;
             const { error } = await supabaseService.upsertUserProfile(userData);
             if (error) {
