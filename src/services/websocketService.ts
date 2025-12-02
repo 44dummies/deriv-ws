@@ -140,6 +140,8 @@ class DerivWebSocket {
   private maxReconnectAttempts: number = 5;
   private isConnecting: boolean = false;
   private isAuthorized: boolean = false; // Track authorization state
+  // Connection state listeners
+  private connectionListeners: Array<(state: 'open' | 'closed') => void> = [];
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -166,6 +168,8 @@ class DerivWebSocket {
         console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
+        // notify listeners
+        try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) { /* noop */ }
         resolve();
       };
 
@@ -203,9 +207,17 @@ class DerivWebSocket {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.isConnecting = false;
+        // notify listeners
+        try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) { /* noop */ }
         this.handleReconnect();
       };
     });
+  }
+
+  // Allow consumers to react to connection open/close events
+  onConnectionChange(cb: (state: 'open' | 'closed') => void): () => void {
+    this.connectionListeners.push(cb);
+    return () => { this.connectionListeners = this.connectionListeners.filter(c => c !== cb); };
   }
 
   private handleReconnect(): void {

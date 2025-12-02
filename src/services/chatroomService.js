@@ -1148,6 +1148,193 @@ class ChatroomService {
       this.dailyChallenges[(startIndex + 2) % this.dailyChallenges.length],
     ];
   }
+
+  // ========== ENHANCED LIVE FEATURES ==========
+
+  /**
+   * Get room with all live data including AI insights
+   * @param {string} roomId - Room ID
+   * @param {Object} aiInsightsService - AI insights service instance
+   * @returns {Object} Room with live data and AI insights
+   */
+  getRoomWithAIInsights(roomId, aiInsightsService) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    const messages = this.getMessages(roomId);
+    const aiInsights = aiInsightsService ? aiInsightsService.generateRoomInsights(roomId, messages, room.type) : null;
+
+    return {
+      ...room,
+      messages,
+      activeTraders: room.activeTraders || this.getRandomTraders(5),
+      marketConditions: room.type === 'ai' ? this.getLiveMarketConditions() : null,
+      aiInsights,
+      sentiment: aiInsights?.sentiment || null,
+      trendingStrategies: aiInsights?.strategies?.topStrategies?.slice(0, 3) || []
+    };
+  }
+
+  /**
+   * Get all rooms with live activity metrics
+   * @returns {Array} Rooms with activity data
+   */
+  getAllRoomsWithActivity() {
+    return Object.values(this.rooms).map(room => {
+      const messages = this.messages.get(room.id) || [];
+      const recentMessages = messages.filter(m => {
+        const msgTime = new Date(m.timestamp);
+        return (Date.now() - msgTime.getTime()) < 3600000; // Last hour
+      });
+
+      // Dynamic activity scoring
+      const activityScore = Math.min(100, 
+        recentMessages.length * 5 + 
+        (room.activeNow || 5) * 3 +
+        Math.floor(Math.random() * 10)
+      );
+
+      return {
+        ...room,
+        category: room.type,
+        members: room.activeNow || Math.floor(Math.random() * 15) + 5,
+        activeNow: room.activeNow || Math.floor(Math.random() * 10) + 3,
+        recentActivity: recentMessages.length,
+        activityScore,
+        isHot: activityScore > 70,
+        premium: room.isPremium || false,
+        isLive: true,
+        lastMessage: messages.length > 0 ? messages[messages.length - 1]?.content?.substring(0, 50) + '...' : null,
+        lastMessageTime: messages.length > 0 ? messages[messages.length - 1]?.time : null
+      };
+    });
+  }
+
+  /**
+   * Get trending topics across all rooms
+   * @returns {Array} Trending topics
+   */
+  getTrendingTopics() {
+    const topicCounts = new Map();
+    const keywords = ['V75', 'V100', 'Boom', 'Crash', 'multiplier', 'martingale', 'discipline', 'risk', 'profit', 'loss', 'strategy'];
+
+    this.messages.forEach((roomMessages) => {
+      roomMessages.forEach(msg => {
+        const content = (msg.content || '').toLowerCase();
+        keywords.forEach(keyword => {
+          if (content.includes(keyword.toLowerCase())) {
+            topicCounts.set(keyword, (topicCounts.get(keyword) || 0) + 1);
+          }
+        });
+      });
+    });
+
+    return Array.from(topicCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([topic, count]) => ({
+        topic,
+        mentions: count,
+        trend: count > 5 ? 'hot' : 'active'
+      }));
+  }
+
+  /**
+   * Get community stats
+   * @returns {Object} Community statistics
+   */
+  getCommunityStats() {
+    let totalMembers = 0;
+    let totalMessages = 0;
+    let activeRooms = 0;
+
+    Object.values(this.rooms).forEach(room => {
+      totalMembers += room.activeNow || 5;
+      activeRooms++;
+    });
+
+    this.messages.forEach(roomMessages => {
+      totalMessages += roomMessages.length;
+    });
+
+    return {
+      totalMembers: Math.max(totalMembers, 50),
+      totalMessages,
+      activeRooms,
+      totalPosts: this.communityPosts.length,
+      onlineNow: Math.floor(totalMembers * 0.6),
+      topContributors: this.getLeaderboard().slice(0, 5)
+    };
+  }
+
+  /**
+   * Generate live trade signal for rooms
+   * @param {Object} trade - Trade data from Deriv
+   * @returns {Object} Trade signal message
+   */
+  generateTradeSignal(trade) {
+    if (!trade) return null;
+
+    const isWin = trade.profit > 0;
+    const profitPercent = trade.buy_price > 0 ? ((trade.profit / trade.buy_price) * 100).toFixed(1) : 0;
+
+    return {
+      id: `signal-${Date.now()}`,
+      type: 'trade_signal',
+      content: isWin 
+        ? `🎉 Trade Alert: +${trade.profit.toFixed(2)} (${profitPercent}%) on ${trade.symbol || 'Unknown'}`
+        : `📊 Trade closed: ${trade.profit.toFixed(2)} on ${trade.symbol || 'Unknown'}`,
+      trade: {
+        symbol: trade.symbol,
+        profit: trade.profit,
+        profitPercent,
+        isWin
+      },
+      timestamp: new Date().toISOString(),
+      time: 'Just now'
+    };
+  }
+
+  /**
+   * Get quick responses based on room context
+   * @param {string} roomId - Room ID
+   * @returns {Array} Quick response options
+   */
+  getQuickResponses(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return [];
+
+    const baseResponses = [
+      { emoji: '👍', text: 'Good insight!' },
+      { emoji: '🙏', text: 'Thanks for sharing' },
+      { emoji: '💪', text: 'Stay disciplined!' }
+    ];
+
+    const typeResponses = {
+      behavior: [
+        { emoji: '🧘', text: 'Remember to breathe' },
+        { emoji: '📝', text: 'Journal this!' },
+        { emoji: '⏸️', text: 'Taking a break helps' }
+      ],
+      strategy: [
+        { emoji: '🎯', text: 'Nice setup!' },
+        { emoji: '📊', text: 'What timeframe?' },
+        { emoji: '💡', text: 'I use similar approach' }
+      ],
+      performance: [
+        { emoji: '🔥', text: 'Keep it up!' },
+        { emoji: '📈', text: 'Great progress' },
+        { emoji: '💎', text: 'Diamond hands' }
+      ],
+      ai: [
+        { emoji: '🤖', text: 'Ask the AI!' },
+        { emoji: '🧠', text: 'Great question' },
+        { emoji: '📚', text: 'Learning everyday' }
+      ]
+    };
+
+    return [...baseResponses, ...(typeResponses[room.type] || [])];
+  }
 }
 
 const chatroomService = new ChatroomService();

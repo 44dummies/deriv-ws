@@ -1,8 +1,37 @@
-node_modules
-build
+# Dependencies
+node_modules/
+server/node_modules/
+
+# Build output
+build/
+dist/
+
+# Environment files (sensitive)
+.env
 .env.local
 .env.production
+.env.development
+server/.env
+
+# IDE
 .DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+
+# Prisma (no longer used)
+prisma/
+
+# Supabase local
+server/supabase/.temp/
+
+# Package locks (optional - keep if you want reproducible builds)
+# package-lock.json
+# server/package-lock.json

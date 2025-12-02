@@ -8,7 +8,7 @@ import {
   Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer,
   Flame, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter, Zap,
   Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale,
-  MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot
+  MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot, Wifi, WifiOff
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
@@ -16,6 +16,10 @@ import websocketService from '../services/websocketService';
 import supabaseService from '../services/supabaseService';
 import analyticsService from '../services/analyticsService';
 import chatroomService from '../services/chatroomService';
+import realtimeService from '../services/realtimeService';
+import aiInsightsService from '../services/aiInsightsService';
+import realtimeSocket from '../services/realtimeSocket';
+import apiClient from '../services/apiClient';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
@@ -23,6 +27,9 @@ const STORAGE_KEYS = {
   TRADES: 'tradermind_trades',
   THEME: 'tradermind_theme',
 };
+
+// Real-time backend mode flag (set to true when backend is running)
+const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
 const Card = ({ children, className = '' }) => (
   <div className={`rounded-xl sm:rounded-2xl border backdrop-blur-xl p-4 sm:p-6 
@@ -154,6 +161,26 @@ const Dashboard = () => {
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostTags, setNewPostTags] = useState([]);
   
+  // Real-time & AI state
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [tradeAlerts, setTradeAlerts] = useState([]);
+  const [roomInsights, setRoomInsights] = useState(null);
+  const [roomSentiment, setRoomSentiment] = useState(null);
+  const [trendingTopics, setTrendingTopics] = useState([]);
+  const [quickResponses, setQuickResponses] = useState([]);
+  const [communityStats, setCommunityStats] = useState(null);
+  const [personalizedRecs, setPersonalizedRecs] = useState(null);
+  const [showAIPanel, setShowAIPanel] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const realtimeUnsubRef = useRef(null);
+  
+  // Real-time backend state
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [realtimeMode, setRealtimeMode] = useState(USE_REALTIME_BACKEND);
+  const socketUnsubsRef = useRef([]);
+  
   // Auto-sync state
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -167,6 +194,8 @@ const Dashboard = () => {
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
   const profileSynced = useRef(false);
+  const logoutTimerRef = useRef(null);
+  const hadWsDisconnectedRef = useRef(false);
 
   // Logout handler (defined early for inactivity hook)
   const handleLogout = useCallback(() => { 
@@ -827,6 +856,9 @@ const Dashboard = () => {
   const initializeChatrooms = useCallback(async () => {
     setChatroomLoading(true);
     try {
+      // Initialize real-time service
+      realtimeService.initialize();
+      
       // Get user analytics for room assignment
       const userAnalytics = fullAnalytics || {
         accountHealth: { score: 50 },
@@ -848,14 +880,65 @@ const Dashboard = () => {
       const userId = userInfo?.loginid || 'demo_user';
       const rep = chatroomService.getUserReputation(userId);
       setUserReputation(rep);
+      
+      // Get trending topics
+      const topics = chatroomService.getTrendingTopics();
+      setTrendingTopics(topics);
+      
+      // Get community stats
+      const stats = chatroomService.getCommunityStats();
+      setCommunityStats(stats);
+      
+      // Get personalized recommendations
+      const allRooms = chatroomService.getAllRooms();
+      const recs = aiInsightsService.generatePersonalizedRecommendations(userAnalytics, allRooms);
+      setPersonalizedRecs(recs);
+      
+      // Get trade alerts
+      const alerts = realtimeService.getTradeAlerts(5);
+      setTradeAlerts(alerts);
+      
+      // Subscribe to new trade alerts
+      realtimeService.subscribe('newTradeAlert', (alert) => {
+        setTradeAlerts(prev => [alert, ...prev.slice(0, 4)]);
+      });
+      
     } catch (error) {
       console.error('Failed to initialize chatrooms:', error);
     }
     setChatroomLoading(false);
   }, [fullAnalytics, userInfo]);
 
-  const enterChatRoom = useCallback((room) => {
-    // Enter room and start live activity
+  const enterChatRoom = useCallback(async (room) => {
+    // If using real-time backend, join via socket
+    if (realtimeMode && realtimeConnected) {
+      try {
+        // Load messages from backend
+        const messages = await apiClient.getChatroomMessages(room.id);
+        setChatMessages(messages.map(m => ({
+          id: m.id,
+          content: m.content,
+          userName: m.user?.displayName || m.user?.username,
+          avatar: m.user?.avatarUrl || '👤',
+          userId: m.user?.id,
+          time: new Date(m.createdAt).toLocaleTimeString(),
+          timestamp: m.createdAt,
+          reactions: m.reactions || []
+        })));
+        
+        setActiveChatRoom(room);
+        
+        // Join the socket room
+        realtimeSocket.joinRoom(room.id);
+        
+        return;
+      } catch (error) {
+        console.error('Failed to load messages from backend:', error);
+        // Fall through to simulated mode
+      }
+    }
+    
+    // Simulated mode - enter room and start live activity
     const result = chatroomService.enterRoom(room.id, userInfo?.loginid);
     if (result.success) {
       setActiveChatRoom({
@@ -869,13 +952,70 @@ const Dashboard = () => {
       const messages = chatroomService.getMessages(room.id);
       setChatMessages(messages);
     }
-  }, [userInfo]);
+    
+    // Initialize real-time features
+    realtimeService.initialize();
+    
+    // Get online users for this room
+    const users = realtimeService.getOnlineUsers(room.id);
+    setOnlineUsers(users);
+    setOnlineCount(users.length);
+    
+    // Subscribe to real-time updates for this room
+    if (realtimeUnsubRef.current) {
+      realtimeUnsubRef.current();
+    }
+    realtimeUnsubRef.current = realtimeService.subscribeToRoom(room.id, (eventType, data) => {
+      switch (eventType) {
+        case 'typing':
+          setTypingUsers(data.typingUsers || []);
+          break;
+        case 'userJoined':
+        case 'userLeft':
+        case 'userStatus':
+          setOnlineUsers(realtimeService.getOnlineUsers(room.id));
+          break;
+        case 'onlineCount':
+          setOnlineCount(data.count);
+          break;
+        case 'message':
+          setChatMessages(prev => [...prev, data.message]);
+          break;
+        default:
+          break;
+      }
+    });
+    
+    // Generate AI insights for the room
+    const messages = chatroomService.getMessages(room.id);
+    const insights = aiInsightsService.generateRoomInsights(room.id, messages, room.type);
+    setRoomInsights(insights);
+    setRoomSentiment(insights?.sentiment || null);
+    
+    // Get quick responses for this room type
+    setQuickResponses(chatroomService.getQuickResponses(room.id));
+    
+    // Get trade alerts
+    setTradeAlerts(realtimeService.getTradeAlerts(5));
+  }, [userInfo, realtimeMode, realtimeConnected]);
 
   const sendChatMessage = useCallback(() => {
     if (!chatInput.trim() || !activeChatRoom) return;
     
     const userId = userInfo?.loginid || 'demo_user';
     const userName = userInfo?.fullname || 'Trader';
+    
+    // If using real-time backend, send via socket
+    if (realtimeMode && realtimeConnected) {
+      realtimeSocket.sendMessage(activeChatRoom.id, chatInput);
+      realtimeSocket.sendTyping(activeChatRoom.id, false);
+      setChatInput('');
+      return;
+    }
+    
+    // Simulated mode
+    // Stop typing indicator
+    realtimeService.setUserTyping(activeChatRoom.id, userId, false);
     
     // Send message through service
     const newMessage = chatroomService.sendMessage(activeChatRoom.id, userId, userName, chatInput);
@@ -884,6 +1024,9 @@ const Dashboard = () => {
       setChatMessages(prev => [...prev, newMessage]);
       setChatInput('');
       
+      // Push to real-time service
+      realtimeService.pushMessage(activeChatRoom.id, newMessage);
+      
       // If in AI coaching room, get AI response
       if (activeChatRoom.id === 'ai-coaching' || activeChatRoom.id === 'ai-smart-trading') {
         setTimeout(() => {
@@ -891,16 +1034,54 @@ const Dashboard = () => {
           setChatMessages(prev => [...prev, aiResponse]);
         }, 1000);
       }
+      
+      // Update room insights after new message
+      setTimeout(() => {
+        const messages = chatroomService.getMessages(activeChatRoom.id);
+        const insights = aiInsightsService.generateRoomInsights(activeChatRoom.id, messages, activeChatRoom.type);
+        setRoomInsights(insights);
+        setRoomSentiment(insights?.sentiment || null);
+      }, 500);
     }
-  }, [chatInput, activeChatRoom, userInfo, fullAnalytics]);
+  }, [chatInput, activeChatRoom, userInfo, fullAnalytics, realtimeMode, realtimeConnected]);
+
+  // Handle typing indicator
+  const handleChatInputChange = useCallback((e) => {
+    setChatInput(e.target.value);
+    
+    // If using real-time backend
+    if (realtimeMode && realtimeConnected && activeChatRoom) {
+      realtimeSocket.sendTyping(activeChatRoom.id, e.target.value.length > 0);
+      return;
+    }
+    
+    // Simulated mode
+    if (activeChatRoom && userInfo?.loginid) {
+      realtimeService.setUserTyping(activeChatRoom.id, userInfo.loginid, e.target.value.length > 0);
+    }
+  }, [activeChatRoom, userInfo, realtimeMode, realtimeConnected]);
 
   const leaveChatRoom = useCallback(() => {
+    // If using real-time backend, leave via socket
+    if (realtimeMode && realtimeConnected && activeChatRoom) {
+      realtimeSocket.leaveRoom(activeChatRoom.id);
+    }
+    
     // Stop live activity simulation when leaving
     if (activeChatRoom) {
       chatroomService.exitRoom(activeChatRoom.id);
+      // Unsubscribe from real-time updates
+      if (realtimeUnsubRef.current) {
+        realtimeUnsubRef.current();
+        realtimeUnsubRef.current = null;
+      }
     }
     setActiveChatRoom(null);
     setChatMessages([]);
+    setTypingUsers([]);
+    setOnlineUsers([]);
+    setRoomInsights(null);
+    setRoomSentiment(null);
   }, [activeChatRoom]);
 
   const createCommunityPost = useCallback(() => {
@@ -929,6 +1110,102 @@ const Dashboard = () => {
     }
   }, [activeTab, assignedRooms.length, initializeChatrooms]);
 
+  // Connect to real-time backend when Community tab is active
+  useEffect(() => {
+    if (!realtimeMode || activeTab !== 'community') return;
+    
+    const connectToBackend = async () => {
+      try {
+        // Login to the real-time backend with Deriv credentials
+        if (userInfo?.loginid) {
+          const result = await apiClient.loginWithDeriv({
+            derivUserId: userInfo.loginid,
+            loginid: userInfo.loginid,
+            email: userInfo.email,
+            currency: userInfo.currency,
+            country: userInfo.country,
+            fullname: userInfo.fullname
+          });
+          
+          // Connect socket
+          await realtimeSocket.connect(result.accessToken);
+          setRealtimeConnected(true);
+          toast.success('Connected to live chat!', { icon: '🔌' });
+          
+          // Subscribe to real-time events
+          const unsub1 = realtimeSocket.onMessage((msg) => {
+            if (activeChatRoom && msg.roomId === activeChatRoom.id) {
+              setChatMessages(prev => [...prev, {
+                id: msg.id,
+                content: msg.content,
+                userName: msg.user?.displayName || msg.user?.username,
+                avatar: msg.user?.avatarUrl || '👤',
+                time: 'Just now',
+                timestamp: msg.createdAt,
+                reactions: msg.reactions || []
+              }]);
+            }
+          });
+          
+          const unsub2 = realtimeSocket.onTyping((data) => {
+            if (activeChatRoom && data.roomId === activeChatRoom.id) {
+              setTypingUsers(data.isTyping 
+                ? prev => [...new Set([...prev, data.username])]
+                : prev => prev.filter(u => u !== data.username)
+              );
+            }
+          });
+          
+          const unsub3 = realtimeSocket.onPresence((data) => {
+            if (activeChatRoom && data.roomId === activeChatRoom.id) {
+              setOnlineCount(data.count || 0);
+              setOnlineUsers(data.users || []);
+            }
+          });
+          
+          const unsub4 = realtimeSocket.onConnectionChange((connected) => {
+            setRealtimeConnected(connected);
+            if (!connected) {
+              toast.error('Chat connection lost', { icon: '⚠️' });
+            }
+          });
+          
+          socketUnsubsRef.current = [unsub1, unsub2, unsub3, unsub4];
+          
+          // Load rooms from backend
+          try {
+            const rooms = await apiClient.getChatrooms();
+            if (rooms.length > 0) {
+              setAssignedRooms(rooms.map(r => ({
+                id: r.id,
+                name: r.name,
+                description: r.description,
+                icon: r.icon || '💬',
+                type: r.type,
+                level: r.level,
+                fitScore: r.fitScore,
+                activeNow: r.memberCount
+              })));
+            }
+          } catch (err) {
+            console.warn('Could not load rooms from backend, using local:', err);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to connect to real-time backend:', error);
+        // Fall back to simulated mode
+        setRealtimeMode(false);
+      }
+    };
+    
+    connectToBackend();
+    
+    return () => {
+      socketUnsubsRef.current.forEach(unsub => unsub?.());
+      socketUnsubsRef.current = [];
+    };
+  }, [activeTab, realtimeMode, userInfo, activeChatRoom]);
+
   // Load community posts when tab is active
   useEffect(() => {
     if (activeTab === 'community' && communityPosts.length === 0) {
@@ -948,6 +1225,53 @@ const Dashboard = () => {
   ];
 
   const moodEmojis = { great: '🚀', good: '😊', neutral: '😐', bad: '😔' };
+
+  // Auto logout after 24 hours of active session
+  useEffect(() => {
+    // Clear previous timer
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+      logoutTimerRef.current = null;
+    }
+
+    if (userInfo) {
+      // Set 24-hour logout
+      const DAY = 24 * 60 * 60 * 1000;
+      logoutTimerRef.current = setTimeout(() => {
+        try {
+          toast('Session expired after 24 hours, logging out...', { icon: '⏳' });
+        } catch (e) {}
+        handleLogout();
+      }, DAY);
+    }
+
+    return () => {
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+        logoutTimerRef.current = null;
+      }
+    };
+  }, [userInfo, handleLogout]);
+
+  // Watch websocket connection state; if ws disconnects then reconnects, force login
+  useEffect(() => {
+    const unsub = websocketService.onConnectionChange((state) => {
+      if (state === 'closed') {
+        hadWsDisconnectedRef.current = true;
+      } else if (state === 'open') {
+        if (hadWsDisconnectedRef.current) {
+          // WebSocket was disconnected and just re-opened. Force login flow.
+          hadWsDisconnectedRef.current = false;
+          try {
+            toast('Connection restored. Please login again for security.', { icon: '🔒' });
+          } catch (e) {}
+          handleLogout();
+        }
+      }
+    });
+
+    return () => { if (typeof unsub === 'function') unsub(); };
+  }, [handleLogout]);
 
   if (isLoading) {
     return (
@@ -1776,6 +2100,64 @@ const Dashboard = () => {
                     Back to Community
                   </button>
                   
+                  {/* AI Insights Panel */}
+                  {roomInsights && showAIPanel && (
+                    <Card className="bg-gradient-to-r from-[#ff3355]/10 to-[#ff8042]/10 border-[#ff3355]/30">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Bot className="w-5 h-5 text-[#ff3355]" />
+                          <h3 className="font-bold">AI Room Insights</h3>
+                        </div>
+                        <button onClick={() => setShowAIPanel(false)} className="text-xs opacity-60 hover:opacity-100">
+                          Hide
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                        {roomInsights.keyInsights?.map((insight, idx) => (
+                          <div key={idx} className="p-3 rounded-lg" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xl">{insight.icon}</span>
+                              <span className="text-xs font-medium">{insight.title}</span>
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{insight.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {roomSentiment && (
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">Sentiment:</span>
+                            <span className={`px-2 py-1 rounded-full ${
+                              roomSentiment.overall === 'positive' ? 'bg-green-500/20 text-green-500' :
+                              roomSentiment.overall === 'negative' ? 'bg-red-500/20 text-red-500' :
+                              'bg-yellow-500/20 text-yellow-500'
+                            }`}>
+                              {roomSentiment.overall.charAt(0).toUpperCase() + roomSentiment.overall.slice(1)}
+                            </span>
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            {roomSentiment.summary}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {roomInsights.strategies?.topStrategies?.length > 0 && (
+                        <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--card-border)' }}>
+                          <p className="text-xs font-medium mb-2">Trending Strategies:</p>
+                          <div className="flex gap-2 flex-wrap">
+                            {roomInsights.strategies.topStrategies.slice(0, 3).map((strat, idx) => (
+                              <span key={idx} className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                                {strat.displayName} ({strat.count})
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </Card>
+                  )}
+                  
                   <Card className="overflow-hidden">
                     <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--card-border)' }}>
                       <div className="flex items-center gap-3">
@@ -1793,9 +2175,13 @@ const Dashboard = () => {
                         </div>
                       </div>
                       
-                      {/* Active Traders */}
-                      {activeChatRoom.activeTraders && (
-                        <div className="flex items-center gap-2">
+                      {/* Online Count & Active Traders */}
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/20">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          <span className="text-xs font-medium text-green-500">{onlineCount || activeChatRoom.activeTraders?.length || 0} online</span>
+                        </div>
+                        {activeChatRoom.activeTraders && (
                           <div className="flex -space-x-2">
                             {activeChatRoom.activeTraders.slice(0, 5).map((trader, idx) => (
                               <div 
@@ -1808,11 +2194,8 @@ const Dashboard = () => {
                               </div>
                             ))}
                           </div>
-                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {activeChatRoom.activeTraders.length}+ online
-                          </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     {/* Chat Messages */}
@@ -1849,14 +2232,51 @@ const Dashboard = () => {
                           </div>
                         ))
                       )}
+                      
+                      {/* Typing Indicators */}
+                      {typingUsers.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-secondary)' }}>
+                          <div className="flex gap-1">
+                            <div className="w-2 h-2 bg-[#ff3355] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-2 h-2 bg-[#ff3355] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-2 h-2 bg-[#ff3355] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          </div>
+                          <span>
+                            {typingUsers.length === 1 
+                              ? `${typingUsers[0].name} is typing...`
+                              : `${typingUsers.length} people are typing...`
+                            }
+                          </span>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Quick Responses */}
+                    {quickResponses.length > 0 && (
+                      <div className="py-2 flex gap-2 overflow-x-auto" style={{ borderTop: '1px solid var(--card-border)' }}>
+                        <span className="text-xs shrink-0 self-center" style={{ color: 'var(--text-secondary)' }}>Quick:</span>
+                        {quickResponses.map((resp, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setChatInput(resp.text);
+                              document.querySelector('input[placeholder*="Type a message"]')?.focus();
+                            }}
+                            className="text-xs px-3 py-1 rounded-full whitespace-nowrap hover:bg-[#ff3355]/20 transition-colors"
+                            style={{ backgroundColor: 'var(--accent-bg)' }}
+                          >
+                            {resp.emoji} {resp.text}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Message Input */}
                     <div className="pt-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)' }}>
                       <input
                         type="text"
                         value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
+                        onChange={handleChatInputChange}
                         onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
                         placeholder={activeChatRoom.type === 'ai' ? "Ask the AI coach anything..." : "Type a message..."}
                         className="flex-1 px-4 py-3 rounded-xl bg-transparent outline-none transition-all focus:ring-2 focus:ring-[#ff3355]/50"
@@ -1875,12 +2295,79 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column - Chatrooms */}
                   <div className="lg:col-span-2 space-y-6">
+                    {/* Trade Alerts */}
+                    {tradeAlerts.length > 0 && (
+                      <Card className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-bold text-sm flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-blue-400" />
+                            Live Trade Signals
+                          </h3>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                            {tradeAlerts.length} recent
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {tradeAlerts.slice(0, 3).map((alert, idx) => (
+                            <div key={alert.id || idx} className="flex items-start gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--card-bg)' }}>
+                              <span className="text-lg shrink-0">
+                                {alert.type === 'signal' ? '📊' : alert.type === 'news' ? '📰' : alert.type === 'warning' ? '⚠️' : '💡'}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium">{alert.message}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--accent-bg)', color: 'var(--text-secondary)' }}>
+                                    {alert.market}
+                                  </span>
+                                  {alert.confidence && (
+                                    <span className="text-xs text-green-400">{alert.confidence}% confidence</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Trending Topics */}
+                    {trendingTopics.length > 0 && (
+                      <Card>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-bold text-sm flex items-center gap-2">
+                            <Flame className="w-4 h-4 text-orange-500" />
+                            Trending Now
+                          </h3>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {trendingTopics.map((topic, idx) => (
+                            <button
+                              key={idx}
+                              className="px-3 py-1.5 rounded-lg text-xs hover:bg-[#ff3355]/20 transition-colors flex items-center gap-1"
+                              style={{ backgroundColor: 'var(--accent-bg)' }}
+                            >
+                              <span>{topic.topic}</span>
+                              <span className="text-[#ff3355]">({topic.mentions})</span>
+                              {topic.trend === 'hot' && <Flame className="w-3 h-3 text-orange-500" />}
+                            </button>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+                    
                     {/* Section Header */}
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-bold flex items-center gap-2">
                         <MessageSquare className="w-5 h-5 text-[#ff3355]" />
                         Trading Chatrooms
                       </h2>
+                      {communityStats && (
+                        <div className="text-xs flex items-center gap-3" style={{ color: 'var(--text-secondary)' }}>
+                          <span>{communityStats.onlineNow} online</span>
+                          <span>•</span>
+                          <span>{communityStats.activeRooms} rooms</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Room Categories */}
