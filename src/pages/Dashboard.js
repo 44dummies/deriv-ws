@@ -516,7 +516,6 @@ const Dashboard = () => {
         
         await websocketService.connect();
         setDerivWsConnected(true);
-        console.log('Deriv WebSocket connected');
         
         const authResponse = await websocketService.authorize(tokens.token);
         if (authResponse.error) { 
@@ -526,7 +525,6 @@ const Dashboard = () => {
           navigate('/'); 
           return; 
         }
-        console.log('Deriv WebSocket authorized');
         
         if (authResponse.authorize) {
           const userData = {
@@ -610,19 +608,15 @@ const Dashboard = () => {
   // Silent sync for auto-sync (no toast notifications)
   const handleSilentSync = useCallback(async () => {
     if (syncing || !derivWsConnected) {
-      console.log('Skipping sync - syncing:', syncing, 'wsConnected:', derivWsConnected);
       return; // Prevent concurrent syncs or sync without connection
     }
     
     // Check minimum gap between syncs
     const now = Date.now();
     if (now - lastSyncAttempt.current < MIN_SYNC_GAP) {
-      console.log('Skipping sync - too soon since last attempt');
       return;
     }
     lastSyncAttempt.current = now;
-    
-    console.log('Starting auto-sync...');
     
     try {
       // Only fetch balance if we don't have recent data
@@ -630,13 +624,9 @@ const Dashboard = () => {
         const balanceRes = await websocketService.getBalance();
         if (balanceRes.balance) {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
-          console.log('Balance updated:', balanceRes.balance.balance);
         }
       } catch (balanceErr) {
         // Handle rate limit for balance - just skip it, not critical
-        if (balanceErr?.code === 'RateLimit') {
-          console.log('Balance rate limited, skipping...');
-        }
       }
       
       // Fetch profit table with rate limit handling
@@ -658,7 +648,6 @@ const Dashboard = () => {
         calculateAnalytics(trades);
         calculateDigitStats(trades);
         runFullAnalytics(trades);
-        console.log('Synced', trades.length, 'trades');
 
         if (useSupabase && userInfo?.loginid) {
           await supabaseService.upsertUserProfile(userInfo);
@@ -670,15 +659,11 @@ const Dashboard = () => {
       syncBackoffTime.current = AUTO_SYNC_INTERVAL;
       setLastSyncTime(new Date());
       setNextSyncTime(new Date(Date.now() + AUTO_SYNC_INTERVAL));
-      console.log('Auto-sync completed successfully');
     } catch (err) { 
       // Handle rate limit errors with exponential backoff
       if (err?.code === 'RateLimit' || err?.message?.includes('rate limit')) {
-        console.log('Rate limited, increasing backoff time...');
         syncBackoffTime.current = Math.min(syncBackoffTime.current * 2, 600000); // Max 10 minutes
         setNextSyncTime(new Date(Date.now() + syncBackoffTime.current));
-      } else {
-        console.error('Auto-sync error:', err);
       }
     }
   }, [syncing, derivWsConnected, useSupabase, userInfo, saveToStorage, calculateAnalytics, calculateDigitStats, runFullAnalytics]);
@@ -733,12 +718,10 @@ const Dashboard = () => {
   // Auto-sync effect with dynamic backoff
   useEffect(() => {
     if (autoSyncEnabled && userInfo && !isLoading && derivWsConnected) {
-      console.log('Auto-sync enabled, starting sync schedule...');
-      
       // Initial sync after a short delay
       const initialTimeout = setTimeout(() => {
         handleSilentSync();
-      }, 3000); // Wait 3 seconds before first sync
+      }, 5000); // Wait 5 seconds before first sync
       
       // Set up interval with dynamic timing
       const scheduleNextSync = () => {
@@ -751,7 +734,7 @@ const Dashboard = () => {
       // Start the scheduling after initial sync
       const scheduleTimeout = setTimeout(() => {
         scheduleNextSync();
-      }, 5000); // Start scheduling 5 seconds after mount
+      }, 10000); // Start scheduling 10 seconds after mount
       
       return () => {
         clearTimeout(initialTimeout);
@@ -1275,7 +1258,6 @@ const Dashboard = () => {
   // Watch websocket connection state; if ws disconnects then reconnects, force login
   useEffect(() => {
     const unsub = websocketService.onConnectionChange((state) => {
-      console.log('Deriv WS state changed:', state);
       if (state === 'closed') {
         hadWsDisconnectedRef.current = true;
         setDerivWsConnected(false);
