@@ -109,7 +109,8 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
   const [activeTab, setActiveTab] = useState('sync');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed (especially for mobile)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Separate state for mobile
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
@@ -223,21 +224,21 @@ const Dashboard = () => {
     checkSupabase();
   }, []);
 
-  // Close sidebar when clicking outside (only when expanded on mobile/tablet)
+  // Close mobile sidebar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && !sidebarCollapsed) {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && mobileSidebarOpen) {
         // Check if the click target is NOT the toggle button
         const isToggleButton = event.target.closest('[data-sidebar-toggle]');
         if (!isToggleButton) {
-          setSidebarCollapsed(true);
+          setMobileSidebarOpen(false);
         }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [sidebarCollapsed]);
+  }, [mobileSidebarOpen]);
 
   // Load data from Supabase or localStorage
   const loadFromStorage = useCallback(async () => {
@@ -788,10 +789,10 @@ const Dashboard = () => {
 
       <div className="relative z-10 flex">
         {/* Sidebar Overlay (for mobile) */}
-        {!sidebarCollapsed && (
+        {mobileSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-20 lg:hidden" 
-            onClick={() => setSidebarCollapsed(true)}
+            onClick={() => setMobileSidebarOpen(false)}
           />
         )}
 
@@ -799,26 +800,25 @@ const Dashboard = () => {
         <aside 
           ref={sidebarRef}
           className={`${
-            sidebarCollapsed ? 'w-0 lg:w-20' : 'w-64'
-          } fixed lg:relative z-30 min-h-screen border-r ${isDarkMode ? 'border-white/10 bg-black/40' : 'border-gray-200 bg-white shadow-lg'} backdrop-blur-xl transition-all duration-300 flex flex-col overflow-hidden`}
+            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0 ${
+            sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+          } w-64 fixed lg:relative z-30 min-h-screen border-r ${isDarkMode ? 'border-white/10 bg-black/40' : 'border-gray-200 bg-white shadow-lg'} backdrop-blur-xl transition-all duration-300 flex flex-col`}
         >
           {/* Logo with integrated toggle */}
           <div className={`p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-            <button 
-              data-sidebar-toggle
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="flex items-center gap-3 w-full group"
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white group-hover:scale-105 transition-transform">
-                {sidebarCollapsed ? <Menu className="w-5 h-5" /> : 'N'}
+            <div className="flex items-center gap-3 w-full">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white">
+                N
               </div>
-              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap">NexaTrade</span>}
-            </button>
+              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap hidden lg:inline">NexaTrade</span>}
+              <span className="font-semibold text-lg whitespace-nowrap lg:hidden">NexaTrade</span>
+            </div>
           </div>
 
           {userInfo && (
-            <div className={`p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'} ${sidebarCollapsed ? 'text-center' : ''}`}>
-              {!sidebarCollapsed && (
+            <div className={`p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'} ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
+              {(!sidebarCollapsed || window.innerWidth < 1024) && (
                 <>
                   <p className="font-medium truncate">{userInfo.fullname || 'Trader'}</p>
                   <p className={`text-sm truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo.loginid}</p>
@@ -828,27 +828,27 @@ const Dashboard = () => {
                   </div>
                 </>
               )}
-              {sidebarCollapsed && <div className={`w-8 h-8 rounded-full mx-auto ${userInfo.is_virtual ? 'bg-yellow-500/20' : 'bg-green-500/20'} flex items-center justify-center text-xs`}>{userInfo.fullname?.[0] || 'T'}</div>}
+              {sidebarCollapsed && <div className={`w-8 h-8 rounded-full mx-auto ${userInfo.is_virtual ? 'bg-yellow-500/20' : 'bg-green-500/20'} hidden lg:flex items-center justify-center text-xs`}>{userInfo.fullname?.[0] || 'T'}</div>}
             </div>
           )}
 
           <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); if (window.innerWidth < 1024) setSidebarCollapsed(true); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'justify-center' : ''}`} title={sidebarCollapsed ? tab.label : undefined}>
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`} title={sidebarCollapsed ? tab.label : undefined}>
                 {tab.icon}
-                {!sidebarCollapsed && <span>{tab.label}</span>}
+                <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{tab.label}</span>
               </button>
             ))}
           </nav>
 
           <div className={`p-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'} space-y-2`}>
-            <button onClick={toggleTheme} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'justify-center' : ''}`}>
+            <button onClick={toggleTheme} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
               {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              {!sidebarCollapsed && <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+              <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
             </button>
-            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
+            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
               <LogOut className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Logout</span>}
+              <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>Logout</span>
             </button>
           </div>
 
@@ -856,7 +856,8 @@ const Dashboard = () => {
           <button 
             data-sidebar-toggle
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
-            className="hidden lg:flex absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-[#ff3355] items-center justify-center text-white shadow-lg hover:scale-110 transition-transform z-40"
+            className="hidden lg:flex absolute top-1/2 -right-3 w-6 h-6 rounded-full items-center justify-center shadow-lg hover:scale-110 transition-transform z-40"
+            style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
           >
             {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
@@ -869,9 +870,9 @@ const Dashboard = () => {
             {/* Mobile hamburger */}
             <button 
               data-sidebar-toggle
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} 
               className={`lg:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}
-              title={sidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+              title={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
               <Menu className="w-5 h-5" />
             </button>
