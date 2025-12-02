@@ -1,8 +1,11 @@
 -- ============================================
--- NEXATRADE SUPABASE SCHEMA
+-- NEXATRADE SUPABASE SCHEMA v2.0
 -- ============================================
 -- Run this in your Supabase SQL Editor to set up the database
 -- Go to: https://supabase.com/dashboard/project/YOUR_PROJECT/sql
+-- 
+-- IMPORTANT: Run each section one at a time if you get errors
+-- ============================================
 
 -- ============================================
 -- 1. PROFILES TABLE
@@ -16,6 +19,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   fullname TEXT,
   currency TEXT DEFAULT 'USD',
   is_virtual BOOLEAN DEFAULT false,
+  last_login TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -203,21 +207,89 @@ END;
 $$ language 'plpgsql';
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_journal_entries_updated_at ON journal_entries;
 CREATE TRIGGER update_journal_entries_updated_at
   BEFORE UPDATE ON journal_entries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_settings_updated_at ON user_settings;
 CREATE TRIGGER update_user_settings_updated_at
   BEFORE UPDATE ON user_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_analytics_cache_updated_at ON analytics_cache;
 CREATE TRIGGER update_analytics_cache_updated_at
   BEFORE UPDATE ON analytics_cache
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 7. DIGIT STATS TABLE
+-- ============================================
+-- Stores digit analysis data
+
+CREATE TABLE IF NOT EXISTS digit_stats (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  deriv_login_id TEXT UNIQUE NOT NULL REFERENCES profiles(deriv_login_id) ON DELETE CASCADE,
+  digit_0 INTEGER DEFAULT 0,
+  digit_1 INTEGER DEFAULT 0,
+  digit_2 INTEGER DEFAULT 0,
+  digit_3 INTEGER DEFAULT 0,
+  digit_4 INTEGER DEFAULT 0,
+  digit_5 INTEGER DEFAULT 0,
+  digit_6 INTEGER DEFAULT 0,
+  digit_7 INTEGER DEFAULT 0,
+  digit_8 INTEGER DEFAULT 0,
+  digit_9 INTEGER DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE digit_stats ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own digit stats" ON digit_stats
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert own digit stats" ON digit_stats
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update own digit stats" ON digit_stats
+  FOR UPDATE USING (true);
+
+-- ============================================
+-- 8. SESSION LOGS TABLE (for security)
+-- ============================================
+-- Tracks user login sessions
+
+CREATE TABLE IF NOT EXISTS session_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  deriv_login_id TEXT NOT NULL REFERENCES profiles(deriv_login_id) ON DELETE CASCADE,
+  login_time TIMESTAMPTZ DEFAULT NOW(),
+  logout_time TIMESTAMPTZ,
+  logout_reason TEXT, -- 'manual', 'inactivity', 'token_expired'
+  user_agent TEXT,
+  ip_address INET
+);
+
+-- Enable RLS
+ALTER TABLE session_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own session logs" ON session_logs
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert session logs" ON session_logs
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update session logs" ON session_logs
+  FOR UPDATE USING (true);
+
+-- Index for faster queries
+CREATE INDEX IF NOT EXISTS idx_session_logs_login ON session_logs(deriv_login_id);
+CREATE INDEX IF NOT EXISTS idx_session_logs_time ON session_logs(login_time DESC);
 
 -- ============================================
 -- DONE!
@@ -227,3 +299,14 @@ CREATE TRIGGER update_analytics_cache_updated_at
 -- 2. Add them to your .env file:
 --    REACT_APP_SUPABASE_URL=your_supabase_url
 --    REACT_APP_SUPABASE_ANON_KEY=your_anon_key
+-- 3. Restart your development server
+--
+-- TABLE SUMMARY:
+-- - profiles: User account info (linked to Deriv login)
+-- - journal_entries: Trading journal entries
+-- - friends: Friend list
+-- - trades: Synced trade history
+-- - user_settings: App preferences
+-- - analytics_cache: Computed stats
+-- - digit_stats: Digit analysis data
+-- - session_logs: Login/logout tracking

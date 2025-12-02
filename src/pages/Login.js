@@ -298,7 +298,7 @@ const Login = () => {
               <span className="font-semibold">NexaTrade</span>
             </div>
             <p className="text-gray-500 text-sm">
-              © 2024 NexaTrade. A Deriv Partner Application.
+              © 2025 NexaTrade. A 44 Dummies Company.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-400">
               <a href="https://deriv.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Deriv.com</a>
