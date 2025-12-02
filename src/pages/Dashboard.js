@@ -150,7 +150,7 @@ const Dashboard = () => {
   const [communityFeed, setCommunityFeed] = useState([]);
   const [userReputation, setUserReputation] = useState({ score: 0, level: 'Newbie', badges: [] });
   const [chatroomLoading, setChatroomLoading] = useState(false);
-  const [chatroomSubTab, setChatroomSubTab] = useState('my-rooms');
+  const [chatroomSubTab, setChatroomSubTab] = useState('assigned');
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostTags, setNewPostTags] = useState([]);
   
@@ -1557,19 +1557,19 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Community Tab - Combined Chatrooms & Community */}
+          {/* Community Tab - Chatrooms & Community Posts */}
           {activeTab === 'community' && (
             <div className="space-y-6">
-              {/* Header with User Rep */}
+              {/* Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
                     <Users className="w-6 h-6 text-[#ff3355]" />
-                    NexaTrade Community
+                    Community Hub
                   </h1>
-                  <p style={{ color: 'var(--text-secondary)' }}>Connect with traders, join chatrooms, share insights</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>Chatrooms, discussions, and community posts</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
                     <Star className="w-4 h-4 text-yellow-500" />
                     <span className="text-sm font-medium">{userReputation.score} pts</span>
@@ -1577,17 +1577,16 @@ const Dashboard = () => {
                   </div>
                   <button onClick={initializeChatrooms} disabled={chatroomLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}>
                     <RefreshCw className={`w-4 h-4 ${chatroomLoading ? 'animate-spin' : ''}`} />
-                    Refresh
                   </button>
                 </div>
               </div>
 
-              {/* Active Chat Room View */}
-              {activeChatRoom ? (
+              {/* Active Chat Room View - Shows when a room is selected */}
+              {activeChatRoom && (
                 <div className="space-y-4">
                   <button onClick={leaveChatRoom} className="flex items-center gap-2 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
                     <ChevronLeft className="w-4 h-4" />
-                    Back to Rooms
+                    Back to Community
                   </button>
                   
                   <Card className="overflow-hidden">
@@ -1599,25 +1598,20 @@ const Dashboard = () => {
                         <div>
                           <h3 className="font-bold text-lg flex items-center gap-2">
                             {activeChatRoom.name}
-                            {activeChatRoom.premium && <Crown className="w-4 h-4 text-yellow-500" />}
+                            {activeChatRoom.isPremium && <Crown className="w-4 h-4 text-yellow-500" />}
                           </h3>
                           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{activeChatRoom.description}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-sm text-green-500">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                          {activeChatRoom.members || 0} online
-                        </span>
-                      </div>
                     </div>
 
                     {/* Chat Messages */}
-                    <div className="h-96 overflow-y-auto py-4 space-y-4">
+                    <div className="h-80 overflow-y-auto py-4 space-y-4">
                       {chatMessages.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center">
                           <MessageSquare className="w-12 h-12 mb-4" style={{ color: 'var(--text-secondary)' }} />
                           <p style={{ color: 'var(--text-secondary)' }}>No messages yet. Start the conversation!</p>
+                          <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Your messages are saved locally</p>
                         </div>
                       ) : (
                         chatMessages.map((msg, idx) => (
@@ -1631,14 +1625,7 @@ const Dashboard = () => {
                                 {msg.isAI && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff3355]">AI Coach</span>}
                                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{msg.time}</span>
                               </div>
-                              <p className="text-sm mt-1" style={{ color: msg.isAI ? 'white' : 'var(--text-secondary)' }}>{msg.content}</p>
-                              {msg.reactions && (
-                                <div className="flex items-center gap-2 mt-2">
-                                  <button className="flex items-center gap-1 text-xs hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
-                                    <ThumbsUp className="w-3 h-3" /> {msg.reactions.likes || 0}
-                                  </button>
-                                </div>
-                              )}
+                              <p className="text-sm mt-1 whitespace-pre-wrap" style={{ color: msg.isAI ? 'white' : 'var(--text-secondary)' }}>{msg.content}</p>
                             </div>
                           </div>
                         ))
@@ -1652,7 +1639,7 @@ const Dashboard = () => {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                        placeholder={activeChatRoom.premium ? "Ask the AI coach anything..." : "Type a message..."}
+                        placeholder={activeChatRoom.type === 'ai' ? "Ask the AI coach anything..." : "Type a message..."}
                         className="flex-1 px-4 py-3 rounded-xl bg-transparent outline-none transition-all focus:ring-2 focus:ring-[#ff3355]/50"
                         style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
                       />
@@ -1662,415 +1649,201 @@ const Dashboard = () => {
                     </div>
                   </Card>
                 </div>
-              ) : (
-                /* Room List View */
-                <div className="space-y-6">
-                  {/* Sub-tabs */}
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                    {[
-                      { id: 'my-rooms', label: 'My Rooms', icon: <Star className="w-4 h-4" /> },
-                      { id: 'feed', label: 'Posts', icon: <Activity className="w-4 h-4" /> },
-                      { id: 'behavior', label: 'Behavior', icon: <Brain className="w-4 h-4" /> },
-                      { id: 'strategy', label: 'Strategy', icon: <Target className="w-4 h-4" /> },
-                      { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
-                      { id: 'premium', label: 'AI Coach', icon: <Crown className="w-4 h-4" /> },
-                      { id: 'deriv-forum', label: 'Deriv Forum', icon: <ExternalLink className="w-4 h-4" /> },
-                    ].map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setChatroomSubTab(tab.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all text-sm ${chatroomSubTab === tab.id ? 'bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white' : ''}`}
-                        style={{ backgroundColor: chatroomSubTab === tab.id ? undefined : 'var(--card-bg)', border: chatroomSubTab === tab.id ? 'none' : '1px solid var(--card-border)' }}
-                      >
-                        {tab.icon}
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
+              )}
 
-                  {chatroomLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[1,2,3,4].map(i => (
-                        <Card key={i} className="animate-pulse">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-white/10" />
-                            <div className="flex-1 space-y-2">
-                              <div className="h-4 bg-white/10 rounded w-3/4" />
-                              <div className="h-3 bg-white/10 rounded w-1/2" />
-                            </div>
-                          </div>
-                        </Card>
+              {/* Main Content - Two Column Layout */}
+              {!activeChatRoom && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column - Chatrooms */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Section Header */}
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-bold flex items-center gap-2">
+                        <MessageSquare className="w-5 h-5 text-[#ff3355]" />
+                        Trading Chatrooms
+                      </h2>
+                    </div>
+
+                    {/* Room Categories */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                      {[
+                        { id: 'assigned', label: 'For You', icon: <Star className="w-4 h-4" /> },
+                        { id: 'behavior', label: 'Behavior', icon: <Brain className="w-4 h-4" /> },
+                        { id: 'strategy', label: 'Strategy', icon: <Target className="w-4 h-4" /> },
+                        { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
+                        { id: 'ai', label: 'AI Coach', icon: <Bot className="w-4 h-4" /> },
+                      ].map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setChatroomSubTab(cat.id)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg whitespace-nowrap transition-all text-sm ${chatroomSubTab === cat.id ? 'bg-[#ff3355] text-white' : ''}`}
+                          style={{ backgroundColor: chatroomSubTab === cat.id ? undefined : 'var(--accent-bg)' }}
+                        >
+                          {cat.icon}
+                          {cat.label}
+                        </button>
                       ))}
                     </div>
-                  ) : (
-                    <>
-                      {/* My Assigned Rooms */}
-                      {chatroomSubTab === 'my-rooms' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold">Your Assigned Rooms</h2>
-                            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                              Based on your trading analytics
-                            </span>
-                          </div>
-                          {assignedRooms.length === 0 ? (
-                            <Card>
-                              <EmptyState
-                                icon={<MessageSquare className="w-8 h-8" />}
-                                title="No Rooms Assigned Yet"
-                                description="Complete some trades to get auto-assigned to relevant trading rooms based on your behavior and performance."
-                              />
-                            </Card>
-                          ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {assignedRooms.map(room => (
-                                <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
-                                  <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                      {room.icon}
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
-                                        {room.premium && <Crown className="w-4 h-4 text-yellow-500" />}
-                                        {room.fitScore && (
-                                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500">
-                                            {room.fitScore}% match
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
-                                      <div className="flex items-center gap-4 mt-3">
-                                        <span className="flex items-center gap-1 text-xs text-green-500">
-                                          <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                          {room.members || 0} online
-                                        </span>
-                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                          {room.category}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
 
-                      {/* Behavior Rooms */}
-                      {chatroomSubTab === 'behavior' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <Brain className="w-5 h-5 text-purple-500" />
-                              Behavior Support Rooms
-                            </h2>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {chatroomService.getAllRooms().filter(r => r.category === 'behavior').map(room => (
-                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
-                                <div className="flex items-start gap-4">
-                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                    {room.icon}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
-                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                      <span className="flex items-center gap-1 text-xs text-green-500">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                        {room.members || 0} online
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Strategy Rooms */}
-                      {chatroomSubTab === 'strategy' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <Target className="w-5 h-5 text-blue-500" />
-                              Strategy Rooms
-                            </h2>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {chatroomService.getAllRooms().filter(r => r.category === 'strategy').map(room => (
-                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
-                                <div className="flex items-start gap-4">
-                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                    {room.icon}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
-                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                      <span className="flex items-center gap-1 text-xs text-green-500">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                        {room.members || 0} online
-                                      </span>
-                                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                        {room.tags?.[0] || 'strategy'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Performance Rooms */}
-                      {chatroomSubTab === 'performance' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <TrendingUp className="w-5 h-5 text-green-500" />
-                              Performance Tiers
-                            </h2>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {chatroomService.getAllRooms().filter(r => r.category === 'performance').map(room => (
-                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
-                                <div className="flex items-start gap-4">
-                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                    {room.icon}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
-                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                      <span className="flex items-center gap-1 text-xs text-green-500">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                        {room.members || 0} online
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Premium AI Rooms */}
-                      {chatroomSubTab === 'premium' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <Crown className="w-5 h-5 text-yellow-500" />
-                              Premium AI Coaching
-                            </h2>
-                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500">
-                              AI-Powered
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {chatroomService.getAllRooms().filter(r => r.category === 'premium').map(room => (
-                              <Card key={room.id} className="hover:border-yellow-500/50 transition-all cursor-pointer group border-yellow-500/20" onClick={() => enterChatRoom(room)}>
-                                <div className="flex items-start gap-4">
-                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20">
-                                    {room.icon}
-                                  </div>
-                                  <div className="flex-1">
-                                    <h3 className="font-bold group-hover:text-yellow-500 transition-colors flex items-center gap-2">
-                                      {room.name}
-                                      <Crown className="w-4 h-4 text-yellow-500" />
-                                    </h3>
-                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
-                                    <div className="flex items-center gap-4 mt-3">
-                                      <span className="flex items-center gap-1 text-xs text-green-500">
-                                        <Bot className="w-3 h-3" />
-                                        AI Active
-                                      </span>
-                                      <span className="text-xs text-yellow-500">
-                                        Personalized coaching
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-                                </div>
-                              </Card>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Global Feed */}
-                      {chatroomSubTab === 'feed' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <Activity className="w-5 h-5 text-[#ff3355]" />
-                              Community Posts
-                            </h2>
-                          </div>
-                          
-                          {/* Create Post */}
-                          <Card>
-                            <div className="space-y-3">
-                              <textarea
-                                value={newPostContent}
-                                onChange={(e) => setNewPostContent(e.target.value)}
-                                placeholder="Share your trading insights, strategies, or milestones..."
-                                rows={3}
-                                className="w-full px-4 py-3 rounded-xl focus:ring-2 focus:ring-[#ff3355]/50 outline-none transition-all resize-none"
-                                style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
-                              />
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {['strategy', 'milestone', 'question', 'tip'].map(tag => (
-                                    <button
-                                      key={tag}
-                                      onClick={() => setNewPostTags(prev => 
-                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                                      )}
-                                      className={`text-xs px-2 py-1 rounded-full transition-all ${newPostTags.includes(tag) ? 'bg-[#ff3355] text-white' : ''}`}
-                                      style={{ backgroundColor: newPostTags.includes(tag) ? undefined : 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
-                                    >
-                                      #{tag}
-                                    </button>
-                                  ))}
-                                </div>
-                                <button
-                                  onClick={createCommunityPost}
-                                  disabled={!newPostContent.trim()}
-                                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
-                                >
-                                  <Send className="w-4 h-4" />
-                                  Post
-                                </button>
+                    {/* Room List */}
+                    {chatroomLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[1,2,3,4].map(i => (
+                          <Card key={i} className="animate-pulse p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-white/10" />
+                              <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-white/10 rounded w-3/4" />
+                                <div className="h-3 bg-white/10 rounded w-1/2" />
                               </div>
                             </div>
                           </Card>
-
-                          {communityFeed.length === 0 ? (
-                            <Card>
-                              <EmptyState
-                                icon={<Activity className="w-8 h-8" />}
-                                title="No Posts Yet"
-                                description="Be the first to share your trading insights with the community!"
-                              />
-                            </Card>
-                          ) : (
-                            <div className="space-y-4">
-                              {communityFeed.map(post => (
-                                <Card key={post.id}>
-                                  <div className="flex items-start gap-4">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                      {post.avatar || post.userName?.[0] || '?'}
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">{post.userName}</span>
-                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
-                                        {post.badge && (
-                                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff3355]">{post.badge}</span>
-                                        )}
-                                      </div>
-                                      <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
-                                      {post.tags && (
-                                        <div className="flex items-center gap-2 mt-3">
-                                          {post.tags.map((tag, idx) => (
-                                            <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                                              #{tag}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      )}
-                                      <div className="flex items-center gap-4 mt-3">
-                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
-                                          <ThumbsUp className="w-4 h-4" /> {post.likes || 0}
-                                        </button>
-                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
-                                          <MessageCircle className="w-4 h-4" /> {post.comments || 0}
-                                        </button>
-                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
-                                          <Eye className="w-4 h-4" /> {post.views || 0}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </Card>
-                              ))}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(chatroomSubTab === 'assigned' ? assignedRooms : chatroomService.getAllRooms().filter(r => r.type === chatroomSubTab)).map(room => (
+                          <Card 
+                            key={room.id} 
+                            className="p-4 hover:border-[#ff3355]/50 transition-all cursor-pointer group"
+                            onClick={() => {
+                              console.log('Entering room:', room);
+                              enterChatRoom(room);
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                {room.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium text-sm group-hover:text-[#ff3355] transition-colors truncate">{room.name}</h3>
+                                  {room.isPremium && <Crown className="w-3 h-3 text-yellow-500 shrink-0" />}
+                                  {room.fitScore && <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-500 shrink-0">{room.fitScore}%</span>}
+                                </div>
+                                <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                              </div>
+                              <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" style={{ color: 'var(--text-secondary)' }} />
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </Card>
+                        ))}
+                        {(chatroomSubTab === 'assigned' ? assignedRooms : chatroomService.getAllRooms().filter(r => r.type === chatroomSubTab)).length === 0 && (
+                          <Card className="col-span-full p-8 text-center">
+                            <MessageSquare className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--text-secondary)' }} />
+                            <p className="font-medium">No Rooms Available</p>
+                            <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                              {chatroomSubTab === 'assigned' ? 'Sync your trades to get personalized room recommendations' : 'No rooms in this category yet'}
+                            </p>
+                          </Card>
+                        )}
+                      </div>
+                    )}
 
-                      {/* Deriv Forum */}
-                      {chatroomSubTab === 'deriv-forum' && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold flex items-center gap-2">
-                              <ExternalLink className="w-5 h-5 text-[#ff3355]" />
-                              Deriv Community Forum
-                            </h2>
-                            <a href={DERIV_COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white text-sm font-medium hover:opacity-90 transition-opacity">
-                              <ExternalLink className="w-4 h-4" />
-                              Open Forum
-                            </a>
+                    {/* Deriv Forum Link */}
+                    <Card className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gradient-to-br from-[#ff3355] to-[#ff8042]">
+                            <ExternalLink className="w-5 h-5 text-white" />
                           </div>
-                          
-                          {communityLoading ? (
-                            <div className="space-y-4">
-                              {[1,2,3].map(i => (
-                                <Card key={i} className="animate-pulse">
-                                  <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                                    <div className="flex-1 space-y-3">
-                                      <div className="h-4 rounded w-1/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                                      <div className="h-4 rounded w-3/4" style={{ backgroundColor: 'var(--accent-bg)' }} />
-                                    </div>
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              {communityPosts.map(post => (
-                                <a key={post.id} href={post.url} target="_blank" rel="noopener noreferrer" className="block">
-                                  <Card className="hover:border-[#ff3355]/50 transition-all">
-                                    <div className="flex items-start gap-4">
-                                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${post.pinned ? 'bg-gradient-to-br from-[#ff3355] to-[#ff8042] text-white' : ''}`} style={!post.pinned ? { backgroundColor: 'var(--accent-bg)' } : {}}>
-                                        {post.avatar}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                          <span className="font-medium">{post.user}</span>
-                                          {post.pinned && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff5f6d]">Pinned</span>}
-                                          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
-                                        </div>
-                                        <h3 className="font-medium mb-2 line-clamp-1">{post.title}</h3>
-                                        <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
-                                        <div className="flex items-center gap-4 sm:gap-6 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                          <span className="flex items-center gap-1.5"><Heart className="w-4 h-4" /> {post.likes}</span>
-                                          <span className="flex items-center gap-1.5"><MessageCircle className="w-4 h-4" /> {post.comments}</span>
-                                          <span className="hidden sm:flex items-center gap-1.5"><Activity className="w-4 h-4" /> {post.views}</span>
-                                        </div>
-                                      </div>
-                                      <ExternalLink className="w-5 h-5 shrink-0" style={{ color: 'var(--text-secondary)' }} />
-                                    </div>
-                                  </Card>
-                                </a>
-                              ))}
-                            </div>
-                          )}
+                          <div>
+                            <h3 className="font-medium text-sm">Deriv Community Forum</h3>
+                            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Join discussions on community.deriv.com</p>
+                          </div>
                         </div>
+                        <a href={DERIV_COMMUNITY_URL} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 rounded-lg bg-[#ff3355] text-white text-sm hover:opacity-90 transition-opacity">
+                          Visit
+                        </a>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Right Column - Community Posts */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-bold flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-[#ff3355]" />
+                        Community Posts
+                      </h2>
+                    </div>
+
+                    {/* Create Post */}
+                    <Card className="p-4">
+                      <textarea
+                        value={newPostContent}
+                        onChange={(e) => setNewPostContent(e.target.value)}
+                        placeholder="Share your trading insights..."
+                        rows={2}
+                        className="w-full px-3 py-2 rounded-lg text-sm focus:ring-1 focus:ring-[#ff3355]/50 outline-none resize-none"
+                        style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
+                      />
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {['strategy', 'milestone', 'tip'].map(tag => (
+                            <button
+                              key={tag}
+                              onClick={() => setNewPostTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                              className={`text-xs px-2 py-0.5 rounded transition-all ${newPostTags.includes(tag) ? 'bg-[#ff3355] text-white' : ''}`}
+                              style={{ backgroundColor: newPostTags.includes(tag) ? undefined : 'var(--accent-bg)' }}
+                            >
+                              #{tag}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={createCommunityPost}
+                          disabled={!newPostContent.trim()}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#ff3355] text-white text-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                        >
+                          <Send className="w-3 h-3" />
+                          Post
+                        </button>
+                      </div>
+                    </Card>
+
+                    {/* Posts Feed */}
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                      {communityFeed.length === 0 ? (
+                        <Card className="p-6 text-center">
+                          <Activity className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--text-secondary)' }} />
+                          <p className="text-sm font-medium">No posts yet</p>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Be the first to share!</p>
+                        </Card>
+                      ) : (
+                        communityFeed.map(post => (
+                          <Card key={post.id} className="p-4">
+                            <div className="flex gap-3">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                {post.avatar || post.userName?.[0] || '?'}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{post.userName}</span>
+                                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
+                                </div>
+                                <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
+                                {post.tags && post.tags.length > 0 && (
+                                  <div className="flex gap-1 mt-2">
+                                    {post.tags.map((tag, i) => (
+                                      <span key={i} className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--accent-bg)' }}>#{tag}</span>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-3 mt-2">
+                                  <button className="flex items-center gap-1 text-xs hover:text-[#ff3355]" style={{ color: 'var(--text-secondary)' }}>
+                                    <ThumbsUp className="w-3 h-3" /> {post.likes || 0}
+                                  </button>
+                                  <button className="flex items-center gap-1 text-xs hover:text-[#ff3355]" style={{ color: 'var(--text-secondary)' }}>
+                                    <MessageCircle className="w-3 h-3" /> {post.comments || 0}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </Card>
+                        ))
                       )}
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
