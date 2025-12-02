@@ -2706,7 +2706,7 @@ const Dashboard = () => {
                 deriv_account_id: userInfo?.loginid,
                 username: userInfo?.fullname || userInfo?.loginid 
               }} 
-              token={TokenService.getToken()}
+              token={TokenService.getTokens()?.token}
             />
           )}
 
