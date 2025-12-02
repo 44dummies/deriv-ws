@@ -6,11 +6,22 @@ import websocketService from '../services/websocketService';
 const Callback = () => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
+  const [status, setStatus] = useState('Parsing callback data...');
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
+        // Check for error in URL (Deriv might return error)
         const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('error')) {
+          const errorMsg = urlParams.get('error') || 'Unknown OAuth error';
+          console.error('OAuth error from Deriv:', errorMsg);
+          setError(`OAuth Error: ${errorMsg}`);
+          setTimeout(() => navigate('/'), 3000);
+          return;
+        }
+
         const accounts = [];
         let i = 1;
         
@@ -23,7 +34,10 @@ const Callback = () => {
           i++;
         }
 
+        console.log('Received accounts:', accounts.length);
+
         if (accounts.length === 0) {
+          console.error('No accounts in callback. URL params:', window.location.search);
           setError('No account information received from Deriv');
           setTimeout(() => navigate('/'), 3000);
           return;
@@ -31,28 +45,45 @@ const Callback = () => {
 
         // Use the first account
         const primaryAccount = accounts[0];
+        console.log('Using account:', primaryAccount.account);
+        
         TokenService.setTokens({
           account: primaryAccount.account,
           token: primaryAccount.token,
           currency: primaryAccount.currency
         });
 
+        setStatus('Connecting to Deriv...');
+        
         // Connect to WebSocket and authorize
         await websocketService.connect();
+        console.log('WebSocket connected, authorizing...');
+        
+        setStatus('Authorizing your account...');
         const authResponse = await websocketService.authorize(primaryAccount.token);
 
         if (authResponse.error) {
+          console.error('Authorization failed:', authResponse.error);
           setError(authResponse.error.message || 'Authorization failed');
           TokenService.clearTokens();
           setTimeout(() => navigate('/'), 3000);
           return;
         }
 
+        console.log('Authorization successful:', authResponse.authorize?.loginid);
+        
+        // Store account info
+        if (authResponse.authorize) {
+          TokenService.setAccount(authResponse.authorize);
+        }
+
+        setStatus('Success! Redirecting...');
+        
         // Success - redirect to dashboard
         navigate('/dashboard');
       } catch (err) {
         console.error('Callback error:', err);
-        setError('An error occurred during authentication');
+        setError(err.message || 'An error occurred during authentication');
         setTimeout(() => navigate('/'), 3000);
       }
     };
@@ -64,7 +95,7 @@ const Callback = () => {
     <div className="min-h-screen bg-[#040404] flex items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-6 text-white">
-          N
+          T
         </div>
         
         {error ? (
@@ -79,7 +110,7 @@ const Callback = () => {
               <div className="w-8 h-8 border-2 border-[#ff3355] border-t-transparent rounded-full animate-spin"></div>
             </div>
             <h2 className="text-xl font-semibold text-white mb-2">Authenticating</h2>
-            <p className="text-gray-400">Connecting to your Deriv account...</p>
+            <p className="text-gray-400">{status}</p>
           </>
         )}
       </div>
