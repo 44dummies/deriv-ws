@@ -7,13 +7,15 @@ import {
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
   Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer,
   Flame, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter, Zap,
-  Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale
+  Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale,
+  MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 import supabaseService from '../services/supabaseService';
 import analyticsService from '../services/analyticsService';
+import chatroomService from '../services/chatroomService';
 
 const STORAGE_KEYS = {
   JOURNAL: 'nexatrade_journal',
@@ -139,6 +141,16 @@ const Dashboard = () => {
   const [fullAnalytics, setFullAnalytics] = useState(null);
   const [statements, setStatements] = useState([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  
+  // Chatroom State
+  const [assignedRooms, setAssignedRooms] = useState([]);
+  const [activeChatRoom, setActiveChatRoom] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [communityFeed, setCommunityFeed] = useState([]);
+  const [userReputation, setUserReputation] = useState({ score: 0, level: 'Newbie', badges: [] });
+  const [chatroomLoading, setChatroomLoading] = useState(false);
+  const [chatroomSubTab, setChatroomSubTab] = useState('my-rooms');
   
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
@@ -697,6 +709,78 @@ const Dashboard = () => {
     setCommunityLoading(false);
   }, []);
 
+  // Chatroom functions
+  const initializeChatrooms = useCallback(async () => {
+    setChatroomLoading(true);
+    try {
+      // Get user analytics for room assignment
+      const userAnalytics = fullAnalytics || {
+        accountHealth: { score: 50 },
+        emotionalScore: { score: 50 },
+        riskManagement: { riskLevel: 'moderate' },
+        emotionalPatterns: { patterns: [] },
+        profitLoss: { winRate: 50, totalProfit: 0 }
+      };
+      
+      // Get assigned rooms based on analytics
+      const rooms = chatroomService.getUserAssignedRooms(userAnalytics);
+      setAssignedRooms(rooms);
+      
+      // Load community feed
+      const feed = chatroomService.getCommunityPosts();
+      setCommunityFeed(feed);
+      
+      // Get user reputation
+      const userId = userInfo?.loginid || 'demo_user';
+      const rep = chatroomService.getUserReputation(userId);
+      setUserReputation(rep);
+    } catch (error) {
+      console.error('Failed to initialize chatrooms:', error);
+    }
+    setChatroomLoading(false);
+  }, [fullAnalytics, userInfo]);
+
+  const enterChatRoom = useCallback((room) => {
+    setActiveChatRoom(room);
+    const messages = chatroomService.getMessages(room.id);
+    setChatMessages(messages);
+  }, []);
+
+  const sendChatMessage = useCallback(() => {
+    if (!chatInput.trim() || !activeChatRoom) return;
+    
+    const userId = userInfo?.loginid || 'demo_user';
+    const userName = userInfo?.fullname || 'Trader';
+    
+    // Send message through service
+    const newMessage = chatroomService.sendMessage(activeChatRoom.id, userId, userName, chatInput);
+    
+    if (newMessage) {
+      setChatMessages(prev => [...prev, newMessage]);
+      setChatInput('');
+      
+      // If in AI coaching room, get AI response
+      if (activeChatRoom.id === 'ai-coaching' || activeChatRoom.id === 'ai-smart-trading') {
+        setTimeout(() => {
+          const aiResponse = chatroomService.sendAICoachingMessage(activeChatRoom.id, chatInput, fullAnalytics);
+          setChatMessages(prev => [...prev, aiResponse]);
+        }, 1000);
+      }
+    }
+  }, [chatInput, activeChatRoom, userInfo, fullAnalytics]);
+
+  const leaveChatRoom = useCallback(() => {
+    setActiveChatRoom(null);
+    setChatMessages([]);
+  }, []);
+
+  // Load chatrooms when tab is active
+  useEffect(() => {
+    if (activeTab === 'chatrooms' && assignedRooms.length === 0) {
+      initializeChatrooms();
+    }
+  }, [activeTab, assignedRooms.length, initializeChatrooms]);
+
   // Load community posts when tab is active
   useEffect(() => {
     if (activeTab === 'community' && communityPosts.length === 0) {
@@ -709,6 +793,7 @@ const Dashboard = () => {
     { id: 'analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics' },
     { id: 'digit', icon: <Hash className="w-5 h-5" />, label: 'Digit Analyzer' },
     { id: 'timeline', icon: <Clock className="w-5 h-5" />, label: 'Trade Timeline' },
+    { id: 'chatrooms', icon: <MessageSquare className="w-5 h-5" />, label: 'Chatrooms' },
     { id: 'community', icon: <Users className="w-5 h-5" />, label: 'Community' },
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
     { id: 'friends', icon: <UserPlus className="w-5 h-5" />, label: 'Friends' },
@@ -786,7 +871,16 @@ const Dashboard = () => {
           {/* Logo with integrated toggle */}
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3 w-full">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white">
+              <div 
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setMobileSidebarOpen(!mobileSidebarOpen);
+                  } else {
+                    setSidebarCollapsed(!sidebarCollapsed);
+                  }
+                }}
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white cursor-pointer hover:scale-105 transition-transform active:scale-95"
+              >
                 N
               </div>
               {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap hidden lg:inline">NexaTrade</span>}
@@ -1438,6 +1532,424 @@ const Dashboard = () => {
                       </Card>
                     );
                   })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chatrooms Tab */}
+          {activeTab === 'chatrooms' && (
+            <div className="space-y-6">
+              {/* Header with User Rep */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <MessageSquare className="w-6 h-6 text-[#ff3355]" />
+                    Trading Chatrooms
+                  </h1>
+                  <p style={{ color: 'var(--text-secondary)' }}>Auto-assigned rooms based on your trading behavior</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}>
+                    <Star className="w-4 h-4 text-yellow-500" />
+                    <span className="text-sm font-medium">{userReputation.score} pts</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white">{userReputation.level}</span>
+                  </div>
+                  <button onClick={initializeChatrooms} disabled={chatroomLoading} className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-sm" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}>
+                    <RefreshCw className={`w-4 h-4 ${chatroomLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </button>
+                </div>
+              </div>
+
+              {/* Active Chat Room View */}
+              {activeChatRoom ? (
+                <div className="space-y-4">
+                  <button onClick={leaveChatRoom} className="flex items-center gap-2 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to Rooms
+                  </button>
+                  
+                  <Card className="overflow-hidden">
+                    <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--card-border)' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                          {activeChatRoom.icon}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg flex items-center gap-2">
+                            {activeChatRoom.name}
+                            {activeChatRoom.premium && <Crown className="w-4 h-4 text-yellow-500" />}
+                          </h3>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{activeChatRoom.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 text-sm text-green-500">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          {activeChatRoom.members || 0} online
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Chat Messages */}
+                    <div className="h-96 overflow-y-auto py-4 space-y-4">
+                      {chatMessages.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                          <MessageSquare className="w-12 h-12 mb-4" style={{ color: 'var(--text-secondary)' }} />
+                          <p style={{ color: 'var(--text-secondary)' }}>No messages yet. Start the conversation!</p>
+                        </div>
+                      ) : (
+                        chatMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex gap-3 ${msg.isAI ? 'bg-gradient-to-r from-[#ff3355]/10 to-transparent p-3 rounded-xl' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.isAI ? 'bg-gradient-to-br from-[#ff3355] to-[#ff8042]' : ''}`} style={{ backgroundColor: msg.isAI ? undefined : 'var(--accent-bg)' }}>
+                              {msg.isAI ? <Bot className="w-4 h-4 text-white" /> : <span className="text-sm">{msg.avatar || msg.userName?.[0] || '?'}</span>}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{msg.userName}</span>
+                                {msg.isAI && <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff3355]">AI Coach</span>}
+                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{msg.time}</span>
+                              </div>
+                              <p className="text-sm mt-1" style={{ color: msg.isAI ? 'white' : 'var(--text-secondary)' }}>{msg.content}</p>
+                              {msg.reactions && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <button className="flex items-center gap-1 text-xs hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                                    <ThumbsUp className="w-3 h-3" /> {msg.reactions.likes || 0}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Message Input */}
+                    <div className="pt-4 flex gap-3" style={{ borderTop: '1px solid var(--card-border)' }}>
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                        placeholder={activeChatRoom.premium ? "Ask the AI coach anything..." : "Type a message..."}
+                        className="flex-1 px-4 py-3 rounded-xl bg-transparent outline-none transition-all focus:ring-2 focus:ring-[#ff3355]/50"
+                        style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }}
+                      />
+                      <button onClick={sendChatMessage} className="px-4 py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white font-medium hover:opacity-90 transition-opacity">
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </Card>
+                </div>
+              ) : (
+                /* Room List View */
+                <div className="space-y-6">
+                  {/* Sub-tabs */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                    {[
+                      { id: 'my-rooms', label: 'My Rooms', icon: <Star className="w-4 h-4" /> },
+                      { id: 'behavior', label: 'Behavior', icon: <Brain className="w-4 h-4" /> },
+                      { id: 'strategy', label: 'Strategy', icon: <Target className="w-4 h-4" /> },
+                      { id: 'performance', label: 'Performance', icon: <TrendingUp className="w-4 h-4" /> },
+                      { id: 'premium', label: 'Premium AI', icon: <Crown className="w-4 h-4" /> },
+                      { id: 'feed', label: 'Global Feed', icon: <Activity className="w-4 h-4" /> },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setChatroomSubTab(tab.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition-all text-sm ${chatroomSubTab === tab.id ? 'bg-gradient-to-r from-[#ff3355] to-[#ff8042] text-white' : ''}`}
+                        style={{ backgroundColor: chatroomSubTab === tab.id ? undefined : 'var(--card-bg)', border: chatroomSubTab === tab.id ? 'none' : '1px solid var(--card-border)' }}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {chatroomLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[1,2,3,4].map(i => (
+                        <Card key={i} className="animate-pulse">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-white/10" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-white/10 rounded w-3/4" />
+                              <div className="h-3 bg-white/10 rounded w-1/2" />
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      {/* My Assigned Rooms */}
+                      {chatroomSubTab === 'my-rooms' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold">Your Assigned Rooms</h2>
+                            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                              Based on your trading analytics
+                            </span>
+                          </div>
+                          {assignedRooms.length === 0 ? (
+                            <Card>
+                              <EmptyState
+                                icon={<MessageSquare className="w-8 h-8" />}
+                                title="No Rooms Assigned Yet"
+                                description="Complete some trades to get auto-assigned to relevant trading rooms based on your behavior and performance."
+                              />
+                            </Card>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {assignedRooms.map(room => (
+                                <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                      {room.icon}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
+                                        {room.premium && <Crown className="w-4 h-4 text-yellow-500" />}
+                                        {room.fitScore && (
+                                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-500">
+                                            {room.fitScore}% match
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                      <div className="flex items-center gap-4 mt-3">
+                                        <span className="flex items-center gap-1 text-xs text-green-500">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                          {room.members || 0} online
+                                        </span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                          {room.category}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Behavior Rooms */}
+                      {chatroomSubTab === 'behavior' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <Brain className="w-5 h-5 text-purple-500" />
+                              Behavior Support Rooms
+                            </h2>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {chatroomService.getAllRooms().filter(r => r.category === 'behavior').map(room => (
+                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
+                                <div className="flex items-start gap-4">
+                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                    {room.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                      <span className="flex items-center gap-1 text-xs text-green-500">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                        {room.members || 0} online
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Strategy Rooms */}
+                      {chatroomSubTab === 'strategy' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <Target className="w-5 h-5 text-blue-500" />
+                              Strategy Rooms
+                            </h2>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {chatroomService.getAllRooms().filter(r => r.category === 'strategy').map(room => (
+                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
+                                <div className="flex items-start gap-4">
+                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                    {room.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                      <span className="flex items-center gap-1 text-xs text-green-500">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                        {room.members || 0} online
+                                      </span>
+                                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                        {room.tags?.[0] || 'strategy'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Performance Rooms */}
+                      {chatroomSubTab === 'performance' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <TrendingUp className="w-5 h-5 text-green-500" />
+                              Performance Tiers
+                            </h2>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {chatroomService.getAllRooms().filter(r => r.category === 'performance').map(room => (
+                              <Card key={room.id} className="hover:border-[#ff3355]/50 transition-all cursor-pointer group" onClick={() => enterChatRoom(room)}>
+                                <div className="flex items-start gap-4">
+                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                    {room.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-bold group-hover:text-[#ff3355] transition-colors">{room.name}</h3>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                      <span className="flex items-center gap-1 text-xs text-green-500">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                                        {room.members || 0} online
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Premium AI Rooms */}
+                      {chatroomSubTab === 'premium' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <Crown className="w-5 h-5 text-yellow-500" />
+                              Premium AI Coaching
+                            </h2>
+                            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-500">
+                              AI-Powered
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {chatroomService.getAllRooms().filter(r => r.category === 'premium').map(room => (
+                              <Card key={room.id} className="hover:border-yellow-500/50 transition-all cursor-pointer group border-yellow-500/20" onClick={() => enterChatRoom(room)}>
+                                <div className="flex items-start gap-4">
+                                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20">
+                                    {room.icon}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h3 className="font-bold group-hover:text-yellow-500 transition-colors flex items-center gap-2">
+                                      {room.name}
+                                      <Crown className="w-4 h-4 text-yellow-500" />
+                                    </h3>
+                                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{room.description}</p>
+                                    <div className="flex items-center gap-4 mt-3">
+                                      <span className="flex items-center gap-1 text-xs text-green-500">
+                                        <Bot className="w-3 h-3" />
+                                        AI Active
+                                      </span>
+                                      <span className="text-xs text-yellow-500">
+                                        Personalized coaching
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Global Feed */}
+                      {chatroomSubTab === 'feed' && (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold flex items-center gap-2">
+                              <Activity className="w-5 h-5 text-[#ff3355]" />
+                              Community Feed
+                            </h2>
+                          </div>
+                          {communityFeed.length === 0 ? (
+                            <Card>
+                              <EmptyState
+                                icon={<Activity className="w-8 h-8" />}
+                                title="No Posts Yet"
+                                description="Be the first to share your trading insights with the community!"
+                              />
+                            </Card>
+                          ) : (
+                            <div className="space-y-4">
+                              {communityFeed.map(post => (
+                                <Card key={post.id}>
+                                  <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                      {post.avatar || post.userName?.[0] || '?'}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{post.userName}</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{post.time}</span>
+                                        {post.badge && (
+                                          <span className="text-xs px-2 py-0.5 rounded-full bg-[#ff3355]/20 text-[#ff3355]">{post.badge}</span>
+                                        )}
+                                      </div>
+                                      <p className="mt-2" style={{ color: 'var(--text-secondary)' }}>{post.content}</p>
+                                      {post.tags && (
+                                        <div className="flex items-center gap-2 mt-3">
+                                          {post.tags.map((tag, idx) => (
+                                            <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                                              #{tag}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-4 mt-3">
+                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                                          <ThumbsUp className="w-4 h-4" /> {post.likes || 0}
+                                        </button>
+                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                                          <MessageCircle className="w-4 h-4" /> {post.comments || 0}
+                                        </button>
+                                        <button className="flex items-center gap-1 text-sm hover:text-[#ff3355] transition-colors" style={{ color: 'var(--text-secondary)' }}>
+                                          <Eye className="w-4 h-4" /> {post.views || 0}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
