@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
-  LogOut, Sun, Moon, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
+  LogOut, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
-  Wallet, ExternalLink, Shield, Cloud, CloudOff, Database, Menu, Timer,
-  Flame, Zap, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter
+  Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer,
+  Flame, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter, Zap,
+  Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 import supabaseService from '../services/supabaseService';
+import analyticsService from '../services/analyticsService';
 
 const STORAGE_KEYS = {
   JOURNAL: 'nexatrade_journal',
@@ -87,23 +89,6 @@ const DERIV_COMMUNITY_URL = 'https://community.deriv.com';
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const WARNING_BEFORE_LOGOUT = 60 * 1000; // Show warning 1 minute before logout
 
-// Helper to calculate time ago
-const timeAgo = (date) => {
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-  const intervals = [
-    { label: 'y', seconds: 31536000 },
-    { label: 'mo', seconds: 2592000 },
-    { label: 'd', seconds: 86400 },
-    { label: 'h', seconds: 3600 },
-    { label: 'm', seconds: 60 },
-  ];
-  for (const interval of intervals) {
-    const count = Math.floor(seconds / interval.seconds);
-    if (count >= 1) return `${count}${interval.label} ago`;
-  }
-  return 'just now';
-};
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -111,7 +96,6 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('sync');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed (especially for mobile)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Separate state for mobile
-  const [isDarkMode, setIsDarkMode] = useState(true);
   const [tradeHistory, setTradeHistory] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
   const [friends, setFriends] = useState([]);
@@ -135,10 +119,6 @@ const Dashboard = () => {
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
   // Advanced Analytics State
-  const [liveBalance, setLiveBalance] = useState(null);
-  const [previousBalance, setPreviousBalance] = useState(null);
-  const [balanceSubscribed, setBalanceSubscribed] = useState(false);
-  const [animatingBalance, setAnimatingBalance] = useState(false);
   const [profitCurve, setProfitCurve] = useState([]);
   const [advancedAnalytics, setAdvancedAnalytics] = useState({
     byHour: {}, byMarket: {}, byContractType: {}, streakData: []
@@ -154,6 +134,11 @@ const Dashboard = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [availableTags] = useState(['#overtrading', '#perfect-entry', '#bad-day', '#strategyA', '#scalping', '#martingale']);
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
+  
+  // Full Analytics State
+  const [fullAnalytics, setFullAnalytics] = useState(null);
+  const [statements, setStatements] = useState([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
@@ -242,9 +227,6 @@ const Dashboard = () => {
 
   // Load data from Supabase or localStorage
   const loadFromStorage = useCallback(async () => {
-    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME);
-    if (savedTheme) setIsDarkMode(savedTheme === 'dark');
-
     // If Supabase is configured and we have userInfo, load from Supabase
     if (useSupabase && userInfo?.loginid) {
       try {
@@ -427,6 +409,43 @@ const Dashboard = () => {
     setDigitHeatmap({ counts: stats, hotColdStatus });
   };
 
+  // Run full analytics with the analyticsService
+  const runFullAnalytics = useCallback(async (trades) => {
+    if (!trades || trades.length === 0) {
+      setFullAnalytics(null);
+      return;
+    }
+    
+    setAnalyticsLoading(true);
+    try {
+      // Fetch statements for deposit/withdrawal analysis
+      let statementsData = statements;
+      if (statementsData.length === 0) {
+        try {
+          const statementRes = await websocketService.getStatement({ limit: 500 });
+          if (statementRes.statement?.transactions) {
+            statementsData = statementRes.statement.transactions;
+            setStatements(statementsData);
+          }
+        } catch (err) {
+          console.error('Failed to fetch statements:', err);
+        }
+      }
+      
+      // Run the full analytics engine
+      const results = analyticsService.runFullAnalysis({
+        trades,
+        statements: statementsData,
+        accountBalance: userInfo?.balance || 0
+      });
+      
+      setFullAnalytics(results);
+    } catch (err) {
+      console.error('Analytics error:', err);
+    }
+    setAnalyticsLoading(false);
+  }, [statements, userInfo?.balance]);
+
   useEffect(() => {
     // Prevent double initialization (React StrictMode or re-renders)
     if (isInitialized.current) return;
@@ -486,33 +505,7 @@ const Dashboard = () => {
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
-  // Live balance subscription
-  useEffect(() => {
-    if (!userInfo?.loginid || balanceSubscribed) return;
-    
-    const subscribeToBalance = async () => {
-      try {
-        const response = await websocketService.subscribeBalance((balanceData) => {
-          if (balanceData.balance) {
-            setPreviousBalance(liveBalance);
-            setLiveBalance(balanceData.balance.balance);
-            setAnimatingBalance(true);
-            setTimeout(() => setAnimatingBalance(false), 1000);
-            setUserInfo(prev => prev ? { ...prev, balance: balanceData.balance.balance } : null);
-          }
-        });
-        if (!response.error) {
-          setBalanceSubscribed(true);
-          if (response.balance) {
-            setLiveBalance(response.balance.balance);
-          }
-        }
-      } catch (err) {
-        console.error('Balance subscription error:', err);
-      }
-    };
-    subscribeToBalance();
-  }, [userInfo?.loginid, balanceSubscribed, liveBalance]);
+
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -573,6 +566,9 @@ const Dashboard = () => {
         saveToStorage(STORAGE_KEYS.TRADES, trades);
         calculateAnalytics(trades);
         calculateDigitStats(trades);
+        
+        // Run full analytics
+        runFullAnalytics(trades);
 
         // Sync trades to Supabase if configured
         if (useSupabase && userInfo?.loginid) {
@@ -679,42 +675,24 @@ const Dashboard = () => {
     toast.success('Friend removed');
   };
 
-  const toggleTheme = () => { setIsDarkMode(!isDarkMode); localStorage.setItem(STORAGE_KEYS.THEME, !isDarkMode ? 'dark' : 'light'); };
 
-  // Fetch posts from Deriv Community Forum
+
+  // Community posts - direct links since CORS prevents API access from browser
   const fetchCommunityPosts = useCallback(async () => {
     setCommunityLoading(true);
     setCommunityError(null);
-    try {
-      // Fetch latest topics from Deriv Community (Discourse API)
-      const response = await fetch(`${DERIV_COMMUNITY_URL}/latest.json`);
-      if (!response.ok) throw new Error('Failed to fetch community posts');
-      const data = await response.json();
-      
-      const posts = data.topic_list?.topics?.slice(0, 15).map(topic => ({
-        id: topic.id.toString(),
-        title: topic.title,
-        user: topic.last_poster_username || 'Anonymous',
-        avatar: topic.last_poster_username?.[0]?.toUpperCase() || '?',
-        content: topic.excerpt || topic.title,
-        likes: topic.like_count || 0,
-        comments: topic.posts_count - 1 || 0,
-        views: topic.views || 0,
-        time: timeAgo(topic.last_posted_at || topic.created_at),
-        url: `${DERIV_COMMUNITY_URL}/t/${topic.slug}/${topic.id}`,
-        category: topic.category_id,
-        pinned: topic.pinned || false,
-      })) || [];
-      
-      setCommunityPosts(posts);
-    } catch (err) {
-      console.error('Community fetch error:', err);
-      setCommunityError('Unable to load community posts. The forum may be unavailable.');
-      // Set fallback posts
-      setCommunityPosts([
-        { id: '1', title: 'Welcome to Deriv Community', user: 'Deriv', avatar: 'D', content: 'Join discussions about trading strategies, API development, and more!', likes: 100, comments: 50, views: 1000, time: 'pinned', url: DERIV_COMMUNITY_URL, pinned: true },
-      ]);
-    }
+    
+    // Since the Deriv Community forum blocks CORS requests from browsers,
+    // we provide curated community links instead of fetching live data
+    const communityLinks = [
+      { id: '1', title: '📌 Welcome to Deriv Community', user: 'Deriv Team', avatar: 'D', content: 'Join discussions about trading strategies, platform features, and connect with other traders!', likes: 500, comments: 200, views: 10000, time: 'pinned', url: DERIV_COMMUNITY_URL, pinned: true },
+      { id: '2', title: 'Trading Strategies & Tips', user: 'Community', avatar: 'T', content: 'Share and discover trading strategies from experienced traders.', likes: 150, comments: 80, views: 3000, time: 'category', url: `${DERIV_COMMUNITY_URL}/c/strategies`, pinned: false },
+      { id: '3', title: 'Deriv API Development', user: 'Developers', avatar: 'A', content: 'Technical discussions about Deriv API integration and development.', likes: 120, comments: 60, views: 2500, time: 'category', url: `${DERIV_COMMUNITY_URL}/c/deriv-api`, pinned: false },
+      { id: '4', title: 'Platform Feedback & Suggestions', user: 'Community', avatar: 'F', content: 'Share your feedback and suggestions to help improve the platform.', likes: 90, comments: 40, views: 1800, time: 'category', url: `${DERIV_COMMUNITY_URL}/c/feedback`, pinned: false },
+      { id: '5', title: 'Latest Discussions', user: 'Community', avatar: 'L', content: 'Browse the latest discussions and topics from the community.', likes: 200, comments: 100, views: 5000, time: 'live', url: `${DERIV_COMMUNITY_URL}/latest`, pinned: false },
+    ];
+    
+    setCommunityPosts(communityLinks);
     setCommunityLoading(false);
   }, []);
 
@@ -751,12 +729,12 @@ const Dashboard = () => {
 
   return (
     <div 
-      className={`min-h-screen ${isDarkMode ? 'bg-[#040404] text-white' : 'bg-gray-50 text-gray-900'}`}
+      className="min-h-screen bg-[#040404] text-white"
       style={{
-        '--card-bg': isDarkMode ? 'rgba(255,255,255,0.05)' : '#ffffff',
-        '--card-border': isDarkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb',
-        '--text-secondary': isDarkMode ? '#9ca3af' : '#6b7280',
-        '--accent-bg': isDarkMode ? 'rgba(255,255,255,0.05)' : '#f3f4f6'
+        '--card-bg': 'rgba(255,255,255,0.05)',
+        '--card-border': 'rgba(255,255,255,0.1)',
+        '--text-secondary': '#9ca3af',
+        '--accent-bg': 'rgba(255,255,255,0.05)'
       }}
     >
       <Toaster position="top-right" />
@@ -764,10 +742,10 @@ const Dashboard = () => {
       {/* Inactivity Warning Modal */}
       {showInactivityWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className={`p-6 rounded-2xl shadow-2xl max-w-sm mx-4 text-center ${isDarkMode ? 'bg-gray-900 border border-white/10' : 'bg-white border border-gray-200'}`}>
+          <div className="p-6 rounded-2xl shadow-2xl max-w-sm mx-4 text-center bg-gray-900 border border-white/10">
             <Timer className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
             <h3 className="text-lg font-bold mb-2">Session Expiring Soon</h3>
-            <p className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <p className="text-sm mb-4 text-gray-400">
               You will be logged out in less than 1 minute due to inactivity. Move your mouse or press any key to stay logged in.
             </p>
             <button
@@ -780,12 +758,11 @@ const Dashboard = () => {
         </div>
       )}
       
-      {isDarkMode && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 -left-10 h-96 w-96 rounded-full bg-[#ff3355]/20 blur-[160px]" />
-          <div className="absolute bottom-0 right-0 h-[32rem] w-[32rem] rounded-full bg-[#5d5dff]/10 blur-[200px]" />
-        </div>
-      )}
+      {/* Background effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 -left-10 h-96 w-96 rounded-full bg-[#ff3355]/20 blur-[160px]" />
+        <div className="absolute bottom-0 right-0 h-[32rem] w-[32rem] rounded-full bg-[#5d5dff]/10 blur-[200px]" />
+      </div>
 
       <div className="relative z-10 flex">
         {/* Sidebar Overlay (for mobile) */}
@@ -803,10 +780,10 @@ const Dashboard = () => {
             mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:translate-x-0 ${
             sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
-          } w-64 fixed lg:relative z-30 min-h-screen border-r ${isDarkMode ? 'border-white/10 bg-black/40' : 'border-gray-200 bg-white shadow-lg'} backdrop-blur-xl transition-all duration-300 flex flex-col`}
+          } w-64 fixed lg:relative z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex flex-col`}
         >
           {/* Logo with integrated toggle */}
-          <div className={`p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+          <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3 w-full">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white">
                 N
@@ -817,11 +794,11 @@ const Dashboard = () => {
           </div>
 
           {userInfo && (
-            <div className={`p-4 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'} ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
+            <div className={`p-4 border-b border-white/10 ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
               {(!sidebarCollapsed || window.innerWidth < 1024) && (
                 <>
                   <p className="font-medium truncate">{userInfo.fullname || 'Trader'}</p>
-                  <p className={`text-sm truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{userInfo.loginid}</p>
+                  <p className="text-sm truncate text-gray-400">{userInfo.loginid}</p>
                   <div className="flex items-center gap-2 mt-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>{userInfo.is_virtual ? 'Demo' : 'Real'}</span>
                     <span className="text-sm font-medium">{userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}</span>
@@ -834,18 +811,14 @@ const Dashboard = () => {
 
           <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`} title={sidebarCollapsed ? tab.label : undefined}>
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : 'hover:bg-white/5 text-gray-400 hover:text-white'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`} title={sidebarCollapsed ? tab.label : undefined}>
                 {tab.icon}
                 <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{tab.label}</span>
               </button>
             ))}
           </nav>
 
-          <div className={`p-4 border-t ${isDarkMode ? 'border-white/10' : 'border-gray-200'} space-y-2`}>
-            <button onClick={toggleTheme} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isDarkMode ? 'hover:bg-white/5 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
-              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
+          <div className="p-4 border-t border-white/10">
             <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
               <LogOut className="w-5 h-5" />
               <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>Logout</span>
@@ -866,12 +839,12 @@ const Dashboard = () => {
         {/* Main Content */}
         <main className={`flex-1 overflow-auto min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-0'}`}>
           {/* Top Header Bar (mobile only shows hamburger in collapsed logo) */}
-          <div className={`sticky top-0 z-20 flex items-center gap-4 p-3 sm:p-4 border-b ${isDarkMode ? 'border-white/5 bg-black/20' : 'border-gray-200 bg-white/80'} backdrop-blur-xl`}>
+          <div className="sticky top-0 z-20 flex items-center gap-4 p-3 sm:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
             {/* Mobile hamburger */}
             <button 
               data-sidebar-toggle
               onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} 
-              className={`lg:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-900'}`}
+              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
               title={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
               <Menu className="w-5 h-5" />
@@ -880,18 +853,16 @@ const Dashboard = () => {
               <h2 className="font-semibold text-base sm:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Supabase Status Indicator */}
-              <div 
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
-                  supabaseStatus === 'connected' 
-                    ? 'bg-green-500/20 text-green-600' 
-                    : isDarkMode ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-200 text-gray-500'
-                }`}
-                title={supabaseStatus === 'connected' ? 'Cloud sync enabled' : 'Local storage only'}
-              >
-                {supabaseStatus === 'connected' ? <Cloud className="w-3 h-3" /> : <CloudOff className="w-3 h-3" />}
-                <span className="hidden sm:inline">{supabaseStatus === 'connected' ? 'Cloud' : 'Local'}</span>
-              </div>
+              {/* Cloud Status Indicator */}
+              {supabaseStatus === 'connected' && (
+                <div 
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-500"
+                  title="Data synced to cloud"
+                >
+                  <Cloud className="w-3 h-3" />
+                  <span className="hidden sm:inline">Synced</span>
+                </div>
+              )}
               {userInfo && (
                 <>
                   <span className={`hidden sm:inline text-xs px-2 py-1 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>
@@ -914,31 +885,6 @@ const Dashboard = () => {
                   {syncing ? 'Syncing...' : 'Sync Now'}
                 </button>
               </div>
-              
-              {/* Live Balance Display */}
-              <Card>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-yellow-500" />
-                    Live Balance
-                  </h3>
-                  <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full ${balanceSubscribed ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
-                    <div className={`w-2 h-2 rounded-full ${balanceSubscribed ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`} />
-                    {balanceSubscribed ? 'Live' : 'Connecting...'}
-                  </div>
-                </div>
-                <div className="text-center py-6">
-                  <p className={`text-5xl font-bold transition-all duration-500 ${animatingBalance ? 'scale-110 text-[#ff5f6d]' : ''}`}>
-                    {userInfo?.currency || 'USD'} {(liveBalance || userInfo?.balance || 0).toFixed(2)}
-                  </p>
-                  {previousBalance !== null && liveBalance !== null && previousBalance !== liveBalance && (
-                    <p className={`text-lg mt-2 flex items-center justify-center gap-1 ${liveBalance > previousBalance ? 'text-green-500' : 'text-red-500'}`}>
-                      {liveBalance > previousBalance ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                      {liveBalance > previousBalance ? '+' : ''}{(liveBalance - previousBalance).toFixed(2)}
-                    </p>
-                  )}
-                </div>
-              </Card>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard icon={<Wallet className="w-5 h-5 text-white" />} label="Balance" value={`${userInfo?.currency || ''} ${userInfo?.balance?.toFixed(2) || '0.00'}`} color="from-green-500 to-emerald-500" />
@@ -973,7 +919,7 @@ const Dashboard = () => {
                   <div className="relative h-32 flex items-center justify-center">
                     <div className="relative w-32 h-32">
                       <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="64" cy="64" r="56" stroke={isDarkMode ? 'rgba(255,255,255,0.1)' : '#e5e7eb'} strokeWidth="12" fill="none" />
+                        <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.1)" strokeWidth="12" fill="none" />
                         <circle cx="64" cy="64" r="56" stroke="url(#winGradient)" strokeWidth="12" fill="none" strokeLinecap="round" strokeDasharray={`${analytics.winRate * 3.52} 352`} />
                         <defs><linearGradient id="winGradient" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#ff3355" /><stop offset="100%" stopColor="#ff8042" /></linearGradient></defs>
                       </svg>
@@ -1020,7 +966,7 @@ const Dashboard = () => {
                         const areaPoints = `0,${baseline} ${points} 100,${baseline}`;
                         return (
                           <>
-                            <line x1="0" y1={baseline} x2="100" y2={baseline} stroke={isDarkMode ? 'rgba(255,255,255,0.2)' : '#e5e7eb'} strokeWidth="0.5" strokeDasharray="2,2" />
+                            <line x1="0" y1={baseline} x2="100" y2={baseline} stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" strokeDasharray="2,2" />
                             <polygon points={areaPoints} fill="url(#profitGradient)" />
                             <polyline points={points} fill="none" stroke="#22c55e" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
                           </>
@@ -1059,6 +1005,258 @@ const Dashboard = () => {
               )}
               
               {analytics.totalTrades === 0 && <Card><EmptyState icon={<BarChart3 className="w-8 h-8" />} title="No analytics data" description="Sync your trades to see analytics" /></Card>}
+              
+              {/* === FULL ANALYTICS SECTION === */}
+              {fullAnalytics && (
+                <>
+                  {/* Account Health Score */}
+                  <Card>
+                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                      <HeartPulse className="w-5 h-5 text-[#ff5f6d]" />
+                      Account Health Score
+                    </h3>
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex-shrink-0 flex flex-col items-center">
+                        <div className="relative w-32 h-32">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="64" cy="64" r="56" stroke="rgba(255,255,255,0.1)" strokeWidth="10" fill="none" />
+                            <circle 
+                              cx="64" cy="64" r="56" 
+                              stroke={fullAnalytics.accountHealth.score >= 70 ? '#22c55e' : fullAnalytics.accountHealth.score >= 40 ? '#eab308' : '#ef4444'}
+                              strokeWidth="10" fill="none" strokeLinecap="round"
+                              strokeDasharray={`${fullAnalytics.accountHealth.score * 3.52} 352`}
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <span className="text-3xl font-bold">{fullAnalytics.accountHealth.score}</span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>/ 100</span>
+                          </div>
+                        </div>
+                        <div className={`mt-2 px-3 py-1 rounded-full text-sm font-medium ${
+                          fullAnalytics.accountHealth.grade === 'A+' || fullAnalytics.accountHealth.grade === 'A' ? 'bg-green-500/20 text-green-500' :
+                          fullAnalytics.accountHealth.grade === 'B' ? 'bg-blue-500/20 text-blue-500' :
+                          fullAnalytics.accountHealth.grade === 'C' ? 'bg-yellow-500/20 text-yellow-500' :
+                          'bg-red-500/20 text-red-500'
+                        }`}>
+                          Grade: {fullAnalytics.accountHealth.grade}
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-3">
+                        {fullAnalytics.accountHealth.strengths.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-green-500 mb-1">✓ Strengths</p>
+                            <ul className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                              {fullAnalytics.accountHealth.strengths.map((s, i) => <li key={i}>• {s}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {fullAnalytics.accountHealth.weaknesses.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-red-500 mb-1">✗ Weaknesses</p>
+                            <ul className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                              {fullAnalytics.accountHealth.weaknesses.map((w, i) => <li key={i}>• {w}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Emotional Score */}
+                  <Card>
+                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-purple-500" />
+                      Emotional Trading Analysis
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <Gauge className={`w-8 h-8 mx-auto mb-2 ${
+                          fullAnalytics.emotionalAnalysis.emotionalScore >= 70 ? 'text-green-500' :
+                          fullAnalytics.emotionalAnalysis.emotionalScore >= 40 ? 'text-yellow-500' : 'text-red-500'
+                        }`} />
+                        <p className="text-3xl font-bold">{fullAnalytics.emotionalAnalysis.emotionalScore}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Emotional Score</p>
+                        <p className={`text-xs mt-1 ${
+                          fullAnalytics.emotionalAnalysis.emotionalStability === 'stable' ? 'text-green-500' :
+                          fullAnalytics.emotionalAnalysis.emotionalStability === 'moderate' ? 'text-yellow-500' :
+                          fullAnalytics.emotionalAnalysis.emotionalStability === 'unstable' ? 'text-orange-500' : 'text-red-500'
+                        }`}>
+                          {fullAnalytics.emotionalAnalysis.emotionalStability.toUpperCase()}
+                        </p>
+                      </div>
+                      <div className={`p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                        <AlertTriangle className={`w-6 h-6 mb-2 ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'text-red-500' : 'text-green-500'}`} />
+                        <p className="font-medium">Revenge Trading</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {fullAnalytics.emotionalAnalysis.revengeTradingDetected 
+                            ? `${fullAnalytics.emotionalAnalysis.revengeTradingInstances} instances detected` 
+                            : 'Not detected'}
+                        </p>
+                      </div>
+                      <div className={`p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                        <Activity className={`w-6 h-6 mb-2 ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'text-orange-500' : 'text-green-500'}`} />
+                        <p className="font-medium">Overtrading</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {fullAnalytics.emotionalAnalysis.overtradingDetected 
+                            ? `Avg ${fullAnalytics.emotionalAnalysis.avgTradesPerSession?.toFixed(1)} trades/hr` 
+                            : 'Trading pace is healthy'}
+                        </p>
+                      </div>
+                    </div>
+                    {fullAnalytics.emotionalAnalysis.majorFactors.length > 0 && (
+                      <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                        <p className="text-sm font-medium text-yellow-500 mb-1">Major Factors Affecting Score:</p>
+                        <ul className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {fullAnalytics.emotionalAnalysis.majorFactors.map((f, i) => <li key={i}>• {f}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Risk Management */}
+                  <Card>
+                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-blue-500" />
+                      Risk Management
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-2xl font-bold">{(fullAnalytics.riskAnalysis.avgRiskPercent ?? 0).toFixed(1)}%</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Avg Risk/Trade</p>
+                      </div>
+                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-2xl font-bold text-red-500">{(fullAnalytics.riskAnalysis.maxDrawdown ?? 0).toFixed(1)}%</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Max Drawdown</p>
+                      </div>
+                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-2xl font-bold">{(fullAnalytics.tradePerformance.profitFactor ?? 0).toFixed(2)}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Profit Factor</p>
+                      </div>
+                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className={`text-2xl font-bold ${
+                          fullAnalytics.riskAnalysis.riskBehavior === 'conservative' ? 'text-green-500' :
+                          fullAnalytics.riskAnalysis.riskBehavior === 'moderate' ? 'text-blue-500' :
+                          fullAnalytics.riskAnalysis.riskBehavior === 'high_risk' ? 'text-orange-500' : 'text-red-500'
+                        }`}>{fullAnalytics.riskAnalysis.riskBehavior?.replace('_', ' ').toUpperCase()}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Risk Profile</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                        <p className="text-xl font-bold text-green-500">{(fullAnalytics.tradePerformance.avgWin ?? 0).toFixed(2)}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Average Win</p>
+                      </div>
+                      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <p className="text-xl font-bold text-red-500">{(fullAnalytics.tradePerformance.avgLoss ?? 0).toFixed(2)}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Average Loss</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Contract Type Performance */}
+                  {Object.keys(fullAnalytics.tradePerformance.contractTypePerformance || {}).length > 0 && (
+                    <Card>
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <PieChart className="w-5 h-5 text-cyan-500" />
+                        Performance by Contract Type
+                      </h3>
+                      <div className="space-y-3">
+                        {Object.entries(fullAnalytics.tradePerformance.contractTypePerformance).map(([type, data]) => (
+                          <div key={type} className="flex items-center justify-between p-3 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                            <div>
+                              <p className="font-medium">{type}</p>
+                              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{data.trades} trades</p>
+                            </div>
+                            <div className="text-right">
+                              <p className={`font-bold ${data.winRate >= 50 ? 'text-green-500' : 'text-red-500'}`}>
+                                {data.winRate.toFixed(1)}% WR
+                              </p>
+                              <p className={`text-sm ${data.profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {data.profit >= 0 ? '+' : ''}{data.profit.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* AI Recommendations */}
+                  {fullAnalytics.recommendations.length > 0 && (
+                    <Card>
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <Lightbulb className="w-5 h-5 text-yellow-500" />
+                        AI Recommendations
+                      </h3>
+                      <div className="space-y-3">
+                        {fullAnalytics.recommendations.slice(0, 6).map((rec, i) => (
+                          <div key={i} className={`p-4 rounded-xl border ${
+                            rec.type === 'critical' ? 'bg-red-500/10 border-red-500/30' :
+                            rec.type === 'warning' ? 'bg-orange-500/10 border-orange-500/30' :
+                            'bg-blue-500/10 border-blue-500/30'
+                          }`}>
+                            <div className="flex items-start gap-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                rec.type === 'critical' ? 'bg-red-500/20' :
+                                rec.type === 'warning' ? 'bg-orange-500/20' : 'bg-blue-500/20'
+                              }`}>
+                                {rec.type === 'critical' ? <AlertTriangle className="w-4 h-4 text-red-500" /> :
+                                 rec.type === 'warning' ? <AlertTriangle className="w-4 h-4 text-orange-500" /> :
+                                 <Lightbulb className="w-4 h-4 text-blue-500" />}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm">{rec.message}</p>
+                                <p className="text-xs mt-1 font-medium" style={{ color: 'var(--text-secondary)' }}>
+                                  → {rec.action}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
+                  {/* Financial Flow (if statements available) */}
+                  {fullAnalytics.financialFlow.depositCount > 0 && (
+                    <Card>
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <ArrowUpDown className="w-5 h-5 text-emerald-500" />
+                        Deposits & Withdrawals Analysis
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                          <p className="text-xl font-bold text-green-500">{fullAnalytics.financialFlow.totalDeposits.toFixed(2)}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Deposits</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                          <p className="text-xl font-bold text-red-500">{fullAnalytics.financialFlow.totalWithdrawals.toFixed(2)}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Total Withdrawals</p>
+                        </div>
+                        <div className={`p-4 rounded-xl ${fullAnalytics.financialFlow.netFlow >= 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                          <p className={`text-xl font-bold ${fullAnalytics.financialFlow.netFlow >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {fullAnalytics.financialFlow.netFlow >= 0 ? '+' : ''}{fullAnalytics.financialFlow.netFlow.toFixed(2)}
+                          </p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Net Flow</p>
+                        </div>
+                        <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                          <p className="text-xl font-bold">{fullAnalytics.financialFlow.fundingStabilityScore}</p>
+                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Funding Score</p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </>
+              )}
+              
+              {analyticsLoading && (
+                <Card>
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 animate-spin mr-3 text-[#ff5f6d]" />
+                    <span>Running advanced analytics...</span>
+                  </div>
+                </Card>
+              )}
             </div>
           )}
 
@@ -1473,37 +1671,18 @@ const Dashboard = () => {
               </Card>
               <Card>
                 <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-                  <Database className="w-5 h-5" /> Cloud Storage
+                  <Cloud className="w-5 h-5" /> Cloud Sync
                 </h3>
                 <SettingRow 
                   icon={supabaseStatus === 'connected' ? <Cloud className="w-5 h-5 text-green-500" /> : <CloudOff className="w-5 h-5" />} 
-                  label="Supabase Status" 
-                  value={supabaseStatus === 'connected' ? 'Connected - Data syncs to cloud' : 'Not configured - Data stored locally'} 
+                  label="Cloud Status" 
+                  value={supabaseStatus === 'connected' ? 'Your data syncs to the cloud automatically' : 'Data stored locally on this device'} 
                   action={
                     <span className={`text-xs px-3 py-1.5 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20'}`} style={{ color: supabaseStatus !== 'connected' ? 'var(--text-secondary)' : undefined }}>
-                      {supabaseStatus === 'connected' ? 'Active' : 'Offline'}
+                      {supabaseStatus === 'connected' ? 'Synced' : 'Local'}
                     </span>
                   }
                 />
-                {supabaseStatus !== 'connected' && (
-                  <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                    <p className="text-sm text-blue-300 mb-2">To enable cloud storage:</p>
-                    <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-                      <li>Create a Supabase project at supabase.com</li>
-                      <li>Run the SQL schema from <code className="text-[#ff5f6d]">supabase_schema.sql</code></li>
-                      <li>Add your credentials to <code className="text-[#ff5f6d]">.env</code> file</li>
-                      <li>Restart the application</li>
-                    </ol>
-                  </div>
-                )}
-              </Card>
-              <Card>
-                <h3 className="text-lg font-medium mb-4">Appearance</h3>
-                <SettingRow icon={isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />} label="Theme" value={isDarkMode ? 'Dark Mode' : 'Light Mode'} action={
-                  <button onClick={toggleTheme} className={`w-14 h-8 rounded-full transition-colors ${isDarkMode ? 'bg-[#ff3355]' : 'bg-gray-600'}`}>
-                    <div className={`w-6 h-6 rounded-full bg-white transition-transform mx-1 ${isDarkMode ? 'translate-x-6' : ''}`} />
-                  </button>
-                } />
               </Card>
               
               {/* Keyboard Shortcuts */}
