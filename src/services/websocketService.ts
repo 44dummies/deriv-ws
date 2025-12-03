@@ -142,6 +142,9 @@ class DerivWebSocket {
   private isAuthorized: boolean = false; // Track authorization state
   // Connection state listeners
   private connectionListeners: Array<(state: 'open' | 'closed') => void> = [];
+  // Keep-alive ping interval (Deriv requires ping every 30 seconds)
+  private pingIntervalId: ReturnType<typeof setInterval> | null = null;
+  private readonly PING_INTERVAL = 30000; // 30 seconds as per Deriv API docs
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -168,6 +171,8 @@ class DerivWebSocket {
         console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
+        // Start keep-alive ping interval (required by Deriv API)
+        this.startPingInterval();
         // notify listeners
         try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) { /* noop */ }
         resolve();
@@ -207,11 +212,36 @@ class DerivWebSocket {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.isConnecting = false;
+        // Stop keep-alive ping interval
+        this.stopPingInterval();
         // notify listeners
         try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) { /* noop */ }
         this.handleReconnect();
       };
     });
+  }
+
+  // Start the keep-alive ping interval (Deriv API requires ping every 30 seconds)
+  private startPingInterval(): void {
+    this.stopPingInterval(); // Clear any existing interval
+    this.pingIntervalId = setInterval(async () => {
+      try {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          await this.ping();
+          console.log('Keep-alive ping sent');
+        }
+      } catch (error) {
+        console.error('Ping failed:', error);
+      }
+    }, this.PING_INTERVAL);
+  }
+
+  // Stop the keep-alive ping interval
+  private stopPingInterval(): void {
+    if (this.pingIntervalId) {
+      clearInterval(this.pingIntervalId);
+      this.pingIntervalId = null;
+    }
   }
 
   // Allow consumers to react to connection open/close events
@@ -490,6 +520,8 @@ class DerivWebSocket {
   }
 
   disconnect(): void {
+    // Stop keep-alive ping interval
+    this.stopPingInterval();
     this.unsubscribeAll().catch(() => {});
     if (this.ws) {
       this.ws.close();
