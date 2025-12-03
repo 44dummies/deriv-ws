@@ -43,28 +43,27 @@ const TierChatroom = ({ user, analytics }) => {
     }
   }, [analytics]);
 
-  // Initialize chatroom
+  // Initialize chatroom - only assign on first load, not every render
   useEffect(() => {
     initializeChatroom();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tier]);
+  }, []); // Only run once on mount
 
   const initializeChatroom = async () => {
     setLoading(true);
     try {
-      // Assign user to their tier chatroom
-      const assignResult = await tierChatroomService.assignToTierChatroom(
-        analytics?.winRate || 0,
-        analytics?.totalTrades || 0
-      );
+      // First, try to get existing chatroom assignment
+      const existingResult = await tierChatroomService.getMyTierChatroom();
       
-      if (assignResult.success && assignResult.chatroom) {
-        setChatroom(assignResult.chatroom);
+      if (existingResult.success && existingResult.assignment?.tier_chatrooms) {
+        // User is already assigned - use existing assignment
+        setChatroom(existingResult.assignment.tier_chatrooms);
+        setTier(existingResult.assignment.tier_chatrooms.tier);
         
         // Load messages and members
         const [messagesResult, membersResult] = await Promise.all([
-          tierChatroomService.getChatroomMessages(assignResult.chatroom.id),
-          tierChatroomService.getChatroomMembers(assignResult.chatroom.id)
+          tierChatroomService.getChatroomMessages(existingResult.assignment.tier_chatrooms.id),
+          tierChatroomService.getChatroomMembers(existingResult.assignment.tier_chatrooms.id)
         ]);
         
         if (messagesResult.success) {
@@ -74,12 +73,36 @@ const TierChatroom = ({ user, analytics }) => {
           setMembers(membersResult.members);
         }
       } else {
-        // Fallback: get all chatrooms and show appropriate one
-        const chatroomsResult = await tierChatroomService.getTierChatrooms();
-        if (chatroomsResult.success && chatroomsResult.chatrooms.length > 0) {
-          const userChatroom = chatroomsResult.chatrooms.find(c => c.tier === tier) 
-            || chatroomsResult.chatrooms[0];
-          setChatroom(userChatroom);
+        // User not assigned - assign them (first login)
+        const assignResult = await tierChatroomService.assignToTierChatroom(
+          analytics?.winRate || 0,
+          analytics?.totalTrades || 0
+        );
+        
+        if (assignResult.success && assignResult.chatroom) {
+          setChatroom(assignResult.chatroom);
+          setTier(assignResult.tier || 'beginner');
+          
+          // Load messages and members
+          const [messagesResult, membersResult] = await Promise.all([
+            tierChatroomService.getChatroomMessages(assignResult.chatroom.id),
+            tierChatroomService.getChatroomMembers(assignResult.chatroom.id)
+          ]);
+          
+          if (messagesResult.success) {
+            setMessages(messagesResult.messages);
+          }
+          if (membersResult.success) {
+            setMembers(membersResult.members);
+          }
+        } else {
+          // Fallback: get all chatrooms and show appropriate one
+          const chatroomsResult = await tierChatroomService.getTierChatrooms();
+          if (chatroomsResult.success && chatroomsResult.chatrooms.length > 0) {
+            const userChatroom = chatroomsResult.chatrooms.find(c => c.tier === tier) 
+              || chatroomsResult.chatrooms[0];
+            setChatroom(userChatroom);
+          }
         }
       }
     } catch (error) {

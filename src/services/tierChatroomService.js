@@ -159,6 +159,19 @@ function getTierInfo(tier) {
 }
 
 /**
+ * Get current user's tier chatroom assignment
+ */
+async function getMyTierChatroom() {
+  try {
+    const response = await apiClient.get(`${API_BASE}/my-tier-chatroom`);
+    return response;
+  } catch (error) {
+    console.error('Error getting my tier chatroom:', error);
+    return { success: false, assignment: null };
+  }
+}
+
+/**
  * Assign user to tier chatroom based on analytics
  */
 async function assignToTierChatroom(winRate, totalTrades) {

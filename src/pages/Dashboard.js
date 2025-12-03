@@ -104,6 +104,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
+  const [userProfile, setUserProfile] = useState(null); // User's saved profile with photo
   const [activeTab, setActiveTab] = useState('sync');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed (especially for mobile)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Separate state for mobile
@@ -632,7 +633,28 @@ const Dashboard = () => {
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
-
+  // Load user profile (for profile photo, etc.)
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        const response = await apiClient.get('/users/settings');
+        if (response?.profile) {
+          setUserProfile({
+            username: response.profile.username,
+            displayName: response.profile.display_name || response.profile.fullname,
+            profilePhoto: response.profile.profile_photo,
+            isProfileComplete: response.profile.is_profile_complete
+          });
+        }
+      } catch (error) {
+        console.log('Could not load user profile:', error);
+      }
+    };
+    
+    if (userInfo?.loginid) {
+      loadUserProfile();
+    }
+  }, [userInfo?.loginid]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1429,19 +1451,57 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* User Profile Section with Photo */}
           {userInfo && (
             <div className={`p-4 border-b border-white/10 ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
+              {/* Profile Photo - visible in expanded mode */}
               {(!sidebarCollapsed || window.innerWidth < 1024) && (
-                <>
-                  <p className="font-medium truncate">{userInfo.fullname || 'Trader'}</p>
-                  <p className="text-sm truncate text-gray-400">{userInfo.loginid}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>{userInfo.is_virtual ? 'Demo' : 'Real'}</span>
-                    <span className="text-sm font-medium">{userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}</span>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative">
+                    {userProfile?.profilePhoto ? (
+                      <img 
+                        src={userProfile.profilePhoto} 
+                        alt="Profile" 
+                        className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-bold text-white">
+                        {userInfo.fullname?.[0]?.toUpperCase() || 'T'}
+                      </div>
+                    )}
+                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${derivWsConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
                   </div>
-                </>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{userProfile?.displayName || userInfo.fullname || 'Trader'}</p>
+                    {/* Only show Deriv ID to the user themselves */}
+                    <p className="text-xs text-gray-500 truncate">ID: {userInfo.loginid}</p>
+                  </div>
+                </div>
               )}
-              {sidebarCollapsed && <div className={`w-8 h-8 rounded-full mx-auto ${userInfo.is_virtual ? 'bg-yellow-500/20' : 'bg-green-500/20'} hidden lg:flex items-center justify-center text-xs`}>{userInfo.fullname?.[0] || 'T'}</div>}
+              
+              {(!sidebarCollapsed || window.innerWidth < 1024) && (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>{userInfo.is_virtual ? 'Demo' : 'Real'}</span>
+                  <span className="text-sm font-medium">{userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}</span>
+                </div>
+              )}
+              
+              {/* Collapsed mode - show profile photo as circle */}
+              {sidebarCollapsed && (
+                <div className="hidden lg:flex flex-col items-center">
+                  {userProfile?.profilePhoto ? (
+                    <img 
+                      src={userProfile.profilePhoto} 
+                      alt="Profile" 
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                    />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20' : 'bg-green-500/20'} flex items-center justify-center text-sm font-medium`}>
+                      {userInfo.fullname?.[0]?.toUpperCase() || 'T'}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
