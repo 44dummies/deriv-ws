@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import friendsService from '../../services/friendsService';
 
-const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) => {
+const FriendSearch = ({ token, currentUserId, existingFriends = [], onRequestSent }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState(new Set());
   const [error, setError] = useState(null);
+
+  const normalizeResults = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.users)) return data.users;
+    if (Array.isArray(data?.results)) return data.results;
+    return [];
+  };
 
   const handleSearch = async (e) => {
     const value = e.target.value;
@@ -21,11 +28,12 @@ const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) 
       setLoading(true);
       setError(null);
       const data = await friendsService.searchUsers(token, value);
-      // Filter out current user and existing friends
-      const filtered = (data.users || []).filter(
-        user => user.deriv_account_id !== currentUserId && 
-                !existingFriends.includes(user.deriv_account_id)
-      );
+      const normalized = normalizeResults(data);
+      const filtered = normalized.filter((user) => {
+        const userId = user.id || user.user_id || user.friend_id || user.deriv_account_id;
+        if (!userId) return true;
+        return !(existingFriends || []).includes(userId);
+      });
       setResults(filtered);
     } catch (err) {
       setError('Search failed. Please try again.');
@@ -108,10 +116,14 @@ const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) 
         {results.map(user => {
           const tierInfo = getTierInfo(user.performance_tier);
           const displayName = user.display_name || user.username || user.fullname || 'Trader';
-          const isPending = pendingRequests.has(user.deriv_account_id) || user.friendship_status === 'pending';
+          const userIdentity = user.id || user.user_id || user.friend_id || user.deriv_account_id || user.username;
+          const isPending = pendingRequests.has(userIdentity) || user.friendship_status === 'pending';
           
+          const avatarSource = (user.avatar_url || user.profile_photo);
+          const safeAvatar = avatarSource?.startsWith('blob:') ? null : avatarSource;
+
           return (
-            <div key={user.deriv_account_id || user.id} className="trader-card">
+            <div key={userIdentity} className="trader-card">
               {/* Card Glow Effect */}
               <div className="trader-card-glow"></div>
               
@@ -127,8 +139,8 @@ const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) 
               {/* Avatar Section */}
               <div className="trader-avatar-section">
                 <div className="trader-avatar">
-                  {user.avatar_url || user.profile_photo ? (
-                    <img src={user.avatar_url || user.profile_photo} alt={displayName} />
+                  {safeAvatar ? (
+                    <img src={safeAvatar} alt={displayName} />
                   ) : (
                     <div className="avatar-initials">{getInitials(displayName)}</div>
                   )}
@@ -160,7 +172,7 @@ const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) 
               <div className="trader-action-section">
                 <button
                   className={`trader-add-btn ${isPending ? 'pending' : ''}`}
-                  onClick={() => handleSendRequest(user.deriv_account_id || user.id)}
+                  onClick={() => handleSendRequest(userIdentity)}
                   disabled={isPending}
                 >
                   {isPending ? (
