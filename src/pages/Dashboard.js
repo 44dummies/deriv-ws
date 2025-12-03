@@ -5,7 +5,7 @@ import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
   LogOut, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
-  Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer,
+  Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer, User,
   Flame, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter, Zap,
   Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale,
   MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot, Wifi, WifiOff
@@ -2285,7 +2285,40 @@ const Dashboard = () => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="space-y-4 sm:space-y-6">
-              <div><h1 className="text-xl sm:text-2xl font-bold">Settings</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage your TraderMind preferences</p></div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage your TraderMind preferences</p>
+                </div>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 
+                    rounded-lg transition-colors text-white font-medium"
+                >
+                  <Settings className="w-4 h-4" />
+                  Full Settings
+                </button>
+              </div>
+              
+              {/* Profile Settings Card */}
+              <Card>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base sm:text-lg font-medium flex items-center gap-2">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5" /> Profile & Privacy
+                  </h3>
+                  <button
+                    onClick={() => navigate('/settings')}
+                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    Edit Profile →
+                  </button>
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Set your custom username, profile photo, bio, and privacy settings.
+                  Control what others can see and who can contact you.
+                </p>
+              </Card>
+
               <Card>
                 <h3 className="text-base sm:text-lg font-medium mb-4">Account Information</h3>
                 <SettingRow icon={<Users className="w-4 h-4 sm:w-5 sm:h-5" />} label="Full Name" value={userInfo?.fullname || 'Not set'} />
