@@ -633,7 +633,7 @@ const Dashboard = () => {
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
-  // Load user profile (for profile photo, etc.)
+  // Load user profile (for profile photo, etc.) - only after backend token is set
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
@@ -651,10 +651,11 @@ const Dashboard = () => {
       }
     };
     
-    if (userInfo?.loginid) {
+    // Only load profile if we have a backend token
+    if (backendToken && userInfo?.loginid) {
       loadUserProfile();
     }
-  }, [userInfo?.loginid]);
+  }, [backendToken, userInfo?.loginid]);
 
   // Keyboard shortcuts
   useEffect(() => {

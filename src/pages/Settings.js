@@ -8,14 +8,18 @@ import {
 } from 'lucide-react';
 import apiClient from '../services/apiClient';
 import { TokenService } from '../services/tokenService';
+import './Settings.css';
 
 const Card = ({ children, className = '', title, icon: Icon }) => (
-  <div className={`rounded-xl border backdrop-blur-xl p-6 border-white/10 ${className}`}
-    style={{ backgroundColor: 'var(--card-bg)', borderColor: 'var(--card-border)' }}>
+  <div className={`settings-card ${className}`}>
     {title && (
-      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
-        {Icon && <Icon className="w-5 h-5 text-purple-400" />}
-        <h3 className="text-lg font-semibold">{title}</h3>
+      <div className="settings-card-header">
+        {Icon && (
+          <div className="settings-card-icon">
+            <Icon />
+          </div>
+        )}
+        <h3 className="settings-card-title">{title}</h3>
       </div>
     )}
     {children}
@@ -23,21 +27,17 @@ const Card = ({ children, className = '', title, icon: Icon }) => (
 );
 
 const Toggle = ({ enabled, onChange, label, description }) => (
-  <div className="flex items-center justify-between py-3">
-    <div className="flex-1">
-      <p className="font-medium">{label}</p>
-      {description && <p className="text-sm text-gray-400 mt-1">{description}</p>}
+  <div className="settings-toggle">
+    <div className="settings-toggle-info">
+      <p className="settings-toggle-label">{label}</p>
+      {description && <p className="settings-toggle-description">{description}</p>}
     </div>
     <button
       onClick={() => onChange(!enabled)}
-      className={`relative w-12 h-6 rounded-full transition-colors ${
-        enabled ? 'bg-purple-500' : 'bg-gray-600'
-      }`}
-    >
-      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-        enabled ? 'translate-x-7' : 'translate-x-1'
-      }`} />
-    </button>
+      className={`toggle-switch ${enabled ? 'active' : ''}`}
+      role="switch"
+      aria-checked={enabled}
+    />
   </div>
 );
 
@@ -214,62 +214,55 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500" />
+      <div className="settings-loading">
+        <div className="settings-loading-spinner" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div className="settings-page">
       <Toaster position="top-right" />
       
       {/* Header */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b border-white/10"
-        style={{ backgroundColor: 'var(--bg-secondary)' }}>
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <header className="settings-header">
+        <div className="settings-header-content">
+          <div className="settings-header-left">
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="settings-back-btn"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold">Settings</h1>
+            <h1 className="settings-title">Settings</h1>
           </div>
           
           <button
             onClick={saveSettings}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 
-              rounded-lg transition-colors disabled:opacity-50"
+            className="settings-save-btn"
           >
             {saving ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div className="spinner" />
             ) : (
               <Save className="w-4 h-4" />
             )}
-            Save
+            <span>Save Changes</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="settings-main">
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="settings-tabs">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-white/5 hover:bg-white/10'
-              }`}
+              className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
             >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <tab.icon />
+              <span>{tab.label}</span>
             </button>
           ))}
         </div>
@@ -279,24 +272,21 @@ const Settings = () => {
           <div className="space-y-6">
             {/* Profile Photo */}
             <Card title="Profile Photo" icon={Camera}>
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 
-                    flex items-center justify-center overflow-hidden">
+              <div className="profile-photo-section">
+                <div className="profile-photo-container">
+                  <div className="profile-photo">
                     {profile.profilePhotoUrl ? (
                       <img 
                         src={profile.profilePhotoUrl} 
                         alt="Profile" 
-                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <User className="w-12 h-12 text-white" />
+                      <User />
                     )}
                   </div>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 p-2 bg-purple-500 rounded-full 
-                      hover:bg-purple-600 transition-colors"
+                    className="profile-photo-edit-btn"
                   >
                     <Camera className="w-4 h-4" />
                   </button>
@@ -309,15 +299,14 @@ const Settings = () => {
                   />
                 </div>
                 
-                <div className="flex-1">
-                  <p className="text-sm text-gray-400 mb-3">
+                <div className="profile-photo-actions">
+                  <p className="profile-photo-hint">
                     Upload a profile photo. Max size: 5MB. Recommended: Square image.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="profile-photo-buttons">
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg 
-                        transition-colors flex items-center gap-2"
+                      className="btn-upload"
                     >
                       <Upload className="w-4 h-4" />
                       Upload
@@ -325,8 +314,7 @@ const Settings = () => {
                     {profile.profilePhotoUrl && (
                       <button
                         onClick={removePhoto}
-                        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 
-                          rounded-lg transition-colors flex items-center gap-2"
+                        className="btn-remove"
                       >
                         <Trash2 className="w-4 h-4" />
                         Remove
@@ -339,66 +327,62 @@ const Settings = () => {
 
             {/* Username & Display Name */}
             <Card title="Identity" icon={AtSign}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
+              <div className="space-y-5">
+                <div className="settings-form-group">
+                  <label className="settings-label">
                     Username
-                    <span className="text-gray-400 ml-2">(searchable by friends)</span>
+                    <span className="settings-label-hint">(searchable by friends)</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">@</span>
+                    <span className="input-prefix">@</span>
                     <input
                       type="text"
                       value={profile.username}
                       onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value.toLowerCase() }))}
                       placeholder="your_username"
-                      className="w-full pl-8 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                        focus:border-purple-500 focus:outline-none transition-colors"
+                      className="settings-input with-prefix"
                     />
                   </div>
                   {validateUsername(profile.username) !== true && (
-                    <p className="text-red-400 text-sm mt-1">{validateUsername(profile.username)}</p>
+                    <p className="settings-error">{validateUsername(profile.username)}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Display Name</label>
+                <div className="settings-form-group">
+                  <label className="settings-label">Display Name</label>
                   <input
                     type="text"
                     value={profile.displayName}
                     onChange={(e) => setProfile(prev => ({ ...prev, displayName: e.target.value }))}
                     placeholder="Your Display Name"
                     maxLength={50}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                      focus:border-purple-500 focus:outline-none transition-colors"
+                    className="settings-input"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Status Message</label>
+                <div className="settings-form-group">
+                  <label className="settings-label">Status Message</label>
                   <input
                     type="text"
                     value={profile.statusMessage}
                     onChange={(e) => setProfile(prev => ({ ...prev, statusMessage: e.target.value }))}
                     placeholder="What's on your mind?"
                     maxLength={100}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                      focus:border-purple-500 focus:outline-none transition-colors"
+                    className="settings-input"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Bio</label>
+                <div className="settings-form-group">
+                  <label className="settings-label">Bio</label>
                   <textarea
                     value={profile.bio}
                     onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
                     placeholder="Tell others about yourself..."
                     maxLength={500}
                     rows={4}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                      focus:border-purple-500 focus:outline-none transition-colors resize-none"
+                    className="settings-input settings-textarea"
                   />
-                  <p className="text-sm text-gray-400 mt-1">{profile.bio.length}/500</p>
+                  <p className="settings-char-count">{profile.bio.length}/500</p>
                 </div>
               </div>
             </Card>
@@ -409,82 +393,76 @@ const Settings = () => {
         {activeTab === 'privacy' && (
           <div className="space-y-6">
             <Card title="Profile Visibility" icon={Eye}>
-              <div className="space-y-2">
-                <Toggle
-                  enabled={privacy.showUsername}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showUsername: v }))}
-                  label="Show Username in Chatrooms"
-                  description="Display your custom username instead of Deriv ID"
-                />
-                <Toggle
-                  enabled={privacy.showRealName}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showRealName: v }))}
-                  label="Show Real Name"
-                  description="Display your full name from Deriv account"
-                />
-                <Toggle
-                  enabled={privacy.showEmail}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showEmail: v }))}
-                  label="Show Email"
-                  description="Make your email visible to other users"
-                />
-                <Toggle
-                  enabled={privacy.showCountry}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showCountry: v }))}
-                  label="Show Country"
-                  description="Display your country on your profile"
-                />
-                <Toggle
-                  enabled={privacy.showPerformance}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showPerformance: v }))}
-                  label="Show Performance Tier"
-                  description="Display your trading performance tier"
-                />
-                <Toggle
-                  enabled={privacy.showOnlineStatus}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, showOnlineStatus: v }))}
-                  label="Show Online Status"
-                  description="Let others see when you're online"
-                />
-              </div>
+              <Toggle
+                enabled={privacy.showUsername}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showUsername: v }))}
+                label="Show Username in Chatrooms"
+                description="Display your custom username instead of Deriv ID"
+              />
+              <Toggle
+                enabled={privacy.showRealName}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showRealName: v }))}
+                label="Show Real Name"
+                description="Display your full name from Deriv account"
+              />
+              <Toggle
+                enabled={privacy.showEmail}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showEmail: v }))}
+                label="Show Email"
+                description="Make your email visible to other users"
+              />
+              <Toggle
+                enabled={privacy.showCountry}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showCountry: v }))}
+                label="Show Country"
+                description="Display your country on your profile"
+              />
+              <Toggle
+                enabled={privacy.showPerformance}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showPerformance: v }))}
+                label="Show Performance Tier"
+                description="Display your trading performance tier"
+              />
+              <Toggle
+                enabled={privacy.showOnlineStatus}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, showOnlineStatus: v }))}
+                label="Show Online Status"
+                description="Let others see when you're online"
+              />
             </Card>
 
             <Card title="Interaction Settings" icon={Shield}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Profile Visibility</label>
-                  <select
-                    value={privacy.profileVisibility}
-                    onChange={(e) => setPrivacy(prev => ({ ...prev, profileVisibility: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                      focus:border-purple-500 focus:outline-none"
-                  >
-                    <option value="public">Public - Anyone can view</option>
-                    <option value="friends">Friends Only</option>
-                    <option value="private">Private - Only you</option>
-                  </select>
-                </div>
+              <div className="settings-form-group">
+                <label className="settings-label">Profile Visibility</label>
+                <select
+                  value={privacy.profileVisibility}
+                  onChange={(e) => setPrivacy(prev => ({ ...prev, profileVisibility: e.target.value }))}
+                  className="settings-select"
+                >
+                  <option value="public">Public - Anyone can view</option>
+                  <option value="friends">Friends Only</option>
+                  <option value="private">Private - Only you</option>
+                </select>
+              </div>
 
-                <Toggle
-                  enabled={privacy.allowFriendRequests}
-                  onChange={(v) => setPrivacy(prev => ({ ...prev, allowFriendRequests: v }))}
-                  label="Allow Friend Requests"
-                  description="Let other users send you friend requests"
-                />
+              <Toggle
+                enabled={privacy.allowFriendRequests}
+                onChange={(v) => setPrivacy(prev => ({ ...prev, allowFriendRequests: v }))}
+                label="Allow Friend Requests"
+                description="Let other users send you friend requests"
+              />
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Who Can Message You</label>
-                  <select
-                    value={privacy.allowMessages}
-                    onChange={(e) => setPrivacy(prev => ({ ...prev, allowMessages: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                      focus:border-purple-500 focus:outline-none"
-                  >
-                    <option value="everyone">Everyone</option>
-                    <option value="friends">Friends Only</option>
-                    <option value="nobody">Nobody</option>
-                  </select>
-                </div>
+              <div className="settings-form-group" style={{ marginTop: '16px' }}>
+                <label className="settings-label">Who Can Message You</label>
+                <select
+                  value={privacy.allowMessages}
+                  onChange={(e) => setPrivacy(prev => ({ ...prev, allowMessages: e.target.value }))}
+                  className="settings-select"
+                >
+                  <option value="everyone">Everyone</option>
+                  <option value="friends">Friends Only</option>
+                  <option value="nobody">Nobody</option>
+                </select>
               </div>
             </Card>
           </div>
@@ -494,61 +472,57 @@ const Settings = () => {
         {activeTab === 'notifications' && (
           <div className="space-y-6">
             <Card title="Notification Types" icon={Bell}>
-              <div className="space-y-2">
-                <Toggle
-                  enabled={notifications.friendRequests}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, friendRequests: v }))}
-                  label="Friend Requests"
-                  description="When someone sends you a friend request"
-                />
-                <Toggle
-                  enabled={notifications.messages}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, messages: v }))}
-                  label="Direct Messages"
-                  description="When you receive a private message"
-                />
-                <Toggle
-                  enabled={notifications.chatMentions}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, chatMentions: v }))}
-                  label="Chat Mentions"
-                  description="When someone mentions you in a chatroom"
-                />
-                <Toggle
-                  enabled={notifications.achievements}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, achievements: v }))}
-                  label="Achievements"
-                  description="When you unlock a new achievement"
-                />
-                <Toggle
-                  enabled={notifications.streakReminders}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, streakReminders: v }))}
-                  label="Streak Reminders"
-                  description="Reminders to maintain your streaks"
-                />
-                <Toggle
-                  enabled={notifications.communityUpdates}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, communityUpdates: v }))}
-                  label="Community Updates"
-                  description="News and updates from the community"
-                />
-              </div>
+              <Toggle
+                enabled={notifications.friendRequests}
+                onChange={(v) => setNotifications(prev => ({ ...prev, friendRequests: v }))}
+                label="Friend Requests"
+                description="When someone sends you a friend request"
+              />
+              <Toggle
+                enabled={notifications.messages}
+                onChange={(v) => setNotifications(prev => ({ ...prev, messages: v }))}
+                label="Direct Messages"
+                description="When you receive a private message"
+              />
+              <Toggle
+                enabled={notifications.chatMentions}
+                onChange={(v) => setNotifications(prev => ({ ...prev, chatMentions: v }))}
+                label="Chat Mentions"
+                description="When someone mentions you in a chatroom"
+              />
+              <Toggle
+                enabled={notifications.achievements}
+                onChange={(v) => setNotifications(prev => ({ ...prev, achievements: v }))}
+                label="Achievements"
+                description="When you unlock a new achievement"
+              />
+              <Toggle
+                enabled={notifications.streakReminders}
+                onChange={(v) => setNotifications(prev => ({ ...prev, streakReminders: v }))}
+                label="Streak Reminders"
+                description="Reminders to maintain your streaks"
+              />
+              <Toggle
+                enabled={notifications.communityUpdates}
+                onChange={(v) => setNotifications(prev => ({ ...prev, communityUpdates: v }))}
+                label="Community Updates"
+                description="News and updates from the community"
+              />
             </Card>
 
             <Card title="Notification Preferences" icon={Volume2}>
-              <div className="space-y-2">
-                <Toggle
-                  enabled={notifications.soundEnabled}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, soundEnabled: v }))}
-                  label="Sound Notifications"
-                  description="Play sounds for notifications"
-                />
-                <Toggle
-                  enabled={notifications.pushEnabled}
-                  onChange={(v) => setNotifications(prev => ({ ...prev, pushEnabled: v }))}
-                  label="Push Notifications"
-                  description="Receive push notifications on your device"
-                />
-              </div>
+              <Toggle
+                enabled={notifications.soundEnabled}
+                onChange={(v) => setNotifications(prev => ({ ...prev, soundEnabled: v }))}
+                label="Sound Notifications"
+                description="Play sounds for notifications"
+              />
+              <Toggle
+                enabled={notifications.pushEnabled}
+                onChange={(v) => setNotifications(prev => ({ ...prev, pushEnabled: v }))}
+                label="Push Notifications"
+                description="Receive push notifications on your device"
+              />
             </Card>
           </div>
         )}
@@ -557,54 +531,49 @@ const Settings = () => {
         {activeTab === 'chat' && (
           <div className="space-y-6">
             <Card title="Message Settings" icon={MessageSquare}>
-              <div className="space-y-2">
-                <Toggle
-                  enabled={chat.enterToSend}
-                  onChange={(v) => setChat(prev => ({ ...prev, enterToSend: v }))}
-                  label="Press Enter to Send"
-                  description="Send messages by pressing Enter (Shift+Enter for new line)"
-                />
-                <Toggle
-                  enabled={chat.showTypingIndicator}
-                  onChange={(v) => setChat(prev => ({ ...prev, showTypingIndicator: v }))}
-                  label="Show Typing Indicator"
-                  description="Let others see when you're typing"
-                />
-                <Toggle
-                  enabled={chat.showReadReceipts}
-                  onChange={(v) => setChat(prev => ({ ...prev, showReadReceipts: v }))}
-                  label="Read Receipts"
-                  description="Show when you've read messages"
-                />
-              </div>
+              <Toggle
+                enabled={chat.enterToSend}
+                onChange={(v) => setChat(prev => ({ ...prev, enterToSend: v }))}
+                label="Press Enter to Send"
+                description="Send messages by pressing Enter (Shift+Enter for new line)"
+              />
+              <Toggle
+                enabled={chat.showTypingIndicator}
+                onChange={(v) => setChat(prev => ({ ...prev, showTypingIndicator: v }))}
+                label="Show Typing Indicator"
+                description="Let others see when you're typing"
+              />
+              <Toggle
+                enabled={chat.showReadReceipts}
+                onChange={(v) => setChat(prev => ({ ...prev, showReadReceipts: v }))}
+                label="Read Receipts"
+                description="Show when you've read messages"
+              />
             </Card>
 
             <Card title="Message History" icon={FileText}>
-              <div className="space-y-4">
-                <Toggle
-                  enabled={chat.autoDeleteMessages}
-                  onChange={(v) => setChat(prev => ({ ...prev, autoDeleteMessages: v }))}
-                  label="Auto-Delete Old Messages"
-                  description="Automatically delete messages after a period"
-                />
-                
-                {chat.autoDeleteMessages && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Keep Messages For</label>
-                    <select
-                      value={chat.messageRetention}
-                      onChange={(e) => setChat(prev => ({ ...prev, messageRetention: parseInt(e.target.value) }))}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg 
-                        focus:border-purple-500 focus:outline-none"
-                    >
-                      <option value={7}>7 days</option>
-                      <option value={30}>30 days</option>
-                      <option value={90}>90 days</option>
-                      <option value={365}>1 year</option>
-                    </select>
-                  </div>
-                )}
-              </div>
+              <Toggle
+                enabled={chat.autoDeleteMessages}
+                onChange={(v) => setChat(prev => ({ ...prev, autoDeleteMessages: v }))}
+                label="Auto-Delete Old Messages"
+                description="Automatically delete messages after a period"
+              />
+              
+              {chat.autoDeleteMessages && (
+                <div className="settings-form-group" style={{ marginTop: '16px' }}>
+                  <label className="settings-label">Keep Messages For</label>
+                  <select
+                    value={chat.messageRetention}
+                    onChange={(e) => setChat(prev => ({ ...prev, messageRetention: parseInt(e.target.value) }))}
+                    className="settings-select"
+                  >
+                    <option value={7}>7 days</option>
+                    <option value={30}>30 days</option>
+                    <option value={90}>90 days</option>
+                    <option value={365}>1 year</option>
+                  </select>
+                </div>
+              )}
             </Card>
           </div>
         )}
