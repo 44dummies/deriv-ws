@@ -6,7 +6,7 @@
 
 import apiClient from './apiClient';
 
-const API_BASE = '/api/community';
+const API_BASE = '/community';
 
 // Local file storage utilities
 const fileStorage = {

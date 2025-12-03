@@ -21,16 +21,16 @@ class ApiClient {
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
-    localStorage.setItem('chatAccessToken', accessToken);
-    localStorage.setItem('chatRefreshToken', refreshToken);
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
   }
 
   /**
    * Load tokens from storage
    */
   loadTokens() {
-    this.accessToken = localStorage.getItem('chatAccessToken');
-    this.refreshToken = localStorage.getItem('chatRefreshToken');
+    this.accessToken = localStorage.getItem('accessToken');
+    this.refreshToken = localStorage.getItem('refreshToken');
     return { accessToken: this.accessToken, refreshToken: this.refreshToken };
   }
 
@@ -40,8 +40,8 @@ class ApiClient {
   clearTokens() {
     this.accessToken = null;
     this.refreshToken = null;
-    localStorage.removeItem('chatAccessToken');
-    localStorage.removeItem('chatRefreshToken');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
   }
 
   /**
