@@ -32,7 +32,11 @@ const FriendsCenter = ({ user, token }) => {
   }, [token]);
 
   const connectSocket = () => {
-    friendsSocket.connect(token, user?.deriv_account_id);
+    // Connect with derivId and token (note: token is the JWT from backend, not Deriv token)
+    const derivId = user?.deriv_account_id || user?.loginid;
+    if (derivId && token) {
+      friendsSocket.connect(derivId, token);
+    }
     
     // Listen for real-time events
     friendsSocket.onNewMessage((message) => {

@@ -146,6 +146,9 @@ const Dashboard = () => {
   const [availableTags] = useState(['#overtrading', '#perfect-entry', '#bad-day', '#strategyA', '#scalping', '#martingale']);
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
   
+  // Backend JWT token for Friends/Community features
+  const [backendToken, setBackendToken] = useState(null);
+  
   // Full Analytics State
   const [fullAnalytics, setFullAnalytics] = useState(null);
   const [statements, setStatements] = useState([]);
@@ -529,19 +532,33 @@ const Dashboard = () => {
         }
         
         if (authResponse.authorize) {
+          // Extract loginid - it could be in loginid field or account_list
+          const loginid = authResponse.authorize.loginid || 
+                         (authResponse.authorize.account_list && authResponse.authorize.account_list.length > 0 
+                          ? authResponse.authorize.account_list[0].loginid 
+                          : null);
+          
           const userData = {
             balance: authResponse.authorize.balance,
             currency: authResponse.authorize.currency,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
-            loginid: authResponse.authorize.loginid,
+            loginid: loginid,
             is_virtual: authResponse.authorize.is_virtual === 1,
           };
+          
+          console.log('Auth response data:', {
+            loginid: loginid,
+            email: authResponse.authorize.email,
+            fullname: authResponse.authorize.fullname,
+            hasAccountList: !!authResponse.authorize.account_list
+          });
+          
           setUserInfo(userData);
           
           // Create/update user profile in Supabase ONCE (required for foreign key constraints)
           // Only proceed if loginid is valid
-          if (supabaseService.isSupabaseConfigured() && !profileSynced.current && userData.loginid) {
+          if (supabaseService.isSupabaseConfigured() && !profileSynced.current && loginid) {
             profileSynced.current = true;
             const { error } = await supabaseService.upsertUserProfile(userData);
             if (error) {
@@ -552,16 +569,36 @@ const Dashboard = () => {
           
           // Authenticate with backend server for Friends/Community features
           try {
-            await apiClient.loginWithDeriv({
-              derivUserId: userData.loginid,
-              loginid: userData.loginid,
+            console.log('Attempting backend auth with data:', {
+              loginid: loginid,
               email: userData.email,
-              currency: userData.currency,
               fullname: userData.fullname
             });
-            console.log('Backend authentication successful');
+            
+            if (!loginid) {
+              console.error('No loginid available for backend auth. Full auth response:', authResponse.authorize);
+            } else {
+              const authPayload = {
+                derivUserId: loginid,
+                loginid: loginid,
+                email: userData.email || undefined,
+                currency: userData.currency || undefined,
+                fullname: userData.fullname || undefined
+              };
+              console.log('Sending auth payload:', authPayload);
+              
+              const backendAuthResponse = await apiClient.loginWithDeriv(authPayload);
+              console.log('Backend authentication successful');
+              
+              // Store the backend JWT token for Friends/Community features
+              if (backendAuthResponse.accessToken) {
+                setBackendToken(backendAuthResponse.accessToken);
+                console.log('Backend token saved');
+              }
+            }
           } catch (backendErr) {
-            console.warn('Backend auth failed (Friends features may not work):', backendErr.message);
+            console.error('Backend auth failed (Friends features may not work):', backendErr);
+            console.warn('Backend auth error message:', backendErr.message);
           }
         }
         setIsLoading(false);
@@ -2225,9 +2262,10 @@ const Dashboard = () => {
             <FriendsCenter 
               user={{ 
                 deriv_account_id: userInfo?.loginid,
+                loginid: userInfo?.loginid,
                 username: userInfo?.fullname || userInfo?.loginid 
               }} 
-              token={TokenService.getTokens()?.token}
+              token={backendToken}
             />
           )}
 

@@ -152,31 +152,55 @@ router.post('/login', async (req, res) => {
  */
 router.post('/deriv', async (req, res) => {
   try {
+    console.log('Deriv auth request body:', req.body);
     const { derivUserId, loginid, email, currency, country, fullname } = req.body;
     
-    if (!derivUserId || !loginid) {
-      return res.status(400).json({ error: 'Deriv user ID and login ID are required' });
+    // Use derivUserId or loginid as the derivId
+    const derivId = derivUserId || loginid;
+    
+    console.log('Extracted values:', { derivUserId, loginid, derivId, email });
+    
+    if (!derivId) {
+      console.error('Missing derivId. Request body:', req.body);
+      return res.status(400).json({ error: 'Deriv user ID or login ID is required' });
     }
     
-    // Find or create user
-    let user = await prisma.user.findUnique({ where: { derivUserId } });
+    console.log('Looking for user with derivId:', derivId);
+    
+    // Find or create user - use derivId (column name in database)
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { derivId } });
+      console.log('User lookup result:', user ? 'found' : 'not found');
+    } catch (dbErr) {
+      console.error('Database lookup error:', dbErr.message);
+      throw dbErr;
+    }
     
     if (!user) {
+      console.log('Creating new user...');
       // Create new user from Deriv login
-      const username = `trader_${loginid}`;
-      
-      user = await prisma.user.create({
-        data: {
-          id: uuidv4(),
-          username,
-          displayName: fullname || username,
-          email: email || `${loginid}@deriv.local`,
-          passwordHash: '', // No password for OAuth users
-          derivUserId,
-          currency,
-          country
-        }
-      });
+      try {
+        // Generate a username from derivId or email
+        const username = derivId.replace(/[^a-z0-9_]/gi, '_').substring(0, 50);
+        
+        user = await prisma.user.create({
+          data: {
+            id: uuidv4(),
+            derivId,
+            username,
+            email: email || null,
+            fullName: fullname || null,
+            country: country || null,
+            traderLevel: 'beginner'
+          }
+        });
+        console.log('User created:', user.id);
+      } catch (createErr) {
+        console.error('User creation error:', createErr.message);
+        console.error('Create error details:', createErr);
+        throw createErr;
+      }
       
       // Auto-assign to chatrooms
       await autoAssignUserToChatrooms(user.id);
@@ -187,35 +211,38 @@ router.post('/deriv', async (req, res) => {
       return res.status(403).json({ error: 'Account suspended' });
     }
     
-    // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id, user.username);
+    // Generate tokens - use derivId as username since we don't have username column
+    const { accessToken, refreshToken } = generateTokens(user.id, user.derivId);
     
-    // Update user
+    // Update user online status
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        refreshToken,
         isOnline: true,
-        lastSeenAt: new Date(),
-        currency,
-        country
+        lastSeen: new Date(),
+        country: country || user.country
       }
     });
     
     res.json({
       user: {
         id: user.id,
-        username: user.username,
+        derivId: user.derivId,
         email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl,
+        traderLevel: user.traderLevel
       },
       accessToken,
       refreshToken
     });
   } catch (error) {
     console.error('Deriv login error:', error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Login failed',
+      details: error.message
+    });
   }
 });
 

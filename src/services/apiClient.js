@@ -192,10 +192,12 @@ class ApiClient {
   }
 
   async loginWithDeriv(derivData) {
+    console.log('apiClient.loginWithDeriv called with:', derivData);
     const result = await this.request('/auth/deriv', {
       method: 'POST',
       body: JSON.stringify(derivData)
     });
+    console.log('apiClient.loginWithDeriv result:', result);
     this.setTokens(result.accessToken, result.refreshToken);
     return result;
   }
