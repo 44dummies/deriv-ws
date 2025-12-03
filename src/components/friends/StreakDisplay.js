@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import leaderboardService from '../../services/leaderboardService';
+import { achievementsService } from '../../services/leaderboardService';
 
 const StreakDisplay = ({ userId, token }) => {
   const [streak, setStreak] = useState(null);
@@ -14,7 +14,9 @@ const StreakDisplay = ({ userId, token }) => {
   const loadStreak = async () => {
     try {
       // Get achievements which includes streak info
-      const data = await leaderboardService.getAchievements(token, userId);
+      const data = userId 
+        ? await achievementsService.getUserAchievements(userId)
+        : await achievementsService.getMyAchievements();
       const streakAchievement = data.achievements?.find(a => a.achievement_type === 'streak');
       if (streakAchievement) {
         setStreak(streakAchievement);
