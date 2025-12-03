@@ -1,1 +1,11 @@
-// Trigger redeploy Wed Dec  3 07:56:48 AM EAT 2025
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
