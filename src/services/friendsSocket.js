@@ -308,6 +308,38 @@ class FriendsSocketService {
   getUserId() {
     return this.userId;
   }
+
+  // =============================================
+  // CONVENIENCE EVENT HANDLERS
+  // =============================================
+
+  onNewMessage(callback) {
+    return this.on('chat:newMessage', callback);
+  }
+
+  onFriendRequest(callback) {
+    return this.on('friend:request', callback);
+  }
+
+  onFriendOnline(callback) {
+    return this.on('friend:online', callback);
+  }
+
+  onFriendOffline(callback) {
+    return this.on('friend:offline', callback);
+  }
+
+  onFriendAccepted(callback) {
+    return this.on('friend:accepted', callback);
+  }
+
+  onTyping(callback) {
+    return this.on('chat:typing', callback);
+  }
+
+  onNotification(callback) {
+    return this.on('notification', callback);
+  }
 }
 
 // Singleton instance
