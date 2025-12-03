@@ -60,8 +60,15 @@ const Settings = () => {
   });
 
   useEffect(() => {
+    // Ensure tokens are loaded before making API calls
+    const tokens = apiClient.loadTokens();
+    if (!tokens.accessToken) {
+      toast.error('Please log in to access settings');
+      navigate('/');
+      return;
+    }
     loadSettings();
-  }, []);
+  }, [navigate]);
 
   const loadSettings = async () => {
     try {

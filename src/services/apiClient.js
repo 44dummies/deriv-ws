@@ -13,6 +13,8 @@ class ApiClient {
     this.refreshToken = null;
     this.onTokenRefresh = null;
     this.onAuthError = null;
+    // Auto-load tokens from storage on initialization
+    this.loadTokens();
   }
 
   /**
