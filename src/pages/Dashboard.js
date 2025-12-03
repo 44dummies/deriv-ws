@@ -522,7 +522,8 @@ const Dashboard = () => {
         await websocketService.connect();
         setDerivWsConnected(true);
         
-        const authResponse = await websocketService.authorize(tokens.token);
+        // Force refresh to get full authorize response (not cached)
+        const authResponse = await websocketService.authorize(tokens.token, true);
         if (authResponse.error) { 
           isInitialized.current = false;
           setDerivWsConnected(false);

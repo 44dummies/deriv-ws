@@ -285,16 +285,24 @@ class DerivWebSocket {
   }
 
   // === Authentication ===
-  async authorize(token: string): Promise<DerivResponse> {
-    // Prevent multiple authorize calls (rate limit protection)
-    if (this.isAuthorized) {
-      console.log('Already authorized, skipping');
-      return { msg_type: 'authorize', authorize: { cached: true } };
+  private lastAuthorizeResponse: DerivResponse | null = null;
+  
+  async authorize(token: string, forceRefresh: boolean = false): Promise<DerivResponse> {
+    // If already authorized and not forcing refresh, return cached response
+    if (this.isAuthorized && this.lastAuthorizeResponse && !forceRefresh) {
+      console.log('Returning cached authorize response');
+      return this.lastAuthorizeResponse;
+    }
+    
+    // Reset authorization state if forcing refresh
+    if (forceRefresh) {
+      this.isAuthorized = false;
     }
     
     const response = await this.send({ authorize: token });
     if (!response.error) {
       this.isAuthorized = true;
+      this.lastAuthorizeResponse = response; // Cache the full response
     }
     return response;
   }
@@ -302,6 +310,7 @@ class DerivWebSocket {
   // Reset authorization state (call on disconnect/logout)
   resetAuth(): void {
     this.isAuthorized = false;
+    this.lastAuthorizeResponse = null;
   }
 
   // === Account ===
