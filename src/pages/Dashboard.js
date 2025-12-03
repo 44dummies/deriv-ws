@@ -532,11 +532,23 @@ const Dashboard = () => {
         }
         
         if (authResponse.authorize) {
-          // Extract loginid - it could be in loginid field or account_list
-          const loginid = authResponse.authorize.loginid || 
-                         (authResponse.authorize.account_list && authResponse.authorize.account_list.length > 0 
-                          ? authResponse.authorize.account_list[0].loginid 
-                          : null);
+          // Debug: Log the full authorize response to understand structure
+          console.log('Full Deriv authorize response:', JSON.stringify(authResponse.authorize, null, 2));
+          
+          // Extract loginid - check multiple possible locations
+          let loginid = authResponse.authorize.loginid;
+          
+          // If not in root, check account_list
+          if (!loginid && authResponse.authorize.account_list && authResponse.authorize.account_list.length > 0) {
+            loginid = authResponse.authorize.account_list[0].loginid;
+          }
+          
+          // Also check if it's nested under a different property
+          if (!loginid && authResponse.authorize.user_id) {
+            loginid = authResponse.authorize.user_id;
+          }
+          
+          console.log('Extracted loginid:', loginid);
           
           const userData = {
             balance: authResponse.authorize.balance,
