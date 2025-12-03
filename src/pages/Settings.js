@@ -166,35 +166,51 @@ const Settings = () => {
       return;
     }
     
-    // Create local preview URL
-    const localUrl = URL.createObjectURL(file);
-    
-    // Store metadata only - no actual upload to server
-    const metadata = {
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      uploadedAt: new Date().toISOString(),
-      localPath: localUrl, // This is a blob URL for preview
-      // In production, you'd use a service like Cloudinary, S3, or IPFS
-      // and store the external URL here
-    };
-    
-    setProfile(prev => ({
-      ...prev,
-      profilePhotoUrl: localUrl,
-      profilePhotoMetadata: metadata,
-    }));
-    
-    toast.success('Photo selected! Save to apply changes.');
+    try {
+      // Show loading toast
+      const uploadToast = toast.loading('Uploading photo...');
+      
+      // Upload to server
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const result = await apiClient.uploadFile('/users/me/avatar', formData);
+      
+      if (result.avatarUrl) {
+        setProfile(prev => ({
+          ...prev,
+          profilePhotoUrl: result.avatarUrl,
+          profilePhotoMetadata: {
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            uploadedAt: new Date().toISOString(),
+          },
+        }));
+        
+        toast.success('Photo uploaded successfully!', { id: uploadToast });
+      } else {
+        throw new Error('No URL returned from upload');
+      }
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      toast.error('Failed to upload photo');
+    }
   };
 
-  const removePhoto = () => {
-    setProfile(prev => ({
-      ...prev,
-      profilePhotoUrl: null,
-      profilePhotoMetadata: null,
-    }));
+  const removePhoto = async () => {
+    try {
+      await apiClient.delete('/users/me/avatar');
+      setProfile(prev => ({
+        ...prev,
+        profilePhotoUrl: null,
+        profilePhotoMetadata: null,
+      }));
+      toast.success('Photo removed');
+    } catch (error) {
+      console.error('Remove photo error:', error);
+      toast.error('Failed to remove photo');
+    }
   };
 
   const validateUsername = (username) => {

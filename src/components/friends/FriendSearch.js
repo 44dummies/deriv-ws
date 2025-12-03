@@ -61,7 +61,7 @@ const FriendSearch = ({ token, currentUserId, existingFriends, onRequestSent }) 
         <span className="search-icon">🔍</span>
         <input
           type="text"
-          placeholder="Search by username..."
+          placeholder="Search by username or Deriv ID (e.g., CR6550175)..."
           value={query}
           onChange={handleSearch}
           autoFocus
