@@ -384,39 +384,37 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
 
         {/* Members Sidebar */}
-        {showMembers && (
-          <div className="members-sidebar">
-            <div className="members-header">
-              <h4>Members ({members.length})</h4>
-              <button onClick={() => setShowMembers(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="members-list">
-              {members.map((member, index) => (
-                <div key={member.user_id || index} className="member-item">
-                  <div className={`member-avatar ${member.user_profiles?.is_online ? 'online' : ''}`}>
-                    {member.user_profiles?.profile_photo ? (
-                      <img src={member.user_profiles.profile_photo} alt="" />
-                    ) : (
-                      <div className="avatar-placeholder">
-                        {(member.user_profiles?.username || 'U')[0].toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="member-info">
-                    <span className="member-name">
-                      {member.user_profiles?.username || member.user_profiles?.fullname || 'Trader'}
-                    </span>
-                    <span className="member-stats">
-                      {member.user_profiles?.win_rate?.toFixed(1)}% WR • {member.user_profiles?.total_trades || 0} trades
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className={`members-sidebar ${showMembers ? 'open' : ''}`}>
+          <div className="members-header">
+            <h4>Members ({members.length})</h4>
+            <button onClick={() => setShowMembers(false)}>
+              <X size={18} />
+            </button>
           </div>
-        )}
+          <div className="members-list">
+            {members.map((member, index) => (
+              <div key={member.user_id || index} className="member-item">
+                <div className={`member-avatar ${member.user_profiles?.is_online ? 'online' : ''}`}>
+                  {member.user_profiles?.profile_photo ? (
+                    <img src={member.user_profiles.profile_photo} alt="" />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      {(member.user_profiles?.username || 'U')[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="member-info">
+                  <span className="member-name">
+                    {member.user_profiles?.username || member.user_profiles?.fullname || 'Trader'}
+                  </span>
+                  <span className="member-stats">
+                    {member.user_profiles?.win_rate?.toFixed(1)}% WR • {member.user_profiles?.total_trades || 0} trades
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Reply Preview */}
