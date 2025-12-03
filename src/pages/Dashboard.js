@@ -633,10 +633,17 @@ const Dashboard = () => {
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
-  // Load user profile (for profile photo, etc.) - only after backend token is set
+  // Load user profile (for profile photo, etc.)
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
+        // Ensure token is loaded
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          console.log('No token available for profile load');
+          return;
+        }
+        
         const response = await apiClient.get('/users/settings');
         if (response?.profile) {
           setUserProfile({
@@ -651,11 +658,11 @@ const Dashboard = () => {
       }
     };
     
-    // Only load profile if we have a backend token
-    if (backendToken && userInfo?.loginid) {
+    // Only load after successful backend auth
+    if (userInfo?.loginid && backendToken) {
       loadUserProfile();
     }
-  }, [backendToken, userInfo?.loginid]);
+  }, [userInfo?.loginid, backendToken]);
 
   // Keyboard shortcuts
   useEffect(() => {
