@@ -549,6 +549,20 @@ const Dashboard = () => {
               profileSynced.current = false; // Allow retry on error
             }
           }
+          
+          // Authenticate with backend server for Friends/Community features
+          try {
+            await apiClient.loginWithDeriv({
+              derivUserId: userData.loginid,
+              loginid: userData.loginid,
+              email: userData.email,
+              currency: userData.currency,
+              fullname: userData.fullname
+            });
+            console.log('Backend authentication successful');
+          } catch (backendErr) {
+            console.warn('Backend auth failed (Friends features may not work):', backendErr.message);
+          }
         }
         setIsLoading(false);
       } catch (err) { 
