@@ -7,11 +7,38 @@
 import apiClient from './apiClient';
 
 const API_BASE = '/community';
+const FILES_API = '/files';
 
-// Local file storage utilities
+// Local file storage utilities (now primarily for caching)
 const fileStorage = {
   /**
-   * Store file metadata locally (files stored on device, only metadata sent to server)
+   * Upload file to server for persistent storage
+   * Returns the permanent URL from Supabase Storage
+   */
+  uploadFile: async (file, context = 'chatroom') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await apiClient.uploadFile(`${FILES_API}/upload?context=${context}`, formData);
+    return response;
+  },
+
+  /**
+   * Upload voice note to server
+   */
+  uploadVoice: async (file, duration = null) => {
+    const formData = new FormData();
+    formData.append('voice', file);
+    if (duration) {
+      formData.append('duration', duration);
+    }
+    
+    const response = await apiClient.uploadFile(`${FILES_API}/voice`, formData);
+    return response;
+  },
+
+  /**
+   * Store file metadata locally for caching
    */
   saveFileMetadata: (fileId, metadata) => {
     const files = JSON.parse(localStorage.getItem('tradermind_shared_files') || '{}');
@@ -195,40 +222,50 @@ async function sendMessage(chatroomId, text, replyToId = null) {
 }
 
 /**
- * Send a file message (file stored locally, only metadata sent to server)
+ * Send a file message (file uploaded to server for persistent storage)
  */
 async function sendFileMessage(chatroomId, file, caption = null) {
   try {
-    // Generate file hash for integrity
-    const fileHash = await fileStorage.generateFileHash(file);
+    // Upload file to Supabase Storage via server
+    const uploadResult = await fileStorage.uploadFile(file, 'chatroom');
     
-    // Store file locally
-    const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    fileStorage.saveFileMetadata(fileId, {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      hash: fileHash,
-      localPath: fileStorage.createLocalUrl(file)
-    });
+    if (!uploadResult.success) {
+      console.error('File upload failed:', uploadResult.error);
+      return { success: false, error: uploadResult.error || 'Failed to upload file' };
+    }
+    
+    const { url, fileName, fileType, fileSize, fileHash } = uploadResult.file;
     
     // Determine file type category
     let messageType = 'file';
-    if (file.type.startsWith('image/')) messageType = 'image';
-    else if (file.type.startsWith('video/')) messageType = 'video';
-    else if (file.type.startsWith('audio/')) messageType = 'audio';
+    if (fileType.startsWith('image/')) messageType = 'image';
+    else if (fileType.startsWith('video/')) messageType = 'video';
+    else if (fileType.startsWith('audio/')) messageType = 'audio';
     
-    // Send metadata to server
+    // Send message with file URL to server
     const response = await apiClient.post(`${API_BASE}/tier-chatroom/${chatroomId}/message`, {
-      text: caption || `Shared: ${file.name}`,
+      text: caption || `Shared: ${fileName}`,
       type: messageType,
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      fileHash: fileHash
+      fileName: fileName,
+      fileType: fileType,
+      fileSize: fileSize,
+      fileHash: fileHash,
+      fileUrl: url // Persistent Supabase Storage URL
     });
     
-    return { ...response, localFileId: fileId };
+    // Cache metadata locally
+    if (response.success) {
+      const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      fileStorage.saveFileMetadata(fileId, {
+        name: fileName,
+        type: fileType,
+        size: fileSize,
+        hash: fileHash,
+        url: url
+      });
+    }
+    
+    return response;
   } catch (error) {
     console.error('Error sending file:', error);
     return { success: false, error: error.message };

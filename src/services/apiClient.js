@@ -171,6 +171,54 @@ class ApiClient {
     return this.request(endpoint, { method: 'DELETE', ...options });
   }
 
+  /**
+   * Upload file (multipart/form-data)
+   * Don't set Content-Type header - browser will set it with boundary
+   */
+  async uploadFile(endpoint, formData, options = {}) {
+    const url = `${API_URL}${endpoint}`;
+    const headers = {};
+
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData,
+        ...options
+      });
+
+      // Handle 401 - try to refresh token
+      if (response.status === 401 && this.refreshToken) {
+        const refreshed = await this.refreshAccessToken();
+        if (refreshed) {
+          headers['Authorization'] = `Bearer ${this.accessToken}`;
+          const retryResponse = await fetch(url, { 
+            method: 'POST', 
+            headers, 
+            body: formData,
+            ...options 
+          });
+          return this.handleResponse(retryResponse);
+        } else {
+          this.clearTokens();
+          if (this.onAuthError) {
+            this.onAuthError();
+          }
+          throw new Error('Session expired');
+        }
+      }
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('File upload error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // ============ Auth ============
 
   async register(data) {

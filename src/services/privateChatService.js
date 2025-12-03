@@ -81,6 +81,92 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
+  /**
+   * Send a file message after uploading to server
+   * @param {string} chatId - Chat ID
+   * @param {File} file - File to upload
+   * @param {string} caption - Optional caption
+   */
+  async sendFileMessage(chatId, file, caption = null) {
+    // Upload file first
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('accessToken');
+    const uploadResponse = await fetch(`${API_URL}/api/files/upload?context=chat`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    if (!uploadResponse.ok) {
+      const error = await uploadResponse.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.error || 'Failed to upload file');
+    }
+    
+    const uploadResult = await uploadResponse.json();
+    
+    // Determine message type
+    let messageType = 'file';
+    if (file.type.startsWith('image/')) messageType = 'image';
+    else if (file.type.startsWith('video/')) messageType = 'video';
+    else if (file.type.startsWith('audio/')) messageType = 'voice';
+    
+    // Send message with file URL
+    return this.sendMessage(chatId, {
+      message_text: caption || `Shared: ${file.name}`,
+      message_type: messageType,
+      media_filename: uploadResult.file.fileName,
+      media_type: uploadResult.file.fileType,
+      media_size: uploadResult.file.fileSize,
+      file_url: uploadResult.file.url
+    });
+  },
+
+  /**
+   * Send a voice message
+   * @param {string} chatId - Chat ID
+   * @param {Blob} audioBlob - Voice recording blob
+   * @param {number} duration - Duration in seconds
+   */
+  async sendVoiceMessage(chatId, audioBlob, duration = null) {
+    // Upload voice file
+    const formData = new FormData();
+    formData.append('voice', audioBlob, 'voice.webm');
+    if (duration) {
+      formData.append('duration', duration);
+    }
+    
+    const token = localStorage.getItem('accessToken');
+    const uploadResponse = await fetch(`${API_URL}/api/files/voice`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    });
+    
+    if (!uploadResponse.ok) {
+      const error = await uploadResponse.json().catch(() => ({ message: 'Upload failed' }));
+      throw new Error(error.error || 'Failed to upload voice message');
+    }
+    
+    const uploadResult = await uploadResponse.json();
+    
+    // Send message with voice URL
+    return this.sendMessage(chatId, {
+      message_text: '🎤 Voice message',
+      message_type: 'voice',
+      media_filename: uploadResult.voice.fileName,
+      media_type: uploadResult.voice.fileType,
+      media_size: uploadResult.voice.fileSize,
+      media_duration: duration,
+      file_url: uploadResult.voice.url
+    });
+  },
+
   async markAsRead(chatId) {
     const response = await fetch(`${API_URL}/api/chats/${chatId}/read`, {
       method: 'PUT',
