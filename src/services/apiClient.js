@@ -139,6 +139,38 @@ class ApiClient {
     }
   }
 
+  // ============ HTTP Helper Methods ============
+
+  async get(endpoint, options = {}) {
+    const { params, ...rest } = options;
+    let url = endpoint;
+    if (params) {
+      const searchParams = new URLSearchParams(params);
+      url = `${endpoint}?${searchParams.toString()}`;
+    }
+    return this.request(url, { method: 'GET', ...rest });
+  }
+
+  async post(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      ...options
+    });
+  }
+
+  async put(endpoint, data, options = {}) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+      ...options
+    });
+  }
+
+  async delete(endpoint, options = {}) {
+    return this.request(endpoint, { method: 'DELETE', ...options });
+  }
+
   // ============ Auth ============
 
   async register(data) {

@@ -61,7 +61,7 @@ const fileStorage = {
 async function getTierChatrooms() {
   try {
     const response = await apiClient.get(`${API_BASE}/tier-chatrooms`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching tier chatrooms:', error);
     return { success: false, chatrooms: [] };
@@ -74,7 +74,7 @@ async function getTierChatrooms() {
 async function getMyTierChatroom() {
   try {
     const response = await apiClient.get(`${API_BASE}/my-tier-chatroom`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching my chatroom:', error);
     return { success: false, assignment: null };
@@ -140,7 +140,7 @@ async function assignToTierChatroom(winRate, totalTrades) {
       winRate,
       totalTrades
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error assigning to chatroom:', error);
     return { success: false, error: error.message };
@@ -155,7 +155,7 @@ async function getChatroomMembers(chatroomId, limit = 50) {
     const response = await apiClient.get(`${API_BASE}/tier-chatroom/${chatroomId}/members`, {
       params: { limit }
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching members:', error);
     return { success: false, members: [] };
@@ -170,7 +170,7 @@ async function getChatroomMessages(chatroomId, limit = 50, before = null) {
     const response = await apiClient.get(`${API_BASE}/tier-chatroom/${chatroomId}/messages`, {
       params: { limit, before }
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error fetching messages:', error);
     return { success: false, messages: [] };
@@ -187,7 +187,7 @@ async function sendMessage(chatroomId, text, replyToId = null) {
       type: 'text',
       replyToId
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error sending message:', error);
     return { success: false, error: error.message };
@@ -228,7 +228,7 @@ async function sendFileMessage(chatroomId, file, caption = null) {
       fileHash: fileHash
     });
     
-    return { ...response.data, localFileId: fileId };
+    return { ...response, localFileId: fileId };
   } catch (error) {
     console.error('Error sending file:', error);
     return { success: false, error: error.message };
@@ -243,7 +243,7 @@ async function addReaction(messageId, emoji) {
     const response = await apiClient.post(`${API_BASE}/tier-message/${messageId}/reaction`, {
       emoji
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error adding reaction:', error);
     return { success: false, error: error.message };
@@ -256,7 +256,7 @@ async function addReaction(messageId, emoji) {
 async function deleteMessage(messageId) {
   try {
     const response = await apiClient.delete(`${API_BASE}/tier-message/${messageId}`);
-    return response.data;
+    return response;
   } catch (error) {
     console.error('Error deleting message:', error);
     return { success: false, error: error.message };
