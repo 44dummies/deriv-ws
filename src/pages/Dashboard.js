@@ -28,6 +28,31 @@ const STORAGE_KEYS = {
   THEME: 'tradermind_theme',
 };
 
+// Avatar options (same as Settings.js)
+const AVATARS = [
+  { id: 1, emoji: '🧑‍💼' }, { id: 2, emoji: '👨‍💻' }, { id: 3, emoji: '👩‍💻' },
+  { id: 4, emoji: '🦊' }, { id: 5, emoji: '🦁' }, { id: 6, emoji: '🐺' },
+  { id: 7, emoji: '🦅' }, { id: 8, emoji: '🐉' }, { id: 9, emoji: '🦈' },
+  { id: 10, emoji: '🐂' }, { id: 11, emoji: '🎭' }, { id: 12, emoji: '🎩' },
+  { id: 13, emoji: '🕶️' }, { id: 14, emoji: '🤖' }, { id: 15, emoji: '👽' },
+  { id: 16, emoji: '🥷' }, { id: 17, emoji: '🧙‍♂️' }, { id: 18, emoji: '🦸' },
+  { id: 19, emoji: '🧑‍🚀' }, { id: 20, emoji: '👑' }, { id: 21, emoji: '💎' },
+  { id: 22, emoji: '🚀' }, { id: 23, emoji: '⚡' }, { id: 24, emoji: '🔥' },
+  { id: 25, emoji: '💰' }, { id: 26, emoji: '📈' }, { id: 27, emoji: '🎯' },
+  { id: 28, emoji: '🏆' }, { id: 29, emoji: '🌟' }, { id: 30, emoji: '🎲' }
+];
+
+// Get avatar emoji from profile_photo string (format: "avatar:ID")
+const getAvatarEmoji = (profilePhoto) => {
+  if (!profilePhoto) return '👤';
+  if (profilePhoto.startsWith('avatar:')) {
+    const id = parseInt(profilePhoto.split(':')[1]) || 1;
+    const avatar = AVATARS.find(a => a.id === id);
+    return avatar ? avatar.emoji : '👤';
+  }
+  return '👤';
+};
+
 // Real-time backend mode flag (set to true when backend is running)
 const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
@@ -1444,21 +1469,13 @@ const Dashboard = () => {
           {/* User Profile Section with Photo */}
           {userInfo && (
             <div className={`p-4 border-b border-white/10 ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
-              {/* Profile Photo - visible in expanded mode */}
+              {/* Avatar - visible in expanded mode */}
               {(!sidebarCollapsed || window.innerWidth < 1024) && (
                 <div className="flex items-center gap-3 mb-3">
                   <div className="relative">
-                    {userProfile?.profilePhoto ? (
-                      <img 
-                        src={userProfile.profilePhoto} 
-                        alt="Profile" 
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg font-bold text-white">
-                        {userInfo.fullname?.[0]?.toUpperCase() || 'T'}
-                      </div>
-                    )}
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-2xl">
+                      {getAvatarEmoji(userProfile?.profilePhoto)}
+                    </div>
                     <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${derivWsConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -1476,20 +1493,12 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {/* Collapsed mode - show profile photo as circle */}
+              {/* Collapsed mode - show avatar as circle under logo */}
               {sidebarCollapsed && (
                 <div className="hidden lg:flex flex-col items-center">
-                  {userProfile?.profilePhoto ? (
-                    <img 
-                      src={userProfile.profilePhoto} 
-                      alt="Profile" 
-                      className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
-                    />
-                  ) : (
-                    <div className={`w-10 h-10 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20' : 'bg-green-500/20'} flex items-center justify-center text-sm font-medium`}>
-                      {userInfo.fullname?.[0]?.toUpperCase() || 'T'}
-                    </div>
-                  )}
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-xl">
+                    {getAvatarEmoji(userProfile?.profilePhoto)}
+                  </div>
                 </div>
               )}
             </div>
