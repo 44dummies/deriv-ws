@@ -121,6 +121,8 @@ async function upsertUserProfile(derivId, profileData) {
  * Tries UUID first, then falls back to deriv_id
  */
 async function updateUserProfile(userId, updates) {
+  console.log('[Profile] updateUserProfile called with userId:', userId);
+  
   const allowedFields = [
     'username', 'display_name', 'fullname', 'bio', 'status_message', 
     'email', 'country', 'profile_photo', 'profile_photo_metadata'
@@ -140,30 +142,61 @@ async function updateUserProfile(userId, updates) {
   
   data.updated_at = new Date().toISOString();
   
-  // Try by UUID first
-  let result = await supabase
-    .from('user_profiles')
-    .update(data)
-    .eq('id', userId)
-    .select()
-    .single();
+  console.log('[Profile] Data to update:', JSON.stringify(data));
   
-  // If no match by UUID, try by deriv_id
-  if (result.error && result.error.code === 'PGRST116') {
-    console.log('[Profile] No match by UUID, trying deriv_id:', userId);
+  // Determine if userId looks like a UUID or a deriv_id
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+  
+  let result;
+  
+  if (isUUID) {
+    // Try by UUID first
+    console.log('[Profile] Trying update by UUID:', userId);
+    result = await supabase
+      .from('user_profiles')
+      .update(data)
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    // If no match by UUID, try by deriv_id
+    if (result.error && result.error.code === 'PGRST116') {
+      console.log('[Profile] No match by UUID, trying deriv_id');
+      result = await supabase
+        .from('user_profiles')
+        .update(data)
+        .eq('deriv_id', userId)
+        .select()
+        .single();
+    }
+  } else {
+    // userId looks like a deriv_id (e.g., CR6550175)
+    console.log('[Profile] Trying update by deriv_id:', userId);
     result = await supabase
       .from('user_profiles')
       .update(data)
       .eq('deriv_id', userId)
       .select()
       .single();
+    
+    // If no match, try by UUID anyway
+    if (result.error && result.error.code === 'PGRST116') {
+      console.log('[Profile] No match by deriv_id, trying as UUID');
+      result = await supabase
+        .from('user_profiles')
+        .update(data)
+        .eq('id', userId)
+        .select()
+        .single();
+    }
   }
   
   if (result.error) {
-    console.error('Update profile error:', result.error);
+    console.error('[Profile] Update error:', result.error);
     throw result.error;
   }
   
+  console.log('[Profile] Update successful:', result.data?.id);
   return result.data;
 }
 

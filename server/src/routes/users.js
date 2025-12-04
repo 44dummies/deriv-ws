@@ -42,10 +42,27 @@ const upload = multer({
  */
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const profile = await getUserProfile(req.userId);
+    const derivId = req.user?.derivId || req.username;
+    console.log('[Users] GET /me - derivId:', derivId);
+    
+    // Try to get profile by derivId first (more reliable)
+    let profile = await getProfileByDerivId(derivId);
+    
+    // If not found by derivId, try by userId (UUID)
     if (!profile) {
-      return res.status(404).json({ error: 'User not found' });
+      profile = await getUserProfile(req.userId);
     }
+    
+    if (!profile) {
+      // Auto-create profile if it doesn't exist
+      console.log('[Users] Creating profile for:', derivId);
+      profile = await upsertUserProfile(derivId, {
+        username: `trader_${derivId.toLowerCase().slice(0, 8)}`,
+        display_name: derivId,
+        fullname: derivId
+      });
+    }
+    
     res.json(profile);
   } catch (error) {
     console.error('Get profile error:', error);
@@ -59,11 +76,38 @@ router.get('/me', authMiddleware, async (req, res) => {
  */
 router.put('/me', authMiddleware, async (req, res) => {
   try {
-    const profile = await updateUserProfile(req.userId, req.body);
+    const derivId = req.user?.derivId || req.username;
+    console.log('[Users] PUT /me - derivId:', derivId, 'userId:', req.userId);
+    console.log('[Users] PUT /me - body:', JSON.stringify(req.body));
+    
+    if (!derivId) {
+      return res.status(400).json({ error: 'No derivId found in token' });
+    }
+    
+    // Ensure profile exists in Supabase, then update it
+    // First, try to get existing profile by deriv_id
+    let existingProfile = await getProfileByDerivId(derivId);
+    
+    if (!existingProfile) {
+      // Create the profile first
+      console.log('[Users] Creating new profile for derivId:', derivId);
+      existingProfile = await upsertUserProfile(derivId, {
+        username: req.body.username,
+        display_name: req.body.display_name,
+        fullname: req.body.display_name,
+        bio: req.body.bio || '',
+        profile_photo: req.body.profile_photo
+      });
+    }
+    
+    // Now update with the full data using the profile's actual ID
+    const profile = await updateUserProfile(existingProfile.id, req.body);
+    
+    console.log('[Users] Profile updated successfully:', profile?.id);
     res.json(profile);
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Failed to update profile' });
+    res.status(500).json({ error: 'Failed to update profile', details: error.message });
   }
 });
 
