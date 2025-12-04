@@ -194,8 +194,11 @@ async function getChatroomMembers(chatroomId, limit = 50) {
  */
 async function getChatroomMessages(chatroomId, limit = 50, before = null) {
   try {
+    const params = { limit };
+    if (before) params.before = before;
+    
     const response = await apiClient.get(`${API_BASE}/tier-chatroom/${chatroomId}/messages`, {
-      params: { limit, before }
+      params
     });
     return response;
   } catch (error) {
