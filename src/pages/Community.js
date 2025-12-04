@@ -12,7 +12,6 @@ import realtimeSocket from '../services/realtimeSocket';
 import profileService from '../services/profileService';
 import './Community.css';
 
-// Post type configurations
 const POST_TYPES = {
   general: { label: 'General', icon: MessageCircle, color: '#8b5cf6' },
   strategy: { label: 'Strategy', icon: Target, color: '#22c55e' },
@@ -21,7 +20,6 @@ const POST_TYPES = {
   news: { label: 'News', icon: Zap, color: '#ef4444' }
 };
 
-// Default rooms
 const DEFAULT_ROOMS = [
   { id: 'general', name: 'General', icon: Hash, memberCount: 0 },
   { id: 'strategies', name: 'Strategies', icon: Target, memberCount: 0 },
@@ -35,11 +33,9 @@ const Community = () => {
   const feedRef = useRef(null);
   const composerRef = useRef(null);
 
-  // User state
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Feed state
   const [posts, setPosts] = useState([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -47,7 +43,6 @@ const Community = () => {
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
 
-  // Composer state
   const [composerOpen, setComposerOpen] = useState(false);
   const [postContent, setPostContent] = useState('');
   const [postType, setPostType] = useState('general');
@@ -55,23 +50,19 @@ const Community = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [posting, setPosting] = useState(false);
 
-  // Room state
   const [rooms, setRooms] = useState(DEFAULT_ROOMS);
   const [activeRoom, setActiveRoom] = useState(null);
   const [roomMessages, setRoomMessages] = useState([]);
   const [roomInput, setRoomInput] = useState('');
 
-  // Online users state
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [showOnlinePanel, setShowOnlinePanel] = useState(true);
 
-  // Comment state
   const [expandedPost, setExpandedPost] = useState(null);
   const [comments, setComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
   const [loadingComments, setLoadingComments] = useState({});
 
-  // Initialize
   useEffect(() => {
     initializeCommunity();
     setupSocketListeners();
@@ -85,16 +76,16 @@ const Community = () => {
     try {
       setLoading(true);
       
-      // Load user profile
+      
       const profile = await profileService.initialize();
       if (profile) {
         setCurrentUser(profile);
       }
 
-      // Load initial feed
+      
       await loadFeed(1, true);
 
-      // Load online users
+      
       loadOnlineUsers();
 
     } catch (error) {
@@ -106,20 +97,17 @@ const Community = () => {
   };
 
   const setupSocketListeners = () => {
-    // Listen for new posts
     realtimeSocket.on('community:post:new', (post) => {
       setPosts(prev => [transformPost(post), ...prev]);
       toast.success('New post in community!', { duration: 2000 });
     });
 
-    // Listen for post likes
     realtimeSocket.on('community:post:like', ({ postId, likeCount, liked, userId }) => {
       setPosts(prev => prev.map(p => 
         p.id === postId ? { ...p, likeCount, liked: userId === currentUser?.id ? liked : p.liked } : p
       ));
     });
 
-    // Listen for new comments
     realtimeSocket.on('community:post:comment', ({ postId, comment, commentCount }) => {
       setPosts(prev => prev.map(p => 
         p.id === postId ? { ...p, commentCount } : p
@@ -132,7 +120,6 @@ const Community = () => {
       }
     });
 
-    // Listen for online users
     realtimeSocket.on('community:user:online', (user) => {
       setOnlineUsers(prev => {
         if (prev.find(u => u.id === user.id)) return prev;
@@ -144,10 +131,9 @@ const Community = () => {
       setOnlineUsers(prev => prev.filter(u => u.derivId !== derivId));
     });
 
-    // Profile updates
     profileService.subscribe((event, data) => {
       if (event === 'user:updated') {
-        // Update posts with new user info
+        
         setPosts(prev => prev.map(p => 
           p.author.derivId === data.derivId 
             ? { ...p, author: { ...p.author, username: data.username, avatarUrl: data.avatarUrl } }
@@ -165,7 +151,6 @@ const Community = () => {
     realtimeSocket.off('community:user:offline');
   };
 
-  // Transform API post to component format
   const transformPost = (post) => ({
     id: post.id,
     content: post.content,
@@ -196,7 +181,6 @@ const Community = () => {
     }
   });
 
-  // Load feed
   const loadFeed = async (pageNum = 1, reset = false) => {
     if (feedLoading) return;
     
@@ -227,14 +211,12 @@ const Community = () => {
     }
   };
 
-  // Load more posts (infinite scroll)
   const loadMore = useCallback(() => {
     if (!feedLoading && hasMore) {
       loadFeed(page + 1);
     }
   }, [feedLoading, hasMore, page]);
 
-  // Scroll handler for infinite scroll
   useEffect(() => {
     const handleScroll = () => {
       if (!feedRef.current) return;
@@ -252,25 +234,22 @@ const Community = () => {
     }
   }, [loadMore]);
 
-  // Filter/sort change
   useEffect(() => {
     if (!loading) {
       loadFeed(1, true);
     }
   }, [filter, sortBy]);
 
-  // Load online users
   const loadOnlineUsers = async () => {
     try {
       const response = await apiClient.get('/community/online-users');
       setOnlineUsers(response.users || []);
     } catch (error) {
-      // Use cached from profileService
+      
       setOnlineUsers(profileService.getOnlineUsers());
     }
   };
 
-  // Handle image selection
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -299,7 +278,6 @@ const Community = () => {
     }
   };
 
-  // Create post
   const createPost = async () => {
     if (!postContent.trim() && !postImage) {
       toast.error('Please add some content');
@@ -315,7 +293,6 @@ const Community = () => {
     try {
       let imageUrl = null;
 
-      // Upload image if present
       if (postImage) {
         const formData = new FormData();
         formData.append('image', postImage);
@@ -323,21 +300,17 @@ const Community = () => {
         imageUrl = uploadResult.url;
       }
 
-      // Create post
       const response = await apiClient.post('/community/posts', {
         content: postContent.trim(),
         post_type: postType,
         image_url: imageUrl
       });
 
-      // Add to feed
       const newPost = transformPost(response);
       setPosts(prev => [newPost, ...prev]);
 
-      // Emit via WebSocket
       realtimeSocket.emit('community:post:new', newPost);
 
-      // Reset composer
       setPostContent('');
       setPostType('general');
       removeImage();
@@ -352,23 +325,19 @@ const Community = () => {
     }
   };
 
-  // Like post
   const likePost = async (postId) => {
     try {
       const post = posts.find(p => p.id === postId);
       const newLiked = !post.liked;
 
-      // Optimistic update
       setPosts(prev => prev.map(p => 
         p.id === postId 
           ? { ...p, liked: newLiked, likeCount: p.likeCount + (newLiked ? 1 : -1) }
           : p
       ));
 
-      // API call
       await apiClient.post(`/community/posts/${postId}/like`, { liked: newLiked });
 
-      // Emit via WebSocket
       realtimeSocket.emit('community:post:like', {
         postId,
         liked: newLiked,
@@ -377,12 +346,10 @@ const Community = () => {
 
     } catch (error) {
       console.error('Like error:', error);
-      // Revert on error
       loadFeed(1, true);
     }
   };
 
-  // Load comments for a post
   const loadComments = async (postId) => {
     if (loadingComments[postId]) return;
 
@@ -400,7 +367,6 @@ const Community = () => {
     }
   };
 
-  // Toggle comments
   const toggleComments = (postId) => {
     if (expandedPost === postId) {
       setExpandedPost(null);
@@ -412,7 +378,6 @@ const Community = () => {
     }
   };
 
-  // Add comment
   const addComment = async (postId) => {
     const content = commentInputs[postId]?.trim();
     if (!content) return;
@@ -433,7 +398,6 @@ const Community = () => {
 
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
 
-      // Emit via WebSocket
       realtimeSocket.emit('community:post:comment', {
         postId,
         comment: newComment
@@ -445,7 +409,6 @@ const Community = () => {
     }
   };
 
-  // Delete post
   const deletePost = async (postId) => {
     if (!window.confirm('Delete this post?')) return;
 
@@ -458,7 +421,6 @@ const Community = () => {
     }
   };
 
-  // Format time ago
   const timeAgo = (date) => {
     const seconds = Math.floor((Date.now() - new Date(date)) / 1000);
     if (seconds < 60) return 'just now';
@@ -468,7 +430,6 @@ const Community = () => {
     return new Date(date).toLocaleDateString();
   };
 
-  // Skeleton loader
   const PostSkeleton = () => (
     <div className="post-card skeleton">
       <div className="post-header">
@@ -500,7 +461,7 @@ const Community = () => {
     <div className="community-page">
       <Toaster position="top-center" />
 
-      {/* Header */}
+      {}
       <header className="community-header">
         <button onClick={() => navigate('/dashboard')} className="back-btn">
           <ArrowLeft size={20} />
@@ -512,7 +473,7 @@ const Community = () => {
       </header>
 
       <div className="community-layout">
-        {/* Left Sidebar - Rooms */}
+        {}
         <aside className="community-sidebar rooms-sidebar">
           <h2 className="sidebar-title">
             <Hash size={16} />
@@ -535,9 +496,9 @@ const Community = () => {
           </div>
         </aside>
 
-        {/* Main Feed */}
+        {}
         <main className="community-feed" ref={feedRef}>
-          {/* Composer Toggle */}
+          {}
           {!composerOpen && (
             <button 
               onClick={() => setComposerOpen(true)} 
@@ -554,7 +515,7 @@ const Community = () => {
             </button>
           )}
 
-          {/* Composer */}
+          {}
           {composerOpen && (
             <div className="post-composer" ref={composerRef}>
               <div className="composer-header">
@@ -634,7 +595,7 @@ const Community = () => {
             </div>
           )}
 
-          {/* Filters */}
+          {}
           <div className="feed-filters">
             <div className="filter-group">
               <button
@@ -666,15 +627,15 @@ const Community = () => {
             </select>
           </div>
 
-          {/* Posts */}
+          {}
           <div className="posts-list">
             {posts.map(post => (
               <article key={post.id} className="post-card">
-                {/* Post Header */}
+                {}
                 <div className="post-header">
                   <div 
                     className="post-author"
-                    onClick={() => {/* Open profile modal */}}
+                    onClick={() => {}}
                   >
                     <div className="author-avatar">
                       {post.author.avatarUrl ? (
@@ -714,7 +675,7 @@ const Community = () => {
                   </div>
                 </div>
 
-                {/* Post Content */}
+                {}
                 <div className="post-content">
                   <p>{post.content}</p>
                   {post.imageUrl && (
@@ -724,7 +685,7 @@ const Community = () => {
                   )}
                 </div>
 
-                {/* Post Actions */}
+                {}
                 <div className="post-actions">
                   <button 
                     onClick={() => likePost(post.id)}
@@ -747,7 +708,7 @@ const Community = () => {
                   </button>
                 </div>
 
-                {/* Comments Section */}
+                {}
                 {expandedPost === post.id && (
                   <div className="comments-section">
                     {loadingComments[post.id] ? (
@@ -820,7 +781,7 @@ const Community = () => {
           </div>
         </main>
 
-        {/* Right Sidebar - Online Users */}
+        {}
         <aside className="community-sidebar users-sidebar">
           <h2 className="sidebar-title">
             <Users size={16} />

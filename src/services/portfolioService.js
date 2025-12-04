@@ -2,7 +2,7 @@
  * Portfolio Service - Frontend API client for portfolio management
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_SERVER_URL || 'http:
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
@@ -78,10 +78,10 @@ export const portfolioService = {
   }
 };
 
-// =============================================
-// LOCAL MEDIA STORAGE
-// Uses IndexedDB for storing media locally
-// =============================================
+
+
+
+
 
 const DB_NAME = 'TraderMindMedia';
 const DB_VERSION = 1;
@@ -204,7 +204,7 @@ export const localMediaService = {
     });
   },
 
-  // Generate thumbnail for images/videos
+  
   async generateThumbnail(file, maxWidth = 200, maxHeight = 200) {
     return new Promise((resolve, reject) => {
       if (file.type.startsWith('image/')) {
@@ -248,7 +248,7 @@ export const localMediaService = {
         const url = URL.createObjectURL(file);
         
         video.onloadeddata = () => {
-          video.currentTime = 1; // Capture frame at 1 second
+          video.currentTime = 1; 
         };
         
         video.onseeked = () => {
@@ -275,7 +275,7 @@ export const localMediaService = {
   }
 };
 
-// Helper function
+
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   

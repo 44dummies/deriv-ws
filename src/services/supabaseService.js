@@ -1,22 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration - replace with your project credentials
+
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
 
-// Create Supabase client
+
 export const supabase = SUPABASE_URL && SUPABASE_ANON_KEY 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
-// Check if Supabase is configured
+
 export const isSupabaseConfigured = () => {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && supabase);
 };
 
-// ============================================
-// USER PROFILE OPERATIONS
-// ============================================
+
+
+
 
 /**
  * Create or update user profile after Deriv OAuth login
@@ -24,7 +24,7 @@ export const isSupabaseConfigured = () => {
 export const upsertUserProfile = async (derivUser) => {
   if (!supabase) return { data: null, error: new Error('Supabase not configured') };
   
-  // Validate required field
+  
   if (!derivUser?.loginid) {
     console.error('Cannot create profile: deriv_login_id is null or undefined');
     return { data: null, error: new Error('Missing required field: loginid') };
@@ -63,9 +63,9 @@ export const getUserProfile = async (loginId) => {
   return { data, error };
 };
 
-// ============================================
-// JOURNAL OPERATIONS
-// ============================================
+
+
+
 
 /**
  * Get all journal entries for a user
@@ -118,9 +118,9 @@ export const deleteJournalEntry = async (entryId, loginId) => {
   return { data, error };
 };
 
-// ============================================
-// TRADE HISTORY OPERATIONS
-// ============================================
+
+
+
 
 /**
  * Sync trade history to Supabase
@@ -128,7 +128,7 @@ export const deleteJournalEntry = async (entryId, loginId) => {
 export const syncTradeHistory = async (loginId, trades) => {
   if (!supabase) return { data: null, error: new Error('Supabase not configured') };
   
-  // Prepare trades with user login id
+  
   const tradesWithUser = trades.map(trade => ({
     deriv_login_id: loginId,
     contract_id: trade.contract_id,
@@ -141,7 +141,7 @@ export const syncTradeHistory = async (loginId, trades) => {
     shortcode: trade.shortcode,
   }));
   
-  // Upsert trades (update existing or insert new)
+  
   const { data, error } = await supabase
     .from('trades')
     .upsert(tradesWithUser, {
@@ -167,9 +167,9 @@ export const getTradeHistory = async (loginId, limit = 100) => {
   return { data, error };
 };
 
-// ============================================
-// USER SETTINGS OPERATIONS
-// ============================================
+
+
+
 
 /**
  * Get user settings

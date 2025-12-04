@@ -15,18 +15,18 @@ class RealtimeService {
     if (this.initialized) return;
     this.initialized = true;
     
-    // Start simulating activity
+    
     this._simulateActivity();
   }
 
   _simulateActivity() {
-    // Simulate new trade alerts every 10-30 seconds
+    
     setInterval(() => {
       const alert = this._generateTradeAlert();
       this.tradeAlerts.unshift(alert);
       if (this.tradeAlerts.length > 50) this.tradeAlerts.pop();
       
-      // Notify subscribers
+      
       this._notifySubscribers('newTradeAlert', alert);
     }, Math.random() * 20000 + 10000);
   }
@@ -41,7 +41,7 @@ class RealtimeService {
     ];
     
     const assets = ['Volatility 75', 'Crash 500', 'Boom 1000', 'V10 (1s)', 'Step Index'];
-    const outcomes = ['WIN', 'WIN', 'WIN', 'LOSS']; // 75% win rate simulation
+    const outcomes = ['WIN', 'WIN', 'WIN', 'LOSS']; 
     
     const trader = traders[Math.floor(Math.random() * traders.length)];
     const asset = assets[Math.floor(Math.random() * assets.length)];
@@ -67,7 +67,7 @@ class RealtimeService {
 
   getOnlineUsers(roomId) {
     if (!this.rooms.has(roomId)) {
-      // Generate some default online users
+      
       this.rooms.set(roomId, this._generateOnlineUsers());
     }
     return this.rooms.get(roomId);
@@ -82,7 +82,7 @@ class RealtimeService {
       { id: 'u5', name: 'Chen_TA', avatar: '📊', status: 'online' },
     ];
     
-    // Return random subset
+    
     const count = Math.floor(Math.random() * 3) + 2;
     return users.slice(0, count);
   }
@@ -93,7 +93,7 @@ class RealtimeService {
     }
     this.subscribers.get(roomId).add(callback);
 
-    // Return unsubscribe function
+    
     return () => {
       const subs = this.subscribers.get(roomId);
       if (subs) subs.delete(callback);
@@ -122,7 +122,7 @@ class RealtimeService {
   }
 
   setUserTyping(roomId, userId, isTyping) {
-    // Notify room subscribers about typing status
+    
     const subs = this.subscribers.get(roomId);
     if (subs) {
       subs.forEach(callback => callback('typing', { 
@@ -135,7 +135,7 @@ class RealtimeService {
   }
 
   pushMessage(roomId, message) {
-    // Notify room subscribers about new message
+    
     const subs = this.subscribers.get(roomId);
     if (subs) {
       subs.forEach(callback => callback('message', message));

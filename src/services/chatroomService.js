@@ -12,7 +12,7 @@ const STORAGE_KEYS = {
   MARKET_TIPS: 'tradermind_market_tips'
 };
 
-// Chatroom Types
+
 const ROOM_TYPES = {
   BEHAVIOR: 'behavior',
   STRATEGY: 'strategy',
@@ -21,7 +21,7 @@ const ROOM_TYPES = {
   AI: 'ai'
 };
 
-// Simulated active traders with realistic profiles
+
 const SIMULATED_TRADERS = [
   { id: 'trader_mike', name: 'Mike_Volatility', avatar: '🎯', winRate: 58, specialty: 'Volatility 75', status: 'online', trades: 1245 },
   { id: 'trader_sarah', name: 'Sarah_Multipliers', avatar: '📈', winRate: 62, specialty: 'Multipliers', status: 'online', trades: 892 },
@@ -37,7 +37,7 @@ const SIMULATED_TRADERS = [
   { id: 'trader_maria', name: 'MariaAnalyst', avatar: '🔬', winRate: 68, specialty: 'Fundamental Analysis', status: 'online', trades: 1567 },
 ];
 
-// Real trading tips and messages by category
+
 const REAL_TRADING_MESSAGES = {
   behavior: [
     { content: "Just avoided a revenge trade after that loss. Taking a 15 min break 🧘", type: 'share' },
@@ -97,7 +97,7 @@ const REAL_TRADING_MESSAGES = {
   ]
 };
 
-// Real-time market insights that can be fetched
+
 const LIVE_MARKET_INSIGHTS = [
   { market: 'V75', condition: 'Trending Up', strength: 75, suggestion: 'Look for pullback entries' },
   { market: 'V100', condition: 'Ranging', strength: 45, suggestion: 'Wait for breakout or trade range edges' },
@@ -106,9 +106,9 @@ const LIVE_MARKET_INSIGHTS = [
   { market: 'V10', condition: 'Low Volatility', strength: 30, suggestion: 'Good for beginners, smaller moves' },
 ];
 
-// Default chatroom definitions
+
 const DEFAULT_ROOMS = {
-  // Behavior Rooms
+  
   behavior: [
     { id: 'discipline', name: 'Discipline Chat', description: 'Build trading discipline together', icon: '🎯', type: 'behavior', capacity: 500, level: 1 },
     { id: 'fomo-rehab', name: 'FOMO Rehab', description: 'Overcome fear of missing out', icon: '😰', type: 'behavior', capacity: 300, level: 1 },
@@ -116,7 +116,7 @@ const DEFAULT_ROOMS = {
     { id: 'revenge-recovery', name: 'Revenge Trading Recovery', description: 'Break the revenge trading cycle', icon: '🔄', type: 'behavior', capacity: 300, level: 1 },
     { id: 'slow-steady', name: 'Slow & Steady Room', description: 'Quality over quantity trading', icon: '🐢', type: 'behavior', capacity: 400, level: 1 },
   ],
-  // Strategy Rooms
+  
   strategy: [
     { id: 'multipliers-lab', name: 'Multipliers Lab', description: 'Multiplier strategies and tips', icon: '📈', type: 'strategy', capacity: 500, level: 2 },
     { id: 'volatility-gang', name: 'Volatility Index Gang', description: 'Volatility trading enthusiasts', icon: '📊', type: 'strategy', capacity: 500, level: 2 },
@@ -124,7 +124,7 @@ const DEFAULT_ROOMS = {
     { id: 'trend-hunters', name: 'Trend Hunters Club', description: 'Finding and riding trends', icon: '🎯', type: 'strategy', capacity: 400, level: 2 },
     { id: 'news-trading', name: 'News Trading Room', description: 'Trade the news together', icon: '📰', type: 'strategy', capacity: 300, level: 3 },
   ],
-  // Performance Rooms
+  
   performance: [
     { id: 'beginners', name: 'Beginner Room', description: 'New to trading? Start here!', icon: '🌱', type: 'performance', capacity: 1000, level: 1 },
     { id: 'intermediate', name: 'Intermediate Room', description: 'Level up your trading game', icon: '📚', type: 'performance', capacity: 500, level: 2 },
@@ -132,13 +132,13 @@ const DEFAULT_ROOMS = {
     { id: 'winning-streak', name: 'Winning Streak Room', description: 'Currently on a hot streak', icon: '🔥', type: 'performance', capacity: 100, level: 2 },
     { id: 'recovery-room', name: 'Recovery Room', description: 'Bounce back from drawdowns', icon: '💪', type: 'performance', capacity: 500, level: 1 },
   ],
-  // AI-Enhanced Rooms
+  
   ai: [
     { id: 'ai-coaching', name: 'AI Coaching Room', description: 'AI-powered trading lessons', icon: '🤖', type: 'ai', capacity: 1000, level: 1, isPremium: false },
     { id: 'market-prediction', name: 'Market Prediction Room', description: 'AI market analysis', icon: '🔮', type: 'ai', capacity: 500, level: 2, isPremium: true },
     { id: 'emotional-support', name: 'Emotional Control Hub', description: 'AI emotional trading alerts', icon: '🧠', type: 'ai', capacity: 500, level: 1, isPremium: false },
   ],
-  // Public Rooms
+  
   public: [
     { id: 'general', name: 'General Discussion', description: 'Chat about anything trading', icon: '💬', type: 'public', capacity: 2000, level: 1 },
     { id: 'daily-trades', name: 'Daily Trades Discussion', description: 'Share today\'s trades', icon: '📅', type: 'public', capacity: 1000, level: 1 },
@@ -150,57 +150,57 @@ const DEFAULT_ROOMS = {
 class ChatroomService {
   constructor() {
     this.rooms = this.loadRooms();
-    this.userRooms = new Map(); // userId -> [roomIds]
-    this.messages = this.loadMessagesFromStorage(); // roomId -> [messages]
-    this.userReputation = this.loadReputationFromStorage(); // userId -> score
+    this.userRooms = new Map(); 
+    this.messages = this.loadMessagesFromStorage(); 
+    this.userReputation = this.loadReputationFromStorage(); 
     this.communityPosts = this.loadCommunityPostsFromStorage();
     this.liveTraders = SIMULATED_TRADERS;
     this.activityIntervals = new Map();
     
-    // Initialize rooms with activity
+    
     this.initializeRoomActivity();
   }
 
-  // Initialize rooms with simulated live activity
+  
   initializeRoomActivity() {
     Object.keys(this.rooms).forEach(roomId => {
       const room = this.rooms[roomId];
-      // Assign random active traders to each room
-      const numActive = Math.floor(Math.random() * 8) + 3; // 3-10 active traders
+      
+      const numActive = Math.floor(Math.random() * 8) + 3; 
       room.activeNow = numActive;
       room.activeTraders = this.getRandomTraders(numActive);
       
-      // Populate with initial messages if empty
+      
       if (!this.messages.has(roomId) || this.messages.get(roomId).length === 0) {
         this.populateRoomWithMessages(roomId);
       }
     });
   }
 
-  // Get random subset of traders
+  
   getRandomTraders(count) {
     const shuffled = [...this.liveTraders].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, Math.min(count, shuffled.length));
   }
 
-  // Populate a room with realistic messages
+  
   populateRoomWithMessages(roomId) {
     const room = this.rooms[roomId];
     if (!room) return;
     
-    // Get appropriate message pool based on room type
+    
     let messagePool = REAL_TRADING_MESSAGES[room.type] || REAL_TRADING_MESSAGES.general;
     if (room.type === 'public') messagePool = REAL_TRADING_MESSAGES.general;
     
     const messages = [];
-    const numMessages = Math.floor(Math.random() * 10) + 5; // 5-15 initial messages
+    const numMessages = Math.floor(Math.random() * 10) + 5; 
     const traders = this.getRandomTraders(numMessages);
     
-    // Generate messages with realistic timestamps (last few hours)
+    
     for (let i = 0; i < numMessages; i++) {
       const trader = traders[i % traders.length];
       const msgData = messagePool[Math.floor(Math.random() * messagePool.length)];
-      const minutesAgo = Math.floor(Math.random() * 120) + 1; // 1-120 minutes ago
+      const minutesAgo = Math.floor(Math.random() * 120) + 1; 
       
       messages.push({
         id: `init-${roomId}-${i}-${Date.now()}`,
@@ -218,14 +218,14 @@ class ChatroomService {
       });
     }
     
-    // Sort by timestamp
+    
     messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     
     this.messages.set(roomId, messages);
     this.saveMessagesToStorage();
   }
 
-  // Format time ago string
+  
   formatTimeAgo(minutes) {
     if (minutes < 1) return 'Just now';
     if (minutes < 60) return `${minutes}m ago`;
@@ -234,12 +234,12 @@ class ChatroomService {
     return `${Math.floor(hours / 24)}d ago`;
   }
 
-  // Start simulated live activity for a room (call when entering room)
+  
   startLiveActivity(roomId) {
-    // Clear any existing interval
+    
     this.stopLiveActivity(roomId);
     
-    // Simulate new messages every 30-90 seconds
+    
     const interval = setInterval(() => {
       this.generateLiveMessage(roomId);
     }, (Math.random() * 60000) + 30000);
@@ -247,7 +247,7 @@ class ChatroomService {
     this.activityIntervals.set(roomId, interval);
   }
 
-  // Stop live activity simulation
+  
   stopLiveActivity(roomId) {
     if (this.activityIntervals.has(roomId)) {
       clearInterval(this.activityIntervals.get(roomId));
@@ -255,7 +255,7 @@ class ChatroomService {
     }
   }
 
-  // Generate a live message from a simulated trader
+  
   generateLiveMessage(roomId) {
     const room = this.rooms[roomId];
     if (!room) return null;
@@ -290,7 +290,7 @@ class ChatroomService {
     return message;
   }
 
-  // Get live market conditions for AI rooms
+  
   getLiveMarketConditions() {
     return LIVE_MARKET_INSIGHTS.map(insight => ({
       ...insight,
@@ -299,10 +299,10 @@ class ChatroomService {
     }));
   }
 
-  // Fetch trading tips from web (simulated - returns curated tips)
+  
   async fetchTradingTips(category = 'all') {
-    // In a real implementation, this would fetch from trading communities
-    // For now, returns curated real trading tips
+    
+    
     const tips = {
       volatility: [
         "V75 typically has 3-5 strong trend moves per day. Catch them, don't chase them.",
@@ -336,7 +336,7 @@ class ChatroomService {
     return tips[category] || tips.strategy;
   }
 
-  // Load messages from localStorage
+  
   loadMessagesFromStorage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.MESSAGES);
@@ -350,7 +350,7 @@ class ChatroomService {
     return new Map();
   }
 
-  // Save messages to localStorage
+  
   saveMessagesToStorage() {
     try {
       const obj = Object.fromEntries(this.messages);
@@ -360,7 +360,7 @@ class ChatroomService {
     }
   }
 
-  // Load community posts from localStorage
+  
   loadCommunityPostsFromStorage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.COMMUNITY_POSTS);
@@ -373,7 +373,7 @@ class ChatroomService {
     return [];
   }
 
-  // Save community posts to localStorage
+  
   saveCommunityPostsToStorage() {
     try {
       localStorage.setItem(STORAGE_KEYS.COMMUNITY_POSTS, JSON.stringify(this.communityPosts));
@@ -382,7 +382,7 @@ class ChatroomService {
     }
   }
 
-  // Load reputation from localStorage
+  
   loadReputationFromStorage() {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.USER_REPUTATION);
@@ -396,7 +396,7 @@ class ChatroomService {
     return new Map();
   }
 
-  // Save reputation to localStorage
+  
   saveReputationToStorage() {
     try {
       const obj = Object.fromEntries(this.userReputation);
@@ -416,7 +416,7 @@ class ChatroomService {
     return allRooms;
   }
 
-  // ========== AUTO-ASSIGNMENT LOGIC ==========
+  
   
   /**
    * Calculate chatroom fit scores and auto-assign user to appropriate rooms
@@ -432,7 +432,7 @@ class ChatroomService {
 
     const { tradePerformance, emotionalAnalysis, riskAnalysis, timePatterns } = analytics;
 
-    // === Trading Performance Assignment ===
+    
     const winRate = tradePerformance?.winRate || 0;
     const totalTrades = tradePerformance?.totalTrades || 0;
 
@@ -449,7 +449,7 @@ class ChatroomService {
       assignments.push('recovery-room');
     }
 
-    // === Emotional Profile Assignment ===
+    
     if (emotionalAnalysis) {
       if (emotionalAnalysis.revengeTradingDetected) {
         assignments.push('revenge-recovery');
@@ -467,7 +467,7 @@ class ChatroomService {
       }
     }
 
-    // === Risk Profile Assignment ===
+    
     if (riskAnalysis) {
       if (riskAnalysis.riskBehavior === 'reckless' || riskAnalysis.riskBehavior === 'high_risk') {
         assignments.push('discipline');
@@ -477,7 +477,7 @@ class ChatroomService {
       }
     }
 
-    // === Contract Type Assignment ===
+    
     if (tradePerformance?.contractTypePerformance) {
       const types = Object.entries(tradePerformance.contractTypePerformance);
       const mostTraded = types.sort((a, b) => b[1].trades - a[1].trades)[0];
@@ -490,11 +490,11 @@ class ChatroomService {
       }
     }
 
-    // Always add general and AI coaching
+    
     assignments.push('general');
     assignments.push('ai-coaching');
 
-    // Remove duplicates
+    
     return [...new Set(assignments)];
   }
 
@@ -505,20 +505,20 @@ class ChatroomService {
     const room = this.rooms[roomId];
     if (!room) return 0;
 
-    let score = 50; // Base score
+    let score = 50; 
 
     if (!analytics) return score;
 
     const { tradePerformance, emotionalAnalysis, riskAnalysis } = analytics;
 
-    // Behavior match
+    
     if (room.type === 'behavior') {
       if (emotionalAnalysis?.emotionalScore < 50) score += 20;
       if (emotionalAnalysis?.revengeTradingDetected && roomId.includes('revenge')) score += 30;
       if (emotionalAnalysis?.overtradingDetected && roomId.includes('overtrading')) score += 30;
     }
 
-    // Performance match
+    
     if (room.type === 'performance') {
       const winRate = tradePerformance?.winRate || 0;
       if (roomId === 'pro-traders' && winRate >= 55) score += 30;
@@ -526,7 +526,7 @@ class ChatroomService {
       if (roomId === 'recovery-room' && riskAnalysis?.maxDrawdown > 20) score += 25;
     }
 
-    // Risk match
+    
     if (riskAnalysis?.riskBehavior === 'conservative' && roomId.includes('discipline')) {
       score += 15;
     }
@@ -534,7 +534,7 @@ class ChatroomService {
     return Math.min(100, score);
   }
 
-  // ========== CHATROOM MANAGEMENT ==========
+  
 
   /**
    * Get all available rooms categorized (legacy method)
@@ -554,12 +554,12 @@ class ChatroomService {
    */
   getAllRooms() {
     return Object.values(this.rooms).map(room => {
-      // Generate dynamic active count that changes slightly
+      
       const baseActive = room.activeNow || 5;
-      const variance = Math.floor(Math.random() * 5) - 2; // -2 to +2
+      const variance = Math.floor(Math.random() * 5) - 2; 
       const activeNow = Math.max(2, baseActive + variance);
       
-      // Get recent message count
+      
       const messages = this.messages.get(room.id) || [];
       const recentMessages = messages.filter(m => {
         const msgTime = new Date(m.timestamp);
@@ -594,7 +594,7 @@ class ChatroomService {
       
       const fitScore = this.getRoomFitScore(id, analytics);
       
-      // Get live activity data
+      
       const baseActive = room.activeNow || 5;
       const variance = Math.floor(Math.random() * 5) - 2;
       const activeNow = Math.max(2, baseActive + variance);
@@ -653,13 +653,13 @@ class ChatroomService {
     return { success: true };
   }
 
-  // ========== MESSAGING ==========
+  
 
   /**
    * Send a message to a room
    */
   sendMessage(roomId, userId, userName, content, userAvatar) {
-    // Moderate content
+    
     const moderationResult = this.moderateMessage(content);
     if (!moderationResult.allowed) {
       return { success: false, error: moderationResult.reason };
@@ -684,17 +684,17 @@ class ChatroomService {
     this.messages.get(roomId).push(message);
     this.saveMessagesToStorage();
 
-    // Update user reputation
+    
     this.updateReputation(userId, 1);
 
-    return message; // Return message directly for easier use
+    return message; 
   }
 
   /**
    * Get messages for a room - populates with activity if empty
    */
   getMessages(roomId, limit = 50) {
-    // If room has no messages, populate it first
+    
     if (!this.messages.has(roomId) || this.messages.get(roomId).length === 0) {
       this.populateRoomWithMessages(roomId);
     }
@@ -710,10 +710,10 @@ class ChatroomService {
     const room = this.rooms[roomId];
     if (!room) return { success: false, error: 'Room not found' };
     
-    // Start live message simulation
+    
     this.startLiveActivity(roomId);
     
-    // Get room info with active traders
+    
     const messages = this.getMessages(roomId);
     const activeTraders = room.activeTraders || this.getRandomTraders(Math.floor(Math.random() * 5) + 3);
     
@@ -773,7 +773,7 @@ class ChatroomService {
     return { success: true, reactions: message.reactions };
   }
 
-  // ========== MODERATION ==========
+  
 
   /**
    * Moderate message content
@@ -785,15 +785,15 @@ class ChatroomService {
     ];
 
     const spamPatterns = [
-      /(.)\1{5,}/i, // Repeated characters
-      /(https?:\/\/[^\s]+\s*){3,}/i, // Multiple links
+      /(.)\1{5,}/i, 
+      /(https?:\/\/[^\s]+\s*){3,}/i, 
     ];
 
     let cleanContent = content;
     let allowed = true;
     let reason = '';
 
-    // Check for toxicity
+    
     for (const pattern of toxicPatterns) {
       if (pattern.test(content)) {
         allowed = false;
@@ -802,7 +802,7 @@ class ChatroomService {
       }
     }
 
-    // Check for spam
+    
     if (allowed) {
       for (const pattern of spamPatterns) {
         if (pattern.test(content)) {
@@ -813,7 +813,7 @@ class ChatroomService {
       }
     }
 
-    // Length check
+    
     if (content.length > 1000) {
       allowed = false;
       reason = 'Message too long (max 1000 characters)';
@@ -860,7 +860,7 @@ class ChatroomService {
     return { score, level, badges };
   }
 
-  // ========== AI MESSAGES ==========
+  
 
   /**
    * Generate AI coaching message based on user's analytics
@@ -884,7 +884,7 @@ class ChatroomService {
 
     const { emotionalAnalysis, riskAnalysis, tradePerformance, recommendations } = analytics;
 
-    // Emotional alerts
+    
     if (emotionalAnalysis?.emotionalScore < 40) {
       messages.push({
         id: `ai-${Date.now()}-emotion`,
@@ -900,7 +900,7 @@ class ChatroomService {
       });
     }
 
-    // Streak alerts
+    
     if (tradePerformance?.currentStreakType === 'loss' && tradePerformance?.currentStreak >= 3) {
       messages.push({
         id: `ai-${Date.now()}-streak`,
@@ -916,7 +916,7 @@ class ChatroomService {
       });
     }
 
-    // Risk alerts
+    
     if (riskAnalysis?.avgRiskPercent > 10) {
       messages.push({
         id: `ai-${Date.now()}-risk`,
@@ -932,7 +932,7 @@ class ChatroomService {
       });
     }
 
-    // Positive reinforcement
+    
     if (tradePerformance?.winRate >= 55 && emotionalAnalysis?.emotionalScore >= 70) {
       messages.push({
         id: `ai-${Date.now()}-positive`,
@@ -948,7 +948,7 @@ class ChatroomService {
       });
     }
 
-    // Add top recommendation
+    
     if (recommendations && recommendations.length > 0) {
       const topRec = recommendations[0];
       messages.push({
@@ -975,7 +975,7 @@ class ChatroomService {
     const message = userMessage.toLowerCase();
     let response = '';
     
-    // Context-aware AI responses
+    
     if (message.includes('losing') || message.includes('loss') || message.includes('lost')) {
       const lossStreak = analytics?.tradePerformance?.currentStreak || 0;
       if (analytics?.tradePerformance?.currentStreakType === 'loss' && lossStreak >= 3) {
@@ -1014,7 +1014,7 @@ class ChatroomService {
     };
   }
 
-  // ========== COMMUNITY FEED ==========
+  
 
   /**
    * Get community posts from localStorage
@@ -1038,7 +1038,7 @@ class ChatroomService {
       userName,
       avatar: userAvatar || userName?.[0]?.toUpperCase() || '?',
       content: moderationResult.cleanContent,
-      type, // text, trade-share, strategy, milestone
+      type, 
       tags,
       time: 'Just now',
       timestamp: new Date().toISOString(),
@@ -1065,7 +1065,7 @@ class ChatroomService {
     } else if (sortBy === 'popular') {
       posts.sort((a, b) => b.likes.length - a.likes.length);
     }
-    // 'recent' is default (already sorted by time)
+    
 
     return posts.slice(0, limit);
   }
@@ -1125,7 +1125,7 @@ class ChatroomService {
     return users;
   }
 
-  // ========== DAILY CHALLENGES ==========
+  
 
   dailyChallenges = [
     { id: 'low-risk', title: 'Low Risk Day', description: 'Trade only with 1% risk for 24 hours', reward: 50, icon: '🎯' },
@@ -1139,7 +1139,7 @@ class ChatroomService {
    * Get today's challenges
    */
   getTodaysChallenges() {
-    // Rotate challenges based on day of week
+    
     const dayIndex = new Date().getDay();
     const startIndex = dayIndex % this.dailyChallenges.length;
     return [
@@ -1149,7 +1149,7 @@ class ChatroomService {
     ];
   }
 
-  // ========== ENHANCED LIVE FEATURES ==========
+  
 
   /**
    * Get room with all live data including AI insights
@@ -1184,10 +1184,10 @@ class ChatroomService {
       const messages = this.messages.get(room.id) || [];
       const recentMessages = messages.filter(m => {
         const msgTime = new Date(m.timestamp);
-        return (Date.now() - msgTime.getTime()) < 3600000; // Last hour
+        return (Date.now() - msgTime.getTime()) < 3600000; 
       });
 
-      // Dynamic activity scoring
+      
       const activityScore = Math.min(100, 
         recentMessages.length * 5 + 
         (room.activeNow || 5) * 3 +

@@ -18,7 +18,7 @@ class AIInsightsService {
    * Get AI-generated insights based on trading data
    */
   async getInsights(tradingData = {}) {
-    // Simulate AI analysis delay
+    
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const { winRate = 50, totalTrades = 0, recentLosses = 0 } = tradingData;
@@ -87,8 +87,8 @@ class AIInsightsService {
   }
 
   _calculateBehaviorScore(data) {
-    // Score from 0-100 based on trading behavior
-    let score = 70; // Base score
+    
+    let score = 70; 
 
     if (data.followedPlan) score += 10;
     if (data.usedStopLoss) score += 10;
@@ -174,17 +174,17 @@ class AIInsightsService {
     const recommendations = [];
     const { winRate = 50, totalTrades = 0, behaviorScore = 70, recentLosses = 0 } = userAnalytics;
 
-    // Determine user level based on stats
+    
     let userLevel = 1;
     if (totalTrades >= 100 && winRate >= 55) userLevel = 3;
     else if (totalTrades >= 50 && winRate >= 50) userLevel = 2;
 
-    // Filter and score rooms based on user profile
+    
     const scoredRooms = allRooms.map(room => {
       let score = 0;
       let reason = '';
 
-      // Match by performance level
+      
       if (room.type === 'performance') {
         if (winRate < 50 && room.id === 'beginners') {
           score += 30;
@@ -202,7 +202,7 @@ class AIInsightsService {
         }
       }
 
-      // Match by behavior needs
+      
       if (room.type === 'behavior') {
         if (behaviorScore < 50 && room.id === 'discipline') {
           score += 35;
@@ -214,7 +214,7 @@ class AIInsightsService {
         }
       }
 
-      // AI rooms for insights
+      
       if (room.type === 'ai') {
         if (totalTrades < 50) {
           score += 25;
@@ -226,13 +226,13 @@ class AIInsightsService {
         }
       }
 
-      // Strategy rooms based on experience
+      
       if (room.type === 'strategy' && userLevel >= 2) {
         score += 15;
         reason = 'Explore new strategies';
       }
 
-      // Base score for accessible rooms
+      
       if (room.level <= userLevel) {
         score += 10;
       }
@@ -240,13 +240,13 @@ class AIInsightsService {
       return { ...room, score, reason };
     });
 
-    // Sort by score and take top recommendations
+    
     const topRecs = scoredRooms
       .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
-    // Add personalized messages
+    
     if (recentLosses >= 3) {
       recommendations.push({
         type: 'alert',

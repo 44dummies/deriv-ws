@@ -11,7 +11,7 @@ import {
 import tierChatroomService from '../../services/tierChatroomService';
 import './TierChatroom.css';
 
-// Common emoji reactions
+
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '💯', '🎯'];
 
 const TierChatroom = ({ user, analytics }) => {
@@ -32,7 +32,7 @@ const TierChatroom = ({ user, analytics }) => {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Calculate and set user's tier
+  
   useEffect(() => {
     if (analytics) {
       const userTier = tierChatroomService.calculateTier(
@@ -43,24 +43,24 @@ const TierChatroom = ({ user, analytics }) => {
     }
   }, [analytics]);
 
-  // Initialize chatroom - only assign on first load, not every render
+  
   useEffect(() => {
     initializeChatroom();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+    
+  }, []); 
 
   const initializeChatroom = async () => {
     setLoading(true);
     try {
-      // First, try to get existing chatroom assignment
+      
       const existingResult = await tierChatroomService.getMyTierChatroom();
       
       if (existingResult.success && existingResult.assignment?.tier_chatrooms) {
-        // User is already assigned - use existing assignment
+        
         setChatroom(existingResult.assignment.tier_chatrooms);
         setTier(existingResult.assignment.tier_chatrooms.tier);
         
-        // Load messages and members
+        
         const [messagesResult, membersResult] = await Promise.all([
           tierChatroomService.getChatroomMessages(existingResult.assignment.tier_chatrooms.id),
           tierChatroomService.getChatroomMembers(existingResult.assignment.tier_chatrooms.id)
@@ -73,7 +73,7 @@ const TierChatroom = ({ user, analytics }) => {
           setMembers(membersResult.members);
         }
       } else {
-        // User not assigned - assign them (first login)
+        
         const assignResult = await tierChatroomService.assignToTierChatroom(
           analytics?.winRate || 0,
           analytics?.totalTrades || 0
@@ -83,7 +83,7 @@ const TierChatroom = ({ user, analytics }) => {
           setChatroom(assignResult.chatroom);
           setTier(assignResult.tier || 'beginner');
           
-          // Load messages and members
+          
           const [messagesResult, membersResult] = await Promise.all([
             tierChatroomService.getChatroomMessages(assignResult.chatroom.id),
             tierChatroomService.getChatroomMembers(assignResult.chatroom.id)
@@ -96,7 +96,7 @@ const TierChatroom = ({ user, analytics }) => {
             setMembers(membersResult.members);
           }
         } else {
-          // Fallback: get all chatrooms and show appropriate one
+          
           const chatroomsResult = await tierChatroomService.getTierChatrooms();
           if (chatroomsResult.success && chatroomsResult.chatrooms.length > 0) {
             const userChatroom = chatroomsResult.chatrooms.find(c => c.tier === tier) 
@@ -111,7 +111,7 @@ const TierChatroom = ({ user, analytics }) => {
     setLoading(false);
   };
 
-  // Scroll to bottom when new messages arrive
+  
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -120,7 +120,7 @@ const TierChatroom = ({ user, analytics }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Handle typing indicator
+  
   const handleTyping = useCallback(() => {
     if (chatroom?.id) {
       tierChatroomService.setTyping(chatroom.id, true);
@@ -135,7 +135,7 @@ const TierChatroom = ({ user, analytics }) => {
     }
   }, [chatroom?.id]);
 
-  // Send message
+  
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -147,14 +147,14 @@ const TierChatroom = ({ user, analytics }) => {
       let result;
       
       if (selectedFile) {
-        // Send file message
+        
         result = await tierChatroomService.sendFileMessage(
           chatroom.id,
           selectedFile,
           newMessage.trim() || null
         );
       } else {
-        // Send text message
+        
         result = await tierChatroomService.sendMessage(
           chatroom.id,
           newMessage.trim(),
@@ -176,11 +176,11 @@ const TierChatroom = ({ user, analytics }) => {
     setSending(false);
   };
 
-  // Handle file selection
+  
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 50MB)
+      
       if (file.size > 50 * 1024 * 1024) {
         alert('File size must be less than 50MB');
         return;
@@ -188,7 +188,7 @@ const TierChatroom = ({ user, analytics }) => {
       
       setSelectedFile(file);
       
-      // Create preview for images
+      
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => setFilePreview(e.target?.result);
@@ -199,7 +199,7 @@ const TierChatroom = ({ user, analytics }) => {
     }
   };
 
-  // Handle reaction
+  
   const handleReaction = async (messageId, emoji) => {
     const result = await tierChatroomService.addReaction(messageId, emoji);
     if (result.success) {
@@ -210,7 +210,7 @@ const TierChatroom = ({ user, analytics }) => {
     setShowEmojiPicker(null);
   };
 
-  // Handle delete
+  
   const handleDelete = async (messageId) => {
     if (window.confirm('Delete this message?')) {
       const result = await tierChatroomService.deleteMessage(messageId);
@@ -220,7 +220,7 @@ const TierChatroom = ({ user, analytics }) => {
     }
   };
 
-  // Get file icon
+  
   const getFileIcon = (fileType) => {
     if (fileType?.startsWith('image/')) return <Image size={20} />;
     if (fileType?.startsWith('video/')) return <Video size={20} />;
@@ -241,7 +241,7 @@ const TierChatroom = ({ user, analytics }) => {
 
   return (
     <div className="tier-chatroom">
-      {/* Header */}
+      {}
       <div className="chatroom-header" style={{ borderColor: tierInfo.color }}>
         <div className="chatroom-info">
           <span className="tier-icon">{chatroom?.icon || tierInfo.icon}</span>
@@ -261,15 +261,15 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       </div>
 
-      {/* Your Tier Badge */}
+      {}
       <div className="tier-badge" style={{ backgroundColor: tierInfo.color + '20', borderColor: tierInfo.color }}>
         <span>{tierInfo.icon}</span>
         <span>You're in the <strong>{tierInfo.name}</strong> based on your trading performance</span>
       </div>
 
-      {/* Main Content */}
+      {}
       <div className="chatroom-content">
-        {/* Messages Area */}
+        {}
         <div className="messages-container">
           {messages.length === 0 ? (
             <div className="no-messages">
@@ -284,7 +284,7 @@ const TierChatroom = ({ user, analytics }) => {
                   key={msg.id || index} 
                   className={`message ${msg.sender?.id === user?.id ? 'own' : ''}`}
                 >
-                  {/* Avatar */}
+                  {}
                   <div className="message-avatar">
                     {msg.sender?.profile_photo ? (
                       <img src={msg.sender.profile_photo} alt="" />
@@ -295,7 +295,7 @@ const TierChatroom = ({ user, analytics }) => {
                     )}
                   </div>
                   
-                  {/* Content */}
+                  {}
                   <div className="message-content">
                     <div className="message-header">
                       <span className="sender-name">
@@ -311,7 +311,7 @@ const TierChatroom = ({ user, analytics }) => {
                       </span>
                     </div>
                     
-                    {/* Reply Reference */}
+                    {}
                     {(msg.replyTo || msg.reply_to) && (
                       <div className="reply-reference">
                         <Reply size={12} />
@@ -319,10 +319,10 @@ const TierChatroom = ({ user, analytics }) => {
                       </div>
                     )}
                     
-                    {/* Message Text */}
+                    {}
                     <div className="message-text">{msg.text || msg.message_text}</div>
                     
-                    {/* File Attachment */}
+                    {}
                     {(msg.fileName || msg.file_name) && (
                       <div className="message-file">
                         {getFileIcon(msg.fileType || msg.file_type)}
@@ -335,7 +335,7 @@ const TierChatroom = ({ user, analytics }) => {
                       </div>
                     )}
                     
-                    {/* Reactions */}
+                    {}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                       <div className="message-reactions">
                         {Object.entries(msg.reactions).map(([emoji, users]) => (
@@ -350,7 +350,7 @@ const TierChatroom = ({ user, analytics }) => {
                       </div>
                     )}
                     
-                    {/* Actions */}
+                    {}
                     <div className="message-actions">
                       <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}>
                         <Smile size={14} />
@@ -365,7 +365,7 @@ const TierChatroom = ({ user, analytics }) => {
                       )}
                     </div>
                     
-                    {/* Emoji Picker */}
+                    {}
                     {showEmojiPicker === msg.id && (
                       <div className="emoji-picker">
                         {EMOJI_REACTIONS.map(emoji => (
@@ -383,7 +383,7 @@ const TierChatroom = ({ user, analytics }) => {
           )}
         </div>
 
-        {/* Members Sidebar */}
+        {}
         <div className={`members-sidebar ${showMembers ? 'open' : ''}`}>
           <div className="members-header">
             <h4>Members ({members.length})</h4>
@@ -417,7 +417,7 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       </div>
 
-      {/* Reply Preview */}
+      {}
       {replyTo && (
         <div className="reply-preview">
           <Reply size={16} />
@@ -428,7 +428,7 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       )}
 
-      {/* File Preview */}
+      {}
       {selectedFile && (
         <div className="file-preview">
           {filePreview ? (
@@ -445,7 +445,7 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       )}
 
-      {/* Message Input */}
+      {}
       <form className="message-input" onSubmit={handleSendMessage}>
         <input
           type="file"

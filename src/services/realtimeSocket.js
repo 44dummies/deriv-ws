@@ -5,7 +5,7 @@
 
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http:
 
 class RealtimeSocketService {
   constructor() {
@@ -33,14 +33,14 @@ class RealtimeSocketService {
         auth: { token: accessToken },
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: Infinity,         // Keep trying forever
+        reconnectionAttempts: Infinity,         
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 30000,            // Max 30 seconds between retries
-        timeout: 60000,                         // 60 second connection timeout
-        pingTimeout: 300000,                    // 5 minutes - match server
-        pingInterval: 25000,                    // 25 seconds
+        reconnectionDelayMax: 30000,            
+        timeout: 60000,                         
+        pingTimeout: 300000,                    
+        pingInterval: 25000,                    
         autoConnect: true,
-        forceNew: false                         // Reuse connection
+        forceNew: false                         
       });
 
       this.socket.on('connect', () => {
@@ -54,7 +54,7 @@ class RealtimeSocketService {
       this.socket.on('connect_error', (error) => {
         console.error('Socket connection error:', error.message);
         this.reconnectAttempts++;
-        // Don't reject - let reconnection handle it
+        
       });
 
       this.socket.on('disconnect', (reason) => {
@@ -62,7 +62,7 @@ class RealtimeSocketService {
         this.connected = false;
         this.notifyConnectionChange(false);
         
-        // If server disconnect, try to reconnect
+        
         if (reason === 'io server disconnect') {
           console.log('🔄 Server disconnected, attempting reconnect...');
           this.socket.connect();
@@ -83,12 +83,12 @@ class RealtimeSocketService {
         console.error('Socket error:', error);
       });
 
-      // Message events
+      
       this.socket.on('newMessage', (message) => {
         this.messageCallbacks.forEach(cb => cb(message));
       });
 
-      // Presence events
+      
       this.socket.on('roomPresence', (data) => {
         this.presenceCallbacks.forEach(cb => cb(data));
       });
@@ -101,22 +101,22 @@ class RealtimeSocketService {
         this.presenceCallbacks.forEach(cb => cb({ type: 'leave', ...data }));
       });
 
-      // Typing events
+      
       this.socket.on('userTyping', (data) => {
         this.typingCallbacks.forEach(cb => cb(data));
       });
 
-      // Read receipts
+      
       this.socket.on('messageRead', (data) => {
         this.emit('messageRead', data);
       });
 
-      // Reactions
+      
       this.socket.on('reactionUpdate', (data) => {
         this.emit('reactionUpdate', data);
       });
 
-      // Moderation
+      
       this.socket.on('messageModerated', (data) => {
         this.emit('messageModerated', data);
       });
@@ -125,7 +125,7 @@ class RealtimeSocketService {
         this.emit('moderationWarning', data);
       });
 
-      // Room events
+      
       this.socket.on('joinedRoom', (data) => {
         this.emit('joinedRoom', data);
       });
@@ -272,7 +272,7 @@ class RealtimeSocketService {
     }
     this.listeners.get(event).add(callback);
     
-    // Also register with socket.io for server events
+    
     if (this.socket) {
       this.socket.on(event, callback);
     }
@@ -322,7 +322,7 @@ class RealtimeSocketService {
   }
 }
 
-// Singleton instance
+
 const realtimeSocket = new RealtimeSocketService();
 
 export default realtimeSocket;

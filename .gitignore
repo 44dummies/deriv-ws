@@ -35,3 +35,27 @@ server/supabase/.temp/
 # Package locks (optional - keep if you want reproducible builds)
 # package-lock.json
 # server/package-lock.json
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+.secrets
+
+# Database
+*.sqlite
+*.db
+
+# Backup files
+*.bak
+*.backup
+
+# Test coverage
+coverage/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

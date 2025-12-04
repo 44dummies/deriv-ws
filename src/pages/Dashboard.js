@@ -28,7 +28,7 @@ const STORAGE_KEYS = {
   THEME: 'tradermind_theme',
 };
 
-// Avatar options (same as Settings.js)
+
 const AVATARS = [
   { id: 1, emoji: '🧑‍💼' }, { id: 2, emoji: '👨‍💻' }, { id: 3, emoji: '👩‍💻' },
   { id: 4, emoji: '🦊' }, { id: 5, emoji: '🦁' }, { id: 6, emoji: '🐺' },
@@ -42,7 +42,7 @@ const AVATARS = [
   { id: 28, emoji: '🏆' }, { id: 29, emoji: '🌟' }, { id: 30, emoji: '🎲' }
 ];
 
-// Get avatar emoji from profile_photo string (format: "avatar:ID")
+
 const getAvatarEmoji = (profilePhoto) => {
   if (!profilePhoto) return '👤';
   if (profilePhoto.startsWith('avatar:')) {
@@ -53,7 +53,7 @@ const getAvatarEmoji = (profilePhoto) => {
   return '👤';
 };
 
-// Real-time backend mode flag (set to true when backend is running)
+
 const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
 const Card = ({ children, className = '' }) => (
@@ -116,21 +116,21 @@ const SettingRow = ({ icon, label, value, action }) => (
   </div>
 );
 
-// Deriv Community Forum API (Discourse)
-const DERIV_COMMUNITY_URL = 'https://community.deriv.com';
 
-// Auto-logout settings
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
-const WARNING_BEFORE_LOGOUT = 60 * 1000; // Show warning 1 minute before logout
+const DERIV_COMMUNITY_URL = 'https:
+
+
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; 
+const WARNING_BEFORE_LOGOUT = 60 * 1000; 
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
-  const [userProfile, setUserProfile] = useState(null); // User's saved profile with photo
+  const [userProfile, setUserProfile] = useState(null); 
   const [activeTab, setActiveTab] = useState('sync');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed (especially for mobile)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Separate state for mobile
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); 
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); 
   const [tradeHistory, setTradeHistory] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
   const [digitStats, setDigitStats] = useState({0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0});
@@ -150,7 +150,7 @@ const Dashboard = () => {
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [showInactivityWarning, setShowInactivityWarning] = useState(false);
   
-  // Advanced Analytics State
+  
   const [profitCurve, setProfitCurve] = useState([]);
   const [advancedAnalytics, setAdvancedAnalytics] = useState({
     byHour: {}, byMarket: {}, byContractType: {}, streakData: []
@@ -167,15 +167,15 @@ const Dashboard = () => {
   const [availableTags] = useState(['#overtrading', '#perfect-entry', '#bad-day', '#strategyA', '#scalping', '#martingale']);
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
   
-  // Backend JWT token for Community features
+  
   const [backendToken, setBackendToken] = useState(null);
   
-  // Full Analytics State
+  
   const [fullAnalytics, setFullAnalytics] = useState(null);
   const [statements, setStatements] = useState([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   
-  // Chatroom State
+  
   const [assignedRooms, setAssignedRooms] = useState([]);
   const [activeChatRoom, setActiveChatRoom] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
@@ -187,7 +187,7 @@ const Dashboard = () => {
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostTags, setNewPostTags] = useState([]);
   
-  // Real-time & AI state
+  
   const [typingUsers, setTypingUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [onlineCount, setOnlineCount] = useState(0);
@@ -202,23 +202,23 @@ const Dashboard = () => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const realtimeUnsubRef = useRef(null);
   
-  // Real-time backend state
+  
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [realtimeMode, setRealtimeMode] = useState(USE_REALTIME_BACKEND);
   const socketUnsubsRef = useRef([]);
   
-  // Deriv WebSocket connection state
+  
   const [derivWsConnected, setDerivWsConnected] = useState(false);
   
-  // Auto-sync state
+  
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [lastSyncTime, setLastSyncTime] = useState(null);
   const [nextSyncTime, setNextSyncTime] = useState(null);
   const autoSyncIntervalRef = useRef(null);
   const lastSyncAttempt = useRef(0);
-  const syncBackoffTime = useRef(300000); // Start with 5 minutes
-  const AUTO_SYNC_INTERVAL = 300000; // 5 minutes auto-sync (increased to avoid rate limits)
-  const MIN_SYNC_GAP = 60000; // Minimum 1 minute between syncs
+  const syncBackoffTime = useRef(300000); 
+  const AUTO_SYNC_INTERVAL = 300000; 
+  const MIN_SYNC_GAP = 60000; 
   
   const sidebarRef = useRef(null);
   const isInitialized = useRef(false);
@@ -226,14 +226,14 @@ const Dashboard = () => {
   const logoutTimerRef = useRef(null);
   const hadWsDisconnectedRef = useRef(false);
 
-  // Logout handler (defined early for inactivity hook)
+  
   const handleLogout = useCallback(() => { 
     TokenService.clearTokens(); 
     websocketService.disconnect(); 
     navigate('/'); 
   }, [navigate]);
 
-  // Keyboard shortcuts
+  
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey) {
@@ -251,7 +251,7 @@ const Dashboard = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Auto-logout on inactivity
+  
   useEffect(() => {
     const handleActivity = () => {
       setLastActivity(Date.now());
@@ -266,14 +266,14 @@ const Dashboard = () => {
       const timeSinceActivity = now - lastActivity;
       
       if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-        // Auto logout
+        
         toast.error('Session expired due to inactivity');
         handleLogout();
       } else if (timeSinceActivity >= INACTIVITY_TIMEOUT - WARNING_BEFORE_LOGOUT) {
-        // Show warning
+        
         setShowInactivityWarning(true);
       }
-    }, 10000); // Check every 10 seconds
+    }, 10000); 
 
     return () => {
       events.forEach(event => window.removeEventListener(event, handleActivity));
@@ -281,7 +281,7 @@ const Dashboard = () => {
     };
   }, [lastActivity, handleLogout]);
 
-  // Check if Supabase is configured on mount
+  
   useEffect(() => {
     const checkSupabase = () => {
       const isConfigured = supabaseService.isSupabaseConfigured();
@@ -291,11 +291,11 @@ const Dashboard = () => {
     checkSupabase();
   }, []);
 
-  // Close mobile sidebar when clicking outside
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (sidebarRef.current && !sidebarRef.current.contains(event.target) && mobileSidebarOpen) {
-        // Check if the click target is NOT the toggle button
+        
         const isToggleButton = event.target.closest('[data-sidebar-toggle]');
         if (!isToggleButton) {
           setMobileSidebarOpen(false);
@@ -307,12 +307,12 @@ const Dashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileSidebarOpen]);
 
-  // Load data from Supabase or localStorage
+  
   const loadFromStorage = useCallback(async () => {
-    // If Supabase is configured and we have userInfo, load from Supabase
+    
     if (useSupabase && userInfo?.loginid) {
       try {
-        // Load journal entries from Supabase
+        
         const { data: journalData } = await supabaseService.getJournalEntries(userInfo.loginid);
         if (journalData) {
           setJournalEntries(journalData.map(e => ({
@@ -325,7 +325,7 @@ const Dashboard = () => {
           })));
         }
 
-        // Load trades from Supabase
+        
         const { data: tradesData } = await supabaseService.getTradeHistory(userInfo.loginid);
         if (tradesData && tradesData.length > 0) {
           const trades = tradesData.map(t => ({
@@ -346,11 +346,11 @@ const Dashboard = () => {
         return;
       } catch (err) {
         console.error('Supabase load error:', err);
-        // Fall through to localStorage
+        
       }
     }
 
-    // Fallback to localStorage
+    
     const savedJournal = localStorage.getItem(STORAGE_KEYS.JOURNAL);
     const savedTrades = localStorage.getItem(STORAGE_KEYS.TRADES);
     if (savedJournal) setJournalEntries(JSON.parse(savedJournal));
@@ -385,7 +385,7 @@ const Dashboard = () => {
       streakData.push({ index: i, winStreak: currentWinStreak, lossStreak: currentLossStreak });
     });
     
-    // Build profit curve (cumulative)
+    
     let cumulative = 0;
     const curve = trades.map((t, i) => {
       cumulative += t.profit;
@@ -393,7 +393,7 @@ const Dashboard = () => {
     });
     setProfitCurve(curve);
     
-    // Advanced analytics by hour
+    
     const byHour = {};
     const byMarket = {};
     const byContractType = {};
@@ -418,7 +418,7 @@ const Dashboard = () => {
     });
     setAdvancedAnalytics({ byHour, byMarket, byContractType, streakData });
     
-    // Timeline insights
+    
     const sortedByProfit = [...trades].sort((a, b) => a.profit - b.profit);
     const biggestLoss = sortedByProfit[0]?.profit < 0 ? sortedByProfit[0] : null;
     const sortedByDuration = [...trades].filter(t => t.profit > 0).sort((a, b) => 
@@ -426,7 +426,7 @@ const Dashboard = () => {
     );
     const fastestWin = sortedByDuration[0] || null;
     
-    // Find risk streaks (3+ consecutive losses)
+    
     const riskStreaks = [];
     let currentRiskStreak = [];
     trades.forEach((t, i) => {
@@ -463,7 +463,7 @@ const Dashboard = () => {
     });
     setDigitStats(stats);
     
-    // Calculate hot/cold status for heatmap
+    
     const total = Object.values(stats).reduce((a, b) => a + b, 0);
     const avg = total / 10;
     const hotColdStatus = {};
@@ -476,7 +476,7 @@ const Dashboard = () => {
     setDigitHeatmap({ counts: stats, hotColdStatus });
   };
 
-  // Run full analytics with the analyticsService
+  
   const runFullAnalytics = useCallback(async (trades) => {
     if (!trades || trades.length === 0) {
       setFullAnalytics(null);
@@ -485,7 +485,7 @@ const Dashboard = () => {
     
     setAnalyticsLoading(true);
     try {
-      // Fetch statements for deposit/withdrawal analysis
+      
       let statementsData = statements;
       if (statementsData.length === 0) {
         try {
@@ -499,7 +499,7 @@ const Dashboard = () => {
         }
       }
       
-      // Run the full analytics engine
+      
       const results = analyticsService.runFullAnalysis({
         trades,
         statements: statementsData,
@@ -514,7 +514,7 @@ const Dashboard = () => {
   }, [statements, userInfo?.balance]);
 
   useEffect(() => {
-    // Prevent double initialization (React StrictMode or re-renders)
+    
     if (isInitialized.current) return;
     
     const initializeDashboard = async () => {
@@ -523,12 +523,12 @@ const Dashboard = () => {
         const tokens = TokenService.getTokens();
         if (!tokens) { navigate('/'); return; }
         
-        isInitialized.current = true; // Mark as initialized
+        isInitialized.current = true; 
         
         await websocketService.connect();
         setDerivWsConnected(true);
         
-        // Force refresh to get full authorize response (not cached)
+        
         const authResponse = await websocketService.authorize(tokens.token, true);
         if (authResponse.error) { 
           isInitialized.current = false;
@@ -539,18 +539,18 @@ const Dashboard = () => {
         }
         
         if (authResponse.authorize) {
-          // Debug: Log the full authorize response to understand structure
+          
           console.log('Full Deriv authorize response:', JSON.stringify(authResponse.authorize, null, 2));
           
-          // Extract loginid - check multiple possible locations
+          
           let loginid = authResponse.authorize.loginid;
           
-          // If not in root, check account_list
+          
           if (!loginid && authResponse.authorize.account_list && authResponse.authorize.account_list.length > 0) {
             loginid = authResponse.authorize.account_list[0].loginid;
           }
           
-          // Also check if it's nested under a different property
+          
           if (!loginid && authResponse.authorize.user_id) {
             loginid = authResponse.authorize.user_id;
           }
@@ -575,18 +575,18 @@ const Dashboard = () => {
           
           setUserInfo(userData);
           
-          // Create/update user profile in Supabase ONCE (required for foreign key constraints)
-          // Only proceed if loginid is valid
+          
+          
           if (supabaseService.isSupabaseConfigured() && !profileSynced.current && loginid) {
             profileSynced.current = true;
             const { error } = await supabaseService.upsertUserProfile(userData);
             if (error) {
               console.error('Failed to create Supabase profile:', error);
-              profileSynced.current = false; // Allow retry on error
+              profileSynced.current = false; 
             }
           }
           
-          // Authenticate with backend server for Community features
+          
           try {
             console.log('Attempting backend auth with data:', {
               loginid: loginid,
@@ -609,7 +609,7 @@ const Dashboard = () => {
               const backendAuthResponse = await apiClient.loginWithDeriv(authPayload);
               console.log('Backend authentication successful');
               
-              // Store the backend JWT token for Community features
+              
               if (backendAuthResponse.accessToken) {
                 setBackendToken(backendAuthResponse.accessToken);
                 console.log('Backend token saved');
@@ -629,20 +629,20 @@ const Dashboard = () => {
       }
     };
     initializeDashboard();
-  }, [navigate]); // Remove loadFromStorage from dependencies
+  }, [navigate]); 
 
-  // Load data after userInfo is set
+  
   useEffect(() => {
     if (userInfo?.loginid && !isLoading) {
       loadFromStorage();
     }
   }, [userInfo?.loginid, isLoading, loadFromStorage]);
 
-  // Load user profile (for profile photo, etc.)
+  
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
-        // Ensure token is loaded
+        
         const token = localStorage.getItem('accessToken');
         if (!token) {
           console.log('No token available for profile load');
@@ -663,13 +663,13 @@ const Dashboard = () => {
       }
     };
     
-    // Only load after successful backend auth
+    
     if (userInfo?.loginid && backendToken) {
       loadUserProfile();
     }
   }, [userInfo?.loginid, backendToken]);
 
-  // Keyboard shortcuts
+  
   useEffect(() => {
     if (!keyboardShortcutsEnabled) return;
     
@@ -706,13 +706,13 @@ const Dashboard = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [keyboardShortcutsEnabled]);
 
-  // Silent sync for auto-sync (no toast notifications)
+  
   const handleSilentSync = useCallback(async () => {
     if (syncing || !derivWsConnected) {
-      return; // Prevent concurrent syncs or sync without connection
+      return; 
     }
     
-    // Check minimum gap between syncs
+    
     const now = Date.now();
     if (now - lastSyncAttempt.current < MIN_SYNC_GAP) {
       return;
@@ -720,17 +720,17 @@ const Dashboard = () => {
     lastSyncAttempt.current = now;
     
     try {
-      // Only fetch balance if we don't have recent data
+      
       try {
         const balanceRes = await websocketService.getBalance();
         if (balanceRes.balance) {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
         }
       } catch (balanceErr) {
-        // Handle rate limit for balance - just skip it, not critical
+        
       }
       
-      // Fetch profit table with rate limit handling
+      
       const profitRes = await websocketService.getProfitTable({ limit: 100 });
       if (profitRes.profit_table?.transactions) {
         const trades = profitRes.profit_table.transactions.map((t) => ({
@@ -756,14 +756,14 @@ const Dashboard = () => {
         }
       }
       
-      // Reset backoff on successful sync
+      
       syncBackoffTime.current = AUTO_SYNC_INTERVAL;
       setLastSyncTime(new Date());
       setNextSyncTime(new Date(Date.now() + AUTO_SYNC_INTERVAL));
     } catch (err) { 
-      // Handle rate limit errors with exponential backoff
+      
       if (err?.code === 'RateLimit' || err?.message?.includes('rate limit')) {
-        syncBackoffTime.current = Math.min(syncBackoffTime.current * 2, 600000); // Max 10 minutes
+        syncBackoffTime.current = Math.min(syncBackoffTime.current * 2, 600000); 
         setNextSyncTime(new Date(Date.now() + syncBackoffTime.current));
       }
     }
@@ -792,12 +792,12 @@ const Dashboard = () => {
         calculateAnalytics(trades);
         calculateDigitStats(trades);
         
-        // Run full analytics
+        
         runFullAnalytics(trades);
 
-        // Sync trades to Supabase if configured
+        
         if (useSupabase && userInfo?.loginid) {
-          // Ensure profile exists before syncing trades (foreign key requirement)
+          
           await supabaseService.upsertUserProfile(userInfo);
           
           const { error } = await supabaseService.syncTradeHistory(userInfo.loginid, trades);
@@ -816,26 +816,26 @@ const Dashboard = () => {
     setSyncing(false);
   };
 
-  // Auto-sync effect with dynamic backoff
+  
   useEffect(() => {
     if (autoSyncEnabled && userInfo && !isLoading && derivWsConnected) {
-      // Initial sync after a short delay
+      
       const initialTimeout = setTimeout(() => {
         handleSilentSync();
-      }, 5000); // Wait 5 seconds before first sync
+      }, 5000); 
       
-      // Set up interval with dynamic timing
+      
       const scheduleNextSync = () => {
         autoSyncIntervalRef.current = setTimeout(() => {
           handleSilentSync();
-          scheduleNextSync(); // Schedule next sync after current one completes
+          scheduleNextSync(); 
         }, syncBackoffTime.current);
       };
       
-      // Start the scheduling after initial sync
+      
       const scheduleTimeout = setTimeout(() => {
         scheduleNextSync();
-      }, 10000); // Start scheduling 10 seconds after mount
+      }, 10000); 
       
       return () => {
         clearTimeout(initialTimeout);
@@ -859,7 +859,7 @@ const Dashboard = () => {
       tags: journalTags 
     };
 
-    // Save to Supabase if configured
+    
     if (useSupabase && userInfo?.loginid) {
       const { data, error } = await supabaseService.createJournalEntry(userInfo.loginid, entry);
       if (error) {
@@ -879,7 +879,7 @@ const Dashboard = () => {
   };
 
   const deleteJournalEntry = async (id) => {
-    // Delete from Supabase if configured
+    
     if (useSupabase && userInfo?.loginid) {
       const { error } = await supabaseService.deleteJournalEntry(id, userInfo.loginid);
       if (error) console.error('Supabase delete error:', error);
@@ -893,13 +893,13 @@ const Dashboard = () => {
 
 
 
-  // Community posts - direct links since CORS prevents API access from browser
+  
   const fetchCommunityPosts = useCallback(async () => {
     setCommunityLoading(true);
     setCommunityError(null);
     
-    // Since the Deriv Community forum blocks CORS requests from browsers,
-    // we provide curated community links instead of fetching live data
+    
+    
     const communityLinks = [
       { id: '1', title: '📌 Welcome to Deriv Community', user: 'Deriv Team', avatar: 'D', content: 'Join discussions about trading strategies, platform features, and connect with other traders!', likes: 500, comments: 200, views: 10000, time: 'pinned', url: DERIV_COMMUNITY_URL, pinned: true },
       { id: '2', title: 'Trading Strategies & Tips', user: 'Community', avatar: 'T', content: 'Share and discover trading strategies from experienced traders.', likes: 150, comments: 80, views: 3000, time: 'category', url: `${DERIV_COMMUNITY_URL}/c/strategies`, pinned: false },
@@ -912,14 +912,14 @@ const Dashboard = () => {
     setCommunityLoading(false);
   }, []);
 
-  // Chatroom functions
+  
   const initializeChatrooms = useCallback(async () => {
     setChatroomLoading(true);
     try {
-      // Initialize real-time service
+      
       realtimeService.initialize();
       
-      // Get user analytics for room assignment
+      
       const userAnalytics = fullAnalytics || {
         accountHealth: { score: 50 },
         emotionalScore: { score: 50 },
@@ -928,11 +928,11 @@ const Dashboard = () => {
         profitLoss: { winRate: 50, totalProfit: 0 }
       };
       
-      // Get assigned rooms based on analytics
+      
       const rooms = chatroomService.getUserAssignedRooms(userAnalytics);
       setAssignedRooms(rooms);
       
-      // Load community feed from backend API for persistence
+      
       try {
         const feedData = await apiClient.getCommunityFeed({ limit: 20 });
         if (feedData?.posts) {
@@ -955,34 +955,34 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Failed to load community feed:', error);
-        // Fallback to local service if API fails
+        
         const feed = chatroomService.getCommunityPosts();
         setCommunityFeed(feed);
       }
       
-      // Get user reputation
+      
       const userId = userInfo?.loginid || 'demo_user';
       const rep = chatroomService.getUserReputation(userId);
       setUserReputation(rep);
       
-      // Get trending topics
+      
       const topics = chatroomService.getTrendingTopics();
       setTrendingTopics(topics);
       
-      // Get community stats
+      
       const stats = chatroomService.getCommunityStats();
       setCommunityStats(stats);
       
-      // Get personalized recommendations
+      
       const allRooms = chatroomService.getAllRooms();
       const recs = aiInsightsService.generatePersonalizedRecommendations(userAnalytics, allRooms);
       setPersonalizedRecs(recs);
       
-      // Get trade alerts
+      
       const alerts = realtimeService.getTradeAlerts(5);
       setTradeAlerts(alerts);
       
-      // Subscribe to new trade alerts
+      
       realtimeService.subscribe('newTradeAlert', (alert) => {
         setTradeAlerts(prev => [alert, ...prev.slice(0, 4)]);
       });
@@ -994,10 +994,10 @@ const Dashboard = () => {
   }, [fullAnalytics, userInfo]);
 
   const enterChatRoom = useCallback(async (room) => {
-    // If using real-time backend, join via socket
+    
     if (realtimeMode && realtimeConnected) {
       try {
-        // Load messages from backend
+        
         const messages = await apiClient.getChatroomMessages(room.id);
         setChatMessages(messages.map(m => ({
           id: m.id,
@@ -1012,17 +1012,17 @@ const Dashboard = () => {
         
         setActiveChatRoom(room);
         
-        // Join the socket room
+        
         realtimeSocket.joinRoom(room.id);
         
         return;
       } catch (error) {
         console.error('Failed to load messages from backend:', error);
-        // Fall through to simulated mode
+        
       }
     }
     
-    // Simulated mode - enter room and start live activity
+    
     const result = chatroomService.enterRoom(room.id, userInfo?.loginid);
     if (result.success) {
       setActiveChatRoom({
@@ -1031,21 +1031,21 @@ const Dashboard = () => {
       });
       setChatMessages(result.room.messages);
     } else {
-      // Fallback
+      
       setActiveChatRoom(room);
       const messages = chatroomService.getMessages(room.id);
       setChatMessages(messages);
     }
     
-    // Initialize real-time features
+    
     realtimeService.initialize();
     
-    // Get online users for this room
+    
     const users = realtimeService.getOnlineUsers(room.id);
     setOnlineUsers(users);
     setOnlineCount(users.length);
     
-    // Subscribe to real-time updates for this room
+    
     if (realtimeUnsubRef.current) {
       realtimeUnsubRef.current();
     }
@@ -1070,16 +1070,16 @@ const Dashboard = () => {
       }
     });
     
-    // Generate AI insights for the room
+    
     const messages = chatroomService.getMessages(room.id);
     const insights = aiInsightsService.generateRoomInsights(room.id, messages, room.type);
     setRoomInsights(insights);
     setRoomSentiment(insights?.sentiment || null);
     
-    // Get quick responses for this room type
+    
     setQuickResponses(chatroomService.getQuickResponses(room.id));
     
-    // Get trade alerts
+    
     setTradeAlerts(realtimeService.getTradeAlerts(5));
   }, [userInfo, realtimeMode, realtimeConnected]);
 
@@ -1089,7 +1089,7 @@ const Dashboard = () => {
     const userId = userInfo?.loginid || 'demo_user';
     const userName = userInfo?.fullname || 'Trader';
     
-    // If using real-time backend, send via socket
+    
     if (realtimeMode && realtimeConnected) {
       realtimeSocket.sendMessage(activeChatRoom.id, chatInput);
       realtimeSocket.sendTyping(activeChatRoom.id, false);
@@ -1097,21 +1097,21 @@ const Dashboard = () => {
       return;
     }
     
-    // Simulated mode
-    // Stop typing indicator
+    
+    
     realtimeService.setUserTyping(activeChatRoom.id, userId, false);
     
-    // Send message through service
+    
     const newMessage = chatroomService.sendMessage(activeChatRoom.id, userId, userName, chatInput);
     
     if (newMessage) {
       setChatMessages(prev => [...prev, newMessage]);
       setChatInput('');
       
-      // Push to real-time service
+      
       realtimeService.pushMessage(activeChatRoom.id, newMessage);
       
-      // If in AI coaching room, get AI response
+      
       if (activeChatRoom.id === 'ai-coaching' || activeChatRoom.id === 'ai-smart-trading') {
         setTimeout(() => {
           const aiResponse = chatroomService.sendAICoachingMessage(activeChatRoom.id, chatInput, fullAnalytics);
@@ -1119,7 +1119,7 @@ const Dashboard = () => {
         }, 1000);
       }
       
-      // Update room insights after new message
+      
       setTimeout(() => {
         const messages = chatroomService.getMessages(activeChatRoom.id);
         const insights = aiInsightsService.generateRoomInsights(activeChatRoom.id, messages, activeChatRoom.type);
@@ -1129,32 +1129,32 @@ const Dashboard = () => {
     }
   }, [chatInput, activeChatRoom, userInfo, fullAnalytics, realtimeMode, realtimeConnected]);
 
-  // Handle typing indicator
+  
   const handleChatInputChange = useCallback((e) => {
     setChatInput(e.target.value);
     
-    // If using real-time backend
+    
     if (realtimeMode && realtimeConnected && activeChatRoom) {
       realtimeSocket.sendTyping(activeChatRoom.id, e.target.value.length > 0);
       return;
     }
     
-    // Simulated mode
+    
     if (activeChatRoom && userInfo?.loginid) {
       realtimeService.setUserTyping(activeChatRoom.id, userInfo.loginid, e.target.value.length > 0);
     }
   }, [activeChatRoom, userInfo, realtimeMode, realtimeConnected]);
 
   const leaveChatRoom = useCallback(() => {
-    // If using real-time backend, leave via socket
+    
     if (realtimeMode && realtimeConnected && activeChatRoom) {
       realtimeSocket.leaveRoom(activeChatRoom.id);
     }
     
-    // Stop live activity simulation when leaving
+    
     if (activeChatRoom) {
       chatroomService.exitRoom(activeChatRoom.id);
-      // Unsubscribe from real-time updates
+      
       if (realtimeUnsubRef.current) {
         realtimeUnsubRef.current();
         realtimeUnsubRef.current = null;
@@ -1173,14 +1173,14 @@ const Dashboard = () => {
     
     try {
       const result = await apiClient.createPost({
-        title: newPostContent.trim().substring(0, 100), // Use first 100 chars as title
+        title: newPostContent.trim().substring(0, 100), 
         content: newPostContent.trim(),
         category: 'discussion',
         tags: newPostTags
       });
       
       if (result) {
-        // Refresh the feed from backend
+        
         const feedData = await apiClient.getCommunityFeed({ limit: 20 });
         if (feedData?.posts) {
           setCommunityFeed(feedData.posts.map(post => ({
@@ -1209,20 +1209,20 @@ const Dashboard = () => {
     }
   }, [newPostContent, newPostTags]);
 
-  // Load chatrooms when tab is active
+  
   useEffect(() => {
     if (activeTab === 'community' && assignedRooms.length === 0) {
       initializeChatrooms();
     }
   }, [activeTab, assignedRooms.length, initializeChatrooms]);
 
-  // Connect to real-time backend when Community tab is active
+  
   useEffect(() => {
     if (!realtimeMode || activeTab !== 'community') return;
     
     const connectToBackend = async () => {
       try {
-        // Login to the real-time backend with Deriv credentials
+        
         if (userInfo?.loginid) {
           const result = await apiClient.loginWithDeriv({
             derivUserId: userInfo.loginid,
@@ -1233,12 +1233,12 @@ const Dashboard = () => {
             fullname: userInfo.fullname
           });
           
-          // Connect socket
+          
           await realtimeSocket.connect(result.accessToken);
           setRealtimeConnected(true);
           toast.success('Connected to live chat!', { icon: '🔌' });
           
-          // Subscribe to real-time events
+          
           const unsub1 = realtimeSocket.onMessage((msg) => {
             if (activeChatRoom && msg.roomId === activeChatRoom.id) {
               setChatMessages(prev => [...prev, {
@@ -1278,7 +1278,7 @@ const Dashboard = () => {
           
           socketUnsubsRef.current = [unsub1, unsub2, unsub3, unsub4];
           
-          // Load rooms from backend
+          
           try {
             const rooms = await apiClient.getChatrooms();
             if (rooms.length > 0) {
@@ -1299,7 +1299,7 @@ const Dashboard = () => {
         }
       } catch (error) {
         console.error('Failed to connect to real-time backend:', error);
-        // Fall back to simulated mode
+        
         setRealtimeMode(false);
       }
     };
@@ -1312,7 +1312,7 @@ const Dashboard = () => {
     };
   }, [activeTab, realtimeMode, userInfo, activeChatRoom]);
 
-  // Load community posts when tab is active
+  
   useEffect(() => {
     if (activeTab === 'community' && communityPosts.length === 0) {
       fetchCommunityPosts();
@@ -1331,16 +1331,16 @@ const Dashboard = () => {
 
   const moodEmojis = { great: '🚀', good: '😊', neutral: '😐', bad: '😔' };
 
-  // Auto logout after 24 hours of active session
+  
   useEffect(() => {
-    // Clear previous timer
+    
     if (logoutTimerRef.current) {
       clearTimeout(logoutTimerRef.current);
       logoutTimerRef.current = null;
     }
 
     if (userInfo) {
-      // Set 24-hour logout
+      
       const DAY = 24 * 60 * 60 * 1000;
       logoutTimerRef.current = setTimeout(() => {
         try {
@@ -1358,7 +1358,7 @@ const Dashboard = () => {
     };
   }, [userInfo, handleLogout]);
 
-  // Watch websocket connection state; if ws disconnects then reconnects, force login
+  
   useEffect(() => {
     const unsub = websocketService.onConnectionChange((state) => {
       if (state === 'closed') {
@@ -1367,7 +1367,7 @@ const Dashboard = () => {
       } else if (state === 'open') {
         setDerivWsConnected(true);
         if (hadWsDisconnectedRef.current) {
-          // WebSocket was disconnected and just re-opened. Force login flow.
+          
           hadWsDisconnectedRef.current = false;
           try {
             toast('Connection restored. Please login again for security.', { icon: '🔒' });
@@ -1403,7 +1403,7 @@ const Dashboard = () => {
     >
       <Toaster position="top-right" />
       
-      {/* Inactivity Warning Modal */}
+      {}
       {showInactivityWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="p-6 rounded-2xl shadow-2xl max-w-sm mx-4 text-center bg-gray-900 border border-white/10">
@@ -1422,14 +1422,14 @@ const Dashboard = () => {
         </div>
       )}
       
-      {/* Background effects */}
+      {}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-32 -left-10 h-96 w-96 rounded-full bg-[#ff3355]/20 blur-[160px]" />
         <div className="absolute bottom-0 right-0 h-[32rem] w-[32rem] rounded-full bg-[#5d5dff]/10 blur-[200px]" />
       </div>
 
       <div className="relative z-10 flex">
-        {/* Sidebar Overlay (for mobile) */}
+        {}
         {mobileSidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/50 z-20 lg:hidden" 
@@ -1437,7 +1437,7 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Sidebar */}
+        {}
         <aside 
           ref={sidebarRef}
           className={`${
@@ -1446,7 +1446,7 @@ const Dashboard = () => {
             sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
           } w-64 fixed lg:relative z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex flex-col`}
         >
-          {/* Logo with integrated toggle */}
+          {}
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3 w-full">
               <div 
@@ -1466,10 +1466,10 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* User Profile Section with Photo */}
+          {}
           {userInfo && (
             <div className={`p-4 border-b border-white/10 ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
-              {/* Avatar - visible in expanded mode */}
+              {}
               {(!sidebarCollapsed || window.innerWidth < 1024) && (
                 <div className="flex items-center gap-3 mb-3">
                   <div className="relative">
@@ -1480,7 +1480,7 @@ const Dashboard = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{userProfile?.displayName || userInfo.fullname || 'Trader'}</p>
-                    {/* Only show Deriv ID to the user themselves */}
+                    {}
                     <p className="text-xs text-gray-500 truncate">ID: {userInfo.loginid}</p>
                   </div>
                 </div>
@@ -1493,7 +1493,7 @@ const Dashboard = () => {
                 </div>
               )}
               
-              {/* Collapsed mode - show avatar as circle under logo */}
+              {}
               {sidebarCollapsed && (
                 <div className="hidden lg:flex flex-col items-center">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-xl">
@@ -1532,7 +1532,7 @@ const Dashboard = () => {
             </button>
           </div>
 
-          {/* Desktop toggle button */}
+          {}
           <button 
             data-sidebar-toggle
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)} 
@@ -1543,11 +1543,11 @@ const Dashboard = () => {
           </button>
         </aside>
 
-        {/* Main Content */}
+        {}
         <main className={`flex-1 overflow-auto min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-0'}`}>
-          {/* Top Header Bar (mobile only shows hamburger in collapsed logo) */}
+          {}
           <div className="sticky top-0 z-20 flex items-center gap-4 p-3 sm:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-            {/* Mobile hamburger */}
+            {}
             <button 
               data-sidebar-toggle
               onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)} 
@@ -1560,7 +1560,7 @@ const Dashboard = () => {
               <h2 className="font-semibold text-base sm:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Cloud Status Indicator */}
+              {}
               {supabaseStatus === 'connected' && (
                 <div 
                   className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-500"
@@ -1582,7 +1582,7 @@ const Dashboard = () => {
           </div>
 
           <div className="p-3 sm:p-4 md:p-6">
-          {/* Sync Tab */}
+          {}
           {activeTab === 'sync' && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1591,7 +1591,7 @@ const Dashboard = () => {
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your data syncs automatically every minute</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {/* Auto-sync toggle */}
+                  {}
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
                     <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Auto-sync</span>
                     <button 
@@ -1608,7 +1608,7 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              {/* Auto-sync status */}
+              {}
               {autoSyncEnabled && (
                 <div className="flex flex-wrap items-center gap-4 p-3 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/20">
                   <div className="flex items-center gap-2">
@@ -1681,7 +1681,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Analytics Tab */}
+          {}
           {activeTab === 'analytics' && (
             <div className="space-y-4 sm:space-y-6">
               <div><h1 className="text-xl sm:text-2xl font-bold">Analytics</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
@@ -1716,7 +1716,7 @@ const Dashboard = () => {
                 </Card>
               </div>
               
-              {/* Profit Curve */}
+              {}
               {profitCurve.length > 0 && (
                 <Card>
                   <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -1760,7 +1760,7 @@ const Dashboard = () => {
                 </Card>
               )}
               
-              {/* Performance by Hour */}
+              {}
               {Object.keys(advancedAnalytics.byHour).length > 0 && (
                 <Card>
                   <h3 className="text-lg font-medium mb-4">Performance by Hour</h3>
@@ -1784,10 +1784,10 @@ const Dashboard = () => {
               
               {analytics.totalTrades === 0 && <Card><EmptyState icon={<BarChart3 className="w-8 h-8" />} title="No analytics data" description="Sync your trades to see analytics" /></Card>}
               
-              {/* === FULL ANALYTICS SECTION === */}
+              {}
               {fullAnalytics && (
                 <>
-                  {/* Account Health Score */}
+                  {}
                   <Card>
                     <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                       <HeartPulse className="w-5 h-5 text-[#ff5f6d]" />
@@ -1840,7 +1840,7 @@ const Dashboard = () => {
                     </div>
                   </Card>
 
-                  {/* Emotional Score */}
+                  {}
                   <Card>
                     <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                       <Brain className="w-5 h-5 text-purple-500" />
@@ -1891,7 +1891,7 @@ const Dashboard = () => {
                     )}
                   </Card>
 
-                  {/* Risk Management */}
+                  {}
                   <Card>
                     <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
                       <Scale className="w-5 h-5 text-blue-500" />
@@ -1931,7 +1931,7 @@ const Dashboard = () => {
                     </div>
                   </Card>
 
-                  {/* Contract Type Performance */}
+                  {}
                   {Object.keys(fullAnalytics.tradePerformance.contractTypePerformance || {}).length > 0 && (
                     <Card>
                       <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -1959,7 +1959,7 @@ const Dashboard = () => {
                     </Card>
                   )}
 
-                  {/* AI Recommendations */}
+                  {}
                   {fullAnalytics.recommendations.length > 0 && (
                     <Card>
                       <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -1995,7 +1995,7 @@ const Dashboard = () => {
                     </Card>
                   )}
 
-                  {/* Financial Flow (if statements available) */}
+                  {}
                   {fullAnalytics.financialFlow.depositCount > 0 && (
                     <Card>
                       <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -2038,12 +2038,12 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Digit Analyzer Tab */}
+          {}
           {activeTab === 'digit' && (
             <div className="space-y-6">
               <div><h1 className="text-2xl font-bold">Digit Analyzer</h1><p style={{ color: 'var(--text-secondary)' }}>Analyze digit patterns in your trades</p></div>
               
-              {/* Digit Heatmap */}
+              {}
               <Card>
                 <h3 className="text-lg font-medium mb-6 flex items-center gap-2">
                   <Flame className="w-5 h-5 text-orange-500" />
@@ -2126,12 +2126,12 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Timeline Tab */}
+          {}
           {activeTab === 'timeline' && (
             <div className="space-y-6">
               <div><h1 className="text-2xl font-bold">Trade Timeline</h1><p style={{ color: 'var(--text-secondary)' }}>Your recent trading activity with insights</p></div>
               
-              {/* Timeline Insights */}
+              {}
               {(timelineInsights.biggestLoss || timelineInsights.fastestWin || timelineInsights.riskStreaks.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {timelineInsights.biggestLoss && (
@@ -2220,7 +2220,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Community Tab - Tier-Based Chatrooms */}
+          {}
           {activeTab === 'community' && (
             <TierChatroom 
               user={{ 
@@ -2236,7 +2236,7 @@ const Dashboard = () => {
             />
           )}
 
-          {/* Journal Tab */}
+          {}
           {activeTab === 'journal' && (
             <div className="space-y-4 sm:space-y-6">
               <div><h1 className="text-xl sm:text-2xl font-bold">Trading Journal</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Document your trading journey</p></div>
@@ -2246,7 +2246,7 @@ const Dashboard = () => {
                   <input type="text" value={newJournalTitle} onChange={(e) => setNewJournalTitle(e.target.value)} placeholder="Entry title..." className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors text-sm sm:text-base" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
                   <textarea value={newJournalContent} onChange={(e) => setNewJournalContent(e.target.value)} placeholder="What did you learn today? What went well? What could improve?" rows={3} className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl focus:border-[#ff3355] outline-none transition-colors resize-none text-sm sm:text-base" style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--card-border)' }} />
                   
-                  {/* Tags Section */}
+                  {}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Tag className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
@@ -2287,7 +2287,7 @@ const Dashboard = () => {
                 </div>
               </Card>
               
-              {/* Tag Filter */}
+              {}
               {journalEntries.length > 0 && (
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2">

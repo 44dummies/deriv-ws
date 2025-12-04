@@ -5,7 +5,7 @@
 
 class AnalyticsService {
   
-  // ========== 1. DEPOSITS & WITHDRAWALS ANALYSIS ==========
+  
   
   /**
    * Analyze financial flow from statement data
@@ -20,18 +20,18 @@ class AnalyticsService {
     const totalWithdrawals = withdrawals.reduce((sum, w) => sum + Math.abs(w.amount || 0), 0);
     const netFlow = totalDeposits - totalWithdrawals;
     
-    // Deposit frequency analysis
+    
     const depositDates = deposits.map(d => new Date(d.transaction_time * 1000));
     const depositFrequency = this.calculateFrequency(depositDates);
     
-    // Average deposit size
+    
     const avgDepositSize = deposits.length > 0 ? totalDeposits / deposits.length : 0;
     
-    // Deposit volatility (standard deviation of deposit amounts)
+    
     const depositAmounts = deposits.map(d => Math.abs(d.amount || 0));
     const depositVolatility = this.calculateStandardDeviation(depositAmounts);
     
-    // Funding Stability Score (0-100)
+    
     const fundingStabilityScore = this.calculateFundingStabilityScore({
       depositVolatility,
       avgDepositSize,
@@ -57,22 +57,22 @@ class AnalyticsService {
   }
   
   calculateFundingStabilityScore({ depositVolatility, avgDepositSize, depositFrequency, netFlow, totalDeposits }) {
-    let score = 50; // Base score
+    let score = 50; 
     
-    // Lower volatility = better (up to +20)
+    
     const volatilityRatio = avgDepositSize > 0 ? depositVolatility / avgDepositSize : 0;
     if (volatilityRatio < 0.3) score += 20;
     else if (volatilityRatio < 0.5) score += 10;
     else if (volatilityRatio > 1) score -= 15;
     
-    // Consistent deposit frequency = better (up to +15)
+    
     if (depositFrequency === 'monthly') score += 15;
     else if (depositFrequency === 'weekly') score += 10;
-    else if (depositFrequency === 'daily') score -= 10; // Too frequent might indicate chasing losses
+    else if (depositFrequency === 'daily') score -= 10; 
     
-    // Positive net flow = better (up to +15)
+    
     if (netFlow > 0) score += 15;
-    else if (netFlow < -totalDeposits * 0.5) score -= 20; // Withdrawn more than 50% of deposits
+    else if (netFlow < -totalDeposits * 0.5) score -= 20; 
     
     return Math.max(0, Math.min(100, score));
   }
@@ -83,7 +83,7 @@ class AnalyticsService {
     const sortedDates = dates.sort((a, b) => a - b);
     const intervals = [];
     for (let i = 1; i < sortedDates.length; i++) {
-      intervals.push((sortedDates[i] - sortedDates[i-1]) / (1000 * 60 * 60 * 24)); // Days
+      intervals.push((sortedDates[i] - sortedDates[i-1]) / (1000 * 60 * 60 * 24)); 
     }
     
     const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
@@ -94,7 +94,7 @@ class AnalyticsService {
     return 'irregular';
   }
   
-  // ========== 2. TRADING PERFORMANCE ANALYSIS ==========
+  
   
   /**
    * Comprehensive trading performance analysis
@@ -113,24 +113,24 @@ class AnalyticsService {
     const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.profit, 0));
     const totalProfit = grossProfit - grossLoss;
     
-    // Win/Loss Ratio
+    
     const winRate = (wins.length / trades.length) * 100;
     
-    // Profit Factor
+    
     const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0;
     
-    // Average Win vs Average Loss
+    
     const avgWin = wins.length > 0 ? grossProfit / wins.length : 0;
     const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0;
     const riskRewardRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : 0;
     
-    // Streak Analysis
+    
     const streakAnalysis = this.analyzeStreaks(trades);
     
-    // Contract-type performance
+    
     const contractTypePerformance = this.analyzeByContractType(trades);
     
-    // Market performance
+    
     const marketPerformance = this.analyzeByMarket(trades);
     
     return {
@@ -199,7 +199,7 @@ class AnalyticsService {
       else byType[type].losses++;
     });
     
-    // Calculate win rate for each type
+    
     Object.keys(byType).forEach(type => {
       byType[type].winRate = byType[type].trades > 0 
         ? (byType[type].wins / byType[type].trades) * 100 
@@ -241,7 +241,7 @@ class AnalyticsService {
     return byMarket;
   }
   
-  // ========== 3. RISK MANAGEMENT ANALYSIS ==========
+  
   
   /**
    * Analyze risk management behavior
@@ -256,23 +256,23 @@ class AnalyticsService {
     
     const stakes = trades.map(t => t.buy_price || 0);
     
-    // Stake Size Volatility
+    
     const avgStake = stakes.reduce((a, b) => a + b, 0) / stakes.length;
     const stakeVolatility = this.calculateStandardDeviation(stakes);
     const stakeVolatilityRatio = avgStake > 0 ? stakeVolatility / avgStake : 0;
     
-    // % of Balance Per Trade (estimated from stakes)
+    
     const riskPercentages = stakes.map(s => accountBalance > 0 ? (s / accountBalance) * 100 : 0);
     const avgRiskPercent = riskPercentages.reduce((a, b) => a + b, 0) / riskPercentages.length;
     const maxRiskPercent = Math.max(...riskPercentages);
     
-    // Drawdown Tracking
+    
     const drawdownAnalysis = this.calculateDrawdown(trades);
     
-    // Stake change detection (sudden spikes)
+    
     const stakeSpikeCount = this.detectStakeSpikes(stakes, avgStake);
     
-    // Risk behavior classification
+    
     const riskBehavior = this.classifyRiskBehavior({
       avgRiskPercent,
       maxRiskPercent,
@@ -321,7 +321,7 @@ class AnalyticsService {
     
     const currentDrawdown = drawdowns.length > 0 ? drawdowns[drawdowns.length - 1] : 0;
     
-    // Recovery speed (how many trades to recover from drawdown)
+    
     let recoveryTrades = 0;
     let inDrawdown = false;
     let drawdownRecoveries = [];
@@ -348,7 +348,7 @@ class AnalyticsService {
   
   detectStakeSpikes(stakes, avgStake) {
     let spikeCount = 0;
-    const threshold = avgStake * 2; // Spike = 2x average
+    const threshold = avgStake * 2; 
     
     for (let i = 1; i < stakes.length; i++) {
       if (stakes[i] > threshold && stakes[i] > stakes[i-1] * 1.5) {
@@ -367,7 +367,7 @@ class AnalyticsService {
     return 'moderate';
   }
   
-  // ========== 4. TIME-BASED BEHAVIOR ANALYSIS ==========
+  
   
   /**
    * Analyze trading patterns by time
@@ -391,21 +391,21 @@ class AnalyticsService {
       const hour = date.getHours();
       const dayOfWeek = date.getDay();
       
-      // By hour
+      
       if (!byHour[hour]) byHour[hour] = { wins: 0, losses: 0, profit: 0, trades: 0 };
       byHour[hour].trades++;
       byHour[hour].profit += t.profit;
       if (t.profit > 0) byHour[hour].wins++;
       else byHour[hour].losses++;
       
-      // By day of week
+      
       if (!byDayOfWeek[dayOfWeek]) byDayOfWeek[dayOfWeek] = { wins: 0, losses: 0, profit: 0, trades: 0 };
       byDayOfWeek[dayOfWeek].trades++;
       byDayOfWeek[dayOfWeek].profit += t.profit;
       if (t.profit > 0) byDayOfWeek[dayOfWeek].wins++;
       else byDayOfWeek[dayOfWeek].losses++;
       
-      // By session
+      
       const session = hour >= 6 && hour < 12 ? 'morning' :
                       hour >= 12 && hour < 17 ? 'afternoon' :
                       hour >= 17 && hour < 22 ? 'evening' : 'night';
@@ -414,7 +414,7 @@ class AnalyticsService {
       else bySession[session].losses++;
     });
     
-    // Calculate win rates
+    
     Object.keys(byHour).forEach(h => {
       byHour[h].winRate = byHour[h].trades > 0 ? (byHour[h].wins / byHour[h].trades) * 100 : 0;
     });
@@ -426,7 +426,7 @@ class AnalyticsService {
       bySession[s].winRate = total > 0 ? (bySession[s].wins / total) * 100 : 0;
     });
     
-    // Find best and worst hours
+    
     const hourEntries = Object.entries(byHour);
     const bestHour = hourEntries.length > 0 
       ? hourEntries.reduce((best, curr) => curr[1].profit > best[1].profit ? curr : best)
@@ -435,7 +435,7 @@ class AnalyticsService {
       ? hourEntries.reduce((worst, curr) => curr[1].profit < worst[1].profit ? curr : worst)
       : null;
     
-    // Dangerous hours (high loss rate, specifically night trading)
+    
     const dangerousHours = Object.entries(byHour)
       .filter(([h, data]) => data.winRate < 40 && data.trades >= 3)
       .map(([h]) => parseInt(h));
@@ -460,7 +460,7 @@ class AnalyticsService {
     };
   }
   
-  // ========== 5. EMOTIONAL TRADING ANALYTICS (AI-DRIVEN) ==========
+  
   
   /**
    * AI-driven emotional trading analysis
@@ -484,31 +484,31 @@ class AnalyticsService {
       fearExitInstances: 0
     };
     
-    // 5.1 Revenge Trading Detection
+    
     const revengeAnalysis = this.detectRevengeTrading(trades);
     emotionalIndicators.revengeTradingDetected = revengeAnalysis.detected;
     emotionalIndicators.revengeTradingInstances = revengeAnalysis.instances;
     emotionalIndicators.revengePatterns = revengeAnalysis.patterns;
     
-    // 5.2 Overtrading Detection
+    
     const overtradingAnalysis = this.detectOvertrading(trades);
     emotionalIndicators.overtradingDetected = overtradingAnalysis.detected;
     emotionalIndicators.overtradingInstances = overtradingAnalysis.instances;
     emotionalIndicators.avgTradesPerSession = overtradingAnalysis.avgTradesPerSession;
     
-    // 5.3 FOMO Trading Detection
+    
     const fomoAnalysis = this.detectFOMOTrading(trades);
     emotionalIndicators.fomoTradingDetected = fomoAnalysis.detected;
     emotionalIndicators.fomoInstances = fomoAnalysis.instances;
     
-    // 5.4 Fear-Based Exit Detection
+    
     const fearAnalysis = this.detectFearBasedExits(trades);
     emotionalIndicators.fearBasedExitsDetected = fearAnalysis.detected;
     emotionalIndicators.fearExitInstances = fearAnalysis.instances;
     emotionalIndicators.avgWinHoldTime = fearAnalysis.avgWinHoldTime;
     emotionalIndicators.avgLossHoldTime = fearAnalysis.avgLossHoldTime;
     
-    // 5.5 Emotional Score (0-100)
+    
     const emotionalScore = this.calculateEmotionalScore({
       ...emotionalIndicators,
       trades,
@@ -542,11 +542,11 @@ class AnalyticsService {
       const prevTrade = trades[i - 1];
       const currTrade = trades[i];
       
-      // Check if previous trade was a loss
+      
       if (prevTrade.profit < 0) {
-        const timeDiff = (currTrade.purchase_time - prevTrade.sell_time) * 1000; // ms
-        const stakeIncrease = currTrade.buy_price > prevTrade.buy_price * 1.3; // 30% increase
-        const quickReentry = timeDiff < 60000; // Within 1 minute
+        const timeDiff = (currTrade.purchase_time - prevTrade.sell_time) * 1000; 
+        const stakeIncrease = currTrade.buy_price > prevTrade.buy_price * 1.3; 
+        const quickReentry = timeDiff < 60000; 
         
         if (stakeIncrease && quickReentry) {
           instances++;
@@ -568,10 +568,10 @@ class AnalyticsService {
   }
   
   detectOvertrading(trades) {
-    // Group trades by session (1-hour windows)
+    
     const sessions = {};
     trades.forEach(t => {
-      const sessionKey = Math.floor(t.purchase_time / 3600); // Hour bucket
+      const sessionKey = Math.floor(t.purchase_time / 3600); 
       if (!sessions[sessionKey]) sessions[sessionKey] = [];
       sessions[sessionKey].push(t);
     });
@@ -581,7 +581,7 @@ class AnalyticsService {
       ? sessionCounts.reduce((a, b) => a + b, 0) / sessionCounts.length
       : 0;
     
-    // Overtrading = more than 10 trades in an hour, multiple times
+    
     const overtradingInstances = sessionCounts.filter(c => c > 10).length;
     
     return {
@@ -594,17 +594,17 @@ class AnalyticsService {
   detectFOMOTrading(trades) {
     let instances = 0;
     
-    // FOMO indicators:
-    // 1. Very short trade duration (under 30 seconds for tick trades)
-    // 2. Trades placed in rapid succession without analysis time
-    // 3. High-risk contract types during volatile periods
+    
+    
+    
+    
     
     for (let i = 1; i < trades.length; i++) {
       const prevTrade = trades[i - 1];
       const currTrade = trades[i];
       
       const timeBetween = (currTrade.purchase_time - prevTrade.sell_time);
-      const veryQuick = timeBetween < 5; // Less than 5 seconds between trades
+      const veryQuick = timeBetween < 5; 
       
       if (veryQuick && currTrade.buy_price > prevTrade.buy_price) {
         instances++;
@@ -621,7 +621,7 @@ class AnalyticsService {
     const wins = trades.filter(t => t.profit > 0);
     const losses = trades.filter(t => t.profit < 0);
     
-    // Calculate hold times
+    
     const winHoldTimes = wins.map(t => t.sell_time - t.purchase_time);
     const lossHoldTimes = losses.map(t => t.sell_time - t.purchase_time);
     
@@ -632,8 +632,8 @@ class AnalyticsService {
       ? lossHoldTimes.reduce((a, b) => a + b, 0) / lossHoldTimes.length
       : 0;
     
-    // Fear-based exits: Cutting winners too early (hold time much shorter than losers)
-    // AND small average wins but larger losses
+    
+    
     const avgWinAmount = wins.length > 0 ? wins.reduce((s, t) => s + t.profit, 0) / wins.length : 0;
     const avgLossAmount = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.profit, 0) / losses.length) : 0;
     
@@ -648,22 +648,22 @@ class AnalyticsService {
   }
   
   calculateEmotionalScore(data) {
-    let score = 100; // Start with perfect score, deduct for issues
+    let score = 100; 
     
-    // Revenge trading (-25 max)
+    
     score -= Math.min(25, data.revengeTradingInstances * 8);
     
-    // Overtrading (-20 max)
+    
     score -= Math.min(20, data.overtradingInstances * 5);
     if (data.avgTradesPerSession > 15) score -= 10;
     
-    // FOMO (-15 max)
+    
     score -= Math.min(15, data.fomoInstances * 3);
     
-    // Fear-based exits (-15 max)
+    
     if (data.fearBasedExitsDetected) score -= 15;
     
-    // Stake volatility indicator (from trades)
+    
     if (data.trades && data.trades.length > 5) {
       const stakes = data.trades.map(t => t.buy_price);
       const avgStake = stakes.reduce((a, b) => a + b, 0) / stakes.length;
@@ -671,7 +671,7 @@ class AnalyticsService {
       if (stakeVolatility > 0.5) score -= 10;
     }
     
-    // Late night trading penalty
+    
     if (data.trades) {
       const nightTrades = data.trades.filter(t => {
         const hour = new Date(t.purchase_time * 1000).getHours();
@@ -706,7 +706,7 @@ class AnalyticsService {
       factors.push('Cutting winners early, holding losers (fear-based)');
     }
     
-    // Check for late-night trading
+    
     if (trades && trades.length > 0) {
       const nightTrades = trades.filter(t => {
         const hour = new Date(t.purchase_time * 1000).getHours();
@@ -720,7 +720,7 @@ class AnalyticsService {
     return factors;
   }
   
-  // ========== 6. ACCOUNT HEALTH SCORE ==========
+  
   
   /**
    * Calculate overall account health score (0-100)
@@ -747,42 +747,42 @@ class AnalyticsService {
     let score = 0;
     const breakdown = {};
     
-    // Win Rate component (0-100)
+    
     const winRateScore = Math.min(100, (tradePerformance?.winRate || 0) * 1.5);
     score += winRateScore * weights.winRate;
     breakdown.winRate = { score: winRateScore, weight: weights.winRate };
     
-    // Profit Factor component (0-100)
+    
     const pfScore = Math.min(100, ((tradePerformance?.profitFactor || 0) / 2) * 100);
     score += pfScore * weights.profitFactor;
     breakdown.profitFactor = { score: pfScore, weight: weights.profitFactor };
     
-    // Drawdown component (inverse - lower is better)
+    
     const ddScore = Math.max(0, 100 - (riskAnalysis?.maxDrawdown || 0) * 2);
     score += ddScore * weights.drawdown;
     breakdown.drawdown = { score: ddScore, weight: weights.drawdown };
     
-    // Risk % component (inverse - lower is better)
+    
     const riskScore = Math.max(0, 100 - (riskAnalysis?.avgRiskPercent || 0) * 5);
     score += riskScore * weights.riskPercent;
     breakdown.riskPercent = { score: riskScore, weight: weights.riskPercent };
     
-    // Emotional Score component
+    
     const emotionScore = emotionalAnalysis?.emotionalScore || 50;
     score += emotionScore * weights.emotionalScore;
     breakdown.emotionalScore = { score: emotionScore, weight: weights.emotionalScore };
     
-    // Funding Stability component
+    
     const fundingScore = financialFlow?.fundingStabilityScore || 50;
     score += fundingScore * weights.fundingStability;
     breakdown.fundingStability = { score: fundingScore, weight: weights.fundingStability };
     
-    // Consistency component (based on stake volatility)
+    
     const consistencyScore = Math.max(0, 100 - (riskAnalysis?.stakeVolatilityRatio || 0) * 100);
     score += consistencyScore * weights.consistency;
     breakdown.consistency = { score: consistencyScore, weight: weights.consistency };
     
-    // Identify strengths and weaknesses
+    
     const strengths = [];
     const weaknesses = [];
     
@@ -807,7 +807,7 @@ class AnalyticsService {
     if (consistencyScore >= 70) strengths.push('Consistent position sizing');
     else if (consistencyScore < 40) weaknesses.push('Inconsistent stake sizes');
     
-    // Night trading check
+    
     if (timePatterns?.nightTradingLossRate > 60) {
       weaknesses.push('High loss rate during night trading');
     }
@@ -830,7 +830,7 @@ class AnalyticsService {
     return 'F';
   }
   
-  // ========== 7. AI-POWERED RECOMMENDATIONS ==========
+  
   
   /**
    * Generate personalized AI recommendations
@@ -841,7 +841,7 @@ class AnalyticsService {
     const recommendations = [];
     const { tradePerformance, riskAnalysis, emotionalAnalysis, timePatterns, financialFlow } = allAnalytics;
     
-    // Streak-based recommendations
+    
     if (tradePerformance?.currentStreakType === 'loss' && tradePerformance?.currentStreak >= 3) {
       recommendations.push({
         type: 'warning',
@@ -851,7 +851,7 @@ class AnalyticsService {
       });
     }
     
-    // Contract type recommendations
+    
     if (tradePerformance?.contractTypePerformance) {
       const types = Object.entries(tradePerformance.contractTypePerformance);
       const bestType = types.reduce((best, curr) => 
@@ -878,7 +878,7 @@ class AnalyticsService {
       }
     }
     
-    // Time-based recommendations
+    
     if (timePatterns?.dangerousHours?.length > 0) {
       const hours = timePatterns.dangerousHours.map(h => `${h}:00`).join(', ');
       recommendations.push({
@@ -898,7 +898,7 @@ class AnalyticsService {
       });
     }
     
-    // Emotional recommendations
+    
     if (emotionalAnalysis?.revengeTradingDetected) {
       recommendations.push({
         type: 'critical',
@@ -926,7 +926,7 @@ class AnalyticsService {
       });
     }
     
-    // Risk recommendations
+    
     if (riskAnalysis?.avgRiskPercent > 10) {
       recommendations.push({
         type: 'critical',
@@ -945,7 +945,7 @@ class AnalyticsService {
       });
     }
     
-    // Profit factor recommendation
+    
     if (tradePerformance?.profitFactor < 1 && tradePerformance?.totalTrades > 10) {
       recommendations.push({
         type: 'critical',
@@ -955,7 +955,7 @@ class AnalyticsService {
       });
     }
     
-    // Win rate vs profit paradox
+    
     if (tradePerformance?.winRate > 50 && tradePerformance?.totalProfit < 0) {
       recommendations.push({
         type: 'insight',
@@ -965,14 +965,14 @@ class AnalyticsService {
       });
     }
     
-    // Sort by priority
+    
     const priorityOrder = { high: 0, medium: 1, low: 2 };
     recommendations.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
     
     return recommendations;
   }
   
-  // ========== UTILITY FUNCTIONS ==========
+  
   
   calculateStandardDeviation(values) {
     if (values.length === 0) return 0;
@@ -982,7 +982,7 @@ class AnalyticsService {
     return Math.sqrt(avgSquareDiff);
   }
   
-  // ========== MAIN ANALYSIS FUNCTION ==========
+  
   
   /**
    * Run complete analytics on all data
@@ -990,22 +990,22 @@ class AnalyticsService {
    * @returns {Object} Complete analytics results
    */
   runFullAnalysis({ trades = [], statements = [], accountBalance = 0 }) {
-    // 1. Financial Flow Analysis
+    
     const financialFlow = this.analyzeFinancialFlow(statements);
     
-    // 2. Trade Performance Analysis
+    
     const tradePerformance = this.analyzeTradePerformance(trades);
     
-    // 3. Risk Management Analysis
+    
     const riskAnalysis = this.analyzeRiskManagement(trades, accountBalance);
     
-    // 4. Time Pattern Analysis
+    
     const timePatterns = this.analyzeTimePatterns(trades);
     
-    // 5. Emotional Trading Analysis
+    
     const emotionalAnalysis = this.analyzeEmotionalTrading(trades, financialFlow);
     
-    // 6. Account Health Score
+    
     const accountHealth = this.calculateAccountHealth({
       tradePerformance,
       riskAnalysis,
@@ -1014,7 +1014,7 @@ class AnalyticsService {
       timePatterns
     });
     
-    // 7. AI Recommendations
+    
     const recommendations = this.generateRecommendations({
       tradePerformance,
       riskAnalysis,

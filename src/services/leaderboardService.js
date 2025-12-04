@@ -2,7 +2,7 @@
  * Leaderboard & Achievements Service
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_SERVER_URL || 'http:
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');

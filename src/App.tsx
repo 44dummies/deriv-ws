@@ -7,7 +7,6 @@ import Settings from './pages/Settings';
 import Community from './pages/Community';
 import { TokenService } from './services/tokenService';
 
-// Protected Route component
 const ProtectedRoute: React.FC<{ children: ReactNode }> = ({ children }) => {
   const isAuthenticated = TokenService.isAuthenticated();
   return isAuthenticated ? <>{children}</> : <Navigate to="/" replace />;

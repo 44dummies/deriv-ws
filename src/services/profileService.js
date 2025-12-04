@@ -11,7 +11,7 @@ class ProfileService {
   constructor() {
     this.profile = null;
     this.listeners = new Set();
-    this.onlineUsers = new Map(); // derivId -> profile
+    this.onlineUsers = new Map(); 
     this.initialized = false;
   }
 
@@ -28,7 +28,7 @@ class ProfileService {
         this.initialized = true;
         this.notifyListeners('profile:loaded', this.profile);
         
-        // Setup socket listeners for profile updates
+        
         this.setupSocketListeners();
       }
       return this.profile;
@@ -75,10 +75,10 @@ class ProfileService {
       const response = await apiClient.put('/users/me', updates);
       
       if (response.success) {
-        // Update local profile
+        
         this.profile = { ...this.profile, ...this.normalizeProfile(response.profile || updates) };
         
-        // Emit socket event for real-time sync
+        
         realtimeSocket.emitProfileUpdate({
           derivId: this.profile.derivId,
           username: this.profile.username,
@@ -108,7 +108,7 @@ class ProfileService {
       if (response.success) {
         this.profile.username = username;
         
-        // Emit socket event for real-time sync
+        
         realtimeSocket.emitProfileUpdate({
           derivId: this.profile.derivId,
           username: username,
@@ -138,7 +138,7 @@ class ProfileService {
       if (response.avatarUrl) {
         this.profile.avatarUrl = response.avatarUrl;
         
-        // Emit socket event for real-time sync
+        
         realtimeSocket.emitProfileUpdate({
           derivId: this.profile.derivId,
           avatarUrl: response.avatarUrl,
@@ -165,7 +165,7 @@ class ProfileService {
       if (response.success) {
         this.profile.avatarUrl = null;
         
-        // Emit socket event for real-time sync
+        
         realtimeSocket.emitProfileUpdate({
           derivId: this.profile.derivId,
           avatarUrl: null,
@@ -186,11 +186,11 @@ class ProfileService {
    * Setup socket listeners for real-time profile updates
    */
   setupSocketListeners() {
-    // Listen for other users' profile updates
+    
     realtimeSocket.on('userProfileUpdated', (data) => {
       const { derivId, ...updates } = data;
       
-      // Update cached online users
+      
       if (this.onlineUsers.has(derivId)) {
         const user = this.onlineUsers.get(derivId);
         this.onlineUsers.set(derivId, { ...user, ...updates });
@@ -199,7 +199,7 @@ class ProfileService {
       this.notifyListeners('user:updated', data);
     });
 
-    // Listen for online users list
+    
     realtimeSocket.on('onlineUsers', (users) => {
       this.onlineUsers.clear();
       users.forEach(user => {
@@ -208,13 +208,13 @@ class ProfileService {
       this.notifyListeners('onlineUsers:updated', Array.from(this.onlineUsers.values()));
     });
 
-    // Listen for user coming online
+    
     realtimeSocket.on('userOnline', (user) => {
       this.onlineUsers.set(user.derivId, this.normalizeProfile(user));
       this.notifyListeners('user:online', user);
     });
 
-    // Listen for user going offline
+    
     realtimeSocket.on('userOffline', (data) => {
       this.onlineUsers.delete(data.derivId);
       this.notifyListeners('user:offline', data);
@@ -232,12 +232,12 @@ class ProfileService {
    * Get user by derivId (from cache or fetch)
    */
   async getUserByDerivId(derivId) {
-    // Check cache first
+    
     if (this.onlineUsers.has(derivId)) {
       return this.onlineUsers.get(derivId);
     }
 
-    // Fetch from server
+    
     try {
       const response = await apiClient.get(`/users/${derivId}`);
       if (response) {
@@ -278,6 +278,6 @@ class ProfileService {
   }
 }
 
-// Singleton instance
+
 const profileService = new ProfileService();
 export default profileService;

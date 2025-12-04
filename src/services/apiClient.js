@@ -5,7 +5,7 @@
 
 const API_URL = process.env.REACT_APP_SERVER_URL 
   ? `${process.env.REACT_APP_SERVER_URL}/api`
-  : 'http://localhost:3001/api';
+  : 'http:
 
 class ApiClient {
   constructor() {
@@ -13,7 +13,7 @@ class ApiClient {
     this.refreshToken = null;
     this.onTokenRefresh = null;
     this.onAuthError = null;
-    // Auto-load tokens from storage on initialization
+    
     this.loadTokens();
   }
 
@@ -80,7 +80,7 @@ class ApiClient {
         headers
       });
 
-      // Handle 401 - try to refresh token
+      
       if (response.status === 401 && this.refreshToken) {
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
@@ -141,7 +141,7 @@ class ApiClient {
     }
   }
 
-  // ============ HTTP Helper Methods ============
+  
 
   async get(endpoint, options = {}) {
     const { params, ...rest } = options;
@@ -193,7 +193,7 @@ class ApiClient {
         ...options
       });
 
-      // Handle 401 - try to refresh token
+      
       if (response.status === 401 && this.refreshToken) {
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
@@ -221,7 +221,7 @@ class ApiClient {
     }
   }
 
-  // ============ Auth ============
+  
 
   async register(data) {
     const result = await this.request('/auth/register', {
@@ -264,7 +264,7 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
-  // ============ Users ============
+  
 
   async getMyProfile() {
     return this.request('/users/me');
@@ -304,7 +304,7 @@ class ApiClient {
     return this.request(`/users/${encodeURIComponent(username)}`);
   }
 
-  // ============ Chatrooms ============
+  
 
   async getChatrooms() {
     return this.request('/chatrooms');
@@ -352,7 +352,7 @@ class ApiClient {
     });
   }
 
-  // ============ Community ============
+  
 
   async getCommunityFeed(options = {}) {
     const params = new URLSearchParams();
@@ -423,7 +423,7 @@ class ApiClient {
   }
 }
 
-// Singleton instance
+
 const apiClient = new ApiClient();
 
 export default apiClient;

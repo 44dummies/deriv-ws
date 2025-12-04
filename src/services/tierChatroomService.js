@@ -9,7 +9,7 @@ import apiClient from './apiClient';
 const API_BASE = '/community';
 const FILES_API = '/files';
 
-// Local file storage utilities (now primarily for caching)
+
 const fileStorage = {
   /**
    * Upload file to server for persistent storage
@@ -226,7 +226,7 @@ async function sendMessage(chatroomId, text, replyToId = null) {
  */
 async function sendFileMessage(chatroomId, file, caption = null) {
   try {
-    // Upload file to Supabase Storage via server
+    
     const uploadResult = await fileStorage.uploadFile(file, 'chatroom');
     
     if (!uploadResult.success) {
@@ -236,13 +236,13 @@ async function sendFileMessage(chatroomId, file, caption = null) {
     
     const { url, fileName, fileType, fileSize, fileHash } = uploadResult.file;
     
-    // Determine file type category
+    
     let messageType = 'file';
     if (fileType.startsWith('image/')) messageType = 'image';
     else if (fileType.startsWith('video/')) messageType = 'video';
     else if (fileType.startsWith('audio/')) messageType = 'audio';
     
-    // Send message with file URL to server
+    
     const response = await apiClient.post(`${API_BASE}/tier-chatroom/${chatroomId}/message`, {
       text: caption || `Shared: ${fileName}`,
       type: messageType,
@@ -250,10 +250,10 @@ async function sendFileMessage(chatroomId, file, caption = null) {
       fileType: fileType,
       fileSize: fileSize,
       fileHash: fileHash,
-      fileUrl: url // Persistent Supabase Storage URL
+      fileUrl: url 
     });
     
-    // Cache metadata locally
+    
     if (response.success) {
       const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       fileStorage.saveFileMetadata(fileId, {
@@ -309,7 +309,7 @@ async function setTyping(chatroomId, isTyping) {
       isTyping
     });
   } catch (error) {
-    // Silently fail for typing indicators
+    
   }
 }
 
@@ -343,7 +343,7 @@ function formatFileSize(bytes) {
 }
 
 export default {
-  // API methods
+  
   getTierChatrooms,
   getMyTierChatroom,
   assignToTierChatroom,
@@ -355,12 +355,12 @@ export default {
   deleteMessage,
   setTyping,
   
-  // Utility methods
+  
   calculateTier,
   getTierInfo,
   formatMessageTime,
   formatFileSize,
   
-  // File storage
+  
   fileStorage
 };

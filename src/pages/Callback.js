@@ -11,7 +11,6 @@ const Callback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check for error in URL (Deriv might return error)
         const urlParams = new URLSearchParams(window.location.search);
         
         if (urlParams.has('error')) {
@@ -43,7 +42,6 @@ const Callback = () => {
           return;
         }
 
-        // Use the first account
         const primaryAccount = accounts[0];
         console.log('Using account:', primaryAccount.account);
         
@@ -55,7 +53,6 @@ const Callback = () => {
 
         setStatus('Connecting to Deriv...');
         
-        // Connect to WebSocket and authorize
         await websocketService.connect();
         console.log('WebSocket connected, authorizing...');
         
@@ -72,14 +69,12 @@ const Callback = () => {
 
         console.log('Authorization successful:', authResponse.authorize?.loginid);
         
-        // Store account info
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
         }
 
         setStatus('Success! Redirecting...');
         
-        // Success - redirect to dashboard
         navigate('/dashboard');
       } catch (err) {
         console.error('Callback error:', err);

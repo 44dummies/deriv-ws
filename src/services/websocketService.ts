@@ -1,6 +1,6 @@
 import CONFIG from '../config';
 
-// Types
+
 export interface DerivRequest {
   [key: string]: any;
   req_id?: number;
@@ -139,12 +139,12 @@ class DerivWebSocket {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private isConnecting: boolean = false;
-  private isAuthorized: boolean = false; // Track authorization state
-  // Connection state listeners
+  private isAuthorized: boolean = false; 
+  
   private connectionListeners: Array<(state: 'open' | 'closed') => void> = [];
-  // Keep-alive ping interval (Deriv requires ping every 30 seconds)
+  
   private pingIntervalId: ReturnType<typeof setInterval> | null = null;
-  private readonly PING_INTERVAL = 30000; // 30 seconds as per Deriv API docs
+  private readonly PING_INTERVAL = 30000; 
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -171,10 +171,10 @@ class DerivWebSocket {
         console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        // Start keep-alive ping interval (required by Deriv API)
+        
         this.startPingInterval();
-        // notify listeners
-        try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) { /* noop */ }
+        
+        try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) {  }
         resolve();
       };
 
@@ -187,7 +187,7 @@ class DerivWebSocket {
       this.ws.onmessage = (event: MessageEvent) => {
         const data: DerivResponse = JSON.parse(event.data);
         
-        // Handle subscription messages
+        
         if (data.subscription?.id) {
           const callback = this.subscriptions.get(data.subscription.id);
           if (callback) {
@@ -195,7 +195,7 @@ class DerivWebSocket {
           }
         }
 
-        // Handle request-response messages
+        
         if (data.req_id && this.pendingRequests.has(data.req_id)) {
           const handlers = this.pendingRequests.get(data.req_id);
           if (handlers) {
@@ -212,18 +212,18 @@ class DerivWebSocket {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.isConnecting = false;
-        // Stop keep-alive ping interval
+        
         this.stopPingInterval();
-        // notify listeners
-        try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) { /* noop */ }
+        
+        try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) {  }
         this.handleReconnect();
       };
     });
   }
 
-  // Start the keep-alive ping interval (Deriv API requires ping every 30 seconds)
+  
   private startPingInterval(): void {
-    this.stopPingInterval(); // Clear any existing interval
+    this.stopPingInterval(); 
     this.pingIntervalId = setInterval(async () => {
       try {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -236,7 +236,7 @@ class DerivWebSocket {
     }, this.PING_INTERVAL);
   }
 
-  // Stop the keep-alive ping interval
+  
   private stopPingInterval(): void {
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId);
@@ -244,7 +244,7 @@ class DerivWebSocket {
     }
   }
 
-  // Allow consumers to react to connection open/close events
+  
   onConnectionChange(cb: (state: 'open' | 'closed') => void): () => void {
     this.connectionListeners.push(cb);
     return () => { this.connectionListeners = this.connectionListeners.filter(c => c !== cb); };
@@ -314,17 +314,17 @@ class DerivWebSocket {
     return this.send({ forget_all: 'candles' });
   }
 
-  // === Authentication ===
+  
   private lastAuthorizeResponse: DerivResponse | null = null;
   
   async authorize(token: string, forceRefresh: boolean = false): Promise<DerivResponse> {
-    // If already authorized and not forcing refresh, return cached response
+    
     if (this.isAuthorized && this.lastAuthorizeResponse && !forceRefresh) {
       console.log('Returning cached authorize response');
       return this.lastAuthorizeResponse;
     }
     
-    // Reset authorization state if forcing refresh
+    
     if (forceRefresh) {
       this.isAuthorized = false;
     }
@@ -332,18 +332,18 @@ class DerivWebSocket {
     const response = await this.send({ authorize: token });
     if (!response.error) {
       this.isAuthorized = true;
-      this.lastAuthorizeResponse = response; // Cache the full response
+      this.lastAuthorizeResponse = response; 
     }
     return response;
   }
   
-  // Reset authorization state (call on disconnect/logout)
+  
   resetAuth(): void {
     this.isAuthorized = false;
     this.lastAuthorizeResponse = null;
   }
 
-  // === Account ===
+  
   async getBalance(subscribe: boolean = false): Promise<DerivResponse> {
     return await this.send({ balance: 1, subscribe: subscribe ? 1 : 0 });
   }
@@ -380,7 +380,7 @@ class DerivWebSocket {
     return await this.send({ profit_table: 1, ...options });
   }
 
-  // === Markets ===
+  
   async getActiveSymbols(productType: string = 'basic'): Promise<DerivResponse> {
     return await this.send({ active_symbols: productType });
   }
@@ -393,7 +393,7 @@ class DerivWebSocket {
     return await this.send({ trading_times: date });
   }
 
-  // === Ticks & History ===
+  
   async getTick(symbol: string): Promise<DerivResponse> {
     return await this.send({ ticks: symbol });
   }
@@ -430,7 +430,7 @@ class DerivWebSocket {
     }, callback);
   }
 
-  // === Contracts ===
+  
   async getContractsFor(symbol: string): Promise<DerivResponse> {
     return await this.send({ contracts_for: symbol, currency: 'USD' });
   }
@@ -463,7 +463,7 @@ class DerivWebSocket {
     return this.subscribe({ proposal: 1, ...options }, callback);
   }
 
-  // === Trading ===
+  
   async buy(proposalId: string, price: number): Promise<DerivResponse> {
     return await this.send({ buy: proposalId, price });
   }
@@ -485,7 +485,7 @@ class DerivWebSocket {
     return await this.send({ sell: contractId, price });
   }
 
-  // === Open Positions ===
+  
   async getOpenContracts(): Promise<DerivResponse> {
     return await this.send({ portfolio: 1 });
   }
@@ -506,7 +506,7 @@ class DerivWebSocket {
     return this.subscribe({ proposal_open_contract: 1 }, callback);
   }
 
-  // === Utility ===
+  
   async ping(): Promise<DerivResponse> {
     return await this.send({ ping: 1 });
   }
@@ -520,7 +520,7 @@ class DerivWebSocket {
   }
 
   disconnect(): void {
-    // Stop keep-alive ping interval
+    
     this.stopPingInterval();
     this.unsubscribeAll().catch(() => {});
     if (this.ws) {
@@ -529,7 +529,7 @@ class DerivWebSocket {
     }
     this.pendingRequests.clear();
     this.subscriptions.clear();
-    this.isAuthorized = false; // Reset auth on disconnect
+    this.isAuthorized = false; 
   }
 
   isConnected(): boolean {

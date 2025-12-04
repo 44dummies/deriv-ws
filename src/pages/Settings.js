@@ -10,9 +10,6 @@ import { TokenService } from '../services/tokenService';
 import apiClient from '../services/apiClient';
 import realtimeSocket from '../services/realtimeSocket';
 
-// =============================================
-// AVATAR OPTIONS - 30 Unique Avatars
-// =============================================
 const AVATARS = [
   { id: 1, emoji: '🧑‍💼', label: 'Business Pro' },
   { id: 2, emoji: '👨‍💻', label: 'Tech Trader' },
@@ -46,9 +43,6 @@ const AVATARS = [
   { id: 30, emoji: '🎲', label: 'Risk Taker' }
 ];
 
-// =============================================
-// SECTIONS CONFIG
-// =============================================
 const SECTIONS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'account', label: 'Account', icon: Shield },
@@ -57,16 +51,12 @@ const SECTIONS = [
   { id: 'danger', label: 'Danger Zone', icon: AlertTriangle }
 ];
 
-// =============================================
-// MAIN SETTINGS COMPONENT
-// =============================================
 const Settings = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Profile State
   const [profile, setProfile] = useState({
     derivId: '',
     email: '',
@@ -76,7 +66,6 @@ const Settings = () => {
     avatarId: 1
   });
   
-  // Settings States
   const [privacySettings, setPrivacySettings] = useState({
     onlineVisibility: true,
     profileVisibility: 'public',
@@ -93,7 +82,6 @@ const Settings = () => {
     pushNotifications: true
   });
   
-  // UI States
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -102,9 +90,6 @@ const Settings = () => {
   
   const usernameTimeoutRef = useRef(null);
 
-  // =============================================
-  // LOAD DATA
-  // =============================================
   useEffect(() => {
     loadAllData();
   }, []);
@@ -162,9 +147,6 @@ const Settings = () => {
     }
   };
 
-  // =============================================
-  // USERNAME VALIDATION
-  // =============================================
   const checkUsernameAvailability = useCallback(async (username) => {
     if (!username || username.length < 3) {
       setUsernameAvailable(null);
@@ -198,9 +180,6 @@ const Settings = () => {
     }, 500);
   };
 
-  // =============================================
-  // AVATAR
-  // =============================================
   const handleAvatarSelect = (avatarId) => {
     setProfile(prev => ({ ...prev, avatarId }));
     setShowAvatarPicker(false);
@@ -211,9 +190,6 @@ const Settings = () => {
     return avatar ? avatar.emoji : '👤';
   };
 
-  // =============================================
-  // SAVE HANDLERS
-  // =============================================
   const saveProfile = async () => {
     if (profile.username && usernameAvailable === false) {
       toast.error('Username is not available');
@@ -304,9 +280,6 @@ const Settings = () => {
     }
   };
 
-  // =============================================
-  // LOADING STATE
-  // =============================================
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
@@ -318,9 +291,6 @@ const Settings = () => {
     );
   }
 
-  // =============================================
-  // TOGGLE COMPONENT
-  // =============================================
   const Toggle = ({ checked, onChange }) => (
     <button
       onClick={() => onChange(!checked)}
@@ -338,12 +308,9 @@ const Settings = () => {
     </button>
   );
 
-  // =============================================
-  // RENDER SECTIONS
-  // =============================================
   const renderProfileSection = () => (
     <div className="space-y-6">
-      {/* Avatar Card */}
+      {}
       <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-6 border border-white/10">
         <div className="flex items-center gap-6">
           <button
@@ -367,14 +334,14 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Form Card */}
+      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <User className="w-5 h-5 text-purple-400" />
           Profile Information
         </h3>
         
-        {/* Username */}
+        {}
         <div className="mb-5">
           <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
             Username
@@ -404,7 +371,7 @@ const Settings = () => {
           <p className="text-xs text-gray-500 mt-2">3-20 characters, letters, numbers, underscores only</p>
         </div>
 
-        {/* Display Name */}
+        {}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
           <input
@@ -417,7 +384,7 @@ const Settings = () => {
           />
         </div>
 
-        {/* Bio */}
+        {}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
           <textarea
@@ -445,7 +412,7 @@ const Settings = () => {
 
   const renderAccountSection = () => (
     <div className="space-y-6">
-      {/* Deriv Account Card */}
+      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Shield className="w-5 h-5 text-purple-400" />
@@ -475,7 +442,7 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Sessions Card */}
+      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Monitor className="w-5 h-5 text-purple-400" />
@@ -491,7 +458,7 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Logout Card */}
+      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <button
           onClick={handleLogout}
@@ -676,16 +643,13 @@ const Settings = () => {
     }
   };
 
-  // =============================================
-  // MAIN RENDER
-  // =============================================
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Toaster position="top-right" toastOptions={{
         style: { background: '#1a1a2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
       }} />
 
-      {/* Header */}
+      {}
       <header className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <button 
@@ -703,11 +667,11 @@ const Settings = () => {
         </div>
       </header>
 
-      {/* Main Content */}
+      {}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
-          {/* Sidebar Navigation */}
+          {}
           <nav className="lg:w-56 shrink-0">
             <div className="bg-[#12121a] rounded-2xl p-3 border border-white/10 lg:sticky lg:top-24">
               <div className="space-y-1">
@@ -729,14 +693,14 @@ const Settings = () => {
             </div>
           </nav>
 
-          {/* Content Area */}
+          {}
           <main className="flex-1 min-w-0">
             {renderActiveSection()}
           </main>
         </div>
       </div>
 
-      {/* Avatar Picker Modal */}
+      {}
       {showAvatarPicker && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
@@ -784,7 +748,7 @@ const Settings = () => {
         </div>
       )}
 
-      {/* Delete Account Modal */}
+      {}
       {showDeleteModal && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"

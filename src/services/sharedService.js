@@ -2,7 +2,7 @@
  * Shared Resources Service - Notes & Watchlists
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_SERVER_URL || 'http:
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
@@ -21,9 +21,9 @@ const handleResponse = async (response) => {
 };
 
 export const sharedService = {
-  // =============================================
-  // SHARED NOTES
-  // =============================================
+  
+  
+  
 
   async getNotes(chatId) {
     const response = await fetch(`${API_URL}/api/shared/${chatId}/notes`, {
@@ -41,9 +41,9 @@ export const sharedService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // SHARED WATCHLIST
-  // =============================================
+  
+  
+  
 
   async getWatchlist(chatId) {
     const response = await fetch(`${API_URL}/api/shared/${chatId}/watchlist`, {

@@ -2,7 +2,7 @@
  * Chat Service - Frontend API client for private messaging
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+const API_URL = process.env.REACT_APP_SERVER_URL || 'http:
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
@@ -21,9 +21,9 @@ const handleResponse = async (response) => {
 };
 
 export const privateChatService = {
-  // =============================================
-  // CHATS
-  // =============================================
+  
+  
+  
 
   async getChats() {
     const response = await fetch(`${API_URL}/api/chats`, {
@@ -55,9 +55,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // MESSAGES
-  // =============================================
+  
+  
+  
 
   async getMessages(chatId, options = {}) {
     const params = new URLSearchParams();
@@ -88,7 +88,7 @@ export const privateChatService = {
    * @param {string} caption - Optional caption
    */
   async sendFileMessage(chatId, file, caption = null) {
-    // Upload file first
+    
     const formData = new FormData();
     formData.append('file', file);
     
@@ -108,13 +108,13 @@ export const privateChatService = {
     
     const uploadResult = await uploadResponse.json();
     
-    // Determine message type
+    
     let messageType = 'file';
     if (file.type.startsWith('image/')) messageType = 'image';
     else if (file.type.startsWith('video/')) messageType = 'video';
     else if (file.type.startsWith('audio/')) messageType = 'voice';
     
-    // Send message with file URL
+    
     return this.sendMessage(chatId, {
       message_text: caption || `Shared: ${file.name}`,
       message_type: messageType,
@@ -132,7 +132,7 @@ export const privateChatService = {
    * @param {number} duration - Duration in seconds
    */
   async sendVoiceMessage(chatId, audioBlob, duration = null) {
-    // Upload voice file
+    
     const formData = new FormData();
     formData.append('voice', audioBlob, 'voice.webm');
     if (duration) {
@@ -155,7 +155,7 @@ export const privateChatService = {
     
     const uploadResult = await uploadResponse.json();
     
-    // Send message with voice URL
+    
     return this.sendMessage(chatId, {
       message_text: '🎤 Voice message',
       message_type: 'voice',
@@ -183,9 +183,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // REACTIONS
-  // =============================================
+  
+  
+  
 
   async addReaction(chatId, messageId, reaction) {
     const response = await fetch(`${API_URL}/api/chats/${chatId}/messages/${messageId}/react`, {
@@ -196,9 +196,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // TYPING
-  // =============================================
+  
+  
+  
 
   async setTyping(chatId, isTyping) {
     const response = await fetch(`${API_URL}/api/chats/${chatId}/typing`, {
@@ -209,9 +209,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // PING
-  // =============================================
+  
+  
+  
 
   async sendPing(chatId) {
     const response = await fetch(`${API_URL}/api/chats/${chatId}/ping`, {
@@ -221,9 +221,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // STREAKS
-  // =============================================
+  
+  
+  
 
   async nameStreak(chatId, name) {
     const response = await fetch(`${API_URL}/api/chats/${chatId}/streak/name`, {
@@ -234,9 +234,9 @@ export const privateChatService = {
     return handleResponse(response);
   },
 
-  // =============================================
-  // UNREAD
-  // =============================================
+  
+  
+  
 
   async getUnreadCount() {
     const response = await fetch(`${API_URL}/api/chats/unread/count`, {
