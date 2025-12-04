@@ -414,9 +414,17 @@ class ApiClient {
     
     return this.request(`/community/search?${params.toString()}`);
   }
+
+  /**
+   * Upload file alias for compatibility
+   */
+  async upload(endpoint, formData, options = {}) {
+    return this.uploadFile(endpoint, formData, options);
+  }
 }
 
 // Singleton instance
 const apiClient = new ApiClient();
 
 export default apiClient;
+export { apiClient };

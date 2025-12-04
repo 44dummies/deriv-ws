@@ -378,6 +378,100 @@ function setupSocketHandlers(io) {
       });
     });
 
+    // ============ Settings Sync Events ============
+
+    /**
+     * Profile update - broadcast to all user's sessions
+     */
+    socket.on('profile:update', (data) => {
+      const { derivId, username, displayName, bio, avatarUrl } = data;
+      
+      // Broadcast to all this user's sockets
+      const sockets = userSockets.get(socket.userId);
+      if (sockets) {
+        sockets.forEach(socketId => {
+          if (socketId !== socket.id) {
+            io.to(socketId).emit('profile:updated', {
+              username, displayName, bio, avatarUrl, timestamp: new Date().toISOString()
+            });
+          }
+        });
+      }
+      
+      // Also broadcast profile change to interested parties (community, chat)
+      io.emit('userProfileUpdated', { derivId, username, displayName, avatarUrl });
+    });
+
+    /**
+     * Avatar update - broadcast globally
+     */
+    socket.on('profile:avatar:update', (data) => {
+      const { derivId, avatarUrl } = data;
+      
+      io.emit('userAvatarUpdated', {
+        derivId,
+        avatarUrl,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    /**
+     * Settings update - sync across user's sessions
+     */
+    socket.on('settings:update', (data) => {
+      const { type, settings } = data;
+      
+      // Broadcast to all this user's other sockets
+      const sockets = userSockets.get(socket.userId);
+      if (sockets) {
+        sockets.forEach(socketId => {
+          if (socketId !== socket.id) {
+            io.to(socketId).emit('settings:updated', { type, settings });
+          }
+        });
+      }
+    });
+
+    /**
+     * Session termination - force logout specific session
+     */
+    socket.on('session:terminate', (data) => {
+      const { sessionId, all, except } = data;
+      
+      const sockets = userSockets.get(socket.userId);
+      if (!sockets) return;
+
+      if (all) {
+        // Terminate all sessions except the specified one
+        sockets.forEach(socketId => {
+          if (socketId !== except) {
+            io.to(socketId).emit('session:terminated', { all: true });
+          }
+        });
+      } else if (sessionId) {
+        // Terminate specific session
+        io.to(sessionId).emit('session:terminated', { sessionId });
+      }
+    });
+
+    /**
+     * User going offline intentionally
+     */
+    socket.on('user:offline', async (data) => {
+      const { derivId } = data;
+      
+      try {
+        await supabase
+          .from('user_profiles')
+          .update({ is_online: false, last_seen_at: new Date().toISOString() })
+          .eq('deriv_id', derivId);
+        
+        io.emit('userOffline', { derivId, timestamp: new Date().toISOString() });
+      } catch (err) {
+        console.error('Failed to update offline status:', err);
+      }
+    });
+
     /**
      * Request online users list
      */

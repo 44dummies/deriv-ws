@@ -271,13 +271,43 @@ class RealtimeSocketService {
       this.listeners.set(event, new Set());
     }
     this.listeners.get(event).add(callback);
-    return () => this.listeners.get(event)?.delete(callback);
+    
+    // Also register with socket.io for server events
+    if (this.socket) {
+      this.socket.on(event, callback);
+    }
+    
+    return () => {
+      this.listeners.get(event)?.delete(callback);
+      if (this.socket) {
+        this.socket.off(event, callback);
+      }
+    };
   }
 
   /**
-   * Emit to local listeners
+   * Remove event listener
+   */
+  off(event, callback) {
+    this.listeners.get(event)?.delete(callback);
+    if (this.socket) {
+      this.socket.off(event, callback);
+    }
+  }
+
+  /**
+   * Emit event to server (Socket.IO emit)
    */
   emit(event, data) {
+    if (this.socket?.connected) {
+      this.socket.emit(event, data);
+    }
+  }
+
+  /**
+   * Emit to local listeners only
+   */
+  emitLocal(event, data) {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(cb => cb(data));
@@ -296,3 +326,4 @@ class RealtimeSocketService {
 const realtimeSocket = new RealtimeSocketService();
 
 export default realtimeSocket;
+export { realtimeSocket };
