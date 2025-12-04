@@ -120,6 +120,125 @@ router.get('/search', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * Check if username is available
+ * GET /api/users/check-username/:username
+ */
+router.get('/check-username/:username', authMiddleware, async (req, res) => {
+  try {
+    const { username } = req.params;
+    
+    if (!username || username.length < 3) {
+      return res.json({ available: false, error: 'Username too short' });
+    }
+    
+    // Check if username exists (excluding current user)
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('id, deriv_id')
+      .eq('username', username.toLowerCase())
+      .single();
+    
+    if (error && error.code === 'PGRST116') {
+      // No match found - username is available
+      return res.json({ available: true });
+    }
+    
+    if (error) {
+      throw error;
+    }
+    
+    // Check if it's the current user's username
+    const isOwnUsername = data.deriv_id === req.user?.derivId || data.id === req.userId;
+    
+    res.json({ available: isOwnUsername });
+  } catch (error) {
+    console.error('Check username error:', error);
+    res.status(500).json({ error: 'Failed to check username' });
+  }
+});
+
+/**
+ * Update profile fields
+ * PUT /api/users/me/profile
+ */
+router.put('/me/profile', authMiddleware, async (req, res) => {
+  try {
+    const { username, display_name, bio, status_message } = req.body;
+    
+    // Validate username if provided
+    if (username) {
+      if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ error: 'Username must be 3-20 characters' });
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return res.status(400).json({ error: 'Invalid username format' });
+      }
+      
+      // Check if username is taken
+      const { data: existing } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .eq('username', username.toLowerCase())
+        .neq('id', req.userId)
+        .single();
+      
+      if (existing) {
+        return res.status(400).json({ error: 'Username is already taken' });
+      }
+    }
+    
+    const profile = await updateUserProfile(req.userId, {
+      username: username?.toLowerCase(),
+      display_name,
+      bio,
+      status_message,
+    });
+    
+    res.json({ success: true, profile });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+/**
+ * Update username only
+ * PUT /api/users/me/username
+ */
+router.put('/me/username', authMiddleware, async (req, res) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username || username.length < 3 || username.length > 20) {
+      return res.status(400).json({ error: 'Username must be 3-20 characters' });
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      return res.status(400).json({ error: 'Invalid username format' });
+    }
+    
+    // Check if username is taken
+    const { data: existing } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('username', username.toLowerCase())
+      .neq('id', req.userId)
+      .single();
+    
+    if (existing) {
+      return res.status(400).json({ error: 'Username is already taken' });
+    }
+    
+    await updateUserProfile(req.userId, { username: username.toLowerCase() });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update username error:', error);
+    res.status(500).json({ error: 'Failed to update username' });
+  }
+});
+
 // ============ Settings Routes (MUST be before /:username) ============
 
 /**

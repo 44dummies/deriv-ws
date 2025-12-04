@@ -1,230 +1,293 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
-  User, Camera, Bell, Lock, MessageSquare, Shield, Eye,
-  Save, ArrowLeft, Upload, Trash2, Volume2, AtSign, FileText
+  User, Camera, Bell, Lock, Palette, 
+  ArrowLeft, Upload, Trash2, Check, X, 
+  ChevronRight, Loader2, Eye, EyeOff,
+  Volume2, VolumeX, Moon, Sun, Globe, Shield
 } from 'lucide-react';
+import profileService from '../services/profileService';
 import apiClient from '../services/apiClient';
 import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  
+  // Loading states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   
   // Profile state
   const [profile, setProfile] = useState({
+    derivId: '',
     username: '',
     displayName: '',
     bio: '',
     statusMessage: '',
-    profilePhotoUrl: null,
-    profilePhotoMetadata: null, // Metadata only - no actual file storage
+    avatarUrl: null,
+    country: '',
   });
   
-  // Privacy settings
+  // Username validation
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  
+  // Settings categories
   const [privacy, setPrivacy] = useState({
-    showUsername: true,
-    showRealName: false,
-    showEmail: false,
-    showCountry: true,
-    showPerformance: true,
     showOnlineStatus: true,
-    profileVisibility: 'public', // public, private
-    allowMessages: 'everyone', // everyone, nobody
+    showPerformance: true,
+    allowMessages: true,
+    profileVisibility: 'public',
   });
   
-  // Notification settings
   const [notifications, setNotifications] = useState({
     messages: true,
-    chatMentions: true,
-    achievements: true,
-    streakReminders: true,
-    communityUpdates: true,
-    soundEnabled: true,
-    pushEnabled: false,
+    mentions: true,
+    sounds: true,
+    push: false,
   });
   
-  // Chat settings
-  const [chat, setChat] = useState({
-    enterToSend: true,
-    showTypingIndicator: true,
-    showReadReceipts: true,
-    autoDeleteMessages: false,
-    messageRetention: 30, // days
+  const [appearance, setAppearance] = useState({
+    theme: 'dark',
+    compactMode: false,
   });
 
-  useEffect(() => {
-    // Ensure tokens are loaded before making API calls
-    const tokens = apiClient.loadTokens();
-    if (!tokens.accessToken) {
-      toast.error('Please log in to access settings');
-      navigate('/');
-      return;
-    }
-    loadSettings();
-  }, [navigate]);
+  // Original values for dirty checking
+  const [originalProfile, setOriginalProfile] = useState(null);
 
-  const loadSettings = async () => {
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/users/settings');
       
-      if (response.profile) {
-        setProfile({
-          username: response.profile.username || '',
-          displayName: response.profile.display_name || response.profile.fullname || '',
-          bio: response.profile.bio || '',
-          statusMessage: response.profile.status_message || '',
-          profilePhotoUrl: response.profile.profile_photo || null,
-          profilePhotoMetadata: response.profile.profile_photo_metadata || null,
-        });
+      // Initialize profile service and get profile
+      const userProfile = await profileService.initialize();
+      
+      if (userProfile) {
+        const profileData = {
+          derivId: userProfile.derivId,
+          username: userProfile.username || '',
+          displayName: userProfile.displayName || '',
+          bio: userProfile.bio || '',
+          statusMessage: userProfile.statusMessage || '',
+          avatarUrl: userProfile.avatarUrl || null,
+          country: userProfile.country || '',
+        };
+        setProfile(profileData);
+        setOriginalProfile(profileData);
       }
       
-      if (response.privacy) setPrivacy(response.privacy);
-      if (response.notifications) setNotifications(response.notifications);
-      if (response.chat) setChat(response.chat);
+      // Load settings
+      try {
+        const settings = await apiClient.get('/users/settings');
+        if (settings.privacy) setPrivacy(settings.privacy);
+        if (settings.notifications) setNotifications(settings.notifications);
+        if (settings.appearance) setAppearance(settings.appearance);
+      } catch (e) {
+        // Use defaults
+      }
       
     } catch (error) {
-      console.error('Failed to load settings:', error);
-      // Load defaults if API fails
+      console.error('Failed to load profile:', error);
+      toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
   };
 
-  const saveSettings = async () => {
-    try {
-      setSaving(true);
-      
-      await apiClient.put('/users/settings', {
-        profile: {
-          username: profile.username,
-          display_name: profile.displayName,
-          bio: profile.bio,
-          status_message: profile.statusMessage,
-          profile_photo: profile.profilePhotoUrl,
-          profile_photo_metadata: profile.profilePhotoMetadata,
-        },
-        privacy,
-        notifications,
-        chat,
-      });
-      
-      toast.success('Settings saved successfully!');
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      toast.error(error.message || 'Failed to save settings');
-    } finally {
-      setSaving(false);
+  // Debounced username check
+  const checkUsername = useCallback(async (username) => {
+    if (!username || username.length < 3) {
+      setUsernameAvailable(null);
+      return;
     }
+    
+    if (username === originalProfile?.username) {
+      setUsernameAvailable(true);
+      return;
+    }
+    
+    setCheckingUsername(true);
+    try {
+      const response = await apiClient.get(`/users/check-username/${username}`);
+      setUsernameAvailable(response.available);
+      if (!response.available) {
+        setUsernameError('Username is already taken');
+      }
+    } catch (error) {
+      setUsernameAvailable(null);
+    } finally {
+      setCheckingUsername(false);
+    }
+  }, [originalProfile]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (profile.username) {
+        checkUsername(profile.username);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [profile.username, checkUsername]);
+
+  const validateUsername = (username) => {
+    if (!username) {
+      setUsernameError('');
+      return true;
+    }
+    if (username.length < 3) {
+      setUsernameError('At least 3 characters');
+      return false;
+    }
+    if (username.length > 20) {
+      setUsernameError('Maximum 20 characters');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setUsernameError('Letters, numbers, underscore only');
+      return false;
+    }
+    setUsernameError('');
+    return true;
+  };
+
+  const handleUsernameChange = (e) => {
+    const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setProfile(prev => ({ ...prev, username: value }));
+    validateUsername(value);
+    setUsernameAvailable(null);
   };
 
   const handlePhotoSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Reset file input so same file can be selected again
     e.target.value = '';
     
-    // Validate file
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
     }
     
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be less than 5MB');
       return;
     }
     
-    // Show loading toast
-    const uploadToast = toast.loading('Uploading photo...');
+    setUploadingPhoto(true);
     
     try {
-      // Upload to server
-      const formData = new FormData();
-      formData.append('avatar', file);
+      const result = await profileService.uploadAvatar(file);
       
-      const result = await apiClient.uploadFile('/users/me/avatar', formData);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      if (result.avatarUrl) {
-        setProfile(prev => ({
-          ...prev,
-          profilePhotoUrl: result.avatarUrl,
-          profilePhotoMetadata: {
-            fileName: file.name,
-            fileType: file.type,
-            fileSize: file.size,
-            uploadedAt: new Date().toISOString(),
-          },
-        }));
-        
-        toast.success('Photo uploaded successfully!', { id: uploadToast });
+      if (result.success) {
+        setProfile(prev => ({ ...prev, avatarUrl: result.avatarUrl }));
+        toast.success('Photo uploaded!');
       } else {
-        throw new Error('No URL returned from upload');
+        throw new Error(result.error || 'Upload failed');
       }
     } catch (error) {
       console.error('Photo upload error:', error);
-      toast.error(error.message || 'Failed to upload photo', { id: uploadToast });
+      toast.error(error.message || 'Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
   const removePhoto = async () => {
-    const removeToast = toast.loading('Removing photo...');
+    if (!profile.avatarUrl) return;
+    
+    setUploadingPhoto(true);
     try {
-      const result = await apiClient.delete('/users/me/avatar');
-      if (result.error) {
-        throw new Error(result.error);
+      const result = await profileService.removeAvatar();
+      if (result.success) {
+        setProfile(prev => ({ ...prev, avatarUrl: null }));
+        toast.success('Photo removed');
       }
-      setProfile(prev => ({
-        ...prev,
-        profilePhotoUrl: null,
-        profilePhotoMetadata: null,
-      }));
-      toast.success('Photo removed', { id: removeToast });
     } catch (error) {
-      console.error('Remove photo error:', error);
-      toast.error(error.message || 'Failed to remove photo', { id: removeToast });
+      toast.error('Failed to remove photo');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
-  const validateUsername = (username) => {
-    if (!username) return true;
-    if (username.length < 3) return 'Username must be at least 3 characters';
-    if (username.length > 20) return 'Username must be less than 20 characters';
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Username can only contain letters, numbers, and underscores';
-    return true;
+  const saveProfile = async () => {
+    // Validate username
+    if (!validateUsername(profile.username)) {
+      toast.error('Please fix username errors');
+      return;
+    }
+    
+    if (usernameAvailable === false) {
+      toast.error('Username is not available');
+      return;
+    }
+    
+    setSaving(true);
+    
+    try {
+      // Update profile
+      await profileService.updateProfile({
+        username: profile.username,
+        display_name: profile.displayName,
+        bio: profile.bio,
+        status_message: profile.statusMessage,
+      });
+      
+      // Update settings
+      await apiClient.put('/users/settings', {
+        privacy,
+        notifications,
+        appearance,
+      });
+      
+      setOriginalProfile(profile);
+      toast.success('Settings saved!');
+      
+    } catch (error) {
+      console.error('Save error:', error);
+      toast.error(error.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'privacy', label: 'Privacy', icon: Lock },
-    { id: 'notifications', label: 'Alerts', icon: Bell },
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-  ];
+  const hasChanges = () => {
+    if (!originalProfile) return false;
+    return JSON.stringify(profile) !== JSON.stringify(originalProfile);
+  };
 
-  // Toggle Component
-  const Toggle = ({ enabled, onChange, label, description }) => (
-    <div className="settings-toggle-row">
-      <div className="toggle-info">
-        <p className="toggle-label">{label}</p>
-        {description && <p className="toggle-description">{description}</p>}
+  // Toggle component
+  const Toggle = ({ enabled, onChange, size = 'md' }) => (
+    <button
+      type="button"
+      onClick={() => onChange(!enabled)}
+      className={`toggle-switch ${enabled ? 'active' : ''} ${size}`}
+      aria-pressed={enabled}
+    >
+      <span className="toggle-thumb" />
+    </button>
+  );
+
+  // Setting row component
+  const SettingRow = ({ icon: Icon, title, description, children }) => (
+    <div className="setting-row">
+      <div className="setting-row-left">
+        {Icon && <Icon size={20} className="setting-icon" />}
+        <div className="setting-info">
+          <span className="setting-title">{title}</span>
+          {description && <span className="setting-desc">{description}</span>}
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange(!enabled)}
-        className={`toggle-switch ${enabled ? 'active' : ''}`}
-        aria-pressed={enabled}
-        aria-label={label}
-      />
+      <div className="setting-row-right">
+        {children}
+      </div>
     </div>
   );
 
@@ -232,8 +295,8 @@ const Settings = () => {
     return (
       <div className="settings-page">
         <div className="settings-loading">
-          <div className="loading-spinner-large" />
-          <p className="loading-text">Loading settings...</p>
+          <Loader2 size={40} className="spin" />
+          <p>Loading settings...</p>
         </div>
       </div>
     );
@@ -242,407 +305,288 @@ const Settings = () => {
   return (
     <div className="settings-page">
       <Toaster 
-        position="top-right" 
+        position="top-center" 
         toastOptions={{
           style: {
-            background: '#1e293b',
-            color: '#f1f5f9',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#1a1a2e',
+            color: '#fff',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
           },
         }}
       />
       
       {/* Header */}
       <header className="settings-header">
-        <div className="settings-header-inner">
-          <div className="settings-header-left">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="settings-back-btn"
-              aria-label="Back to Dashboard"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <h1 className="settings-title">Settings</h1>
-          </div>
-          
-          <button
-            onClick={saveSettings}
-            disabled={saving}
-            className="settings-save-btn"
-          >
-            {saving ? (
-              <div className="spinner" />
-            ) : (
-              <Save size={18} />
-            )}
-            <span>Save Changes</span>
-          </button>
-        </div>
+        <button onClick={() => navigate('/dashboard')} className="back-btn">
+          <ArrowLeft size={20} />
+        </button>
+        <h1>Settings</h1>
+        <button 
+          onClick={saveProfile} 
+          disabled={saving || !hasChanges()}
+          className={`save-btn ${hasChanges() ? 'has-changes' : ''}`}
+        >
+          {saving ? <Loader2 size={18} className="spin" /> : <Check size={18} />}
+          <span>Save</span>
+        </button>
       </header>
 
       <main className="settings-main">
-        {/* Tabs */}
-        <div className="settings-tabs" role="tablist">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`settings-tab ${activeTab === tab.id ? 'active' : ''}`}
-              role="tab"
-              aria-selected={activeTab === tab.id}
-            >
-              <tab.icon size={18} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          <div className="settings-content">
-            {/* Profile Photo Card */}
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <Camera size={22} />
-                </div>
-                <h2 className="settings-card-title">Profile Photo</h2>
-              </div>
-              
-              <div className="profile-photo-section">
-                <div className="profile-photo-container">
-                  <div className="profile-photo">
-                    {profile.profilePhotoUrl ? (
-                      <img src={profile.profilePhotoUrl} alt="Profile" />
-                    ) : (
-                      <User size={48} />
-                    )}
+        {/* Profile Section */}
+        <section className="settings-section">
+          <h2 className="section-title">
+            <User size={18} />
+            Profile
+          </h2>
+          
+          {/* Avatar */}
+          <div className="avatar-section">
+            <div className="avatar-container">
+              <div className={`avatar-wrapper ${uploadingPhoto ? 'uploading' : ''}`}>
+                {profile.avatarUrl ? (
+                  <img src={profile.avatarUrl} alt="Profile" className="avatar-image" />
+                ) : (
+                  <div className="avatar-placeholder">
+                    <User size={32} />
                   </div>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="photo-edit-btn"
-                    aria-label="Change photo"
-                  >
-                    <Camera size={16} />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoSelect}
-                    style={{ display: 'none' }}
-                  />
-                </div>
-                
-                <div className="profile-photo-info">
-                  <p>Upload a profile photo. Max size: 5MB. Recommended: Square image.</p>
-                  <div className="photo-actions">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="photo-action-btn"
-                    >
-                      <Upload size={16} />
-                      Upload
-                    </button>
-                    {profile.profilePhotoUrl && (
-                      <button
-                        onClick={removePhoto}
-                        className="photo-action-btn remove"
-                      >
-                        <Trash2 size={16} />
-                        Remove
-                      </button>
-                    )}
+                )}
+                {uploadingPhoto && (
+                  <div className="avatar-overlay">
+                    <Loader2 size={24} className="spin" />
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Identity Card */}
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <AtSign size={22} />
-                </div>
-                <h2 className="settings-card-title">Identity</h2>
-              </div>
-              
-              <div className="settings-form-group">
-                <label className="settings-label">
-                  Username
-                  <span className="settings-label-hint">(unique identifier)</span>
-                </label>
-                <div className="settings-input-wrapper">
-                  <span className="username-prefix">@</span>
-                  <input
-                    type="text"
-                    value={profile.username}
-                    onChange={(e) => setProfile(prev => ({ ...prev, username: e.target.value.toLowerCase() }))}
-                    placeholder="your_username"
-                    className="settings-input username-input"
-                  />
-                </div>
-                {validateUsername(profile.username) !== true && (
-                  <p className="input-error">{validateUsername(profile.username)}</p>
                 )}
               </div>
-
-              <div className="settings-form-group">
-                <label className="settings-label">Display Name</label>
-                <input
-                  type="text"
-                  value={profile.displayName}
-                  onChange={(e) => setProfile(prev => ({ ...prev, displayName: e.target.value }))}
-                  placeholder="Your Display Name"
-                  maxLength={50}
-                  className="settings-input"
-                />
-              </div>
-
-              <div className="settings-form-group">
-                <label className="settings-label">Status Message</label>
-                <input
-                  type="text"
-                  value={profile.statusMessage}
-                  onChange={(e) => setProfile(prev => ({ ...prev, statusMessage: e.target.value }))}
-                  placeholder="What's on your mind?"
-                  maxLength={100}
-                  className="settings-input"
-                />
-              </div>
-
-              <div className="settings-form-group">
-                <label className="settings-label">Bio</label>
-                <textarea
-                  value={profile.bio}
-                  onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
-                  placeholder="Tell others about yourself..."
-                  maxLength={500}
-                  rows={4}
-                  className="settings-textarea"
-                />
-                <p className="char-count">{profile.bio.length}/500</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Privacy Tab */}
-        {activeTab === 'privacy' && (
-          <div className="settings-content">
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <Eye size={22} />
-                </div>
-                <h2 className="settings-card-title">Profile Visibility</h2>
-              </div>
               
-              <Toggle
-                enabled={privacy.showUsername}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showUsername: v }))}
-                label="Show Username in Chatrooms"
-                description="Display your custom username instead of Deriv ID"
-              />
-              <Toggle
-                enabled={privacy.showRealName}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showRealName: v }))}
-                label="Show Real Name"
-                description="Display your full name from Deriv account"
-              />
-              <Toggle
-                enabled={privacy.showEmail}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showEmail: v }))}
-                label="Show Email"
-                description="Make your email visible to other users"
-              />
-              <Toggle
-                enabled={privacy.showCountry}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showCountry: v }))}
-                label="Show Country"
-                description="Display your country on your profile"
-              />
-              <Toggle
-                enabled={privacy.showPerformance}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showPerformance: v }))}
-                label="Show Performance Tier"
-                description="Display your trading performance tier"
-              />
-              <Toggle
-                enabled={privacy.showOnlineStatus}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, showOnlineStatus: v }))}
-                label="Show Online Status"
-                description="Let others see when you're online"
-              />
-            </div>
-
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <Shield size={22} />
-                </div>
-                <h2 className="settings-card-title">Interaction Settings</h2>
-              </div>
-              
-              <div className="settings-form-group">
-                <label className="settings-label">Profile Visibility</label>
-                <select
-                  value={privacy.profileVisibility}
-                  onChange={(e) => setPrivacy(prev => ({ ...prev, profileVisibility: e.target.value }))}
-                  className="settings-select"
+              <div className="avatar-actions">
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="avatar-btn upload"
+                  disabled={uploadingPhoto}
                 >
-                  <option value="public">Public - Anyone can view</option>
-                  <option value="private">Private - Only you</option>
-                </select>
-              </div>
-
-              <div className="settings-form-group">
-                <label className="settings-label">Who Can Message You</label>
-                <select
-                  value={privacy.allowMessages}
-                  onChange={(e) => setPrivacy(prev => ({ ...prev, allowMessages: e.target.value }))}
-                  className="settings-select"
-                >
-                  <option value="everyone">Everyone</option>
-                  <option value="nobody">Nobody</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Notifications Tab */}
-        {activeTab === 'notifications' && (
-          <div className="settings-content">
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <Bell size={22} />
-                </div>
-                <h2 className="settings-card-title">Notification Types</h2>
-              </div>
-              
-              <Toggle
-                enabled={notifications.messages}
-                onChange={(v) => setNotifications(prev => ({ ...prev, messages: v }))}
-                label="Direct Messages"
-                description="When you receive a private message"
-              />
-              <Toggle
-                enabled={notifications.chatMentions}
-                onChange={(v) => setNotifications(prev => ({ ...prev, chatMentions: v }))}
-                label="Chat Mentions"
-                description="When someone mentions you in a chatroom"
-              />
-              <Toggle
-                enabled={notifications.achievements}
-                onChange={(v) => setNotifications(prev => ({ ...prev, achievements: v }))}
-                label="Achievements"
-                description="When you unlock a new achievement"
-              />
-              <Toggle
-                enabled={notifications.streakReminders}
-                onChange={(v) => setNotifications(prev => ({ ...prev, streakReminders: v }))}
-                label="Streak Reminders"
-                description="Reminders to maintain your streaks"
-              />
-              <Toggle
-                enabled={notifications.communityUpdates}
-                onChange={(v) => setNotifications(prev => ({ ...prev, communityUpdates: v }))}
-                label="Community Updates"
-                description="News and updates from the community"
-              />
-            </div>
-
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <Volume2 size={22} />
-                </div>
-                <h2 className="settings-card-title">Notification Preferences</h2>
-              </div>
-              
-              <Toggle
-                enabled={notifications.soundEnabled}
-                onChange={(v) => setNotifications(prev => ({ ...prev, soundEnabled: v }))}
-                label="Sound Notifications"
-                description="Play sounds for notifications"
-              />
-              <Toggle
-                enabled={notifications.pushEnabled}
-                onChange={(v) => setNotifications(prev => ({ ...prev, pushEnabled: v }))}
-                label="Push Notifications"
-                description="Receive push notifications on your device"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Chat Tab */}
-        {activeTab === 'chat' && (
-          <div className="settings-content">
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <MessageSquare size={22} />
-                </div>
-                <h2 className="settings-card-title">Message Settings</h2>
-              </div>
-              
-              <Toggle
-                enabled={chat.enterToSend}
-                onChange={(v) => setChat(prev => ({ ...prev, enterToSend: v }))}
-                label="Press Enter to Send"
-                description="Send messages by pressing Enter (Shift+Enter for new line)"
-              />
-              <Toggle
-                enabled={chat.showTypingIndicator}
-                onChange={(v) => setChat(prev => ({ ...prev, showTypingIndicator: v }))}
-                label="Show Typing Indicator"
-                description="Let others see when you're typing"
-              />
-              <Toggle
-                enabled={chat.showReadReceipts}
-                onChange={(v) => setChat(prev => ({ ...prev, showReadReceipts: v }))}
-                label="Read Receipts"
-                description="Show when you've read messages"
-              />
-            </div>
-
-            <div className="settings-card">
-              <div className="settings-card-header">
-                <div className="settings-card-icon">
-                  <FileText size={22} />
-                </div>
-                <h2 className="settings-card-title">Message History</h2>
-              </div>
-              
-              <Toggle
-                enabled={chat.autoDeleteMessages}
-                onChange={(v) => setChat(prev => ({ ...prev, autoDeleteMessages: v }))}
-                label="Auto-Delete Old Messages"
-                description="Automatically delete messages after a period"
-              />
-              
-              {chat.autoDeleteMessages && (
-                <div className="settings-form-group" style={{ marginTop: '16px' }}>
-                  <label className="settings-label">Keep Messages For</label>
-                  <select
-                    value={chat.messageRetention}
-                    onChange={(e) => setChat(prev => ({ ...prev, messageRetention: parseInt(e.target.value) }))}
-                    className="settings-select"
+                  <Upload size={16} />
+                  Upload
+                </button>
+                {profile.avatarUrl && (
+                  <button 
+                    onClick={removePhoto}
+                    className="avatar-btn remove"
+                    disabled={uploadingPhoto}
                   >
-                    <option value={7}>7 days</option>
-                    <option value={30}>30 days</option>
-                    <option value={90}>90 days</option>
-                    <option value={365}>1 year</option>
-                  </select>
-                </div>
-              )}
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                hidden
+              />
+            </div>
+            
+            <div className="deriv-id">
+              <span className="label">Deriv ID</span>
+              <span className="value">{profile.derivId}</span>
             </div>
           </div>
-        )}
+
+          {/* Username */}
+          <div className="input-group">
+            <label>Username</label>
+            <div className="input-wrapper">
+              <span className="input-prefix">@</span>
+              <input
+                type="text"
+                value={profile.username}
+                onChange={handleUsernameChange}
+                placeholder="your_username"
+                className={`${usernameError ? 'error' : ''} ${usernameAvailable === true ? 'valid' : ''}`}
+                maxLength={20}
+              />
+              <span className="input-suffix">
+                {checkingUsername && <Loader2 size={16} className="spin" />}
+                {!checkingUsername && usernameAvailable === true && <Check size={16} className="valid" />}
+                {!checkingUsername && usernameAvailable === false && <X size={16} className="error" />}
+              </span>
+            </div>
+            {usernameError && <span className="input-error">{usernameError}</span>}
+          </div>
+
+          {/* Display Name */}
+          <div className="input-group">
+            <label>Display Name</label>
+            <input
+              type="text"
+              value={profile.displayName}
+              onChange={(e) => setProfile(prev => ({ ...prev, displayName: e.target.value }))}
+              placeholder="Your display name"
+              maxLength={50}
+            />
+          </div>
+
+          {/* Status */}
+          <div className="input-group">
+            <label>Status Message</label>
+            <input
+              type="text"
+              value={profile.statusMessage}
+              onChange={(e) => setProfile(prev => ({ ...prev, statusMessage: e.target.value }))}
+              placeholder="What's on your mind?"
+              maxLength={100}
+            />
+          </div>
+
+          {/* Bio */}
+          <div className="input-group">
+            <label>Bio</label>
+            <textarea
+              value={profile.bio}
+              onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
+              placeholder="Tell others about yourself..."
+              maxLength={300}
+              rows={3}
+            />
+            <span className="char-count">{profile.bio.length}/300</span>
+          </div>
+        </section>
+
+        {/* Privacy Section */}
+        <section className="settings-section">
+          <h2 className="section-title">
+            <Shield size={18} />
+            Privacy
+          </h2>
+          
+          <SettingRow
+            icon={Eye}
+            title="Show Online Status"
+            description="Let others see when you're online"
+          >
+            <Toggle 
+              enabled={privacy.showOnlineStatus} 
+              onChange={(v) => setPrivacy(p => ({ ...p, showOnlineStatus: v }))}
+            />
+          </SettingRow>
+          
+          <SettingRow
+            icon={Globe}
+            title="Profile Visibility"
+            description="Who can see your profile"
+          >
+            <select 
+              value={privacy.profileVisibility}
+              onChange={(e) => setPrivacy(p => ({ ...p, profileVisibility: e.target.value }))}
+              className="setting-select"
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+          </SettingRow>
+          
+          <SettingRow
+            title="Allow Messages"
+            description="Let others send you direct messages"
+          >
+            <Toggle 
+              enabled={privacy.allowMessages} 
+              onChange={(v) => setPrivacy(p => ({ ...p, allowMessages: v }))}
+            />
+          </SettingRow>
+          
+          <SettingRow
+            title="Show Performance"
+            description="Display your trading tier on profile"
+          >
+            <Toggle 
+              enabled={privacy.showPerformance} 
+              onChange={(v) => setPrivacy(p => ({ ...p, showPerformance: v }))}
+            />
+          </SettingRow>
+        </section>
+
+        {/* Notifications Section */}
+        <section className="settings-section">
+          <h2 className="section-title">
+            <Bell size={18} />
+            Notifications
+          </h2>
+          
+          <SettingRow
+            title="Messages"
+            description="Notifications for new messages"
+          >
+            <Toggle 
+              enabled={notifications.messages} 
+              onChange={(v) => setNotifications(n => ({ ...n, messages: v }))}
+            />
+          </SettingRow>
+          
+          <SettingRow
+            title="Mentions"
+            description="When someone mentions you"
+          >
+            <Toggle 
+              enabled={notifications.mentions} 
+              onChange={(v) => setNotifications(n => ({ ...n, mentions: v }))}
+            />
+          </SettingRow>
+          
+          <SettingRow
+            icon={notifications.sounds ? Volume2 : VolumeX}
+            title="Sound Effects"
+            description="Play sounds for notifications"
+          >
+            <Toggle 
+              enabled={notifications.sounds} 
+              onChange={(v) => setNotifications(n => ({ ...n, sounds: v }))}
+            />
+          </SettingRow>
+          
+          <SettingRow
+            title="Push Notifications"
+            description="Receive push notifications"
+          >
+            <Toggle 
+              enabled={notifications.push} 
+              onChange={(v) => setNotifications(n => ({ ...n, push: v }))}
+            />
+          </SettingRow>
+        </section>
+
+        {/* Appearance Section */}
+        <section className="settings-section">
+          <h2 className="section-title">
+            <Palette size={18} />
+            Appearance
+          </h2>
+          
+          <SettingRow
+            icon={appearance.theme === 'dark' ? Moon : Sun}
+            title="Theme"
+            description="Choose your preferred theme"
+          >
+            <select 
+              value={appearance.theme}
+              onChange={(e) => setAppearance(a => ({ ...a, theme: e.target.value }))}
+              className="setting-select"
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="system">System</option>
+            </select>
+          </SettingRow>
+          
+          <SettingRow
+            title="Compact Mode"
+            description="Reduce spacing and padding"
+          >
+            <Toggle 
+              enabled={appearance.compactMode} 
+              onChange={(v) => setAppearance(a => ({ ...a, compactMode: v }))}
+            />
+          </SettingRow>
+        </section>
       </main>
     </div>
   );

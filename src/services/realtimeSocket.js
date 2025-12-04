@@ -216,6 +216,22 @@ class RealtimeSocketService {
   }
 
   /**
+   * Emit profile update to server for real-time sync
+   */
+  emitProfileUpdate(profileData) {
+    if (!this.socket) return;
+    this.socket.emit('profileUpdate', profileData);
+  }
+
+  /**
+   * Request online users list
+   */
+  requestOnlineUsers() {
+    if (!this.socket) return;
+    this.socket.emit('getOnlineUsers');
+  }
+
+  /**
    * Subscribe to new messages
    */
   onMessage(callback) {
