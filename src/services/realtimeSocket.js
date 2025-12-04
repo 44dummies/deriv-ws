@@ -78,7 +78,6 @@ class RealtimeSocketService {
       this.socket.on('reconnect_attempt', (attemptNumber) => {
         console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
       });
-      });
 
       this.socket.on('error', (error) => {
         console.error('Socket error:', error);
