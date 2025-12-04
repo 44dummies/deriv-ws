@@ -14,7 +14,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const chatroomRoutes = require('./routes/chatrooms');
-const communityRoutes = require('./routes/community');
+const communityRoutes = require('./routes/communityV2');
 
 // Additional routes
 const chatsRoutes = require('./routes/chats');

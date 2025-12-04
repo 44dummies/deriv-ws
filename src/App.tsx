@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Callback from './pages/Callback';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
+import Community from './pages/Community';
 import { TokenService } from './services/tokenService';
 
 // Protected Route component
@@ -31,6 +32,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/community" 
+          element={
+            <ProtectedRoute>
+              <Community />
             </ProtectedRoute>
           } 
         />
