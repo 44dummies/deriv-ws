@@ -4,7 +4,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   User, Shield, Bell, Eye, Trash2, Check, X, ArrowLeft,
   LogOut, Globe, AlertTriangle, Loader2, Save, Settings as SettingsIcon,
-  MessageSquare, Users, BarChart3, Smartphone, Monitor, Wifi, Sparkles
+  MessageSquare, Users, BarChart3, Smartphone, Monitor, Wifi, Sparkles, Palette
 } from 'lucide-react';
 import { TokenService } from '../services/tokenService';
 import apiClient from '../services/apiClient';
@@ -45,10 +45,22 @@ const AVATARS = [
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'account', label: 'Account', icon: Shield },
   { id: 'privacy', label: 'Privacy', icon: Eye },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'danger', label: 'Danger Zone', icon: AlertTriangle }
+];
+
+const THEMES = [
+  { id: 'dark', name: 'Dark', primary: '#6366f1', bg: '#0a0a0f', accent: '#22d3ee', preview: 'bg-gray-900' },
+  { id: 'midnight', name: 'Midnight Blue', primary: '#3b82f6', bg: '#0f172a', accent: '#60a5fa', preview: 'bg-slate-900' },
+  { id: 'emerald', name: 'Emerald', primary: '#10b981', bg: '#0a0f0a', accent: '#34d399', preview: 'bg-emerald-950' },
+  { id: 'rose', name: 'Rose', primary: '#f43f5e', bg: '#0f0a0a', accent: '#fb7185', preview: 'bg-rose-950' },
+  { id: 'amber', name: 'Amber', primary: '#f59e0b', bg: '#0f0d0a', accent: '#fbbf24', preview: 'bg-amber-950' },
+  { id: 'violet', name: 'Violet', primary: '#8b5cf6', bg: '#0d0a0f', accent: '#a78bfa', preview: 'bg-violet-950' },
+  { id: 'cyan', name: 'Cyan', primary: '#06b6d4', bg: '#0a0f0f', accent: '#22d3ee', preview: 'bg-cyan-950' },
+  { id: 'crimson', name: 'Crimson', primary: '#dc2626', bg: '#0a0505', accent: '#ef4444', preview: 'bg-red-950' }
 ];
 
 const Settings = () => {
@@ -82,6 +94,10 @@ const Settings = () => {
     pushNotifications: true
   });
   
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    return localStorage.getItem('tradermind_theme') || 'dark';
+  });
+  
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -93,6 +109,24 @@ const Settings = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  useEffect(() => {
+    applyTheme(selectedTheme);
+  }, [selectedTheme]);
+
+  const applyTheme = (themeId) => {
+    const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
+    document.documentElement.style.setProperty('--theme-primary', theme.primary);
+    document.documentElement.style.setProperty('--theme-bg', theme.bg);
+    document.documentElement.style.setProperty('--theme-accent', theme.accent);
+    document.documentElement.setAttribute('data-theme', themeId);
+    localStorage.setItem('tradermind_theme', themeId);
+  };
+
+  const handleThemeChange = (themeId) => {
+    setSelectedTheme(themeId);
+    toast.success(`Theme changed to ${THEMES.find(t => t.id === themeId)?.name}`);
+  };
 
   const loadAllData = async () => {
     setLoading(true);
@@ -587,6 +621,79 @@ const Settings = () => {
     </div>
   );
 
+  const renderAppearanceSection = () => (
+    <div className="space-y-6">
+      <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+          <Palette className="w-5 h-5 text-purple-400" />
+          Theme Customization
+        </h3>
+        
+        <p className="text-gray-400 text-sm mb-6">
+          Choose a color theme that suits your style. Your preference will be saved automatically.
+        </p>
+        
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              onClick={() => handleThemeChange(theme.id)}
+              className={`relative p-4 rounded-xl border-2 transition-all duration-300 ${
+                selectedTheme === theme.id 
+                  ? 'border-white/40 ring-2 ring-offset-2 ring-offset-[#0a0a0f]' 
+                  : 'border-white/10 hover:border-white/20'
+              }`}
+              style={{ 
+                background: theme.bg,
+                ringColor: theme.primary
+              }}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-full"
+                  style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` }}
+                />
+                <span className="text-sm font-medium">{theme.name}</span>
+              </div>
+              {selectedTheme === theme.id && (
+                <div 
+                  className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ background: theme.primary }}
+                >
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+        
+        <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10">
+          <h4 className="font-medium mb-3">Preview</h4>
+          <div className="flex gap-3">
+            <div 
+              className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm"
+              style={{ background: THEMES.find(t => t.id === selectedTheme)?.primary }}
+            >
+              Primary Color
+            </div>
+            <div 
+              className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm border border-white/20"
+              style={{ background: THEMES.find(t => t.id === selectedTheme)?.bg }}
+            >
+              Background
+            </div>
+            <div 
+              className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm"
+              style={{ background: THEMES.find(t => t.id === selectedTheme)?.accent }}
+            >
+              Accent
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderDangerSection = () => (
     <div className="space-y-6">
       <div className="bg-red-500/5 rounded-2xl p-6 border border-red-500/20">
@@ -630,6 +737,7 @@ const Settings = () => {
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'profile': return renderProfileSection();
+      case 'appearance': return renderAppearanceSection();
       case 'account': return renderAccountSection();
       case 'privacy': return renderPrivacySection();
       case 'notifications': return renderNotificationsSection();

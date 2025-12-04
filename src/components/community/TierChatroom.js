@@ -392,7 +392,7 @@ const TierChatroom = ({ user, analytics }) => {
             {members.map((member, index) => (
               <div key={member.user_id || index} className="member-item">
                 <div className={`member-avatar ${member.user_profiles?.is_online ? 'online' : ''}`}>
-                  {member.user_profiles?.profile_photo ? (
+                  {member.user_profiles?.profile_photo && member.user_profiles.profile_photo.startsWith('http') ? (
                     <img src={member.user_profiles.profile_photo} alt="" />
                   ) : (
                     <div className="avatar-placeholder">
