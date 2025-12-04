@@ -307,29 +307,29 @@ const TierChatroom = ({ user, analytics }) => {
                         </span>
                       )}
                       <span className="message-time">
-                        {tierChatroomService.formatMessageTime(msg.created_at)}
+                        {tierChatroomService.formatMessageTime(msg.createdAt || msg.created_at)}
                       </span>
                     </div>
                     
                     {/* Reply Reference */}
-                    {msg.reply_to && (
+                    {(msg.replyTo || msg.reply_to) && (
                       <div className="reply-reference">
                         <Reply size={12} />
-                        <span>{msg.reply_to.sender?.username}: {msg.reply_to.message_text?.substring(0, 50)}...</span>
+                        <span>{(msg.replyTo || msg.reply_to).sender?.username}: {((msg.replyTo || msg.reply_to).text || (msg.replyTo || msg.reply_to).message_text)?.substring(0, 50)}...</span>
                       </div>
                     )}
                     
                     {/* Message Text */}
-                    <div className="message-text">{msg.message_text}</div>
+                    <div className="message-text">{msg.text || msg.message_text}</div>
                     
                     {/* File Attachment */}
-                    {msg.file_name && (
+                    {(msg.fileName || msg.file_name) && (
                       <div className="message-file">
-                        {getFileIcon(msg.file_type)}
+                        {getFileIcon(msg.fileType || msg.file_type)}
                         <div className="file-info">
-                          <span className="file-name">{msg.file_name}</span>
+                          <span className="file-name">{msg.fileName || msg.file_name}</span>
                           <span className="file-size">
-                            {tierChatroomService.formatFileSize(msg.file_size)}
+                            {tierChatroomService.formatFileSize(msg.fileSize || msg.file_size)}
                           </span>
                         </div>
                       </div>
@@ -358,7 +358,7 @@ const TierChatroom = ({ user, analytics }) => {
                       <button onClick={() => setReplyTo(msg)}>
                         <Reply size={14} />
                       </button>
-                      {msg.sender?.id === user?.id && (
+                      {(msg.sender?.id === user?.id || msg.senderId === user?.id) && (
                         <button onClick={() => handleDelete(msg.id)} className="delete-btn">
                           <Trash2 size={14} />
                         </button>
