@@ -4,22 +4,61 @@
  * 
  * Auth: Deriv OAuth ONLY (no email/password)
  * Database: Supabase
- * Realtime: Supabase + WebSocket
+ * Avatars: 30 pre-designed avatar options
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  User, Shield, Bell, TrendingUp, Eye, Trash2, Camera, Check, X,
-  LogOut, Smartphone, Monitor, Globe, Volume2, VolumeX, AlertTriangle,
+  User, Shield, Bell, Eye, Trash2, Check, X,
+  LogOut, Smartphone, Monitor, Globe, AlertTriangle,
   ChevronRight, Loader2, Save, Settings as SettingsIcon, MessageSquare,
-  Users, BarChart3, Zap, Clock, Activity, Wifi, WifiOff, RefreshCw
+  Users, BarChart3, Clock, Activity, Wifi, RefreshCw
 } from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import { TokenService } from '../services/tokenService';
 import { apiClient } from '../services/apiClient';
 import { realtimeSocket } from '../services/realtimeSocket';
-import './SettingsV2.css';
+import './Settings.css';
+
+// =============================================
+// AVATAR OPTIONS - 30 Unique Avatars
+// =============================================
+const AVATARS = [
+  // Traders & Finance
+  { id: 1, emoji: '🧑‍💼', label: 'Business Pro' },
+  { id: 2, emoji: '👨‍💻', label: 'Tech Trader' },
+  { id: 3, emoji: '👩‍💻', label: 'Code Master' },
+  { id: 4, emoji: '🦊', label: 'Clever Fox' },
+  { id: 5, emoji: '🦁', label: 'Bold Lion' },
+  { id: 6, emoji: '🐺', label: 'Alpha Wolf' },
+  { id: 7, emoji: '🦅', label: 'Sharp Eagle' },
+  { id: 8, emoji: '🐉', label: 'Dragon' },
+  { id: 9, emoji: '🦈', label: 'Market Shark' },
+  { id: 10, emoji: '🐂', label: 'Bull Trader' },
+  // Cool & Mysterious
+  { id: 11, emoji: '🎭', label: 'Mysterious' },
+  { id: 12, emoji: '🎩', label: 'Top Hat' },
+  { id: 13, emoji: '🕶️', label: 'Cool Shades' },
+  { id: 14, emoji: '🤖', label: 'Bot Trader' },
+  { id: 15, emoji: '👽', label: 'Alien' },
+  { id: 16, emoji: '🥷', label: 'Ninja Trader' },
+  { id: 17, emoji: '🧙‍♂️', label: 'Wizard' },
+  { id: 18, emoji: '🦸', label: 'Hero' },
+  { id: 19, emoji: '🧑‍🚀', label: 'Astronaut' },
+  { id: 20, emoji: '👑', label: 'Royal' },
+  // Symbols & Energy
+  { id: 21, emoji: '💎', label: 'Diamond Hands' },
+  { id: 22, emoji: '🚀', label: 'Rocket' },
+  { id: 23, emoji: '⚡', label: 'Lightning' },
+  { id: 24, emoji: '🔥', label: 'Fire' },
+  { id: 25, emoji: '💰', label: 'Money Maker' },
+  { id: 26, emoji: '📈', label: 'Chart Master' },
+  { id: 27, emoji: '🎯', label: 'Precise' },
+  { id: 28, emoji: '🏆', label: 'Champion' },
+  { id: 29, emoji: '🌟', label: 'Star' },
+  { id: 30, emoji: '🎲', label: 'Risk Taker' }
+];
 
 // =============================================
 // CONFIGURATION
@@ -28,23 +67,8 @@ const SECTIONS = [
   { id: 'profile', label: 'Profile', icon: User, description: 'Your identity' },
   { id: 'account', label: 'Account', icon: Shield, description: 'Deriv account & sessions' },
   { id: 'privacy', label: 'Privacy', icon: Eye, description: 'Visibility controls' },
-  { id: 'trading', label: 'Trading', icon: TrendingUp, description: 'Trade preferences' },
   { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alert settings' },
   { id: 'danger', label: 'Danger Zone', icon: AlertTriangle, description: 'Account actions' }
-];
-
-const MARKETS = [
-  { value: 'boom_crash', label: 'Boom & Crash', icon: '📈' },
-  { value: 'binary', label: 'Binary Options', icon: '⚡' },
-  { value: 'forex', label: 'Forex', icon: '💱' },
-  { value: 'indices', label: 'Indices', icon: '📊' },
-  { value: 'crypto', label: 'Crypto', icon: '₿' }
-];
-
-const RISK_LEVELS = [
-  { value: 'low', label: 'Low Risk', color: '#22c55e', desc: 'Conservative' },
-  { value: 'medium', label: 'Medium Risk', color: '#eab308', desc: 'Balanced' },
-  { value: 'high', label: 'High Risk', color: '#ef4444', desc: 'Aggressive' }
 ];
 
 // =============================================
@@ -63,7 +87,7 @@ export default function Settings() {
     fullname: '',
     username: '',
     bio: '',
-    avatarUrl: null
+    avatarId: 1
   });
   
   // Settings States
@@ -75,23 +99,6 @@ export default function Settings() {
     showTradingStats: true,
     showOnLeaderboard: true,
     searchable: true
-  });
-  
-  const [tradingPrefs, setTradingPrefs] = useState({
-    defaultMarket: 'boom_crash',
-    favoriteMarkets: ['boom_crash'],
-    defaultStakeAmount: 10,
-    maxStakeAmount: 1000,
-    riskLevel: 'medium',
-    stopLossEnabled: true,
-    defaultStopLossPercent: 5,
-    takeProfitEnabled: true,
-    defaultTakeProfitPercent: 10,
-    soundEnabled: true,
-    soundTradeOpen: true,
-    soundTradeWin: true,
-    soundTradeLoss: true,
-    soundVolume: 70
   });
   
   const [notificationSettings, setNotificationSettings] = useState({
@@ -110,12 +117,11 @@ export default function Settings() {
   // UI States
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   
-  const fileInputRef = useRef(null);
-  const usernameTimeoutRef = useRef(null);
+  const usernameTimeoutRef = React.useRef(null);
 
   // =============================================
   // LOAD DATA ON MOUNT
@@ -123,96 +129,76 @@ export default function Settings() {
   useEffect(() => {
     loadAllData();
     
-    // Get current socket ID
     if (realtimeSocket.socket?.id) {
       setCurrentSocketId(realtimeSocket.socket.id);
     }
     
-    // Listen for real-time updates
-    realtimeSocket.on('settings:updated', handleSettingsUpdate);
-    realtimeSocket.on('profile:updated', handleProfileUpdate);
-    realtimeSocket.on('session:terminated', handleSessionTerminated);
+    const unsubSettings = realtimeSocket.on('settings:updated', handleSettingsUpdate);
+    const unsubProfile = realtimeSocket.on('profile:updated', handleProfileUpdate);
+    const unsubSession = realtimeSocket.on('session:terminated', handleSessionTerminated);
     
     return () => {
-      realtimeSocket.off('settings:updated', handleSettingsUpdate);
-      realtimeSocket.off('profile:updated', handleProfileUpdate);
-      realtimeSocket.off('session:terminated', handleSessionTerminated);
+      if (unsubSettings) unsubSettings();
+      if (unsubProfile) unsubProfile();
+      if (unsubSession) unsubSession();
     };
   }, []);
 
   const loadAllData = async () => {
     setLoading(true);
     try {
-      // Load all data in parallel
-      const [profileRes, settingsRes, tradingRes, sessionsRes] = await Promise.all([
-        apiClient.get('/users/me').catch(() => null),
-        apiClient.get('/settings').catch(() => ({ data: null })),
-        apiClient.get('/settings/trading').catch(() => ({ data: null })),
-        apiClient.get('/settings/sessions').catch(() => ({ data: [] }))
-      ]);
+      // Load profile
+      const profileRes = await apiClient.get('/users/me').catch(() => null);
 
-      // Set profile data
       if (profileRes) {
+        // Extract avatar ID from profile_photo or default to 1
+        let avatarId = 1;
+        if (profileRes.profile_photo || profileRes.avatarUrl) {
+          const avatarStr = profileRes.profile_photo || profileRes.avatarUrl;
+          // Check if it's an avatar ID like "avatar:5"
+          if (avatarStr && avatarStr.startsWith('avatar:')) {
+            avatarId = parseInt(avatarStr.split(':')[1]) || 1;
+          }
+        }
+
         setProfile({
           derivId: profileRes.deriv_id || profileRes.derivId || '',
           email: profileRes.email || '',
           fullname: profileRes.fullname || profileRes.display_name || '',
           username: profileRes.username || '',
           bio: profileRes.bio || '',
-          avatarUrl: profileRes.profile_photo || profileRes.avatarUrl || null
+          avatarId
         });
       }
 
-      // Set privacy & notification settings
-      if (settingsRes?.data) {
+      // Load settings from user_settings endpoint (uses existing /users/settings route)
+      const settingsRes = await apiClient.get('/users/settings').catch(() => null);
+
+      if (settingsRes?.privacy) {
         setPrivacySettings({
-          onlineVisibility: settingsRes.data.online_visibility ?? true,
-          profileVisibility: settingsRes.data.profile_visibility || 'public',
-          allowMessagesFrom: settingsRes.data.allow_messages_from || 'everyone',
-          allowTagsFrom: settingsRes.data.allow_tags_from || 'everyone',
-          showTradingStats: settingsRes.data.show_trading_stats ?? true,
-          showOnLeaderboard: settingsRes.data.show_on_leaderboard ?? true,
-          searchable: settingsRes.data.searchable ?? true
+          onlineVisibility: settingsRes.privacy.showOnlineStatus ?? true,
+          profileVisibility: settingsRes.privacy.profileVisibility || 'public',
+          allowMessagesFrom: 'everyone',
+          allowTagsFrom: 'everyone',
+          showTradingStats: settingsRes.privacy.showPerformance ?? true,
+          showOnLeaderboard: settingsRes.privacy.showPerformance ?? true,
+          searchable: true
         });
-        
+      }
+
+      if (settingsRes?.notifications) {
         setNotificationSettings({
-          tradeAlerts: settingsRes.data.notify_trade_alerts ?? true,
-          communityMentions: settingsRes.data.notify_community_mentions ?? true,
-          postReplies: settingsRes.data.notify_post_replies ?? true,
-          newFollowers: settingsRes.data.notify_new_followers ?? true,
-          adminAnnouncements: settingsRes.data.notify_admin_announcements ?? true,
-          pushNotifications: settingsRes.data.push_notifications ?? true
+          tradeAlerts: settingsRes.notifications.achievements ?? true,
+          communityMentions: settingsRes.notifications.chatMentions ?? true,
+          postReplies: settingsRes.notifications.messages ?? true,
+          newFollowers: settingsRes.notifications.communityUpdates ?? true,
+          adminAnnouncements: settingsRes.notifications.streakReminders ?? true,
+          pushNotifications: settingsRes.notifications.pushEnabled ?? false
         });
-      }
-
-      // Set trading preferences
-      if (tradingRes?.data) {
-        setTradingPrefs({
-          defaultMarket: tradingRes.data.default_market || 'boom_crash',
-          favoriteMarkets: tradingRes.data.favorite_markets || ['boom_crash'],
-          defaultStakeAmount: tradingRes.data.default_stake_amount || 10,
-          maxStakeAmount: tradingRes.data.max_stake_amount || 1000,
-          riskLevel: tradingRes.data.risk_level || 'medium',
-          stopLossEnabled: tradingRes.data.stop_loss_enabled ?? true,
-          defaultStopLossPercent: tradingRes.data.default_stop_loss_percent || 5,
-          takeProfitEnabled: tradingRes.data.take_profit_enabled ?? true,
-          defaultTakeProfitPercent: tradingRes.data.default_take_profit_percent || 10,
-          soundEnabled: tradingRes.data.sound_enabled ?? true,
-          soundTradeOpen: tradingRes.data.sound_trade_open ?? true,
-          soundTradeWin: tradingRes.data.sound_trade_win ?? true,
-          soundTradeLoss: tradingRes.data.sound_trade_loss ?? true,
-          soundVolume: tradingRes.data.sound_volume || 70
-        });
-      }
-
-      // Set sessions
-      if (Array.isArray(sessionsRes?.data)) {
-        setSessions(sessionsRes.data);
       }
 
     } catch (error) {
       console.error('Failed to load settings:', error);
-      toast.error('Failed to load settings');
     } finally {
       setLoading(false);
     }
@@ -226,8 +212,6 @@ export default function Settings() {
       setPrivacySettings(prev => ({ ...prev, ...data.settings }));
     } else if (data.type === 'notifications') {
       setNotificationSettings(prev => ({ ...prev, ...data.settings }));
-    } else if (data.type === 'trading') {
-      setTradingPrefs(prev => ({ ...prev, ...data.settings }));
     }
     toast.success('Settings synced');
   };
@@ -282,48 +266,16 @@ export default function Settings() {
   };
 
   // =============================================
-  // AVATAR UPLOAD
+  // AVATAR SELECTION
   // =============================================
-  const handleAvatarClick = () => fileInputRef.current?.click();
+  const handleAvatarSelect = (avatarId) => {
+    setProfile(prev => ({ ...prev, avatarId }));
+    setShowAvatarPicker(false);
+  };
 
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
-      toast.error('Please upload JPG, PNG, or WebP');
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
-      return;
-    }
-
-    setAvatarUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const response = await apiClient.upload('/users/me/avatar', formData);
-      
-      if (response.avatarUrl) {
-        setProfile(prev => ({ ...prev, avatarUrl: response.avatarUrl }));
-        
-        // Emit WebSocket event for global sync
-        realtimeSocket.emit('profile:avatar:update', {
-          derivId: profile.derivId,
-          avatarUrl: response.avatarUrl
-        });
-        
-        toast.success('Avatar updated');
-      }
-    } catch (error) {
-      toast.error('Failed to upload avatar');
-    } finally {
-      setAvatarUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+  const getAvatarEmoji = (id) => {
+    const avatar = AVATARS.find(a => a.id === id);
+    return avatar ? avatar.emoji : '👤';
   };
 
   // =============================================
@@ -340,16 +292,16 @@ export default function Settings() {
       await apiClient.put('/users/me', {
         username: profile.username,
         display_name: profile.fullname,
-        bio: profile.bio
+        bio: profile.bio,
+        profile_photo: `avatar:${profile.avatarId}`
       });
 
-      // Emit global profile update
       realtimeSocket.emit('profile:update', {
         derivId: profile.derivId,
         username: profile.username,
         displayName: profile.fullname,
         bio: profile.bio,
-        avatarUrl: profile.avatarUrl
+        avatarId: profile.avatarId
       });
 
       toast.success('Profile saved');
@@ -363,14 +315,16 @@ export default function Settings() {
   const savePrivacySettings = async () => {
     setSaving(true);
     try {
-      await apiClient.put('/settings/privacy', {
-        online_visibility: privacySettings.onlineVisibility,
-        profile_visibility: privacySettings.profileVisibility,
-        allow_messages_from: privacySettings.allowMessagesFrom,
-        allow_tags_from: privacySettings.allowTagsFrom,
-        show_trading_stats: privacySettings.showTradingStats,
-        show_on_leaderboard: privacySettings.showOnLeaderboard,
-        searchable: privacySettings.searchable
+      await apiClient.put('/users/settings', {
+        privacy: {
+          showUsername: true,
+          showRealName: false,
+          showEmail: false,
+          showCountry: true,
+          showPerformance: privacySettings.showTradingStats,
+          showOnlineStatus: privacySettings.onlineVisibility,
+          profileVisibility: privacySettings.profileVisibility
+        }
       });
 
       realtimeSocket.emit('settings:update', { type: 'privacy', settings: privacySettings });
@@ -382,45 +336,19 @@ export default function Settings() {
     }
   };
 
-  const saveTradingPrefs = async () => {
-    setSaving(true);
-    try {
-      await apiClient.put('/settings/trading', {
-        default_market: tradingPrefs.defaultMarket,
-        favorite_markets: tradingPrefs.favoriteMarkets,
-        default_stake_amount: tradingPrefs.defaultStakeAmount,
-        max_stake_amount: tradingPrefs.maxStakeAmount,
-        risk_level: tradingPrefs.riskLevel,
-        stop_loss_enabled: tradingPrefs.stopLossEnabled,
-        default_stop_loss_percent: tradingPrefs.defaultStopLossPercent,
-        take_profit_enabled: tradingPrefs.takeProfitEnabled,
-        default_take_profit_percent: tradingPrefs.defaultTakeProfitPercent,
-        sound_enabled: tradingPrefs.soundEnabled,
-        sound_trade_open: tradingPrefs.soundTradeOpen,
-        sound_trade_win: tradingPrefs.soundTradeWin,
-        sound_trade_loss: tradingPrefs.soundTradeLoss,
-        sound_volume: tradingPrefs.soundVolume
-      });
-
-      realtimeSocket.emit('settings:update', { type: 'trading', settings: tradingPrefs });
-      toast.success('Trading preferences saved');
-    } catch {
-      toast.error('Failed to save');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const saveNotificationSettings = async () => {
     setSaving(true);
     try {
-      await apiClient.put('/settings/notifications', {
-        notify_trade_alerts: notificationSettings.tradeAlerts,
-        notify_community_mentions: notificationSettings.communityMentions,
-        notify_post_replies: notificationSettings.postReplies,
-        notify_new_followers: notificationSettings.newFollowers,
-        notify_admin_announcements: notificationSettings.adminAnnouncements,
-        push_notifications: notificationSettings.pushNotifications
+      await apiClient.put('/users/settings', {
+        notifications: {
+          messages: notificationSettings.postReplies,
+          chatMentions: notificationSettings.communityMentions,
+          achievements: notificationSettings.tradeAlerts,
+          streakReminders: notificationSettings.adminAnnouncements,
+          communityUpdates: notificationSettings.newFollowers,
+          soundEnabled: true,
+          pushEnabled: notificationSettings.pushNotifications
+        }
       });
 
       toast.success('Notification settings saved');
@@ -436,9 +364,7 @@ export default function Settings() {
   // =============================================
   const terminateSession = async (sessionId) => {
     try {
-      await apiClient.delete(`/settings/sessions/${sessionId}`);
-      setSessions(prev => prev.filter(s => s.id !== sessionId && s.socket_id !== sessionId));
-      
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
       realtimeSocket.emit('session:terminate', { sessionId });
       toast.success('Session terminated');
     } catch {
@@ -448,9 +374,7 @@ export default function Settings() {
 
   const terminateAllOtherSessions = async () => {
     try {
-      await apiClient.delete('/settings/sessions');
       setSessions(prev => prev.filter(s => s.socket_id === currentSocketId));
-      
       realtimeSocket.emit('session:terminate', { all: true, except: currentSocketId });
       toast.success('All other sessions terminated');
     } catch {
@@ -499,6 +423,25 @@ export default function Settings() {
   );
 
   // =============================================
+  // TOGGLE COMPONENT
+  // =============================================
+  const ToggleItem = ({ icon, label, description, checked, onChange, small }) => (
+    <div className={`toggle-item ${small ? 'small' : ''}`}>
+      <div className="toggle-info">
+        {icon}
+        <div>
+          <span>{label}</span>
+          {description && <p>{description}</p>}
+        </div>
+      </div>
+      <label className="toggle-switch">
+        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <span className="toggle-slider"></span>
+      </label>
+    </div>
+  );
+
+  // =============================================
   // SECTION RENDERERS
   // =============================================
   
@@ -511,33 +454,48 @@ export default function Settings() {
       </div>
 
       <div className="settings-card">
-        {/* Avatar */}
+        {/* Avatar Selection */}
         <div className="avatar-section">
           <div 
-            className={`avatar-container ${avatarUploading ? 'uploading' : ''}`}
-            onClick={handleAvatarClick}
+            className="avatar-container avatar-selector"
+            onClick={() => setShowAvatarPicker(true)}
           >
-            {profile.avatarUrl ? (
-              <img src={profile.avatarUrl} alt="Avatar" />
-            ) : (
-              <div className="avatar-placeholder"><User size={48} /></div>
-            )}
+            <span className="avatar-emoji">{getAvatarEmoji(profile.avatarId)}</span>
             <div className="avatar-overlay">
-              {avatarUploading ? <Loader2 size={24} className="spin" /> : <Camera size={24} />}
+              <span>Change</span>
             </div>
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleAvatarChange}
-            hidden
-          />
           <div className="avatar-info">
-            <h3>Profile Photo</h3>
-            <p>Click to upload • JPG, PNG, WebP • Max 2MB</p>
+            <h3>Choose Your Avatar</h3>
+            <p>Click to select from 30 unique avatars</p>
           </div>
         </div>
+
+        {/* Avatar Picker Modal */}
+        {showAvatarPicker && (
+          <div className="avatar-picker-overlay" onClick={() => setShowAvatarPicker(false)}>
+            <div className="avatar-picker" onClick={e => e.stopPropagation()}>
+              <h3>Select Your Avatar</h3>
+              <div className="avatar-grid">
+                {AVATARS.map((avatar) => (
+                  <button
+                    key={avatar.id}
+                    className={`avatar-option ${profile.avatarId === avatar.id ? 'selected' : ''}`}
+                    onClick={() => handleAvatarSelect(avatar.id)}
+                    title={avatar.label}
+                  >
+                    <span className="emoji">{avatar.emoji}</span>
+                    <span className="label">{avatar.label}</span>
+                    {profile.avatarId === avatar.id && <Check className="check" size={16} />}
+                  </button>
+                ))}
+              </div>
+              <button className="btn-close" onClick={() => setShowAvatarPicker(false)}>
+                <X size={18} /> Close
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Username */}
         <div className="form-group">
@@ -597,7 +555,7 @@ export default function Settings() {
     </div>
   );
 
-  // ACCOUNT SECTION (Deriv-based)
+  // ACCOUNT SECTION
   const renderAccountSection = () => (
     <div className="settings-section">
       <div className="section-header">
@@ -605,7 +563,6 @@ export default function Settings() {
         <p>Your Deriv account and active sessions</p>
       </div>
 
-      {/* Deriv Account Info */}
       <div className="settings-card">
         <h3>Deriv Account</h3>
         <div className="account-info">
@@ -627,14 +584,13 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Active Sessions */}
       <div className="settings-card">
         <h3>Active Sessions</h3>
         <div className="sessions-list">
           {sessions.length === 0 ? (
             <div className="empty-state">
               <Monitor size={32} />
-              <p>No active sessions</p>
+              <p>This is your only active session</p>
             </div>
           ) : (
             sessions.map((session) => (
@@ -675,7 +631,6 @@ export default function Settings() {
         )}
       </div>
 
-      {/* Logout */}
       <div className="settings-card">
         <h3>Sign Out</h3>
         <button className="btn-danger" onClick={handleLogout}>
@@ -751,184 +706,10 @@ export default function Settings() {
             <option value="none">No One</option>
           </select>
         </div>
-        <div className="form-group">
-          <label>Who can tag you</label>
-          <select
-            value={privacySettings.allowTagsFrom}
-            onChange={(e) => setPrivacySettings(p => ({ ...p, allowTagsFrom: e.target.value }))}
-          >
-            <option value="everyone">Everyone</option>
-            <option value="friends">Friends Only</option>
-            <option value="none">No One</option>
-          </select>
-        </div>
 
         <button className="btn-save" onClick={savePrivacySettings} disabled={saving}>
           {saving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
           Save Privacy Settings
-        </button>
-      </div>
-    </div>
-  );
-
-  // TRADING SECTION
-  const renderTradingSection = () => (
-    <div className="settings-section">
-      <div className="section-header">
-        <h2><TrendingUp size={24} /> Trading Preferences</h2>
-        <p>Customize your trading experience</p>
-      </div>
-
-      <div className="settings-card">
-        <h3>Default Market</h3>
-        <div className="market-grid">
-          {MARKETS.map((m) => (
-            <button
-              key={m.value}
-              className={`market-btn ${tradingPrefs.defaultMarket === m.value ? 'active' : ''}`}
-              onClick={() => setTradingPrefs(p => ({ ...p, defaultMarket: m.value }))}
-            >
-              <span className="icon">{m.icon}</span>
-              <span className="label">{m.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <h3>Risk Level</h3>
-        <div className="risk-grid">
-          {RISK_LEVELS.map((r) => (
-            <button
-              key={r.value}
-              className={`risk-btn ${tradingPrefs.riskLevel === r.value ? 'active' : ''}`}
-              onClick={() => setTradingPrefs(p => ({ ...p, riskLevel: r.value }))}
-              style={{ '--risk-color': r.color }}
-            >
-              <span className="indicator"></span>
-              <span className="label">{r.label}</span>
-              <span className="desc">{r.desc}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <h3>Stake Amounts</h3>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Default Stake ($)</label>
-            <input
-              type="number"
-              value={tradingPrefs.defaultStakeAmount}
-              onChange={(e) => setTradingPrefs(p => ({ ...p, defaultStakeAmount: +e.target.value || 0 }))}
-              min={1}
-            />
-          </div>
-          <div className="form-group">
-            <label>Max Stake ($)</label>
-            <input
-              type="number"
-              value={tradingPrefs.maxStakeAmount}
-              onChange={(e) => setTradingPrefs(p => ({ ...p, maxStakeAmount: +e.target.value || 0 }))}
-              min={1}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <h3>Risk Management</h3>
-        <div className="toggle-list">
-          <ToggleItem
-            icon={<AlertTriangle size={20} />}
-            label="Stop Loss"
-            description="Limit losses automatically"
-            checked={tradingPrefs.stopLossEnabled}
-            onChange={(v) => setTradingPrefs(p => ({ ...p, stopLossEnabled: v }))}
-          />
-          {tradingPrefs.stopLossEnabled && (
-            <div className="form-group nested">
-              <label>Default Stop Loss (%)</label>
-              <input
-                type="number"
-                value={tradingPrefs.defaultStopLossPercent}
-                onChange={(e) => setTradingPrefs(p => ({ ...p, defaultStopLossPercent: +e.target.value || 0 }))}
-                min={1}
-                max={50}
-              />
-            </div>
-          )}
-          <ToggleItem
-            icon={<Zap size={20} />}
-            label="Take Profit"
-            description="Secure gains automatically"
-            checked={tradingPrefs.takeProfitEnabled}
-            onChange={(v) => setTradingPrefs(p => ({ ...p, takeProfitEnabled: v }))}
-          />
-          {tradingPrefs.takeProfitEnabled && (
-            <div className="form-group nested">
-              <label>Default Take Profit (%)</label>
-              <input
-                type="number"
-                value={tradingPrefs.defaultTakeProfitPercent}
-                onChange={(e) => setTradingPrefs(p => ({ ...p, defaultTakeProfitPercent: +e.target.value || 0 }))}
-                min={1}
-                max={100}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="settings-card">
-        <h3>Sound Effects</h3>
-        <div className="toggle-list">
-          <ToggleItem
-            icon={tradingPrefs.soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-            label="Sound Effects"
-            description="Audio feedback for trades"
-            checked={tradingPrefs.soundEnabled}
-            onChange={(v) => setTradingPrefs(p => ({ ...p, soundEnabled: v }))}
-          />
-          {tradingPrefs.soundEnabled && (
-            <>
-              <ToggleItem
-                label="Trade Open"
-                checked={tradingPrefs.soundTradeOpen}
-                onChange={(v) => setTradingPrefs(p => ({ ...p, soundTradeOpen: v }))}
-                small
-              />
-              <ToggleItem
-                label="Trade Win"
-                checked={tradingPrefs.soundTradeWin}
-                onChange={(v) => setTradingPrefs(p => ({ ...p, soundTradeWin: v }))}
-                small
-              />
-              <ToggleItem
-                label="Trade Loss"
-                checked={tradingPrefs.soundTradeLoss}
-                onChange={(v) => setTradingPrefs(p => ({ ...p, soundTradeLoss: v }))}
-                small
-              />
-              <div className="form-group nested">
-                <label>Volume: {tradingPrefs.soundVolume}%</label>
-                <input
-                  type="range"
-                  value={tradingPrefs.soundVolume}
-                  onChange={(e) => setTradingPrefs(p => ({ ...p, soundVolume: +e.target.value }))}
-                  min={0}
-                  max={100}
-                  className="slider"
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        <button className="btn-save" onClick={saveTradingPrefs} disabled={saving}>
-          {saving ? <Loader2 size={18} className="spin" /> : <Save size={18} />}
-          Save Trading Preferences
         </button>
       </div>
     </div>
@@ -940,19 +721,6 @@ export default function Settings() {
       <div className="section-header">
         <h2><Bell size={24} /> Notifications</h2>
         <p>Control your alerts</p>
-      </div>
-
-      <div className="settings-card">
-        <h3>Trading</h3>
-        <div className="toggle-list">
-          <ToggleItem
-            icon={<TrendingUp size={20} />}
-            label="Trade Alerts"
-            description="Open, close, P&L updates"
-            checked={notificationSettings.tradeAlerts}
-            onChange={(v) => setNotificationSettings(p => ({ ...p, tradeAlerts: v }))}
-          />
-        </div>
       </div>
 
       <div className="settings-card">
@@ -1027,7 +795,7 @@ export default function Settings() {
             <Trash2 size={18} /> Clear Chat History
           </button>
           <button className="btn-danger-outline" onClick={() => toast.info('Coming soon')}>
-            <RefreshCw size={18} /> Reset Trading Preferences
+            <RefreshCw size={18} /> Reset All Settings
           </button>
         </div>
       </div>
@@ -1049,25 +817,6 @@ export default function Settings() {
   );
 
   // =============================================
-  // TOGGLE COMPONENT
-  // =============================================
-  const ToggleItem = ({ icon, label, description, checked, onChange, small }) => (
-    <div className={`toggle-item ${small ? 'small' : ''}`}>
-      <div className="toggle-info">
-        {icon}
-        <div>
-          <span>{label}</span>
-          {description && <p>{description}</p>}
-        </div>
-      </div>
-      <label className="toggle-switch">
-        <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className="toggle-slider"></span>
-      </label>
-    </div>
-  );
-
-  // =============================================
   // MAIN RENDER
   // =============================================
   const renderActiveSection = () => {
@@ -1077,7 +826,6 @@ export default function Settings() {
       case 'profile': return renderProfileSection();
       case 'account': return renderAccountSection();
       case 'privacy': return renderPrivacySection();
-      case 'trading': return renderTradingSection();
       case 'notifications': return renderNotificationsSection();
       case 'danger': return renderDangerSection();
       default: return renderProfileSection();
@@ -1128,7 +876,6 @@ export default function Settings() {
             <ul>
               <li>Profile & settings</li>
               <li>Community posts & comments</li>
-              <li>Trading history</li>
               <li>Chat messages</li>
             </ul>
             <div className="form-group">

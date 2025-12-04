@@ -226,27 +226,26 @@ async function getFeed(options = {}) {
       userId = null
     } = options;
 
-    // Build query - don't filter by is_deleted if column doesn't exist
+    // Build query - select only columns that exist in both schemas
     let query = supabase
       .from('community_posts')
-      .select('*', { count: 'exact' });
+      .select('id, user_id, content, title, category, upvotes, downvotes, created_at, updated_at', { count: 'exact' });
 
     // Filter by category/type
     if (category && category !== 'all') {
-      query = query.eq('post_type', category);
+      query = query.eq('category', category);
     }
 
-    // Sorting
+    // Sorting - use created_at which always exists
     switch (sortBy) {
       case 'top':
-        query = query.order('like_count', { ascending: false });
+        query = query.order('upvotes', { ascending: false, nullsFirst: false });
         break;
       case 'trending':
         // Trending: recent posts with high engagement
         query = query
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-          .order('like_count', { ascending: false })
-          .order('comment_count', { ascending: false });
+          .order('upvotes', { ascending: false, nullsFirst: false });
         break;
       case 'newest':
       default:
