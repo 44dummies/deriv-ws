@@ -630,56 +630,64 @@
 /* ============ Mobile Responsive ============ */
 @media (max-width: 768px) {
   .settings-header-inner {
-    padding: 14px 16px;
+    padding: 12px 16px;
   }
   
   .settings-title {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
   
   .settings-save-btn {
-    padding: 10px 18px;
-    font-size: 0.9rem;
+    padding: 10px 16px;
+    font-size: 0.85rem;
   }
   
   .settings-save-btn span {
-    display: none;
+    display: inline; /* Keep "Save" text visible on tablets */
   }
   
   .settings-main {
-    padding: 16px 14px 40px;
+    padding: 16px 12px 60px;
   }
   
   .settings-tabs {
     gap: 4px;
     padding: 4px;
     border-radius: var(--st-radius-lg);
+    justify-content: stretch;
   }
   
   .settings-tab {
-    padding: 12px 14px;
-    font-size: 0.85rem;
+    padding: 10px 12px;
+    font-size: 0.8rem;
     gap: 6px;
+    min-width: 0;
+    flex: 1;
   }
   
   .settings-tab span {
-    display: none;
+    display: inline; /* Keep tab labels visible */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .settings-card {
-    padding: 18px;
+    padding: 16px;
     border-radius: var(--st-radius-lg);
+    margin-bottom: 16px;
   }
   
   .settings-card-header {
     gap: 12px;
-    padding-bottom: 16px;
-    margin-bottom: 16px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
   }
   
   .settings-card-icon {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
   }
   
   .settings-card-icon svg {
@@ -688,18 +696,19 @@
   }
   
   .settings-card-title {
-    font-size: 1.05rem;
+    font-size: 1rem;
   }
   
   .profile-photo-section {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 18px;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
   }
   
   .profile-photo {
-    width: 88px;
-    height: 88px;
+    width: 90px;
+    height: 90px;
   }
   
   .profile-photo svg {
@@ -708,95 +717,52 @@
   }
   
   .photo-edit-btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .profile-photo-info {
+    min-width: 100%;
+    text-align: center;
   }
   
   .photo-actions {
     width: 100%;
+    justify-content: center;
   }
   
   .photo-action-btn {
     flex: 1;
+    max-width: 140px;
     justify-content: center;
     padding: 10px 14px;
     font-size: 0.85rem;
   }
   
   .settings-toggle-row {
-    padding: 14px 0;
-    flex-wrap: wrap;
+    padding: 12px 0;
+    gap: 12px;
   }
   
   .toggle-info {
-    flex: unset;
-    width: calc(100% - 60px);
+    flex: 1;
+    min-width: 0;
   }
   
   .toggle-label {
     font-size: 0.9rem;
+    margin-bottom: 2px;
   }
   
   .toggle-description {
-    font-size: 0.8rem;
-  }
-  
-  .settings-input,
-  .settings-textarea,
-  .settings-select {
-    padding: 12px 14px;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .settings-header-inner {
-    padding: 12px 14px;
-  }
-  
-  .settings-back-btn {
-    width: 38px;
-    height: 38px;
-  }
-  
-  .settings-title {
-    font-size: 1.05rem;
-  }
-  
-  .settings-save-btn {
-    padding: 10px 14px;
-    font-size: 0.85rem;
-  }
-  
-  .settings-main {
-    padding: 14px 12px 36px;
-  }
-  
-  .settings-tabs {
-    margin-bottom: 20px;
-  }
-  
-  .settings-tab {
-    padding: 10px 12px;
-  }
-  
-  .settings-tab svg {
-    width: 16px;
-    height: 16px;
-  }
-  
-  .settings-card {
-    padding: 16px;
-  }
-  
-  .profile-photo {
-    width: 80px;
-    height: 80px;
+    font-size: 0.78rem;
+    line-height: 1.3;
   }
   
   .toggle-switch {
     width: 48px;
     height: 26px;
+    flex-shrink: 0;
   }
   
   .toggle-switch::after {
@@ -807,12 +773,187 @@
   .toggle-switch.active::after {
     transform: translateX(22px);
   }
+  
+  .settings-input,
+  .settings-textarea,
+  .settings-select {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+  }
+  
+  .settings-form-group {
+    margin-bottom: 16px;
+  }
+  
+  .settings-label {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  
+  .settings-label-hint {
+    display: block;
+    margin-left: 0;
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-header-inner {
+    padding: 10px 12px;
+  }
+  
+  .settings-back-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .settings-title {
+    font-size: 1rem;
+  }
+  
+  .settings-save-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+  
+  .settings-save-btn span {
+    display: none; /* Hide text on very small screens */
+  }
+  
+  .settings-main {
+    padding: 12px 10px 50px;
+  }
+  
+  .settings-tabs {
+    margin-bottom: 16px;
+    padding: 3px;
+  }
+  
+  .settings-tab {
+    padding: 8px 6px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  
+  .settings-tab svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .settings-tab span {
+    display: none; /* Hide labels on very small screens, show icons only */
+  }
+  
+  .settings-card {
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  
+  .settings-card-header {
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .settings-card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  
+  .settings-card-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .settings-card-title {
+    font-size: 0.95rem;
+  }
+  
+  .profile-photo {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .profile-photo svg {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .photo-edit-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .profile-photo-info p {
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+  }
+  
+  .photo-action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    max-width: 120px;
+  }
+  
+  .settings-toggle-row {
+    padding: 10px 0;
+    gap: 10px;
+  }
+  
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+  
+  .toggle-description {
+    font-size: 0.75rem;
+  }
+  
+  .toggle-switch {
+    width: 44px;
+    height: 24px;
+  }
+  
+  .toggle-switch::after {
+    width: 16px;
+    height: 16px;
+    top: 3px;
+    left: 3px;
+  }
+  
+  .toggle-switch.active::after {
+    transform: translateX(20px);
+  }
+  
+  .settings-input,
+  .settings-textarea,
+  .settings-select {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .settings-form-group {
+    margin-bottom: 14px;
+  }
+  
+  .settings-label {
+    font-size: 0.8rem;
+  }
+  
+  .char-count {
+    font-size: 0.75rem;
+  }
 }
 
 /* ============ Animation Helpers ============ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.settings-content {
+  animation: fadeIn 0.3s ease forwards;
 }
 
 .settings-card {
@@ -822,6 +963,117 @@
 .settings-card:nth-child(2) { animation-delay: 0.1s; }
 .settings-card:nth-child(3) { animation-delay: 0.2s; }
 .settings-card:nth-child(4) { animation-delay: 0.3s; }
+
+/* ============ Extra Small Devices (320px) ============ */
+@media (max-width: 360px) {
+  .settings-header-inner {
+    padding: 8px 10px;
+  }
+  
+  .settings-back-btn {
+    width: 34px;
+    height: 34px;
+  }
+  
+  .settings-title {
+    font-size: 0.95rem;
+  }
+  
+  .settings-save-btn {
+    padding: 8px 10px;
+    min-width: 36px;
+    justify-content: center;
+  }
+  
+  .settings-main {
+    padding: 10px 8px 40px;
+  }
+  
+  .settings-tabs {
+    padding: 2px;
+    gap: 2px;
+  }
+  
+  .settings-tab {
+    padding: 8px 4px;
+  }
+  
+  .settings-card {
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .settings-card-header {
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  
+  .settings-card-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .settings-card-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .settings-card-title {
+    font-size: 0.9rem;
+  }
+  
+  .profile-photo {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .profile-photo svg {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .photo-action-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .settings-toggle-row {
+    padding: 8px 0;
+    gap: 8px;
+  }
+  
+  .toggle-label {
+    font-size: 0.8rem;
+  }
+  
+  .toggle-description {
+    font-size: 0.7rem;
+  }
+  
+  .toggle-switch {
+    width: 40px;
+    height: 22px;
+  }
+  
+  .toggle-switch::after {
+    width: 14px;
+    height: 14px;
+    top: 3px;
+    left: 3px;
+  }
+  
+  .toggle-switch.active::after {
+    transform: translateX(18px);
+  }
+  
+  .settings-input,
+  .settings-textarea,
+  .settings-select {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+}
 
 /* ============ Accessibility ============ */
 .settings-input:focus-visible,

@@ -127,6 +127,9 @@ const Settings = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    // Reset file input so same file can be selected again
+    e.target.value = '';
+    
     // Validate file
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
@@ -138,15 +141,19 @@ const Settings = () => {
       return;
     }
     
+    // Show loading toast
+    const uploadToast = toast.loading('Uploading photo...');
+    
     try {
-      // Show loading toast
-      const uploadToast = toast.loading('Uploading photo...');
-      
       // Upload to server
       const formData = new FormData();
       formData.append('avatar', file);
       
       const result = await apiClient.uploadFile('/users/me/avatar', formData);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
       
       if (result.avatarUrl) {
         setProfile(prev => ({
@@ -166,22 +173,26 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Photo upload error:', error);
-      toast.error('Failed to upload photo');
+      toast.error(error.message || 'Failed to upload photo', { id: uploadToast });
     }
   };
 
   const removePhoto = async () => {
+    const removeToast = toast.loading('Removing photo...');
     try {
-      await apiClient.delete('/users/me/avatar');
+      const result = await apiClient.delete('/users/me/avatar');
+      if (result.error) {
+        throw new Error(result.error);
+      }
       setProfile(prev => ({
         ...prev,
         profilePhotoUrl: null,
         profilePhotoMetadata: null,
       }));
-      toast.success('Photo removed');
+      toast.success('Photo removed', { id: removeToast });
     } catch (error) {
       console.error('Remove photo error:', error);
-      toast.error('Failed to remove photo');
+      toast.error(error.message || 'Failed to remove photo', { id: removeToast });
     }
   };
 
