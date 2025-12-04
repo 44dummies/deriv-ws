@@ -5,7 +5,7 @@
 
 const API_URL = process.env.REACT_APP_SERVER_URL 
   ? `${process.env.REACT_APP_SERVER_URL}/api`
-  : 'http:
+  : 'https://tradermind-server.up.railway.app/api';
 
 class ApiClient {
   constructor() {

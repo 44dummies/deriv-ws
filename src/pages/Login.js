@@ -46,7 +46,6 @@ const Login = () => {
 
   return (
     <div className={`min-h-screen bg-[#040404] text-white overflow-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
-      {}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-[#ff3355]/20 blur-[160px] animate-pulse" />
         <div className="absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full bg-[#5d5dff]/15 blur-[180px] animate-pulse" style={{ animationDelay: '1s' }} />
@@ -55,7 +54,6 @@ const Login = () => {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
       </div>
 
-      {}
       <nav className="relative z-20 border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -78,7 +76,6 @@ const Login = () => {
         </div>
       </nav>
 
-      {}
       <section className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-32">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8">
@@ -184,7 +181,6 @@ const Login = () => {
         </div>
       </section>
 
-      {}
       <section id="stats" className="relative z-10 border-y border-white/5 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -200,7 +196,6 @@ const Login = () => {
         </div>
       </section>
 
-      {}
       <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
@@ -228,7 +223,6 @@ const Login = () => {
         </div>
       </section>
 
-      {}
       <section id="testimonials" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
@@ -262,7 +256,6 @@ const Login = () => {
         </div>
       </section>
 
-      {}
       <section className="relative z-10 max-w-7xl mx-auto px-6 py-24">
         <div className="relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-12 md:p-16 text-center overflow-hidden">
           <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[#ff3355]/20 blur-[100px]" />
@@ -287,7 +280,6 @@ const Login = () => {
         </div>
       </section>
 
-      {}
       <footer className="relative z-10 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -301,8 +293,8 @@ const Login = () => {
               © 2025 TraderMind. A 44 Dummies Company.
             </p>
             <div className="flex items-center gap-6 text-sm text-gray-400">
-              <a href="https:
-              <a href="https:
+              <a href="https://tradermind.site/privacy" className="hover:text-white">Privacy</a>
+              <a href="https://tradermind.site/terms" className="hover:text-white">Terms</a>
             </div>
           </div>
         </div>

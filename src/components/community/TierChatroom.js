@@ -241,7 +241,6 @@ const TierChatroom = ({ user, analytics }) => {
 
   return (
     <div className="tier-chatroom">
-      {}
       <div className="chatroom-header" style={{ borderColor: tierInfo.color }}>
         <div className="chatroom-info">
           <span className="tier-icon">{chatroom?.icon || tierInfo.icon}</span>
@@ -261,13 +260,11 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       </div>
 
-      {}
       <div className="tier-badge" style={{ backgroundColor: tierInfo.color + '20', borderColor: tierInfo.color }}>
         <span>{tierInfo.icon}</span>
         <span>You're in the <strong>{tierInfo.name}</strong> based on your trading performance</span>
       </div>
 
-      {}
       <div className="chatroom-content">
         {}
         <div className="messages-container">
@@ -417,7 +414,6 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       </div>
 
-      {}
       {replyTo && (
         <div className="reply-preview">
           <Reply size={16} />
@@ -428,7 +424,6 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       )}
 
-      {}
       {selectedFile && (
         <div className="file-preview">
           {filePreview ? (
@@ -445,7 +440,6 @@ const TierChatroom = ({ user, analytics }) => {
         </div>
       )}
 
-      {}
       <form className="message-input" onSubmit={handleSendMessage}>
         <input
           type="file"

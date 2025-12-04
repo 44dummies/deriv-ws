@@ -310,7 +310,6 @@ const Settings = () => {
 
   const renderProfileSection = () => (
     <div className="space-y-6">
-      {}
       <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-2xl p-6 border border-white/10">
         <div className="flex items-center gap-6">
           <button
@@ -334,7 +333,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <User className="w-5 h-5 text-purple-400" />
@@ -412,7 +410,6 @@ const Settings = () => {
 
   const renderAccountSection = () => (
     <div className="space-y-6">
-      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Shield className="w-5 h-5 text-purple-400" />
@@ -442,7 +439,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Monitor className="w-5 h-5 text-purple-400" />
@@ -458,7 +454,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {}
       <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
         <button
           onClick={handleLogout}
@@ -649,7 +644,6 @@ const Settings = () => {
         style: { background: '#1a1a2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
       }} />
 
-      {}
       <header className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <button 
@@ -667,7 +661,6 @@ const Settings = () => {
         </div>
       </header>
 
-      {}
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
@@ -700,7 +693,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {}
       {showAvatarPicker && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
@@ -748,7 +740,6 @@ const Settings = () => {
         </div>
       )}
 
-      {}
       {showDeleteModal && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"

@@ -2,7 +2,7 @@
  * Portfolio Service - Frontend API client for portfolio management
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'http:
+const API_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');

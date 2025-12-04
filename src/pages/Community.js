@@ -461,7 +461,6 @@ const Community = () => {
     <div className="community-page">
       <Toaster position="top-center" />
 
-      {}
       <header className="community-header">
         <button onClick={() => navigate('/dashboard')} className="back-btn">
           <ArrowLeft size={20} />

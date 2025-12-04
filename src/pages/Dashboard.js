@@ -117,7 +117,7 @@ const SettingRow = ({ icon, label, value, action }) => (
 );
 
 
-const DERIV_COMMUNITY_URL = 'https:
+const DERIV_COMMUNITY_URL = 'https://community.deriv.com';
 
 
 const INACTIVITY_TIMEOUT = 10 * 60 * 1000; 
@@ -1403,7 +1403,6 @@ const Dashboard = () => {
     >
       <Toaster position="top-right" />
       
-      {}
       {showInactivityWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="p-6 rounded-2xl shadow-2xl max-w-sm mx-4 text-center bg-gray-900 border border-white/10">
@@ -1422,7 +1421,6 @@ const Dashboard = () => {
         </div>
       )}
       
-      {}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-32 -left-10 h-96 w-96 rounded-full bg-[#ff3355]/20 blur-[160px]" />
         <div className="absolute bottom-0 right-0 h-[32rem] w-[32rem] rounded-full bg-[#5d5dff]/10 blur-[200px]" />
