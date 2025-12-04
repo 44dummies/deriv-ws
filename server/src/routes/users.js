@@ -77,36 +77,70 @@ router.get('/me', authMiddleware, async (req, res) => {
 router.put('/me', authMiddleware, async (req, res) => {
   try {
     const derivId = req.user?.derivId || req.username;
-    console.log('[Users] PUT /me - derivId:', derivId, 'userId:', req.userId);
+    console.log('[Users] PUT /me - derivId:', derivId);
     console.log('[Users] PUT /me - body:', JSON.stringify(req.body));
     
     if (!derivId) {
       return res.status(400).json({ error: 'No derivId found in token' });
     }
     
-    // Ensure profile exists in Supabase, then update it
-    // First, try to get existing profile by deriv_id
-    let existingProfile = await getProfileByDerivId(derivId);
+    // Build update data
+    const updateData = {};
+    if (req.body.username !== undefined) updateData.username = req.body.username;
+    if (req.body.display_name !== undefined) updateData.display_name = req.body.display_name;
+    if (req.body.fullname !== undefined) updateData.fullname = req.body.fullname;
+    if (req.body.bio !== undefined) updateData.bio = req.body.bio;
+    if (req.body.profile_photo !== undefined) updateData.profile_photo = req.body.profile_photo;
+    if (req.body.status_message !== undefined) updateData.status_message = req.body.status_message;
+    updateData.updated_at = new Date().toISOString();
     
-    if (!existingProfile) {
-      // Create the profile first
-      console.log('[Users] Creating new profile for derivId:', derivId);
-      existingProfile = await upsertUserProfile(derivId, {
-        username: req.body.username,
-        display_name: req.body.display_name,
-        fullname: req.body.display_name,
-        bio: req.body.bio || '',
-        profile_photo: req.body.profile_photo
-      });
+    console.log('[Users] Update data:', JSON.stringify(updateData));
+    
+    // Direct update by deriv_id
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .update(updateData)
+      .eq('deriv_id', derivId)
+      .select()
+      .single();
+    
+    if (error) {
+      // If no row found, create the profile first
+      if (error.code === 'PGRST116') {
+        console.log('[Users] Profile not found, creating new one');
+        const { data: newProfile, error: createError } = await supabase
+          .from('user_profiles')
+          .insert({
+            deriv_id: derivId,
+            username: req.body.username || `trader_${derivId.toLowerCase().slice(0, 8)}`,
+            display_name: req.body.display_name || derivId,
+            fullname: req.body.fullname || req.body.display_name || derivId,
+            bio: req.body.bio || '',
+            profile_photo: req.body.profile_photo || '',
+            performance_tier: 'beginner',
+            is_online: true,
+            last_seen_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error('[Users] Create profile error:', createError);
+          return res.status(500).json({ error: 'Failed to create profile', details: createError.message });
+        }
+        
+        console.log('[Users] Profile created:', newProfile?.id);
+        return res.json(newProfile);
+      }
+      
+      console.error('[Users] Update error:', error);
+      return res.status(500).json({ error: 'Failed to update profile', details: error.message });
     }
     
-    // Now update with the full data using the profile's actual ID
-    const profile = await updateUserProfile(existingProfile.id, req.body);
-    
-    console.log('[Users] Profile updated successfully:', profile?.id);
+    console.log('[Users] Profile updated:', profile?.id);
     res.json(profile);
   } catch (error) {
-    console.error('Update profile error:', error);
+    console.error('[Users] Exception:', error);
     res.status(500).json({ error: 'Failed to update profile', details: error.message });
   }
 });
