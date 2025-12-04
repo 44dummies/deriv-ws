@@ -283,8 +283,8 @@ const TierChatroom = ({ user, analytics }) => {
                 >
                   {}
                   <div className="message-avatar">
-                    {msg.sender?.profile_photo ? (
-                      <img src={msg.sender.profile_photo} alt="" />
+                    {msg.sender?.avatarUrl && msg.sender.avatarUrl.startsWith('http') ? (
+                      <img src={msg.sender.avatarUrl} alt="" />
                     ) : (
                       <div className="avatar-placeholder">
                         {(msg.sender?.username || 'U')[0].toUpperCase()}
