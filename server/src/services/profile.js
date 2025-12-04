@@ -160,6 +160,8 @@ async function updateUserProfile(userId, updates) {
  */
 async function saveProfilePicture(userId, file) {
   try {
+    console.log('[Profile] Saving photo for userId:', userId);
+    
     // Convert buffer to base64 data URL
     const base64Data = file.buffer.toString('base64');
     const mimeType = file.mimetype;
@@ -173,11 +175,11 @@ async function saveProfilePicture(userId, file) {
       uploadedAt: new Date().toISOString()
     };
     
-    // Update user profile with photo data URL
-    const { data, error } = await supabase
+    // First try by UUID
+    let result = await supabase
       .from('user_profiles')
       .update({
-        profile_photo: dataUrl, // Store as data URL for direct use in img src
+        profile_photo: dataUrl,
         profile_photo_metadata: metadata,
         updated_at: new Date().toISOString()
       })
@@ -185,13 +187,28 @@ async function saveProfilePicture(userId, file) {
       .select('profile_photo')
       .single();
     
-    if (error) {
-      console.error('Save profile picture error:', error);
-      throw error;
+    // If no match, try by deriv_id
+    if (result.error || !result.data) {
+      console.log('[Profile] User not found by id, trying deriv_id');
+      result = await supabase
+        .from('user_profiles')
+        .update({
+          profile_photo: dataUrl,
+          profile_photo_metadata: metadata,
+          updated_at: new Date().toISOString()
+        })
+        .eq('deriv_id', userId)
+        .select('profile_photo')
+        .single();
+    }
+    
+    if (result.error) {
+      console.error('Save profile picture error:', result.error);
+      throw result.error;
     }
     
     console.log('[Profile] Photo saved to database for user:', userId, 'Size:', file.size);
-    return data.profile_photo;
+    return result.data.profile_photo;
   } catch (error) {
     console.error('[Profile] Save photo error:', error);
     throw error;
@@ -203,18 +220,45 @@ async function saveProfilePicture(userId, file) {
  */
 async function deleteProfilePicture(userId) {
   try {
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        profile_photo: null,
-        profile_photo_metadata: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
+    console.log('[Profile] Deleting photo for userId:', userId);
     
-    if (error) {
-      console.error('Delete profile picture error:', error);
-      throw error;
+    // First check if user exists
+    const { data: user, error: fetchError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    
+    if (fetchError || !user) {
+      console.log('[Profile] User not found by id, trying deriv_id');
+      // Try by deriv_id instead
+      const { error: updateError } = await supabase
+        .from('user_profiles')
+        .update({
+          profile_photo: null,
+          profile_photo_metadata: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('deriv_id', userId);
+      
+      if (updateError) {
+        console.error('Delete profile picture error (deriv_id):', updateError);
+        throw updateError;
+      }
+    } else {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          profile_photo: null,
+          profile_photo_metadata: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      
+      if (error) {
+        console.error('Delete profile picture error:', error);
+        throw error;
+      }
     }
     
     console.log('[Profile] Photo deleted for user:', userId);
