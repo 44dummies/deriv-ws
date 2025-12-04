@@ -119,59 +119,6 @@ export const deleteJournalEntry = async (entryId, loginId) => {
 };
 
 // ============================================
-// FRIENDS OPERATIONS
-// ============================================
-
-/**
- * Get all friends for a user
- */
-export const getFriends = async (loginId) => {
-  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
-  
-  const { data, error } = await supabase
-    .from('friends')
-    .select('*')
-    .eq('user_login_id', loginId)
-    .order('created_at', { ascending: false });
-    
-  return { data, error };
-};
-
-/**
- * Add a friend
- */
-export const addFriend = async (loginId, friend) => {
-  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
-  
-  const { data, error } = await supabase
-    .from('friends')
-    .insert({
-      user_login_id: loginId,
-      friend_name: friend.name,
-      friend_login_id: friend.loginid,
-    })
-    .select()
-    .single();
-    
-  return { data, error };
-};
-
-/**
- * Remove a friend
- */
-export const removeFriend = async (friendId, loginId) => {
-  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
-  
-  const { data, error } = await supabase
-    .from('friends')
-    .delete()
-    .eq('id', friendId)
-    .eq('user_login_id', loginId);
-    
-  return { data, error };
-};
-
-// ============================================
 // TRADE HISTORY OPERATIONS
 // ============================================
 
@@ -269,9 +216,6 @@ const supabaseService = {
   getJournalEntries,
   createJournalEntry,
   deleteJournalEntry,
-  getFriends,
-  addFriend,
-  removeFriend,
   syncTradeHistory,
   getTradeHistory,
   getUserSettings,

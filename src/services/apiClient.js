@@ -304,49 +304,6 @@ class ApiClient {
     return this.request(`/users/${encodeURIComponent(username)}`);
   }
 
-  // ============ Friends ============
-
-  async getFriends() {
-    return this.request('/users/friends/list');
-  }
-
-  async getPendingRequests() {
-    return this.request('/users/friends/pending');
-  }
-
-  async sendFriendRequest(username) {
-    return this.request('/users/friends/request', {
-      method: 'POST',
-      body: JSON.stringify({ username })
-    });
-  }
-
-  async acceptFriendRequest(requestId) {
-    return this.request(`/users/friends/accept/${requestId}`, { method: 'POST' });
-  }
-
-  async declineFriendRequest(requestId) {
-    return this.request(`/users/friends/decline/${requestId}`, { method: 'POST' });
-  }
-
-  async removeFriend(friendshipId) {
-    return this.request(`/users/friends/${friendshipId}`, { method: 'DELETE' });
-  }
-
-  async blockUser(username) {
-    return this.request('/users/block', {
-      method: 'POST',
-      body: JSON.stringify({ username })
-    });
-  }
-
-  async unblockUser(username) {
-    return this.request('/users/unblock', {
-      method: 'POST',
-      body: JSON.stringify({ username })
-    });
-  }
-
   // ============ Chatrooms ============
 
   async getChatrooms() {

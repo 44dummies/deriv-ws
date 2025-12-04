@@ -16,12 +16,10 @@ const userRoutes = require('./routes/users');
 const chatroomRoutes = require('./routes/chatrooms');
 const communityRoutes = require('./routes/community');
 
-// Friends Center routes
-const friendsRoutes = require('./routes/friends');
+// Additional routes
 const chatsRoutes = require('./routes/chats');
 const portfolioRoutes = require('./routes/portfolio');
 const sharedRoutes = require('./routes/shared');
-const notificationsRoutes = require('./routes/notifications');
 const leaderboardRoutes = require('./routes/leaderboard');
 const mentorRoutes = require('./routes/mentor');
 const achievementsRoutes = require('./routes/achievements');
@@ -31,7 +29,6 @@ const filesRoutes = require('./routes/files');
 
 // Import socket handlers
 const { setupSocketHandlers } = require('./socket');
-const { setupFriendsSocketHandlers } = require('./socket/friends');
 
 // Import services
 const { initializeDefaultChatrooms } = require('./services/assignment');
@@ -55,7 +52,7 @@ const corsOrigins = process.env.CORS_ORIGIN
 
 console.log('CORS origins configured:', corsOrigins);
 
-// Socket.IO setup with CORS
+// Socket.IO setup with CORS - increased timeouts for session persistence
 const io = new Server(server, {
   cors: {
     origin: corsOrigins,
@@ -63,9 +60,11 @@ const io = new Server(server, {
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
   },
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  transports: ['websocket', 'polling']
+  pingTimeout: 300000,     // 5 minutes - how long to wait for pong
+  pingInterval: 25000,     // 25 seconds - ping every 25 seconds
+  connectTimeout: 60000,   // 60 seconds connection timeout
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true
 });
 
 // Middleware
@@ -91,12 +90,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/chatrooms', chatroomRoutes);
 app.use('/api/community', communityRoutes);
 
-// Friends Center API Routes
-app.use('/api/friends', friendsRoutes);
+// Chat API Routes
 app.use('/api/chats', chatsRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/shared', sharedRoutes);
-app.use('/api/notifications', notificationsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/mentor', mentorRoutes);
 app.use('/api/achievements', achievementsRoutes);
@@ -143,7 +140,6 @@ app.set('io', io);
 
 // Setup Socket.IO handlers
 setupSocketHandlers(io);
-setupFriendsSocketHandlers(io);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -156,9 +152,28 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Global error handlers to prevent crashes
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  // Don't crash - log and continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Promise Rejection:', reason);
+  // Don't crash - log and continue
+});
+
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
   server.close(() => {
     console.log('Server closed');
     process.exit(0);
@@ -185,7 +200,7 @@ async function startServer() {
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 TraderMind Real-time Server running on port ${PORT}`);
       console.log(`📡 WebSocket ready for connections`);
-      console.log(`👥 Friends Center System active`);
+      console.log(`💬 Community System active`);
       console.log(`📁 File storage initialized`);
       console.log(`🔗 CORS origins: ${corsOrigins.join(', ')}`);
     });

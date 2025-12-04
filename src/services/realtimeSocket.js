@@ -33,10 +33,14 @@ class RealtimeSocketService {
         auth: { token: accessToken },
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionAttempts: Infinity,         // Keep trying forever
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 10000
+        reconnectionDelayMax: 30000,            // Max 30 seconds between retries
+        timeout: 60000,                         // 60 second connection timeout
+        pingTimeout: 300000,                    // 5 minutes - match server
+        pingInterval: 25000,                    // 25 seconds
+        autoConnect: true,
+        forceNew: false                         // Reuse connection
       });
 
       this.socket.on('connect', () => {
@@ -50,15 +54,30 @@ class RealtimeSocketService {
       this.socket.on('connect_error', (error) => {
         console.error('Socket connection error:', error.message);
         this.reconnectAttempts++;
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          reject(new Error('Failed to connect to chat server'));
-        }
+        // Don't reject - let reconnection handle it
       });
 
       this.socket.on('disconnect', (reason) => {
         console.log('🔌 Socket disconnected:', reason);
         this.connected = false;
         this.notifyConnectionChange(false);
+        
+        // If server disconnect, try to reconnect
+        if (reason === 'io server disconnect') {
+          console.log('🔄 Server disconnected, attempting reconnect...');
+          this.socket.connect();
+        }
+      });
+
+      this.socket.on('reconnect', (attemptNumber) => {
+        console.log(`🔄 Socket reconnected after ${attemptNumber} attempts`);
+        this.connected = true;
+        this.notifyConnectionChange(true);
+      });
+
+      this.socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log(`🔄 Socket reconnection attempt ${attemptNumber}`);
+      });
       });
 
       this.socket.on('error', (error) => {

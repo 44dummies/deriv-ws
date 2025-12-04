@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
-  RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, UserPlus, Settings,
+  RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, Settings,
   LogOut, ChevronLeft, ChevronRight, Plus, Trash2, TrendingUp,
   TrendingDown, DollarSign, Activity, Target, Award, MessageCircle, Heart,
   Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer, User,
@@ -20,12 +20,10 @@ import realtimeService from '../services/realtimeService';
 import aiInsightsService from '../services/aiInsightsService';
 import realtimeSocket from '../services/realtimeSocket';
 import apiClient from '../services/apiClient';
-import { FriendsCenter, FriendsLeaderboard, UserProfile } from '../components/friends';
 import { TierChatroom } from '../components/community';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
-  FRIENDS: 'tradermind_friends',
   TRADES: 'tradermind_trades',
   THEME: 'tradermind_theme',
 };
@@ -110,7 +108,6 @@ const Dashboard = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Separate state for mobile
   const [tradeHistory, setTradeHistory] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
-  const [friends, setFriends] = useState([]);
   const [digitStats, setDigitStats] = useState({0:0,1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0});
   const [analytics, setAnalytics] = useState({
     totalTrades: 0, winRate: 0, totalProfit: 0, avgProfit: 0,
@@ -120,8 +117,6 @@ const Dashboard = () => {
   const [newJournalTitle, setNewJournalTitle] = useState('');
   const [newJournalContent, setNewJournalContent] = useState('');
   const [newJournalMood, setNewJournalMood] = useState('neutral');
-  const [newFriendName, setNewFriendName] = useState('');
-  const [newFriendId, setNewFriendId] = useState('');
   const [communityPosts, setCommunityPosts] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityError, setCommunityError] = useState(null);
@@ -147,7 +142,7 @@ const Dashboard = () => {
   const [availableTags] = useState(['#overtrading', '#perfect-entry', '#bad-day', '#strategyA', '#scalping', '#martingale']);
   const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
   
-  // Backend JWT token for Friends/Community features
+  // Backend JWT token for Community features
   const [backendToken, setBackendToken] = useState(null);
   
   // Full Analytics State
@@ -305,19 +300,6 @@ const Dashboard = () => {
           })));
         }
 
-        // Load friends from Supabase
-        const { data: friendsData } = await supabaseService.getFriends(userInfo.loginid);
-        if (friendsData) {
-          setFriends(friendsData.map(f => ({
-            id: f.id,
-            name: f.friend_name,
-            loginid: f.friend_login_id,
-            winRate: Math.random() * 40 + 50,
-            status: Math.random() > 0.5 ? 'online' : 'offline',
-            addedAt: f.created_at
-          })));
-        }
-
         // Load trades from Supabase
         const { data: tradesData } = await supabaseService.getTradeHistory(userInfo.loginid);
         if (tradesData && tradesData.length > 0) {
@@ -345,10 +327,8 @@ const Dashboard = () => {
 
     // Fallback to localStorage
     const savedJournal = localStorage.getItem(STORAGE_KEYS.JOURNAL);
-    const savedFriends = localStorage.getItem(STORAGE_KEYS.FRIENDS);
     const savedTrades = localStorage.getItem(STORAGE_KEYS.TRADES);
     if (savedJournal) setJournalEntries(JSON.parse(savedJournal));
-    if (savedFriends) setFriends(JSON.parse(savedFriends));
     if (savedTrades) {
       const trades = JSON.parse(savedTrades);
       setTradeHistory(trades);
@@ -581,7 +561,7 @@ const Dashboard = () => {
             }
           }
           
-          // Authenticate with backend server for Friends/Community features
+          // Authenticate with backend server for Community features
           try {
             console.log('Attempting backend auth with data:', {
               loginid: loginid,
@@ -604,14 +584,14 @@ const Dashboard = () => {
               const backendAuthResponse = await apiClient.loginWithDeriv(authPayload);
               console.log('Backend authentication successful');
               
-              // Store the backend JWT token for Friends/Community features
+              // Store the backend JWT token for Community features
               if (backendAuthResponse.accessToken) {
                 setBackendToken(backendAuthResponse.accessToken);
                 console.log('Backend token saved');
               }
             }
           } catch (backendErr) {
-            console.error('Backend auth failed (Friends features may not work):', backendErr);
+            console.error('Backend auth failed (Community features may not work):', backendErr);
             console.warn('Backend auth error message:', backendErr.message);
           }
         }
@@ -886,49 +866,6 @@ const Dashboard = () => {
     toast.success('Entry deleted');
   };
 
-  const addFriend = async () => {
-    if (!newFriendName.trim() || !newFriendId.trim()) { toast.error('Please fill in name and login ID'); return; }
-    
-    const friend = { 
-      id: Date.now().toString(), 
-      name: newFriendName, 
-      loginid: newFriendId, 
-      winRate: Math.random() * 40 + 50, 
-      status: Math.random() > 0.5 ? 'online' : 'offline', 
-      addedAt: new Date().toISOString() 
-    };
-
-    // Save to Supabase if configured
-    if (useSupabase && userInfo?.loginid) {
-      const { data, error } = await supabaseService.addFriend(userInfo.loginid, friend);
-      if (error) {
-        console.error('Supabase error:', error);
-        toast.error('Failed to save to cloud, saved locally');
-      } else if (data) {
-        friend.id = data.id;
-      }
-    }
-
-    const updated = [friend, ...friends];
-    setFriends(updated);
-    saveToStorage(STORAGE_KEYS.FRIENDS, updated);
-    setNewFriendName(''); setNewFriendId('');
-    toast.success('Friend added!');
-  };
-
-  const removeFriend = async (id) => {
-    // Delete from Supabase if configured
-    if (useSupabase && userInfo?.loginid) {
-      const { error } = await supabaseService.removeFriend(id, userInfo.loginid);
-      if (error) console.error('Supabase delete error:', error);
-    }
-
-    const updated = friends.filter(f => f.id !== id);
-    setFriends(updated);
-    saveToStorage(STORAGE_KEYS.FRIENDS, updated);
-    toast.success('Friend removed');
-  };
-
 
 
   // Community posts - direct links since CORS prevents API access from browser
@@ -970,9 +907,33 @@ const Dashboard = () => {
       const rooms = chatroomService.getUserAssignedRooms(userAnalytics);
       setAssignedRooms(rooms);
       
-      // Load community feed
-      const feed = chatroomService.getCommunityPosts();
-      setCommunityFeed(feed);
+      // Load community feed from backend API for persistence
+      try {
+        const feedData = await apiClient.getCommunityFeed({ limit: 20 });
+        if (feedData?.posts) {
+          const feed = feedData.posts.map(post => ({
+            id: post.id,
+            userId: post.author?.username,
+            userName: post.author?.displayName || post.author?.username,
+            avatar: post.author?.avatarUrl || post.author?.displayName?.[0]?.toUpperCase() || '?',
+            content: post.content,
+            title: post.title,
+            type: post.category,
+            tags: post.tags || [],
+            time: new Date(post.createdAt).toLocaleString(),
+            timestamp: post.createdAt,
+            likes: post.upvotes || 0,
+            comments: post.commentCount || 0,
+            views: post.viewCount || 0
+          }));
+          setCommunityFeed(feed);
+        }
+      } catch (error) {
+        console.error('Failed to load community feed:', error);
+        // Fallback to local service if API fails
+        const feed = chatroomService.getCommunityPosts();
+        setCommunityFeed(feed);
+      }
       
       // Get user reputation
       const userId = userInfo?.loginid || 'demo_user';
@@ -1182,24 +1143,46 @@ const Dashboard = () => {
     setRoomSentiment(null);
   }, [activeChatRoom]);
 
-  const createCommunityPost = useCallback(() => {
+  const createCommunityPost = useCallback(async () => {
     if (!newPostContent.trim()) return;
     
-    const userId = userInfo?.loginid || 'demo_user';
-    const userName = userInfo?.fullname || 'Trader';
-    const userAvatar = userName?.[0]?.toUpperCase() || '?';
-    
-    const result = chatroomService.createPost(userId, userName, userAvatar, newPostContent, 'text', newPostTags);
-    
-    if (result.success) {
-      setCommunityFeed(chatroomService.getCommunityPosts());
-      setNewPostContent('');
-      setNewPostTags([]);
-      toast.success('Post shared with the community!');
-    } else {
-      toast.error(result.error || 'Failed to create post');
+    try {
+      const result = await apiClient.createPost({
+        title: newPostContent.trim().substring(0, 100), // Use first 100 chars as title
+        content: newPostContent.trim(),
+        category: 'discussion',
+        tags: newPostTags
+      });
+      
+      if (result) {
+        // Refresh the feed from backend
+        const feedData = await apiClient.getCommunityFeed({ limit: 20 });
+        if (feedData?.posts) {
+          setCommunityFeed(feedData.posts.map(post => ({
+            id: post.id,
+            userId: post.author?.username,
+            userName: post.author?.displayName || post.author?.username,
+            avatar: post.author?.avatarUrl || post.author?.displayName?.[0]?.toUpperCase() || '?',
+            content: post.content,
+            title: post.title,
+            type: post.category,
+            tags: post.tags || [],
+            time: new Date(post.createdAt).toLocaleString(),
+            timestamp: post.createdAt,
+            likes: post.upvotes || 0,
+            comments: post.commentCount || 0,
+            views: post.viewCount || 0
+          })));
+        }
+        setNewPostContent('');
+        setNewPostTags([]);
+        toast.success('Post shared with the community!');
+      }
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      toast.error(error.message || 'Failed to create post');
     }
-  }, [newPostContent, newPostTags, userInfo]);
+  }, [newPostContent, newPostTags]);
 
   // Load chatrooms when tab is active
   useEffect(() => {
@@ -1318,7 +1301,6 @@ const Dashboard = () => {
     { id: 'timeline', icon: <Clock className="w-5 h-5" />, label: 'Trade Timeline' },
     { id: 'community', icon: <Users className="w-5 h-5" />, label: 'Community' },
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
-    { id: 'friends', icon: <UserPlus className="w-5 h-5" />, label: 'Friends' },
     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
   ];
 
@@ -2336,18 +2318,6 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-          )}
-
-          {/* Friends Tab - New Friends Center */}
-          {activeTab === 'friends' && (
-            <FriendsCenter 
-              user={{ 
-                deriv_account_id: userInfo?.loginid,
-                loginid: userInfo?.loginid,
-                username: userInfo?.fullname || userInfo?.loginid 
-              }} 
-              token={backendToken}
-            />
           )}
 
           {/* Settings Tab */}

@@ -33,14 +33,12 @@ const Settings = () => {
     showCountry: true,
     showPerformance: true,
     showOnlineStatus: true,
-    profileVisibility: 'public', // public, friends, private
-    allowFriendRequests: true,
-    allowMessages: 'friends', // everyone, friends, nobody
+    profileVisibility: 'public', // public, private
+    allowMessages: 'everyone', // everyone, nobody
   });
   
   // Notification settings
   const [notifications, setNotifications] = useState({
-    friendRequests: true,
     messages: true,
     chatMentions: true,
     achievements: true,
@@ -362,7 +360,7 @@ const Settings = () => {
               <div className="settings-form-group">
                 <label className="settings-label">
                   Username
-                  <span className="settings-label-hint">(searchable by friends)</span>
+                  <span className="settings-label-hint">(unique identifier)</span>
                 </label>
                 <div className="settings-input-wrapper">
                   <span className="username-prefix">@</span>
@@ -484,17 +482,9 @@ const Settings = () => {
                   className="settings-select"
                 >
                   <option value="public">Public - Anyone can view</option>
-                  <option value="friends">Friends Only</option>
                   <option value="private">Private - Only you</option>
                 </select>
               </div>
-
-              <Toggle
-                enabled={privacy.allowFriendRequests}
-                onChange={(v) => setPrivacy(prev => ({ ...prev, allowFriendRequests: v }))}
-                label="Allow Friend Requests"
-                description="Let other users send you friend requests"
-              />
 
               <div className="settings-form-group">
                 <label className="settings-label">Who Can Message You</label>
@@ -504,7 +494,6 @@ const Settings = () => {
                   className="settings-select"
                 >
                   <option value="everyone">Everyone</option>
-                  <option value="friends">Friends Only</option>
                   <option value="nobody">Nobody</option>
                 </select>
               </div>
@@ -523,12 +512,6 @@ const Settings = () => {
                 <h2 className="settings-card-title">Notification Types</h2>
               </div>
               
-              <Toggle
-                enabled={notifications.friendRequests}
-                onChange={(v) => setNotifications(prev => ({ ...prev, friendRequests: v }))}
-                label="Friend Requests"
-                description="When someone sends you a friend request"
-              />
               <Toggle
                 enabled={notifications.messages}
                 onChange={(v) => setNotifications(prev => ({ ...prev, messages: v }))}

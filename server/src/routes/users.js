@@ -1,26 +1,23 @@
 /**
  * User Routes
+ * Handles user profiles, settings, and profile pictures
+ * No friends functionality - removed for simplification
  */
 
 const express = require('express');
 const multer = require('multer');
 const { 
   getUserProfile,
+  getProfileByDerivId,
+  upsertUserProfile,
   updateUserProfile,
   saveProfilePicture,
   deleteProfilePicture,
   searchUsersByUsername,
-  getPublicProfile,
-  sendFriendRequest,
-  acceptFriendRequest,
-  declineFriendRequest,
-  getFriendList,
-  getPendingRequests,
-  removeFriend,
-  blockUser,
-  unblockUser
+  getPublicProfile
 } = require('../services/profile');
 const { authMiddleware } = require('../middleware/auth');
+const { supabase } = require('../db/supabase');
 
 const router = express.Router();
 
@@ -71,7 +68,7 @@ router.put('/me', authMiddleware, async (req, res) => {
 });
 
 /**
- * Upload profile picture
+ * Upload profile picture - stores in database as base64
  * POST /api/users/me/avatar
  */
 router.post('/me/avatar', authMiddleware, upload.single('avatar'), async (req, res) => {
@@ -79,7 +76,11 @@ router.post('/me/avatar', authMiddleware, upload.single('avatar'), async (req, r
     if (!req.file) {
       return res.status(400).json({ error: 'No file provided' });
     }
+    
+    console.log('[Avatar] Uploading for user:', req.userId, 'File size:', req.file.size);
     const avatarUrl = await saveProfilePicture(req.userId, req.file);
+    console.log('[Avatar] Upload successful, URL length:', avatarUrl?.length);
+    
     res.json({ avatarUrl });
   } catch (error) {
     console.error('Upload avatar error:', error);
@@ -121,9 +122,6 @@ router.get('/search', authMiddleware, async (req, res) => {
 
 // ============ Settings Routes (MUST be before /:username) ============
 
-const FriendsService = require('../services/friends');
-const { supabase } = require('../db/supabase');
-
 /**
  * Get user settings
  * GET /api/users/settings
@@ -133,15 +131,15 @@ router.get('/settings', authMiddleware, async (req, res) => {
     console.log('GET /settings - User:', req.user);
     
     // Get user profile by derivId
-    let user = await FriendsService.getProfileByDerivId(req.user.derivId);
+    let user = await getProfileByDerivId(req.user.derivId);
     
     console.log('Profile found:', user ? user.id : 'null');
     
     // If user doesn't exist, create a new profile
     if (!user) {
       console.log('User not found, creating profile for:', req.user.derivId);
-      user = await FriendsService.upsertUserProfile(req.user.derivId, {
-        username: `trader_${req.user.derivId.toLowerCase()}`,
+      user = await upsertUserProfile(req.user.derivId, {
+        username: `trader_${req.user.derivId.toLowerCase().slice(0, 8)}`,
         fullname: null,
         email: null,
         country: null
@@ -183,11 +181,8 @@ router.get('/settings', authMiddleware, async (req, res) => {
         showPerformance: true,
         showOnlineStatus: true,
         profileVisibility: 'public',
-        allowFriendRequests: true,
-        allowMessages: 'friends',
       },
       notifications: settings?.notifications || {
-        friendRequests: true,
         messages: true,
         chatMentions: true,
         achievements: true,
@@ -219,11 +214,11 @@ router.put('/settings', authMiddleware, async (req, res) => {
     const { profile, privacy, notifications, chat } = req.body;
     
     // Get user profile or create if doesn't exist
-    let user = await FriendsService.getProfileByDerivId(req.user.derivId);
+    let user = await getProfileByDerivId(req.user.derivId);
     if (!user) {
       console.log('User not found during settings update, creating profile for:', req.user.derivId);
-      user = await FriendsService.upsertUserProfile(req.user.derivId, {
-        username: `trader_${req.user.derivId.toLowerCase()}`,
+      user = await upsertUserProfile(req.user.derivId, {
+        username: `trader_${req.user.derivId.toLowerCase().slice(0, 8)}`,
         fullname: null,
         email: null,
         country: null
@@ -259,7 +254,7 @@ router.put('/settings', authMiddleware, async (req, res) => {
         profileUpdate.profile_photo_metadata = profile.profile_photo_metadata;
       }
 
-      console.log('Updating profile for user:', user.id, 'with:', profileUpdate);
+      console.log('Updating profile for user:', user.id);
       
       const { error: updateError } = await supabase
         .from('user_profiles')
@@ -344,150 +339,6 @@ router.get('/:username', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Get public profile error:', error);
     res.status(500).json({ error: 'Failed to get profile' });
-  }
-});
-
-// ============ Friends Routes ============
-
-/**
- * Get friend list
- * GET /api/users/friends/list
- */
-router.get('/friends/list', authMiddleware, async (req, res) => {
-  try {
-    const friends = await getFriendList(req.userId);
-    res.json(friends);
-  } catch (error) {
-    console.error('Get friends error:', error);
-    res.status(500).json({ error: 'Failed to get friends' });
-  }
-});
-
-/**
- * Get pending friend requests
- * GET /api/users/friends/pending
- */
-router.get('/friends/pending', authMiddleware, async (req, res) => {
-  try {
-    const requests = await getPendingRequests(req.userId);
-    res.json(requests);
-  } catch (error) {
-    console.error('Get pending requests error:', error);
-    res.status(500).json({ error: 'Failed to get pending requests' });
-  }
-});
-
-/**
- * Send friend request
- * POST /api/users/friends/request
- */
-router.post('/friends/request', authMiddleware, async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
-    }
-    const result = await sendFriendRequest(req.userId, username);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Send friend request error:', error);
-    res.status(500).json({ error: 'Failed to send friend request' });
-  }
-});
-
-/**
- * Accept friend request
- * POST /api/users/friends/accept/:requestId
- */
-router.post('/friends/accept/:requestId', authMiddleware, async (req, res) => {
-  try {
-    const result = await acceptFriendRequest(req.userId, req.params.requestId);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Accept friend request error:', error);
-    res.status(500).json({ error: 'Failed to accept friend request' });
-  }
-});
-
-/**
- * Decline friend request
- * POST /api/users/friends/decline/:requestId
- */
-router.post('/friends/decline/:requestId', authMiddleware, async (req, res) => {
-  try {
-    const result = await declineFriendRequest(req.userId, req.params.requestId);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Decline friend request error:', error);
-    res.status(500).json({ error: 'Failed to decline friend request' });
-  }
-});
-
-/**
- * Remove friend
- * DELETE /api/users/friends/:friendshipId
- */
-router.delete('/friends/:friendshipId', authMiddleware, async (req, res) => {
-  try {
-    const result = await removeFriend(req.userId, req.params.friendshipId);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Remove friend error:', error);
-    res.status(500).json({ error: 'Failed to remove friend' });
-  }
-});
-
-/**
- * Block user
- * POST /api/users/block
- */
-router.post('/block', authMiddleware, async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
-    }
-    const result = await blockUser(req.userId, username);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Block user error:', error);
-    res.status(500).json({ error: 'Failed to block user' });
-  }
-});
-
-/**
- * Unblock user
- * POST /api/users/unblock
- */
-router.post('/unblock', authMiddleware, async (req, res) => {
-  try {
-    const { username } = req.body;
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
-    }
-    const result = await unblockUser(req.userId, username);
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Unblock user error:', error);
-    res.status(500).json({ error: 'Failed to unblock user' });
   }
 });
 

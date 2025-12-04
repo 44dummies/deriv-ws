@@ -4,9 +4,24 @@
  */
 
 const express = require('express');
+const multer = require('multer');
 const router = express.Router();
 const FriendsService = require('../services/friends');
+const { uploadProfilePhoto, deleteProfilePhoto } = require('../services/fileStorage');
 const { authMiddleware } = require('../middleware/auth');
+
+// Configure multer for profile photo uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  }
+});
 
 // Apply auth middleware to all routes
 router.use(authMiddleware);
@@ -121,9 +136,72 @@ router.put('/profile', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/friends/profile/photo
+ * Upload profile photo to Supabase Storage
+ */
+router.post('/profile/photo', upload.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No photo provided' });
+    }
+    
+    const currentUser = await getOrCreateUser(req.user.derivId);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    
+    // Upload to Supabase Storage
+    const result = await uploadProfilePhoto(req.file, currentUser.id);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+    
+    // Update user profile with new photo URL
+    await FriendsService.updateProfile(currentUser.id, {
+      profile_photo: result.url
+    });
+    
+    res.json({
+      success: true,
+      profile_photo: result.url
+    });
+  } catch (error) {
+    console.error('Upload profile photo error:', error);
+    res.status(500).json({ error: 'Failed to upload profile photo' });
+  }
+});
+
+/**
+ * DELETE /api/friends/profile/photo
+ * Delete profile photo
+ */
+router.delete('/profile/photo', async (req, res) => {
+  try {
+    const currentUser = await getOrCreateUser(req.user.derivId);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    
+    // Delete from Supabase Storage
+    await deleteProfilePhoto(currentUser.id);
+    
+    // Clear profile photo URL
+    await FriendsService.updateProfile(currentUser.id, {
+      profile_photo: null
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete profile photo error:', error);
+    res.status(500).json({ error: 'Failed to delete profile photo' });
+  }
+});
+
 // =============================================
 // FRIEND SEARCH
-// =============================================
+// ==============================================
 
 /**
  * GET /api/friends/search?q=username

@@ -2,473 +2,584 @@ const { v4: uuidv4 } = require('uuid');
 const { supabase } = require('../db/supabase');
 
 /**
- * Community Service - Supabase-backed with in-memory fallback
+ * Community Service - Supabase-backed with persistence
  * 
- * This service provides community post functionality. It attempts to use
- * Supabase tables (community_posts, post_comments, post_votes) when available,
- * falling back to in-memory storage for development or when tables don't exist.
+ * All posts, comments, and votes are stored in Supabase for persistence
+ * across server restarts and browser sessions.
  */
 
-let useSupabase = null; // null = unknown, true = use DB, false = use memory
+// =============================================
+// HELPER FUNCTIONS
+// =============================================
 
-async function checkSupabaseAvailable() {
-  if (useSupabase !== null) return useSupabase;
+/**
+ * Get user profile from user_profiles table
+ */
+async function getUserProfile(userId) {
+  if (!userId) return null;
   
-  try {
-    const { data, error } = await supabase
-      .from('community_posts')
-      .select('id')
-      .limit(1);
-    
-    if (error && error.code === '42P01') {
-      console.log('[Community] Supabase tables not found, using in-memory fallback');
-      useSupabase = false;
-    } else if (error) {
-      console.log('[Community] Supabase error:', error.message, '- using in-memory fallback');
-      useSupabase = false;
-    } else {
-      console.log('[Community] Supabase tables available, using database');
-      useSupabase = true;
-    }
-  } catch (err) {
-    console.log('[Community] Failed to check Supabase:', err.message, '- using in-memory fallback');
-    useSupabase = false;
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id, username, display_name, fullname, profile_photo, performance_tier')
+    .eq('id', userId)
+    .single();
+  
+  if (error || !data) {
+    return {
+      id: userId,
+      username: `Trader_${String(userId).slice(-4)}`,
+      displayName: `Trader ${String(userId).slice(-4)}`,
+      avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${String(userId).slice(-4)}`,
+      reputation: 0
+    };
   }
   
-  return useSupabase;
-}
-
-const demoUsers = [
-  {
-    id: 'demo-user-main',
-    username: 'TraderNova',
-    displayName: 'Trader Nova',
-    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=TN',
-    reputation: 420
-  },
-  {
-    id: 'demo-user-mentor',
-    username: 'MentorWave',
-    displayName: 'Mentor Wave',
-    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=MW',
-    reputation: 610
-  },
-  {
-    id: 'demo-user-analyst',
-    username: 'QuantAyesha',
-    displayName: 'Quant Ayesha',
-    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=QA',
-    reputation: 355
-  },
-  {
-    id: 'demo-user-ai',
-    username: 'AITactician',
-    displayName: 'AI Tactician',
-    avatarUrl: 'https://api.dicebear.com/7.x/initials/svg?seed=AI',
-    reputation: 502
-  }
-];
-
-const now = Date.now();
-
-const seedPosts = [
-  {
-    id: uuidv4(),
-    userId: demoUsers[0].id,
-    title: 'Recovering from a 5-trade drawdown',
-    content:
-      'Last week I hit a 5-trade losing streak. I audited every entry, reduced size by 50%, and focused on A+ setups only. Ended the week +2R. Sharing full checklist inside.',
-    category: 'mindset',
-    tags: ['mindset', 'risk', 'playbook'],
-    attachments: [],
-    votes: 42,
-    upvotes: 48,
-    downvotes: 6,
-    viewCount: 1800,
-    isPinned: true,
-    createdAt: new Date(now - 1000 * 60 * 60 * 20).toISOString(),
-    updatedAt: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-    comments: [
-      {
-        id: uuidv4(),
-        userId: demoUsers[1].id,
-        content: 'Thanks for being transparent. Journaling the emotions is key during streaks.',
-        createdAt: new Date(now - 1000 * 60 * 60 * 5).toISOString()
-      },
-      {
-        id: uuidv4(),
-        userId: demoUsers[2].id,
-        content: 'Curious what metrics you tracked before scaling back up?',
-        createdAt: new Date(now - 1000 * 60 * 30).toISOString()
-      }
-    ],
-    isDeleted: false
-  },
-  {
-    id: uuidv4(),
-    userId: demoUsers[1].id,
-    title: '52-week high breakout checklist (free template)',
-    content:
-      'Sharing my 7-step breakout checklist that focuses on volume pockets, multi-timeframe confluence, and risk compression. Link inside to duplicate on Notion.',
-    category: 'strategy',
-    tags: ['breakouts', 'trend following', 'tools'],
-    attachments: ['https://www.notion.so/template/breakout'],
-    votes: 65,
-    upvotes: 72,
-    downvotes: 7,
-    viewCount: 2400,
-    isPinned: false,
-    createdAt: new Date(now - 1000 * 60 * 60 * 40).toISOString(),
-    updatedAt: new Date(now - 1000 * 60 * 60 * 10).toISOString(),
-    comments: [
-      {
-        id: uuidv4(),
-        userId: demoUsers[0].id,
-        content: 'Downloaded! Already added my ATR-based filter. Appreciate you.',
-        createdAt: new Date(now - 1000 * 60 * 60 * 8).toISOString()
-      }
-    ],
-    isDeleted: false
-  },
-  {
-    id: uuidv4(),
-    userId: demoUsers[3].id,
-    title: 'AI sentiment dashboard for synthetic indices',
-    content:
-      'Built a lightweight sentiment layer by scraping Telegram, Twitter, and Deriv tick data. Combining it with EMA clouds improved timing on volatility spikes.',
-    category: 'tools',
-    tags: ['ai', 'synthetic', 'automation'],
-    attachments: [],
-    votes: 31,
-    upvotes: 34,
-    downvotes: 3,
-    viewCount: 980,
-    isPinned: false,
-    createdAt: new Date(now - 1000 * 60 * 60 * 6).toISOString(),
-    updatedAt: new Date(now - 1000 * 60 * 60 * 1).toISOString(),
-    comments: [],
-    isDeleted: false
-  }
-];
-
-let posts = [...seedPosts];
-const postVotes = new Map();
-
-function getUserProfile(userId, overrides = {}) {
-  const demo = demoUsers.find((user) => user.id === userId);
-  const username = overrides.username || overrides.authorUsername || demo?.username || `Trader_${String(userId).slice(-4)}`;
   return {
-    id: userId,
-    username,
-    displayName: overrides.displayName || overrides.authorDisplayName || demo?.displayName || username,
-    avatarUrl:
-      overrides.avatarUrl || demo?.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(username)}`,
-    reputation: overrides.reputation ?? demo?.reputation ?? 0
+    id: data.id,
+    username: data.username || `Trader_${String(userId).slice(-4)}`,
+    displayName: data.display_name || data.fullname || data.username,
+    avatarUrl: data.profile_photo || `https://api.dicebear.com/7.x/initials/svg?seed=${data.username || userId}`,
+    reputation: data.performance_tier === 'elite' ? 500 : data.performance_tier === 'pro' ? 300 : 100
   };
 }
 
-function clonePost(post, userId = null) {
-  const authorProfile = getUserProfile(post.userId);
-  const userVote = userId ? postVotes.get(`${post.id}:${userId}`) || 0 : 0;
+/**
+ * Transform DB post to API format
+ */
+async function transformPost(post, currentUserId = null) {
+  const author = await getUserProfile(post.user_id);
+  
+  // Get comment count
+  const { count: commentCount } = await supabase
+    .from('post_comments')
+    .select('*', { count: 'exact', head: true })
+    .eq('post_id', post.id)
+    .eq('is_deleted', false);
+  
+  // Get user's vote if logged in
+  let userVote = 0;
+  if (currentUserId) {
+    const { data: vote } = await supabase
+      .from('post_votes')
+      .select('vote_value')
+      .eq('post_id', post.id)
+      .eq('user_id', currentUserId)
+      .single();
+    userVote = vote?.vote_value || 0;
+  }
+  
   return {
     id: post.id,
     title: post.title,
     content: post.content,
-    category: post.category,
-    tags: post.tags,
-    attachments: post.attachments,
+    category: post.category || 'discussion',
+    tags: post.tags || [],
+    attachments: post.attachments || [],
     author: {
-      username: authorProfile.username,
-      displayName: authorProfile.displayName,
-      avatarUrl: authorProfile.avatarUrl,
-      reputation: authorProfile.reputation
+      username: author.username,
+      displayName: author.displayName,
+      avatarUrl: author.avatarUrl,
+      reputation: author.reputation
     },
-    votes: post.votes,
-    upvotes: post.upvotes,
-    downvotes: post.downvotes,
-    commentCount: post.comments.length,
+    votes: (post.upvotes || 0) - (post.downvotes || 0),
+    upvotes: post.upvotes || 0,
+    downvotes: post.downvotes || 0,
+    commentCount: commentCount || 0,
     userVote,
-    isPinned: Boolean(post.isPinned),
-    createdAt: post.createdAt,
-    updatedAt: post.updatedAt,
-    viewCount: post.viewCount || 0
+    isPinned: Boolean(post.is_pinned),
+    createdAt: post.created_at,
+    updatedAt: post.updated_at,
+    viewCount: post.view_count || 0
   };
 }
 
-function clonePostWithComments(post, userId = null) {
-  const base = clonePost(post, userId);
+/**
+ * Transform comment to API format
+ */
+async function transformComment(comment) {
+  const author = await getUserProfile(comment.user_id);
   return {
-    ...base,
-    comments: post.comments.map((comment) => {
-      const profile = getUserProfile(comment.userId);
-      return {
-        id: comment.id,
-        content: comment.content,
-        author: {
-          username: profile.username,
-          displayName: profile.displayName,
-          avatarUrl: profile.avatarUrl
-        },
-        createdAt: comment.createdAt
-      };
-    })
+    id: comment.id,
+    content: comment.content,
+    author: {
+      username: author.username,
+      displayName: author.displayName,
+      avatarUrl: author.avatarUrl
+    },
+    createdAt: comment.created_at
   };
 }
 
-function paginate(list, page, limit) {
-  const total = list.length;
-  const totalPages = Math.max(1, Math.ceil(total / limit));
-  const start = (page - 1) * limit;
-  const end = start + limit;
-  const slice = list.slice(start, end);
-  return {
-    slice,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasMore: end < total
-    }
-  };
-}
+// =============================================
+// MAIN FUNCTIONS
+// =============================================
 
-function sortPosts(list, sortBy) {
-  switch (sortBy) {
-    case 'newest':
-      return [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    case 'top':
-      return [...list].sort((a, b) => b.votes - a.votes || new Date(b.createdAt) - new Date(a.createdAt));
-    case 'trending':
-    default:
-      return [...list].sort(
-        (a, b) =>
-          b.votes / Math.max(1, (Date.now() - new Date(b.createdAt)) / 3600000) -
-          a.votes / Math.max(1, (Date.now() - new Date(a.createdAt)) / 3600000)
-      );
-  }
-}
-
-function filterByTimeRange(list, timeRange) {
-  if (!timeRange || timeRange === 'all') return list;
-  const nowTs = Date.now();
-  const deltaMap = {
-    day: 24 * 60 * 60 * 1000,
-    week: 7 * 24 * 60 * 60 * 1000,
-    month: 30 * 24 * 60 * 60 * 1000
-  };
-  const limit = deltaMap[timeRange];
-  if (!limit) return list;
-  return list.filter((post) => nowTs - new Date(post.createdAt).getTime() <= limit);
-}
-
+/**
+ * Create a new post
+ */
 async function createPost(userId, data = {}, userInfo = {}) {
   const { title, content, category, tags = [], attachments = [] } = data;
+  
   if (!title || title.length < 5 || title.length > 200) {
     return { success: false, error: 'Title must be 5-200 characters' };
   }
   if (!content || content.length < 10 || content.length > 10000) {
     return { success: false, error: 'Content must be 10-10000 characters' };
   }
-
-  const newPost = {
-    id: uuidv4(),
-    userId,
-    title: title.trim(),
-    content: content.trim(),
-    category: category || 'discussion',
-    tags: Array.isArray(tags) ? tags : [],
-    attachments: Array.isArray(attachments) ? attachments : [],
-    votes: 0,
-    upvotes: 0,
-    downvotes: 0,
-    viewCount: 0,
-    isPinned: false,
-    isDeleted: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    comments: []
-  };
-
-  posts = [newPost, ...posts];
-  return { success: true, post: clonePost(newPost, userInfo.id || userId) };
-}
-
-async function getFeed(options = {}) {
-  const { page = 1, limit = 20, category, sortBy = 'trending', timeRange = 'week', userId = null } = options;
-  let visible = posts.filter((post) => !post.isDeleted);
-  if (category) {
-    visible = visible.filter((post) => post.category === category);
+  
+  const { data: post, error } = await supabase
+    .from('community_posts')
+    .insert({
+      user_id: userId,
+      title: title.trim(),
+      content: content.trim(),
+      category: category || 'discussion',
+      tags: Array.isArray(tags) ? tags : [],
+      attachments: Array.isArray(attachments) ? attachments : [],
+      upvotes: 0,
+      downvotes: 0,
+      view_count: 0,
+      is_pinned: false,
+      is_deleted: false
+    })
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[Community] Create post error:', error);
+    return { success: false, error: 'Failed to create post' };
   }
-  visible = filterByTimeRange(visible, timeRange);
-  visible = sortPosts(visible, sortBy);
-  const { slice, pagination } = paginate(visible, page, limit);
+  
+  const transformedPost = await transformPost(post, userId);
+  return { success: true, post: transformedPost };
+}
+
+/**
+ * Get feed with pagination
+ */
+async function getFeed(options = {}) {
+  const { 
+    page = 1, 
+    limit = 20, 
+    category, 
+    sortBy = 'trending', 
+    timeRange = 'week',
+    userId = null 
+  } = options;
+  
+  // Calculate time filter
+  let timeFilter = null;
+  if (timeRange && timeRange !== 'all') {
+    const now = new Date();
+    switch (timeRange) {
+      case 'day':
+        timeFilter = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+        break;
+      case 'week':
+        timeFilter = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+        break;
+      case 'month':
+        timeFilter = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+        break;
+    }
+  }
+  
+  // Build query
+  let query = supabase
+    .from('community_posts')
+    .select('*', { count: 'exact' })
+    .eq('is_deleted', false);
+  
+  if (category) {
+    query = query.eq('category', category);
+  }
+  
+  if (timeFilter) {
+    query = query.gte('created_at', timeFilter);
+  }
+  
+  // Apply sorting
+  switch (sortBy) {
+    case 'newest':
+      query = query.order('created_at', { ascending: false });
+      break;
+    case 'top':
+      query = query.order('upvotes', { ascending: false });
+      break;
+    case 'trending':
+    default:
+      // For trending, we order by recent activity + votes
+      query = query.order('created_at', { ascending: false });
+      break;
+  }
+  
+  // Apply pagination
+  const offset = (page - 1) * limit;
+  query = query.range(offset, offset + limit - 1);
+  
+  const { data: posts, error, count } = await query;
+  
+  if (error) {
+    console.error('[Community] Get feed error:', error);
+    return { posts: [], pagination: { page, limit, total: 0, totalPages: 0, hasMore: false } };
+  }
+  
+  // Transform posts
+  const transformedPosts = await Promise.all(
+    (posts || []).map(post => transformPost(post, userId))
+  );
+  
+  // Sort by trending score if needed
+  if (sortBy === 'trending') {
+    transformedPosts.sort((a, b) => {
+      const aScore = a.votes / Math.max(1, (Date.now() - new Date(a.createdAt)) / 3600000);
+      const bScore = b.votes / Math.max(1, (Date.now() - new Date(b.createdAt)) / 3600000);
+      return bScore - aScore;
+    });
+  }
+  
+  const total = count || 0;
+  const totalPages = Math.ceil(total / limit);
+  
   return {
-    posts: slice.map((post) => clonePost(post, userId)),
-    pagination
+    posts: transformedPosts,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasMore: page < totalPages
+    }
   };
 }
 
+/**
+ * Get single post with comments
+ */
 async function getPost(postId, userId = null) {
-  const post = posts.find((item) => item.id === postId && !item.isDeleted);
-  if (!post) return null;
-  post.viewCount += 1;
-  post.updatedAt = new Date().toISOString();
-  return clonePostWithComments(post, userId);
+  // Get post
+  const { data: post, error } = await supabase
+    .from('community_posts')
+    .select('*')
+    .eq('id', postId)
+    .eq('is_deleted', false)
+    .single();
+  
+  if (error || !post) {
+    return null;
+  }
+  
+  // Increment view count
+  await supabase
+    .from('community_posts')
+    .update({ view_count: (post.view_count || 0) + 1 })
+    .eq('id', postId);
+  
+  // Get comments
+  const { data: comments } = await supabase
+    .from('post_comments')
+    .select('*')
+    .eq('post_id', postId)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: true });
+  
+  // Transform post
+  const transformedPost = await transformPost(post, userId);
+  
+  // Transform comments
+  const transformedComments = await Promise.all(
+    (comments || []).map(comment => transformComment(comment))
+  );
+  
+  return {
+    ...transformedPost,
+    comments: transformedComments
+  };
 }
 
+/**
+ * Vote on a post
+ */
 async function votePost(userId, postId, value) {
   if (![1, 0, -1].includes(value)) {
     return { success: false, error: 'Invalid vote value' };
   }
-  const post = posts.find((item) => item.id === postId && !item.isDeleted);
-  if (!post) {
+  
+  // Check if post exists
+  const { data: post, error: postError } = await supabase
+    .from('community_posts')
+    .select('id, upvotes, downvotes')
+    .eq('id', postId)
+    .eq('is_deleted', false)
+    .single();
+  
+  if (postError || !post) {
     return { success: false, error: 'Post not found' };
   }
-  const key = `${postId}:${userId}`;
-  const previous = postVotes.get(key) || 0;
-  postVotes.set(key, value);
-
-  post.votes += value - previous;
-  if (previous === 1) post.upvotes -= 1;
-  if (previous === -1) post.downvotes -= 1;
-  if (value === 1) post.upvotes += 1;
-  if (value === -1) post.downvotes += 1;
-  if (value === 0) postVotes.delete(key);
-
+  
+  // Get existing vote
+  const { data: existingVote } = await supabase
+    .from('post_votes')
+    .select('id, vote_value')
+    .eq('post_id', postId)
+    .eq('user_id', userId)
+    .single();
+  
+  const previousValue = existingVote?.vote_value || 0;
+  
+  if (value === 0) {
+    // Remove vote
+    if (existingVote) {
+      await supabase.from('post_votes').delete().eq('id', existingVote.id);
+    }
+  } else if (existingVote) {
+    // Update existing vote
+    await supabase
+      .from('post_votes')
+      .update({ vote_value: value })
+      .eq('id', existingVote.id);
+  } else {
+    // Create new vote
+    await supabase
+      .from('post_votes')
+      .insert({ post_id: postId, user_id: userId, vote_value: value });
+  }
+  
+  // Calculate new vote counts
+  let upvotes = post.upvotes || 0;
+  let downvotes = post.downvotes || 0;
+  
+  if (previousValue === 1) upvotes--;
+  if (previousValue === -1) downvotes--;
+  if (value === 1) upvotes++;
+  if (value === -1) downvotes++;
+  
+  // Update post vote counts
+  await supabase
+    .from('community_posts')
+    .update({ upvotes, downvotes })
+    .eq('id', postId);
+  
   return {
     success: true,
-    votes: post.votes,
-    upvotes: post.upvotes,
-    downvotes: post.downvotes
+    votes: upvotes - downvotes,
+    upvotes,
+    downvotes
   };
 }
 
+/**
+ * Add comment to a post
+ */
 async function addComment(userId, postId, content, userInfo = {}) {
   if (!content || content.trim().length < 1 || content.length > 2000) {
     return { success: false, error: 'Comment must be 1-2000 characters' };
   }
-  const post = posts.find((item) => item.id === postId && !item.isDeleted);
+  
+  // Check if post exists
+  const { data: post } = await supabase
+    .from('community_posts')
+    .select('id')
+    .eq('id', postId)
+    .eq('is_deleted', false)
+    .single();
+  
   if (!post) {
     return { success: false, error: 'Post not found' };
   }
-  const comment = {
-    id: uuidv4(),
-    userId,
-    content: content.trim(),
-    createdAt: new Date().toISOString()
-  };
-  post.comments.push(comment);
-  post.updatedAt = new Date().toISOString();
-
-  const profile = getUserProfile(userId, userInfo);
-  return {
-    success: true,
-    comment: {
-      id: comment.id,
-      content: comment.content,
-      author: {
-        username: profile.username,
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl
-      },
-      createdAt: comment.createdAt
-    }
-  };
+  
+  // Create comment
+  const { data: comment, error } = await supabase
+    .from('post_comments')
+    .insert({
+      post_id: postId,
+      user_id: userId,
+      content: content.trim(),
+      is_deleted: false
+    })
+    .select()
+    .single();
+  
+  if (error) {
+    console.error('[Community] Add comment error:', error);
+    return { success: false, error: 'Failed to add comment' };
+  }
+  
+  const transformedComment = await transformComment(comment);
+  return { success: true, comment: transformedComment };
 }
 
+/**
+ * Delete a post
+ */
 async function deletePost(userId, postId) {
-  const post = posts.find((item) => item.id === postId && !item.isDeleted);
+  const { data: post } = await supabase
+    .from('community_posts')
+    .select('user_id')
+    .eq('id', postId)
+    .eq('is_deleted', false)
+    .single();
+  
   if (!post) {
     return { success: false, error: 'Post not found' };
   }
-  if (post.userId !== userId) {
+  
+  if (post.user_id !== userId) {
     return { success: false, error: 'Not authorized to delete this post' };
   }
-  post.isDeleted = true;
-  post.updatedAt = new Date().toISOString();
+  
+  await supabase
+    .from('community_posts')
+    .update({ is_deleted: true })
+    .eq('id', postId);
+  
   return { success: true };
 }
 
+/**
+ * Delete a comment
+ */
 async function deleteComment(userId, commentId) {
-  for (const post of posts) {
-    const commentIndex = post.comments.findIndex((comment) => comment.id === commentId);
-    if (commentIndex !== -1) {
-      if (post.comments[commentIndex].userId !== userId) {
-        return { success: false, error: 'Not authorized to delete this comment' };
-      }
-      post.comments.splice(commentIndex, 1);
-      post.updatedAt = new Date().toISOString();
-      return { success: true };
-    }
+  const { data: comment } = await supabase
+    .from('post_comments')
+    .select('user_id')
+    .eq('id', commentId)
+    .eq('is_deleted', false)
+    .single();
+  
+  if (!comment) {
+    return { success: false, error: 'Comment not found' };
   }
-  return { success: false, error: 'Comment not found' };
+  
+  if (comment.user_id !== userId) {
+    return { success: false, error: 'Not authorized to delete this comment' };
+  }
+  
+  await supabase
+    .from('post_comments')
+    .update({ is_deleted: true })
+    .eq('id', commentId);
+  
+  return { success: true };
 }
 
+/**
+ * Get posts by username
+ */
 async function getUserPosts(username, page = 1, limit = 20) {
-  const filtered = posts.filter((post) => {
-    const profile = getUserProfile(post.userId);
-    return !post.isDeleted && profile.username.toLowerCase() === username.toLowerCase();
-  });
-  const ordered = filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const { slice, pagination } = paginate(ordered, page, limit);
-  return {
-    posts: slice.map((post) => ({
+  // Get user by username
+  const { data: user } = await supabase
+    .from('user_profiles')
+    .select('id')
+    .eq('username', username)
+    .single();
+  
+  if (!user) {
+    return { posts: [], pagination: { page, limit, total: 0, totalPages: 0, hasMore: false } };
+  }
+  
+  const offset = (page - 1) * limit;
+  
+  const { data: posts, count } = await supabase
+    .from('community_posts')
+    .select('*', { count: 'exact' })
+    .eq('user_id', user.id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+  
+  const transformedPosts = await Promise.all(
+    (posts || []).map(async post => ({
       id: post.id,
       title: post.title,
       content: post.content,
       category: post.category,
-      votes: post.votes,
-      commentCount: post.comments.length,
-      createdAt: post.createdAt
-    })),
-    pagination
+      votes: (post.upvotes || 0) - (post.downvotes || 0),
+      commentCount: 0, // Could add count query here
+      createdAt: post.created_at
+    }))
+  );
+  
+  const total = count || 0;
+  const totalPages = Math.ceil(total / limit);
+  
+  return {
+    posts: transformedPosts,
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages }
   };
 }
 
+/**
+ * Get trending tags
+ */
 async function getTrendingTags(limit = 10) {
-  const tagCount = posts.reduce((acc, post) => {
-    if (post.isDeleted) return acc;
-    for (const tag of post.tags) {
-      acc[tag] = (acc[tag] || 0) + 1;
-    }
-    return acc;
-  }, {});
+  const { data: posts } = await supabase
+    .from('community_posts')
+    .select('tags')
+    .eq('is_deleted', false);
+  
+  const tagCount = {};
+  (posts || []).forEach(post => {
+    (post.tags || []).forEach(tag => {
+      tagCount[tag] = (tagCount[tag] || 0) + 1;
+    });
+  });
+  
   return Object.entries(tagCount)
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([tag, count]) => ({ tag, count }));
 }
 
+/**
+ * Search posts
+ */
 async function searchPosts(query, options = {}) {
   const { page = 1, limit = 20, category } = options;
+  
   if (!query) {
     return { posts: [], pagination: { page: 1, limit, total: 0, totalPages: 1, hasMore: false } };
   }
-  const normalized = query.toLowerCase();
-  let filtered = posts.filter((post) => {
-    if (post.isDeleted) return false;
-    const inText = post.title.toLowerCase().includes(normalized) || post.content.toLowerCase().includes(normalized);
-    const inTags = post.tags.some((tag) => tag.toLowerCase().includes(normalized));
-    return inText || inTags;
-  });
+  
+  const searchPattern = `%${query}%`;
+  const offset = (page - 1) * limit;
+  
+  let dbQuery = supabase
+    .from('community_posts')
+    .select('*', { count: 'exact' })
+    .eq('is_deleted', false)
+    .or(`title.ilike.${searchPattern},content.ilike.${searchPattern}`);
+  
   if (category) {
-    filtered = filtered.filter((post) => post.category === category);
+    dbQuery = dbQuery.eq('category', category);
   }
-  filtered = filtered.sort((a, b) => b.votes - a.votes || new Date(b.createdAt) - new Date(a.createdAt));
-  const { slice, pagination } = paginate(filtered, page, limit);
+  
+  const { data: posts, count } = await dbQuery
+    .order('upvotes', { ascending: false })
+    .range(offset, offset + limit - 1);
+  
+  const transformedPosts = await Promise.all(
+    (posts || []).map(async post => {
+      const author = await getUserProfile(post.user_id);
+      return {
+        id: post.id,
+        title: post.title,
+        content: post.content.substring(0, 200),
+        category: post.category,
+        author,
+        votes: (post.upvotes || 0) - (post.downvotes || 0),
+        commentCount: 0,
+        createdAt: post.created_at
+      };
+    })
+  );
+  
+  const total = count || 0;
+  const totalPages = Math.ceil(total / limit);
+  
   return {
-    posts: slice.map((post) => ({
-      id: post.id,
-      title: post.title,
-      content: post.content.substring(0, 200),
-      category: post.category,
-      author: getUserProfile(post.userId),
-      votes: post.votes,
-      commentCount: post.comments.length,
-      createdAt: post.createdAt
-    })),
-    pagination
+    posts: transformedPosts,
+    pagination: { page, limit, total, totalPages, hasMore: page < totalPages }
   };
 }
 
