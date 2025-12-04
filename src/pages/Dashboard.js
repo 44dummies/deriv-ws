@@ -1301,7 +1301,7 @@ const Dashboard = () => {
     { id: 'timeline', icon: <Clock className="w-5 h-5" />, label: 'Trade Timeline' },
     { id: 'community', icon: <Users className="w-5 h-5" />, label: 'Community' },
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
-    { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
+    { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings', navigateTo: '/settings' },
   ];
 
   const moodEmojis = { great: '🚀', good: '😊', neutral: '😐', bad: '😔' };
@@ -1497,7 +1497,19 @@ const Dashboard = () => {
 
           <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
             {tabs.map(tab => (
-              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setMobileSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : 'hover:bg-white/5 text-gray-400 hover:text-white'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`} title={sidebarCollapsed ? tab.label : undefined}>
+              <button 
+                key={tab.id} 
+                onClick={() => { 
+                  if (tab.navigateTo) {
+                    navigate(tab.navigateTo);
+                  } else {
+                    setActiveTab(tab.id); 
+                    setMobileSidebarOpen(false); 
+                  }
+                }} 
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id && !tab.navigateTo ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : 'hover:bg-white/5 text-gray-400 hover:text-white'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`} 
+                title={sidebarCollapsed ? tab.label : undefined}
+              >
                 {tab.icon}
                 <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{tab.label}</span>
               </button>
@@ -2320,115 +2332,6 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-4 sm:space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold">Settings</h1>
-                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Manage your TraderMind preferences</p>
-                </div>
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 
-                    rounded-lg transition-colors text-white font-medium"
-                >
-                  <Settings className="w-4 h-4" />
-                  Full Settings
-                </button>
-              </div>
-              
-              {/* Profile Settings Card */}
-              <Card>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-base sm:text-lg font-medium flex items-center gap-2">
-                    <User className="w-4 h-4 sm:w-5 sm:h-5" /> Profile & Privacy
-                  </h3>
-                  <button
-                    onClick={() => navigate('/settings')}
-                    className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-                  >
-                    Edit Profile →
-                  </button>
-                </div>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Set your custom username, profile photo, bio, and privacy settings.
-                  Control what others can see and who can contact you.
-                </p>
-              </Card>
-
-              <Card>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Account Information</h3>
-                <SettingRow icon={<Users className="w-4 h-4 sm:w-5 sm:h-5" />} label="Full Name" value={userInfo?.fullname || 'Not set'} />
-                <SettingRow icon={<Shield className="w-4 h-4 sm:w-5 sm:h-5" />} label="Login ID" value={userInfo?.loginid} />
-                <SettingRow icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5" />} label="Account Type" value={userInfo?.is_virtual ? 'Demo Account' : 'Real Account'} />
-                <SettingRow icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />} label="Currency" value={userInfo?.currency} />
-              </Card>
-              <Card>
-                <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
-                  <Cloud className="w-4 h-4 sm:w-5 sm:h-5" /> Cloud Sync
-                </h3>
-                <SettingRow 
-                  icon={supabaseStatus === 'connected' ? <Cloud className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" /> : <CloudOff className="w-4 h-4 sm:w-5 sm:h-5" />} 
-                  label="Cloud Status" 
-                  value={supabaseStatus === 'connected' ? 'Cloud sync enabled' : 'Local storage only'} 
-                  action={
-                    <span className={`text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full ${supabaseStatus === 'connected' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20'}`} style={{ color: supabaseStatus !== 'connected' ? 'var(--text-secondary)' : undefined }}>
-                      {supabaseStatus === 'connected' ? 'Synced' : 'Local'}
-                    </span>
-                  }
-                />
-              </Card>
-              
-              {/* Keyboard Shortcuts */}
-              <Card className="hidden sm:block">
-                <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
-                  <Keyboard className="w-4 h-4 sm:w-5 sm:h-5" /> Keyboard Shortcuts
-                </h3>
-                <SettingRow 
-                  icon={<Keyboard className="w-4 h-4 sm:w-5 sm:h-5" />} 
-                  label="Enable Shortcuts" 
-                  value="Use keyboard shortcuts for navigation" 
-                  action={
-                    <button 
-                      onClick={() => setKeyboardShortcutsEnabled(!keyboardShortcutsEnabled)} 
-                      className={`w-12 sm:w-14 h-6 sm:h-8 rounded-full transition-colors ${keyboardShortcutsEnabled ? 'bg-[#ff3355]' : 'bg-gray-600'}`}
-                    >
-                      <div className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-white transition-transform mx-0.5 sm:mx-1 ${keyboardShortcutsEnabled ? 'translate-x-5 sm:translate-x-6' : ''}`} />
-                    </button>
-                  }
-                />
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                  {[
-                    { keys: 'Ctrl+S', action: 'Sync' },
-                    { keys: 'Ctrl+A', action: 'Analytics' },
-                    { keys: 'Ctrl+D', action: 'Digits' },
-                    { keys: 'Ctrl+T', action: 'Timeline' },
-                    { keys: 'Ctrl+J', action: 'Journal' },
-                  ].map(shortcut => (
-                    <div key={shortcut.keys} className="flex items-center gap-2 p-2 rounded-lg" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                      <kbd className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-xs font-mono bg-black/30">{shortcut.keys}</kbd>
-                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>{shortcut.action}</span>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-              
-              <Card>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Quick Links</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <a href="https://deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Deriv Website</span></a>
-                  <a href="https://app.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Trading Platform</span></a>
-                  <a href="https://api.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>API Docs</span></a>
-                  <a href="https://community.deriv.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 sm:p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors text-sm sm:text-base"><ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-[#ff5f6d] shrink-0" /><span>Community</span></a>
-                </div>
-              </Card>
-              <Card>
-                <h3 className="text-base sm:text-lg font-medium mb-4 text-red-400">Danger Zone</h3>
-                <button onClick={handleLogout} className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors text-sm sm:text-base w-full sm:w-auto justify-center sm:justify-start"><LogOut className="w-4 h-4 sm:w-5 sm:h-5" /> Sign Out</button>
-              </Card>
-            </div>
-          )}
           </div>
         </main>
       </div>
