@@ -72,7 +72,7 @@ class ProfileService {
    */
   async updateProfile(updates) {
     try {
-      const response = await apiClient.put('/users/me/profile', updates);
+      const response = await apiClient.put('/users/me', updates);
       
       if (response.success) {
         // Update local profile
