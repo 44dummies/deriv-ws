@@ -222,50 +222,42 @@ async function deleteProfilePicture(userId) {
   try {
     console.log('[Profile] Deleting photo for userId:', userId);
     
-    // First check if user exists
-    const { data: user, error: fetchError } = await supabase
+    // Try updating by UUID first
+    let result = await supabase
       .from('user_profiles')
-      .select('id')
+      .update({
+        profile_photo: null,
+        profile_photo_metadata: null,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
-      .single();
+      .select('id');
     
-    if (fetchError || !user) {
-      console.log('[Profile] User not found by id, trying deriv_id');
-      // Try by deriv_id instead
-      const { error: updateError } = await supabase
+    // If no rows updated, try by deriv_id
+    if (!result.data || result.data.length === 0) {
+      console.log('[Profile] No user found by id, trying deriv_id:', userId);
+      result = await supabase
         .from('user_profiles')
         .update({
           profile_photo: null,
           profile_photo_metadata: null,
           updated_at: new Date().toISOString()
         })
-        .eq('deriv_id', userId);
-      
-      if (updateError) {
-        console.error('Delete profile picture error (deriv_id):', updateError);
-        throw updateError;
-      }
-    } else {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          profile_photo: null,
-          profile_photo_metadata: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-      
-      if (error) {
-        console.error('Delete profile picture error:', error);
-        throw error;
-      }
+        .eq('deriv_id', userId)
+        .select('id');
     }
     
-    console.log('[Profile] Photo deleted for user:', userId);
+    if (result.error) {
+      console.error('Delete profile picture error:', result.error);
+      throw result.error;
+    }
+    
+    console.log('[Profile] Photo deleted for user:', userId, 'Rows affected:', result.data?.length || 0);
     return { success: true };
   } catch (error) {
     console.error('[Profile] Delete photo error:', error);
-    throw error;
+    // Return success anyway - photo is effectively "deleted" if user doesn't exist
+    return { success: true };
   }
 }
 

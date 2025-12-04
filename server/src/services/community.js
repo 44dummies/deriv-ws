@@ -158,99 +158,112 @@ async function createPost(userId, data = {}, userInfo = {}) {
  * Get feed with pagination
  */
 async function getFeed(options = {}) {
-  const { 
-    page = 1, 
-    limit = 20, 
-    category, 
-    sortBy = 'trending', 
-    timeRange = 'week',
-    userId = null 
-  } = options;
-  
-  // Calculate time filter
-  let timeFilter = null;
-  if (timeRange && timeRange !== 'all') {
-    const now = new Date();
-    switch (timeRange) {
-      case 'day':
-        timeFilter = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+  try {
+    const { 
+      page = 1, 
+      limit = 20, 
+      category, 
+      sortBy = 'trending', 
+      timeRange = 'week',
+      userId = null 
+    } = options;
+    
+    // Calculate time filter
+    let timeFilter = null;
+    if (timeRange && timeRange !== 'all') {
+      const now = new Date();
+      switch (timeRange) {
+        case 'day':
+          timeFilter = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+          break;
+        case 'week':
+          timeFilter = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+          break;
+        case 'month':
+          timeFilter = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+          break;
+      }
+    }
+    
+    // Build query
+    let query = supabase
+      .from('community_posts')
+      .select('*', { count: 'exact' })
+      .eq('is_deleted', false);
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    if (timeFilter) {
+      query = query.gte('created_at', timeFilter);
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        query = query.order('created_at', { ascending: false });
         break;
-      case 'week':
-        timeFilter = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+      case 'top':
+        query = query.order('upvotes', { ascending: false });
         break;
-      case 'month':
-        timeFilter = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+      case 'trending':
+      default:
+        query = query.order('created_at', { ascending: false });
         break;
     }
-  }
-  
-  // Build query
-  let query = supabase
-    .from('community_posts')
-    .select('*', { count: 'exact' })
-    .eq('is_deleted', false);
-  
-  if (category) {
-    query = query.eq('category', category);
-  }
-  
-  if (timeFilter) {
-    query = query.gte('created_at', timeFilter);
-  }
-  
-  // Apply sorting
-  switch (sortBy) {
-    case 'newest':
-      query = query.order('created_at', { ascending: false });
-      break;
-    case 'top':
-      query = query.order('upvotes', { ascending: false });
-      break;
-    case 'trending':
-    default:
-      // For trending, we order by recent activity + votes
-      query = query.order('created_at', { ascending: false });
-      break;
-  }
-  
-  // Apply pagination
-  const offset = (page - 1) * limit;
-  query = query.range(offset, offset + limit - 1);
-  
-  const { data: posts, error, count } = await query;
-  
-  if (error) {
-    console.error('[Community] Get feed error:', error);
-    return { posts: [], pagination: { page, limit, total: 0, totalPages: 0, hasMore: false } };
-  }
-  
-  // Transform posts
-  const transformedPosts = await Promise.all(
-    (posts || []).map(post => transformPost(post, userId))
-  );
-  
-  // Sort by trending score if needed
-  if (sortBy === 'trending') {
-    transformedPosts.sort((a, b) => {
-      const aScore = a.votes / Math.max(1, (Date.now() - new Date(a.createdAt)) / 3600000);
-      const bScore = b.votes / Math.max(1, (Date.now() - new Date(b.createdAt)) / 3600000);
-      return bScore - aScore;
-    });
-  }
-  
-  const total = count || 0;
-  const totalPages = Math.ceil(total / limit);
-  
-  return {
-    posts: transformedPosts,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages,
-      hasMore: page < totalPages
+    
+    // Apply pagination
+    const offset = (page - 1) * limit;
+    query = query.range(offset, offset + limit - 1);
+    
+    const { data: posts, error, count } = await query;
+    
+    if (error) {
+      console.error('[Community] Get feed error:', error);
+      return { posts: [], pagination: { page, limit, total: 0, totalPages: 0, hasMore: false } };
     }
-  };
+    
+    // Transform posts
+    const transformedPosts = await Promise.all(
+      (posts || []).map(post => transformPost(post, userId))
+    );
+    
+    // Sort by trending score if needed
+    if (sortBy === 'trending') {
+      transformedPosts.sort((a, b) => {
+        const aScore = a.votes / Math.max(1, (Date.now() - new Date(a.createdAt)) / 3600000);
+        const bScore = b.votes / Math.max(1, (Date.now() - new Date(b.createdAt)) / 3600000);
+        return bScore - aScore;
+      });
+    }
+    
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+    
+    return {
+      posts: transformedPosts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages
+      }
+    };
+  } catch (error) {
+    console.error('[Community] getFeed error:', error);
+    return {
+      posts: [],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+        hasMore: false
+      }
+    };
+  }
 }
 
 /**
