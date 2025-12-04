@@ -317,7 +317,14 @@ const TierChatroom = ({ user, analytics }) => {
                     )}
                     
                     {}
-                    <div className="message-text">{msg.text || msg.message_text}</div>
+                    <div className="message-text">
+                      {msg.text || msg.message_text}
+                      {msg.sender?.id === user?.id && (
+                        <span className="message-time-inline">
+                          {tierChatroomService.formatMessageTime(msg.createdAt || msg.created_at)}
+                        </span>
+                      )}
+                    </div>
                     
                     {}
                     {(msg.fileName || msg.file_name) && (

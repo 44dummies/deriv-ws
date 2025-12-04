@@ -3,23 +3,47 @@
 @tailwind utilities;
 
 :root {
-  --theme-primary: #6366f1;
-  --theme-bg: #0a0a0f;
-  --theme-accent: #22d3ee;
+  --theme-primary: #3390ec;
+  --theme-primary-rgb: 51, 144, 236;
+  --theme-bg: #0e1621;
+  --theme-bg-secondary: #17212b;
+  --theme-bg-chat: #0e1621;
+  --theme-msg-own: #2b5278;
+  --theme-msg-other: #182533;
+  --theme-accent: #6ab2f2;
+  --theme-text: #ffffff;
+  --theme-text-secondary: #8b9ba5;
+  --theme-text-muted: #6c7883;
+  --theme-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
   body {
-    @apply text-gray-100 min-h-screen antialiased;
-    background: radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--theme-primary) 12%, transparent), transparent 45%),
-                radial-gradient(circle at 80% 0%, color-mix(in srgb, var(--theme-accent) 8%, transparent), transparent 35%),
-                var(--theme-bg);
-    transition: background 0.3s ease;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
   
   * {
     scrollbar-width: thin;
-    scrollbar-color: #374151 transparent;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
   }
 }
 
