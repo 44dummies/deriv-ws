@@ -118,6 +118,7 @@ async function upsertUserProfile(derivId, profileData) {
 
 /**
  * Update user profile fields
+ * Tries UUID first, then falls back to deriv_id
  */
 async function updateUserProfile(userId, updates) {
   const allowedFields = [
@@ -139,19 +140,31 @@ async function updateUserProfile(userId, updates) {
   
   data.updated_at = new Date().toISOString();
   
-  const { data: updated, error } = await supabase
+  // Try by UUID first
+  let result = await supabase
     .from('user_profiles')
     .update(data)
     .eq('id', userId)
     .select()
     .single();
   
-  if (error) {
-    console.error('Update profile error:', error);
-    throw error;
+  // If no match by UUID, try by deriv_id
+  if (result.error && result.error.code === 'PGRST116') {
+    console.log('[Profile] No match by UUID, trying deriv_id:', userId);
+    result = await supabase
+      .from('user_profiles')
+      .update(data)
+      .eq('deriv_id', userId)
+      .select()
+      .single();
   }
   
-  return updated;
+  if (result.error) {
+    console.error('Update profile error:', result.error);
+    throw result.error;
+  }
+  
+  return result.data;
 }
 
 /**
