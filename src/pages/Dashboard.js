@@ -327,24 +327,9 @@ const Dashboard = () => {
           })));
         }
 
-        
-        const { data: tradesData } = await supabaseService.getTradeHistory(userInfo.loginid);
-        if (tradesData && tradesData.length > 0) {
-          const trades = tradesData.map(t => ({
-            id: t.id,
-            contract_id: t.contract_id,
-            symbol: t.symbol,
-            buy_price: parseFloat(t.buy_price),
-            sell_price: parseFloat(t.sell_price),
-            profit: parseFloat(t.profit),
-            purchase_time: new Date(t.purchase_time).getTime() / 1000,
-            sell_time: new Date(t.sell_time).getTime() / 1000,
-            shortcode: t.shortcode
-          }));
-          setTradeHistory(trades);
-          calculateAnalytics(trades);
-          calculateDigitStats(trades);
-        }
+        // OLD TRADE SYNC DISABLED - Using new trading system
+        // const { data: tradesData } = await supabaseService.getTradeHistory(userInfo.loginid);
+        setTradeHistory([]); // Will be populated by new trading system
         return;
       } catch (err) {
         console.error('Supabase load error:', err);
@@ -802,13 +787,8 @@ const Dashboard = () => {
           
           await supabaseService.upsertUserProfile(userInfo);
           
-          const { error } = await supabaseService.syncTradeHistory(userInfo.loginid, trades);
-          if (error) {
-            console.error('Supabase sync error:', error);
-            toast.success('Data synced locally (cloud sync failed)');
-            setSyncing(false);
-            return;
-          }
+          // OLD TRADE SYNC DISABLED - Using new trading system
+          // const { error } = await supabaseService.syncTradeHistory(userInfo.loginid, trades);
         }
       }
       setLastSyncTime(new Date());
