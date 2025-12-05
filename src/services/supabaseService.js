@@ -126,45 +126,20 @@ export const deleteJournalEntry = async (entryId, loginId) => {
  * Sync trade history to Supabase
  */
 export const syncTradeHistory = async (loginId, trades) => {
-  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
-  
-  
-  const tradesWithUser = trades.map(trade => ({
-    deriv_login_id: loginId,
-    contract_id: trade.contract_id,
-    symbol: trade.symbol,
-    buy_price: trade.buy_price,
-    sell_price: trade.sell_price,
-    profit: trade.profit,
-    purchase_time: new Date(trade.purchase_time * 1000).toISOString(),
-    sell_time: new Date(trade.sell_time * 1000).toISOString(),
-    shortcode: trade.shortcode,
-  }));
-  
-  
-  const { data, error } = await supabase
-    .from('trades')
-    .upsert(tradesWithUser, {
-      onConflict: 'deriv_login_id,contract_id'
-    });
-    
-  return { data, error };
+  // DISABLED: Conflicts with new trading system
+  // Use tradingApi.js and backend /api/trading/trades instead
+  console.warn('syncTradeHistory is deprecated. Use new trading system API.');
+  return { data: [], error: null };
 };
 
 /**
  * Get trade history from Supabase
  */
 export const getTradeHistory = async (loginId, limit = 100) => {
-  if (!supabase) return { data: null, error: new Error('Supabase not configured') };
-  
-  const { data, error } = await supabase
-    .from('trades')
-    .select('*')
-    .eq('deriv_login_id', loginId)
-    .order('sell_time', { ascending: false })
-    .limit(limit);
-    
-  return { data, error };
+  // DISABLED: Conflicts with new trading system
+  // Use tradingApi.js and backend /api/trading/trades instead
+  console.warn('getTradeHistory is deprecated. Use new trading system API.');
+  return { data: [], error: null };
 };
 
 
