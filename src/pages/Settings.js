@@ -291,10 +291,10 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg)' }}>
         <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-purple-500 mx-auto mb-4" />
-          <p className="text-gray-400">Loading settings...</p>
+          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4" style={{ color: 'var(--theme-primary)' }} />
+          <p style={{ color: 'var(--theme-text-secondary)' }}>Loading settings...</p>
         </div>
       </div>
     );
@@ -726,12 +726,12 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
       <Toaster position="top-right" toastOptions={{
-        style: { background: '#1a1a2e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+        style: { background: 'var(--theme-bg-secondary)', color: 'var(--theme-text)', border: '1px solid var(--theme-border)' }
       }} />
 
-      <header className="sticky top-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/10">
+      <header className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ backgroundColor: 'rgba(var(--theme-bg), 0.8)', borderColor: 'var(--theme-border)' }}>
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <button 
             onClick={() => navigate('/dashboard')}

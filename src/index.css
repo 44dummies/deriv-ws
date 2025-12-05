@@ -18,13 +18,79 @@
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+  }
+  
   body {
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--theme-bg);
-    color: var(--theme-text);
+    background-color: var(--theme-bg) !important;
+    color: var(--theme-text) !important;
     transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  /* Theme-aware background classes */
+  .theme-bg {
+    background-color: var(--theme-bg) !important;
+  }
+  
+  .theme-bg-secondary {
+    background-color: var(--theme-bg-secondary) !important;
+  }
+  
+  .theme-bg-chat {
+    background-color: var(--theme-bg-chat) !important;
+  }
+  
+  .theme-text {
+    color: var(--theme-text) !important;
+  }
+  
+  .theme-text-secondary {
+    color: var(--theme-text-secondary) !important;
+  }
+  
+  .theme-text-muted {
+    color: var(--theme-text-muted) !important;
+  }
+  
+  .theme-border {
+    border-color: var(--theme-border) !important;
+  }
+  
+  .theme-primary {
+    background-color: var(--theme-primary) !important;
+  }
+  
+  .theme-primary-text {
+    color: var(--theme-primary) !important;
+  }
+  
+  .theme-accent {
+    color: var(--theme-accent) !important;
+  }
+  
+  /* Override common Tailwind background colors with theme */
+  .bg-\[\#0a0a0f\], .bg-\[\#0e1621\], .bg-\[\#111118\], .bg-\[\#17212b\],
+  .bg-gray-900, .bg-slate-900, .bg-zinc-900, .bg-neutral-900 {
+    background-color: var(--theme-bg) !important;
+  }
+  
+  .bg-gray-800, .bg-slate-800, .bg-zinc-800, .bg-neutral-800,
+  .bg-\[\#1a1a2e\], .bg-\[\#131d33\], .bg-\[\#182533\] {
+    background-color: var(--theme-bg-secondary) !important;
+  }
+  
+  /* Theme-aware cards and panels */
+  .bg-white\/5, .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+  }
+  
+  /* Border colors */
+  .border-white\/5, .border-white\/10, .border-white\/20 {
+    border-color: var(--theme-border) !important;
   }
   
   * {

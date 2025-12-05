@@ -1382,10 +1382,10 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#040404] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg)' }}>
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-4 animate-pulse text-white">T</div>
-          <p className="text-gray-400">Loading TraderMind...</p>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto mb-4 animate-pulse text-white" style={{ background: `linear-gradient(135deg, var(--theme-primary), var(--theme-accent))` }}>T</div>
+          <p style={{ color: 'var(--theme-text-secondary)' }}>Loading TraderMind...</p>
         </div>
       </div>
     );
@@ -1393,11 +1393,13 @@ const Dashboard = () => {
 
   return (
     <div 
-      className="min-h-screen bg-[#040404] text-white"
+      className="min-h-screen"
       style={{
+        backgroundColor: 'var(--theme-bg)',
+        color: 'var(--theme-text)',
         '--card-bg': 'rgba(255,255,255,0.05)',
-        '--card-border': 'rgba(255,255,255,0.1)',
-        '--text-secondary': '#9ca3af',
+        '--card-border': 'var(--theme-border)',
+        '--text-secondary': 'var(--theme-text-secondary)',
         '--accent-bg': 'rgba(255,255,255,0.05)'
       }}
     >

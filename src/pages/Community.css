@@ -3,25 +3,25 @@
    Modern, Responsive, Mobile-First Design
    =============================================== */
 
-/* CSS Variables */
-:root {
-  --tg-bg: #0e1621;
-  --tg-bg-chat: #0e1621;
-  --tg-surface: #17212b;
-  --tg-surface-hover: #1e2c3a;
-  --tg-border: rgba(255, 255, 255, 0.06);
+/* CSS Variables - Inherit from global theme */
+.tg-community {
+  --tg-bg: var(--theme-bg);
+  --tg-bg-chat: var(--theme-bg-chat);
+  --tg-surface: var(--theme-bg-secondary);
+  --tg-surface-hover: var(--theme-bg-secondary);
+  --tg-border: var(--theme-border);
   
-  --tg-primary: #3390ec;
-  --tg-primary-hover: #4ba3f5;
-  --tg-message-out: #2b5278;
-  --tg-message-out-hover: #325d87;
-  --tg-message-in: #182533;
-  --tg-message-in-hover: #1e2f42;
+  --tg-primary: var(--theme-primary);
+  --tg-primary-hover: var(--theme-accent);
+  --tg-message-out: var(--theme-msg-own);
+  --tg-message-out-hover: var(--theme-msg-own);
+  --tg-message-in: var(--theme-msg-other);
+  --tg-message-in-hover: var(--theme-msg-other);
   
-  --tg-text: #ffffff;
-  --tg-text-secondary: #8b9bab;
-  --tg-text-muted: #6c7883;
-  --tg-link: #6ab2f2;
+  --tg-text: var(--theme-text);
+  --tg-text-secondary: var(--theme-text-secondary);
+  --tg-text-muted: var(--theme-text-muted);
+  --tg-link: var(--theme-accent);
   
   --tg-success: #4fae4e;
   --tg-warning: #e5a64e;

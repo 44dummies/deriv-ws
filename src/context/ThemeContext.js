@@ -144,6 +144,7 @@ export const ThemeProvider = ({ children }) => {
     const selectedTheme = THEMES[id] || THEMES.telegram;
     const root = document.documentElement;
     
+    // Set CSS custom properties
     root.style.setProperty('--theme-primary', selectedTheme.primary);
     root.style.setProperty('--theme-primary-rgb', selectedTheme.primaryRgb);
     root.style.setProperty('--theme-bg', selectedTheme.bg);
@@ -157,8 +158,22 @@ export const ThemeProvider = ({ children }) => {
     root.style.setProperty('--theme-text-muted', selectedTheme.textMuted);
     root.style.setProperty('--theme-border', selectedTheme.border);
     
+    // Apply to body directly
     document.body.style.backgroundColor = selectedTheme.bg;
     document.body.style.color = selectedTheme.text;
+    
+    // Apply to html element for full coverage
+    root.style.backgroundColor = selectedTheme.bg;
+    root.style.color = selectedTheme.text;
+    
+    // Set color-scheme for proper scrollbar and input styling
+    root.style.colorScheme = id === 'light' ? 'light' : 'dark';
+    
+    // Force repaint on all major containers
+    const containers = document.querySelectorAll('[class*="bg-"], [class*="min-h-screen"]');
+    containers.forEach(el => {
+      el.style.transition = 'background-color 0.3s ease, color 0.3s ease';
+    });
     
     localStorage.setItem('tradermind_theme', id);
   };

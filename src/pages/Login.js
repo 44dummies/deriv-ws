@@ -45,7 +45,7 @@ const Login = () => {
   ];
 
   return (
-    <div className={`min-h-screen bg-[#040404] text-white overflow-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`min-h-screen overflow-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-[#ff3355]/20 blur-[160px] animate-pulse" />
         <div className="absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full bg-[#5d5dff]/15 blur-[180px] animate-pulse" style={{ animationDelay: '1s' }} />
