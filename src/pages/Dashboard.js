@@ -1842,19 +1842,19 @@ const Dashboard = () => {
 
                   {}
                   <Card>
-                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
                       <Brain className="w-5 h-5 text-purple-500" />
                       Emotional Trading Analysis
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div className="p-4 rounded-xl text-center" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <Gauge className={`w-8 h-8 mx-auto mb-2 ${
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                      <div className="p-3 sm:p-4 rounded-xl text-center" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <Gauge className={`w-6 sm:w-8 h-6 sm:h-8 mx-auto mb-2 ${
                           fullAnalytics.emotionalAnalysis.emotionalScore >= 70 ? 'text-green-500' :
                           fullAnalytics.emotionalAnalysis.emotionalScore >= 40 ? 'text-yellow-500' : 'text-red-500'
                         }`} />
-                        <p className="text-3xl font-bold">{fullAnalytics.emotionalAnalysis.emotionalScore}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Emotional Score</p>
-                        <p className={`text-xs mt-1 ${
+                        <p className="text-2xl sm:text-3xl font-bold">{fullAnalytics.emotionalAnalysis.emotionalScore}</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Emotional Score</p>
+                        <p className={`text-[10px] sm:text-xs mt-1 font-medium truncate ${
                           fullAnalytics.emotionalAnalysis.emotionalStability === 'stable' ? 'text-green-500' :
                           fullAnalytics.emotionalAnalysis.emotionalStability === 'moderate' ? 'text-yellow-500' :
                           fullAnalytics.emotionalAnalysis.emotionalStability === 'unstable' ? 'text-orange-500' : 'text-red-500'
@@ -1862,19 +1862,19 @@ const Dashboard = () => {
                           {fullAnalytics.emotionalAnalysis.emotionalStability.toUpperCase()}
                         </p>
                       </div>
-                      <div className={`p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
-                        <AlertTriangle className={`w-6 h-6 mb-2 ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'text-red-500' : 'text-green-500'}`} />
-                        <p className="font-medium">Revenge Trading</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <div className={`p-3 sm:p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'bg-red-500/10 border border-red-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                        <AlertTriangle className={`w-5 sm:w-6 h-5 sm:h-6 mb-2 ${fullAnalytics.emotionalAnalysis.revengeTradingDetected ? 'text-red-500' : 'text-green-500'}`} />
+                        <p className="font-medium text-sm sm:text-base">Revenge Trading</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                           {fullAnalytics.emotionalAnalysis.revengeTradingDetected 
                             ? `${fullAnalytics.emotionalAnalysis.revengeTradingInstances} instances detected` 
                             : 'Not detected'}
                         </p>
                       </div>
-                      <div className={`p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
-                        <Activity className={`w-6 h-6 mb-2 ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'text-orange-500' : 'text-green-500'}`} />
-                        <p className="font-medium">Overtrading</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <div className={`p-3 sm:p-4 rounded-xl ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'bg-orange-500/10 border border-orange-500/30' : 'bg-green-500/10 border border-green-500/30'}`}>
+                        <Activity className={`w-5 sm:w-6 h-5 sm:h-6 mb-2 ${fullAnalytics.emotionalAnalysis.overtradingDetected ? 'text-orange-500' : 'text-green-500'}`} />
+                        <p className="font-medium text-sm sm:text-base">Overtrading</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                           {fullAnalytics.emotionalAnalysis.overtradingDetected 
                             ? `Avg ${fullAnalytics.emotionalAnalysis.avgTradesPerSession?.toFixed(1)} trades/hr` 
                             : 'Trading pace is healthy'}
@@ -1883,8 +1883,8 @@ const Dashboard = () => {
                     </div>
                     {fullAnalytics.emotionalAnalysis.majorFactors.length > 0 && (
                       <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                        <p className="text-sm font-medium text-yellow-500 mb-1">Major Factors Affecting Score:</p>
-                        <ul className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        <p className="text-xs sm:text-sm font-medium text-yellow-500 mb-1">Major Factors Affecting Score:</p>
+                        <ul className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
                           {fullAnalytics.emotionalAnalysis.majorFactors.map((f, i) => <li key={i}>• {f}</li>)}
                         </ul>
                       </div>
@@ -1893,40 +1893,40 @@ const Dashboard = () => {
 
                   {}
                   <Card>
-                    <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-medium mb-4 flex items-center gap-2">
                       <Scale className="w-5 h-5 text-blue-500" />
                       Risk Management
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <p className="text-2xl font-bold">{(fullAnalytics.riskAnalysis.avgRiskPercent ?? 0).toFixed(1)}%</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Avg Risk/Trade</p>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-xl sm:text-2xl font-bold">{(fullAnalytics.riskAnalysis.avgRiskPercent ?? 0).toFixed(1)}%</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Avg Risk/Trade</p>
                       </div>
-                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <p className="text-2xl font-bold text-red-500">{(fullAnalytics.riskAnalysis.maxDrawdown ?? 0).toFixed(1)}%</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Max Drawdown</p>
+                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-xl sm:text-2xl font-bold text-red-500">{(fullAnalytics.riskAnalysis.maxDrawdown ?? 0).toFixed(1)}%</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Max Drawdown</p>
                       </div>
-                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <p className="text-2xl font-bold">{(fullAnalytics.tradePerformance.profitFactor ?? 0).toFixed(2)}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Profit Factor</p>
+                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className="text-xl sm:text-2xl font-bold">{(fullAnalytics.tradePerformance.profitFactor ?? 0).toFixed(2)}</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Profit Factor</p>
                       </div>
-                      <div className="p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <p className={`text-2xl font-bold ${
+                      <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
+                        <p className={`text-base sm:text-xl lg:text-2xl font-bold leading-tight truncate ${
                           fullAnalytics.riskAnalysis.riskBehavior === 'conservative' ? 'text-green-500' :
                           fullAnalytics.riskAnalysis.riskBehavior === 'moderate' ? 'text-blue-500' :
                           fullAnalytics.riskAnalysis.riskBehavior === 'high_risk' ? 'text-orange-500' : 'text-red-500'
                         }`}>{fullAnalytics.riskAnalysis.riskBehavior?.replace('_', ' ').toUpperCase()}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Risk Profile</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Risk Profile</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                        <p className="text-xl font-bold text-green-500">{(fullAnalytics.tradePerformance.avgWin ?? 0).toFixed(2)}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Average Win</p>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
+                      <div className="p-3 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                        <p className="text-lg sm:text-xl font-bold text-green-500">{(fullAnalytics.tradePerformance.avgWin ?? 0).toFixed(2)}</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Average Win</p>
                       </div>
-                      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                        <p className="text-xl font-bold text-red-500">{(fullAnalytics.tradePerformance.avgLoss ?? 0).toFixed(2)}</p>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Average Loss</p>
+                      <div className="p-3 sm:p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                        <p className="text-lg sm:text-xl font-bold text-red-500">{(fullAnalytics.tradePerformance.avgLoss ?? 0).toFixed(2)}</p>
+                        <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Average Loss</p>
                       </div>
                     </div>
                   </Card>
