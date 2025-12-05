@@ -10,7 +10,7 @@ import * as api from './tradingApi';
 /**
  * Hook for managing trading accounts
  */
-export function useAccounts() {
+export function useTradingAccounts() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,7 +49,7 @@ export function useAccounts() {
 /**
  * Hook for managing trading sessions
  */
-export function useSessions(options = {}) {
+export function useTradingSessions(options = {}) {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -200,7 +200,7 @@ export function useTickStream(accountId, token, symbol, strategy = null) {
 /**
  * Hook for bot status
  */
-export function useBotStatus() {
+export function useTradingBot() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   

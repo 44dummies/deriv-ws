@@ -196,3 +196,48 @@ export async function getActivityLogs(options = {}) {
 export async function getTradingConstants() {
   return apiRequest('/api/trading/constants');
 }
+
+// ==================== Unified Export ====================
+
+export const tradingApi = {
+  // Accounts
+  getAccounts,
+  addAccount,
+  verifyToken,
+  updateAccount,
+  deleteAccount,
+  
+  // Sessions
+  getSessions,
+  getSession,
+  createSession,
+  updateSession,
+  deleteSession,
+  startSession,
+  stopSession,
+  pauseSession,
+  resumeSession,
+  
+  // Invitations
+  inviteAccounts,
+  getInvitations,
+  acceptInvitation,
+  declineInvitation,
+  createInvitation: inviteAccounts, // Alias
+  
+  // Trades
+  getSessionTrades,
+  getTradeStats,
+  getTrades: getSessionTrades, // Alias
+  
+  // Bot Control
+  startBot,
+  stopBot,
+  getBotStatus,
+  
+  // Activity Logs
+  getActivityLogs,
+  
+  // Constants
+  getConstants: getTradingConstants
+};

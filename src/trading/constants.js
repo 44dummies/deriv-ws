@@ -106,3 +106,18 @@ export const DEFAULT_SETTINGS = {
   minTicksForAnalysis: 20,
   invitationExpiryMinutes: 5
 };
+
+// Aliases for convenience (plural forms)
+export const CONTRACT_TYPES = CONTRACT_TYPE;
+export const VOLATILITY_INDICES = {
+  R_10: 'R_10',
+  R_25: 'R_25',
+  R_50: 'R_50',
+  R_75: 'R_75',
+  R_100: 'R_100',
+  '1HZ10V': '1HZ10V',
+  '1HZ25V': '1HZ25V',
+  '1HZ50V': '1HZ50V',
+  '1HZ75V': '1HZ75V',
+  '1HZ100V': '1HZ100V'
+};
