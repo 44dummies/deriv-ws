@@ -44,7 +44,7 @@ const UserTradingDashboard = ({ user }) => {
   } = useTradingBot();
 
   // Get active session for tick stream
-  const activeSession = sessions.find(s => s.status === 'active');
+  const activeSession = sessions?.find(s => s.status === 'active');
   const { 
     ticks, 
     lastTick, 
@@ -333,7 +333,7 @@ const UserTradingDashboard = ({ user }) => {
             <BarChart2 size={24} />
           </div>
           <div className="stat-content">
-            <span className="stat-value">{botStatus.isRunning ? 'Running' : 'Idle'}</span>
+            <span className="stat-value">{botStatus?.isRunning ? 'Running' : 'Idle'}</span>
             <span className="stat-label">Bot Status</span>
           </div>
         </div>
@@ -344,7 +344,7 @@ const UserTradingDashboard = ({ user }) => {
         <h2>Your Sessions</h2>
         {sessionsLoading ? (
           <div className="loading">Loading sessions...</div>
-        ) : sessions.length === 0 ? (
+        ) : !sessions || sessions.length === 0 ? (
           <div className="empty-state">
             <Activity size={48} />
             <p>No sessions available</p>
@@ -393,7 +393,7 @@ const UserTradingDashboard = ({ user }) => {
       )}
 
       {/* Recent Ticks (if connected) */}
-      {isConnected && ticks.length > 0 && (
+      {isConnected && ticks && ticks.length > 0 && (
         <div className="ticks-section">
           <h2>Recent Ticks</h2>
           <div className="ticks-list">

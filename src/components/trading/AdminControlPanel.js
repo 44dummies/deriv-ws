@@ -299,11 +299,11 @@ const AdminControlPanel = ({ user }) => {
 
       {/* Bot Status */}
       <div className="bot-status-bar">
-        <div className="bot-indicator">
-          <Zap size={20} className={botStatus.isRunning ? 'active' : ''} />
-          <span>Bot Status: {botStatus.isRunning ? 'Running' : 'Stopped'}</span>
+        <div className="stat-card">
+          <Zap size={20} className={botStatus?.isRunning ? 'active' : ''} />
+          <span>Bot Status: {botStatus?.isRunning ? 'Running' : 'Stopped'}</span>
         </div>
-        {botStatus.sessionId && (
+        {botStatus?.sessionId && (
           <span>Active Session: {botStatus.sessionId}</span>
         )}
       </div>
@@ -339,7 +339,7 @@ const AdminControlPanel = ({ user }) => {
           <div className="sessions-grid">
             {sessionsLoading ? (
               <div className="loading">Loading sessions...</div>
-            ) : sessions.length === 0 ? (
+            ) : !sessions || sessions.length === 0 ? (
               <div className="empty-state">
                 <Activity size={48} />
                 <p>No trading sessions yet</p>
@@ -357,7 +357,7 @@ const AdminControlPanel = ({ user }) => {
           <div className="accounts-grid">
             {accountsLoading ? (
               <div className="loading">Loading accounts...</div>
-            ) : accounts.length === 0 ? (
+            ) : !accounts || accounts.length === 0 ? (
               <div className="empty-state">
                 <Users size={48} />
                 <p>No trading accounts connected</p>
