@@ -3,13 +3,13 @@
  * HTTP client for backend trading endpoints
  */
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+const API_BASE = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 
 /**
  * Helper to make authenticated requests
  */
 async function apiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('accessToken');
   
   const config = {
     ...options,
