@@ -172,8 +172,14 @@ export const ThemeProvider = ({ children }) => {
     applyTheme(themeId);
   }, []);
 
+  // Convert THEMES object to array with id for Settings page
+  const themesArray = Object.entries(THEMES).map(([id, theme]) => ({
+    id,
+    ...theme
+  }));
+
   return (
-    <ThemeContext.Provider value={{ theme, themeId, setTheme, themes: THEMES }}>
+    <ThemeContext.Provider value={{ theme, themeId, setTheme, themes: themesArray }}>
       {children}
     </ThemeContext.Provider>
   );
