@@ -5,7 +5,7 @@
 const API_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
@@ -92,7 +92,7 @@ export const privateChatService = {
     const formData = new FormData();
     formData.append('file', file);
     
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken');
     const uploadResponse = await fetch(`${API_URL}/api/files/upload?context=chat`, {
       method: 'POST',
       headers: {
@@ -139,7 +139,7 @@ export const privateChatService = {
       formData.append('duration', duration);
     }
     
-    const token = localStorage.getItem('accessToken');
+    const token = sessionStorage.getItem('accessToken');
     const uploadResponse = await fetch(`${API_URL}/api/files/voice`, {
       method: 'POST',
       headers: {

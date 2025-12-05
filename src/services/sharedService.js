@@ -5,7 +5,7 @@
 const API_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   return {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`

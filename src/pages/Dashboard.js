@@ -643,7 +643,7 @@ const Dashboard = () => {
     const loadUserProfile = async () => {
       try {
         
-        const token = localStorage.getItem('accessToken');
+        const token = sessionStorage.getItem('accessToken');
         if (!token) {
           console.log('No token available for profile load');
           return;

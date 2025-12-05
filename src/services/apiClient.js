@@ -18,21 +18,21 @@ class ApiClient {
   }
 
   /**
-   * Set tokens
+   * Set tokens - uses sessionStorage so session ends when tab is closed
    */
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    sessionStorage.setItem('accessToken', accessToken);
+    sessionStorage.setItem('refreshToken', refreshToken);
   }
 
   /**
    * Load tokens from storage
    */
   loadTokens() {
-    this.accessToken = localStorage.getItem('accessToken');
-    this.refreshToken = localStorage.getItem('refreshToken');
+    this.accessToken = sessionStorage.getItem('accessToken');
+    this.refreshToken = sessionStorage.getItem('refreshToken');
     return { accessToken: this.accessToken, refreshToken: this.refreshToken };
   }
 
@@ -42,8 +42,8 @@ class ApiClient {
   clearTokens() {
     this.accessToken = null;
     this.refreshToken = null;
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
   }
 
   /**

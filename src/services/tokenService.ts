@@ -10,27 +10,29 @@ interface AccountData {
 const TOKEN_KEY = 'deriv_tokens';
 const ACCOUNT_KEY = 'deriv_account';
 
+// Use sessionStorage so session ends when browser tab is closed
+// User must explicitly log out or close tab to end session
 export const TokenService = {
   setTokens: (tokens: TokenData): void => {
-    localStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
+    sessionStorage.setItem(TOKEN_KEY, JSON.stringify(tokens));
   },
 
   getTokens: (): TokenData | null => {
-    const tokens = localStorage.getItem(TOKEN_KEY);
+    const tokens = sessionStorage.getItem(TOKEN_KEY);
     return tokens ? JSON.parse(tokens) : null;
   },
 
   clearTokens: (): void => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ACCOUNT_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(ACCOUNT_KEY);
   },
 
   setAccount: (account: AccountData): void => {
-    localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    sessionStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
   },
 
   getAccount: (): AccountData | null => {
-    const account = localStorage.getItem(ACCOUNT_KEY);
+    const account = sessionStorage.getItem(ACCOUNT_KEY);
     return account ? JSON.parse(account) : null;
   },
 
