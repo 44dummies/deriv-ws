@@ -3,61 +3,63 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   ArrowLeft, Send, Heart, MessageCircle, Image, X, Users,
-  Hash, Loader2, MoreHorizontal, Trash2, Flag, Share2,
-  TrendingUp, Zap, Target, BookOpen, HelpCircle, Clock,
-  ChevronDown, Filter, RefreshCw, Smile, Camera
+  Hash, Loader2, Trash2, Share2, Clock, Camera, Paperclip,
+  Smile, ChevronDown, Search, MoreVertical, Check, CheckCheck,
+  Play, FileText, Download, ImageIcon, Video, File, Mic,
+  Phone, Info, Pin, Bell, BellOff, Settings, Filter
 } from 'lucide-react';
 import apiClient from '../services/apiClient';
 import realtimeSocket from '../services/realtimeSocket';
 import profileService from '../services/profileService';
 import './Community.css';
 
-const POST_TYPES = {
-  general: { label: 'General', icon: MessageCircle, color: '#8b5cf6' },
-  strategy: { label: 'Strategy', icon: Target, color: '#22c55e' },
-  result: { label: 'Result', icon: TrendingUp, color: '#3b82f6' },
-  question: { label: 'Question', icon: HelpCircle, color: '#f59e0b' },
-  news: { label: 'News', icon: Zap, color: '#ef4444' }
-};
-
-const DEFAULT_ROOMS = [
-  { id: 'general', name: 'General', icon: Hash, memberCount: 0 },
-  { id: 'strategies', name: 'Strategies', icon: Target, memberCount: 0 },
-  { id: 'results', name: 'Results', icon: TrendingUp, memberCount: 0 },
-  { id: 'beginners', name: 'Beginners', icon: BookOpen, memberCount: 0 }
+const POST_CATEGORIES = [
+  { id: 'all', label: 'All', emoji: '💬' },
+  { id: 'general', label: 'General', emoji: '💭' },
+  { id: 'strategy', label: 'Strategies', emoji: '📊' },
+  { id: 'result', label: 'Results', emoji: '🏆' },
+  { id: 'question', label: 'Questions', emoji: '❓' },
+  { id: 'news', label: 'News', emoji: '📰' }
 ];
+
+const EMOJI_LIST = ['👍', '❤️', '🔥', '😂', '😮', '😢', '🎉', '💯', '🚀', '💎'];
 
 const Community = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
-  const feedRef = useRef(null);
-  const composerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
+  // User state
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Posts/messages state
   const [posts, setPosts] = useState([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
+  const [activeCategory, setActiveCategory] = useState('all');
 
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [postContent, setPostContent] = useState('');
-  const [postType, setPostType] = useState('general');
-  const [postImage, setPostImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  // Composer state
+  const [messageInput, setMessageInput] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [filePreviews, setFilePreviews] = useState([]);
   const [posting, setPosting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
 
-  const [rooms, setRooms] = useState(DEFAULT_ROOMS);
-  const [activeRoom, setActiveRoom] = useState(null);
-  const [roomMessages, setRoomMessages] = useState([]);
-  const [roomInput, setRoomInput] = useState('');
-
+  // UI state
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [mediaGalleryItems, setMediaGalleryItems] = useState([]);
+  const [selectedMedia, setSelectedMedia] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [showOnlinePanel, setShowOnlinePanel] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typingUsers, setTypingUsers] = useState([]);
 
+  // Comments state
   const [expandedPost, setExpandedPost] = useState(null);
   const [comments, setComments] = useState({});
   const [commentInputs, setCommentInputs] = useState({});
@@ -66,28 +68,25 @@ const Community = () => {
   useEffect(() => {
     initializeCommunity();
     setupSocketListeners();
-    
-    return () => {
-      cleanupSocketListeners();
-    };
+    return () => cleanupSocketListeners();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      loadFeed(1, true);
+    }
+  }, [activeCategory]);
 
   const initializeCommunity = async () => {
     try {
       setLoading(true);
-      
-      
       const profile = await profileService.initialize();
       if (profile) {
         setCurrentUser(profile);
       }
-
-      
       await loadFeed(1, true);
-
-      
       loadOnlineUsers();
-
+      loadMediaGallery();
     } catch (error) {
       console.error('Failed to initialize community:', error);
       toast.error('Failed to load community');
@@ -99,7 +98,6 @@ const Community = () => {
   const setupSocketListeners = () => {
     realtimeSocket.on('community:post:new', (post) => {
       setPosts(prev => [transformPost(post), ...prev]);
-      toast.success('New post in community!', { duration: 2000 });
     });
 
     realtimeSocket.on('community:post:like', ({ postId, likeCount, liked, userId }) => {
@@ -131,15 +129,14 @@ const Community = () => {
       setOnlineUsers(prev => prev.filter(u => u.derivId !== derivId));
     });
 
-    profileService.subscribe((event, data) => {
-      if (event === 'user:updated') {
-        
-        setPosts(prev => prev.map(p => 
-          p.author.derivId === data.derivId 
-            ? { ...p, author: { ...p.author, username: data.username, avatarUrl: data.avatarUrl } }
-            : p
-        ));
-      }
+    realtimeSocket.on('community:typing', ({ user }) => {
+      setTypingUsers(prev => {
+        if (prev.find(u => u.id === user.id)) return prev;
+        return [...prev, user];
+      });
+      setTimeout(() => {
+        setTypingUsers(prev => prev.filter(u => u.id !== user.id));
+      }, 3000);
     });
   };
 
@@ -149,6 +146,7 @@ const Community = () => {
     realtimeSocket.off('community:post:comment');
     realtimeSocket.off('community:user:online');
     realtimeSocket.off('community:user:offline');
+    realtimeSocket.off('community:typing');
   };
 
   const transformPost = (post) => ({
@@ -156,10 +154,15 @@ const Community = () => {
     content: post.content,
     postType: post.post_type || post.postType || 'general',
     imageUrl: post.image_url || post.imageUrl,
+    fileUrl: post.file_url || post.fileUrl,
+    fileName: post.file_name || post.fileName,
+    fileType: post.file_type || post.fileType,
+    fileSize: post.file_size || post.fileSize,
     likeCount: post.like_count ?? post.likeCount ?? 0,
     commentCount: post.comment_count ?? post.commentCount ?? 0,
     viewCount: post.view_count ?? post.viewCount ?? 0,
     liked: post.liked || false,
+    reactions: post.reactions || {},
     createdAt: post.created_at || post.createdAt,
     author: {
       id: post.author?.id || post.user_id,
@@ -188,15 +191,15 @@ const Community = () => {
     try {
       const response = await apiClient.get('/community/feed', {
         page: pageNum,
-        limit: 20,
-        category: filter !== 'all' ? filter : undefined,
-        sortBy
+        limit: 30,
+        category: activeCategory !== 'all' ? activeCategory : undefined
       });
 
       const transformedPosts = (response.posts || []).map(transformPost);
       
       if (reset) {
         setPosts(transformedPosts);
+        scrollToBottom();
       } else {
         setPosts(prev => [...prev, ...transformedPosts]);
       }
@@ -205,121 +208,154 @@ const Community = () => {
       setPage(pageNum);
     } catch (error) {
       console.error('Load feed error:', error);
-      toast.error('Failed to load posts');
+      toast.error('Failed to load messages');
     } finally {
       setFeedLoading(false);
     }
   };
-
-  const loadMore = useCallback(() => {
-    if (!feedLoading && hasMore) {
-      loadFeed(page + 1);
-    }
-  }, [feedLoading, hasMore, page]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!feedRef.current) return;
-      
-      const { scrollTop, scrollHeight, clientHeight } = feedRef.current;
-      if (scrollHeight - scrollTop - clientHeight < 200) {
-        loadMore();
-      }
-    };
-
-    const feed = feedRef.current;
-    if (feed) {
-      feed.addEventListener('scroll', handleScroll);
-      return () => feed.removeEventListener('scroll', handleScroll);
-    }
-  }, [loadMore]);
-
-  useEffect(() => {
-    if (!loading) {
-      loadFeed(1, true);
-    }
-  }, [filter, sortBy]);
 
   const loadOnlineUsers = async () => {
     try {
       const response = await apiClient.get('/community/online-users');
       setOnlineUsers(response.users || []);
     } catch (error) {
-      
       setOnlineUsers(profileService.getOnlineUsers());
     }
   };
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.match(/^image\/(jpeg|png|webp)$/)) {
-      toast.error('Only JPG, PNG, or WebP images allowed');
-      return;
+  const loadMediaGallery = async () => {
+    try {
+      const response = await apiClient.get('/community/media');
+      setMediaGalleryItems(response.media || []);
+    } catch (error) {
+      // Extract media from posts as fallback
+      const media = posts
+        .filter(p => p.imageUrl || p.fileUrl)
+        .map(p => ({
+          id: p.id,
+          url: p.imageUrl || p.fileUrl,
+          type: p.imageUrl ? 'image' : 'file',
+          fileName: p.fileName,
+          createdAt: p.createdAt,
+          author: p.author
+        }));
+      setMediaGalleryItems(media);
     }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Image must be less than 2MB');
-      return;
-    }
-
-    setPostImage(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target.result);
-    reader.readAsDataURL(file);
   };
 
-  const removeImage = () => {
-    setPostImage(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleScroll = useCallback(() => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop } = chatContainerRef.current;
+    if (scrollTop < 100 && !feedLoading && hasMore) {
+      loadFeed(page + 1);
     }
+  }, [feedLoading, hasMore, page]);
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB)`);
+        return false;
+      }
+      return true;
+    });
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+
+    validFiles.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setFilePreviews(prev => [...prev, { file, preview: e.target.result, type: 'image' }]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreviews(prev => [...prev, { file, preview: null, type: 'file' }]);
+      }
+    });
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setFilePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const createPost = async () => {
-    if (!postContent.trim() && !postImage) {
-      toast.error('Please add some content');
-      return;
-    }
-
-    if (postContent.length > 5000) {
-      toast.error('Post is too long (max 5000 characters)');
-      return;
-    }
+    if (!messageInput.trim() && selectedFiles.length === 0) return;
 
     setPosting(true);
     try {
       let imageUrl = null;
+      let fileUrl = null;
+      let fileName = null;
+      let fileType = null;
+      let fileSize = null;
 
-      if (postImage) {
+      if (selectedFiles.length > 0) {
+        const file = selectedFiles[0];
         const formData = new FormData();
-        formData.append('image', postImage);
-        const uploadResult = await apiClient.uploadFile('/community/upload-image', formData);
-        imageUrl = uploadResult.url;
+        
+        if (file.type.startsWith('image/')) {
+          formData.append('image', file);
+          const uploadResult = await apiClient.uploadFile('/community/upload-image', formData);
+          imageUrl = uploadResult.url;
+        } else {
+          formData.append('file', file);
+          const uploadResult = await apiClient.uploadFile('/community/upload-file', formData);
+          fileUrl = uploadResult.url;
+          fileName = file.name;
+          fileType = file.type;
+          fileSize = file.size;
+        }
       }
 
       const response = await apiClient.post('/community/posts', {
-        content: postContent.trim(),
-        post_type: postType,
-        image_url: imageUrl
+        content: messageInput.trim(),
+        post_type: activeCategory !== 'all' ? activeCategory : 'general',
+        image_url: imageUrl,
+        file_url: fileUrl,
+        file_name: fileName,
+        file_type: fileType,
+        file_size: fileSize,
+        reply_to: replyingTo?.id
       });
 
       const newPost = transformPost(response);
       setPosts(prev => [newPost, ...prev]);
+      
+      // Update media gallery
+      if (imageUrl || fileUrl) {
+        setMediaGalleryItems(prev => [{
+          id: newPost.id,
+          url: imageUrl || fileUrl,
+          type: imageUrl ? 'image' : 'file',
+          fileName,
+          createdAt: newPost.createdAt,
+          author: newPost.author
+        }, ...prev]);
+      }
 
       realtimeSocket.emit('community:post:new', newPost);
 
-      setPostContent('');
-      setPostType('general');
-      removeImage();
-      setComposerOpen(false);
+      setMessageInput('');
+      setSelectedFiles([]);
+      setFilePreviews([]);
+      setReplyingTo(null);
+      scrollToBottom();
 
-      toast.success('Post created!');
+      toast.success('Message sent!');
     } catch (error) {
       console.error('Create post error:', error);
-      toast.error(error.message || 'Failed to create post');
+      toast.error(error.message || 'Failed to send message');
     } finally {
       setPosting(false);
     }
@@ -343,7 +379,6 @@ const Community = () => {
         liked: newLiked,
         userId: currentUser?.id
       });
-
     } catch (error) {
       console.error('Like error:', error);
       loadFeed(1, true);
@@ -402,55 +437,81 @@ const Community = () => {
         postId,
         comment: newComment
       });
-
     } catch (error) {
       console.error('Add comment error:', error);
-      toast.error('Failed to add comment');
+      toast.error('Failed to add reply');
     }
   };
 
   const deletePost = async (postId) => {
-    if (!window.confirm('Delete this post?')) return;
+    if (!window.confirm('Delete this message?')) return;
 
     try {
       await apiClient.delete(`/community/posts/${postId}`);
       setPosts(prev => prev.filter(p => p.id !== postId));
-      toast.success('Post deleted');
+      toast.success('Message deleted');
     } catch (error) {
-      toast.error('Failed to delete post');
+      toast.error('Failed to delete message');
     }
   };
 
-  const timeAgo = (date) => {
-    const seconds = Math.floor((Date.now() - new Date(date)) / 1000);
-    if (seconds < 60) return 'just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return new Date(date).toLocaleDateString();
+  const formatTime = (date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now - d;
+    
+    if (diff < 60000) return 'now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+    if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const PostSkeleton = () => (
-    <div className="post-card skeleton">
-      <div className="post-header">
-        <div className="skeleton-avatar" />
-        <div className="skeleton-info">
-          <div className="skeleton-line w-32" />
-          <div className="skeleton-line w-20" />
-        </div>
-      </div>
-      <div className="skeleton-content">
-        <div className="skeleton-line w-full" />
-        <div className="skeleton-line w-3/4" />
-      </div>
-    </div>
-  );
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const getFileIcon = (fileType) => {
+    if (!fileType) return File;
+    if (fileType.startsWith('image/')) return ImageIcon;
+    if (fileType.startsWith('video/')) return Video;
+    if (fileType.startsWith('audio/')) return Mic;
+    if (fileType.includes('pdf')) return FileText;
+    return File;
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      createPost();
+    }
+  };
+
+  const insertEmoji = (emoji) => {
+    setMessageInput(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const getAvatarContent = (user) => {
+    if (user?.avatarUrl) {
+      if (user.avatarUrl.startsWith('avatar:')) {
+        const avatarId = parseInt(user.avatarUrl.split(':')[1]) || 1;
+        const avatars = ['🧑‍💼', '👨‍💻', '👩‍💻', '🦊', '🦁', '🐺', '🦅', '🐉', '🦈', '🐂', '🎭', '🎩', '🕶️', '🤖', '👽', '🥷', '🧙‍♂️', '🦸', '🧑‍🚀', '👑', '💎', '🚀', '⚡', '🔥', '💰', '📈', '🎯', '🏆', '🌟', '🎲'];
+        return <span className="avatar-emoji">{avatars[avatarId - 1] || '👤'}</span>;
+      }
+      return <img src={user.avatarUrl} alt="" />;
+    }
+    return <span className="avatar-initial">{user?.username?.[0]?.toUpperCase() || '?'}</span>;
+  };
 
   if (loading) {
     return (
-      <div className="community-page">
-        <div className="community-loading">
-          <Loader2 size={40} className="spin" />
+      <div className="tg-community">
+        <div className="tg-loading">
+          <div className="tg-loading-spinner"></div>
           <p>Loading community...</p>
         </div>
       </div>
@@ -458,289 +519,238 @@ const Community = () => {
   }
 
   return (
-    <div className="community-page">
+    <div className="tg-community">
       <Toaster position="top-center" />
 
-      <header className="community-header">
-        <button onClick={() => navigate('/dashboard')} className="back-btn">
-          <ArrowLeft size={20} />
+      {/* Header */}
+      <header className="tg-header">
+        <button onClick={() => navigate('/dashboard')} className="tg-header-btn">
+          <ArrowLeft size={22} />
         </button>
-        <h1>Community</h1>
-        <button onClick={() => loadFeed(1, true)} className="refresh-btn">
-          <RefreshCw size={18} className={feedLoading ? 'spin' : ''} />
-        </button>
+        
+        <div className="tg-header-info" onClick={() => setShowSidebar(true)}>
+          <div className="tg-header-avatar">
+            <span>💬</span>
+          </div>
+          <div className="tg-header-text">
+            <h1>TraderMind Community</h1>
+            <span className="tg-header-subtitle">
+              {onlineUsers.length} online • {posts.length} messages
+            </span>
+          </div>
+        </div>
+
+        <div className="tg-header-actions">
+          <button 
+            onClick={() => setShowSearch(!showSearch)} 
+            className="tg-header-btn"
+          >
+            <Search size={20} />
+          </button>
+          <button 
+            onClick={() => setShowMediaGallery(true)} 
+            className="tg-header-btn"
+          >
+            <ImageIcon size={20} />
+          </button>
+          <button 
+            onClick={() => setShowSidebar(!showSidebar)} 
+            className="tg-header-btn"
+          >
+            <MoreVertical size={20} />
+          </button>
+        </div>
       </header>
 
-      <div className="community-layout">
-        {}
-        <aside className="community-sidebar rooms-sidebar">
-          <h2 className="sidebar-title">
-            <Hash size={16} />
-            Rooms
-          </h2>
-          <div className="rooms-list">
-            {rooms.map(room => (
-              <button
-                key={room.id}
-                onClick={() => setActiveRoom(room.id === activeRoom ? null : room.id)}
-                className={`room-item ${activeRoom === room.id ? 'active' : ''}`}
-              >
-                <room.icon size={16} />
-                <span>{room.name}</span>
-                {room.memberCount > 0 && (
-                  <span className="member-count">{room.memberCount}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </aside>
+      {/* Search Bar */}
+      {showSearch && (
+        <div className="tg-search-bar">
+          <Search size={18} />
+          <input
+            type="text"
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+          <button onClick={() => { setShowSearch(false); setSearchQuery(''); }}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
-        {}
-        <main className="community-feed" ref={feedRef}>
-          {}
-          {!composerOpen && (
-            <button 
-              onClick={() => setComposerOpen(true)} 
-              className="composer-toggle"
-            >
-              <div className="composer-avatar">
-                {currentUser?.avatarUrl ? (
-                  <img src={currentUser.avatarUrl} alt="" />
-                ) : (
-                  <span>{currentUser?.username?.[0] || '?'}</span>
-                )}
-              </div>
-              <span>What's on your mind?</span>
+      {/* Category Tabs */}
+      <div className="tg-categories">
+        {POST_CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`tg-category ${activeCategory === cat.id ? 'active' : ''}`}
+          >
+            <span className="tg-category-emoji">{cat.emoji}</span>
+            <span className="tg-category-label">{cat.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Main Chat Area */}
+      <div 
+        className="tg-chat-container" 
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+      >
+        {feedLoading && page === 1 && (
+          <div className="tg-loading-messages">
+            <div className="tg-loading-spinner small"></div>
+          </div>
+        )}
+
+        {hasMore && page > 1 && (
+          <div className="tg-load-more">
+            <button onClick={() => loadFeed(page + 1)}>
+              {feedLoading ? <Loader2 size={16} className="spin" /> : 'Load older messages'}
             </button>
+          </div>
+        )}
+
+        <div className="tg-messages">
+          {posts.length === 0 && !feedLoading && (
+            <div className="tg-empty">
+              <div className="tg-empty-icon">💬</div>
+              <h3>No messages yet</h3>
+              <p>Be the first to start the conversation!</p>
+            </div>
           )}
 
-          {}
-          {composerOpen && (
-            <div className="post-composer" ref={composerRef}>
-              <div className="composer-header">
-                <div className="composer-user">
-                  <div className="user-avatar">
-                    {currentUser?.avatarUrl ? (
-                      <img src={currentUser.avatarUrl} alt="" />
-                    ) : (
-                      <span>{currentUser?.username?.[0] || '?'}</span>
+          {[...posts].reverse().map((post, index, arr) => {
+            const isOwn = post.author.id === currentUser?.id;
+            const showAvatar = index === 0 || arr[index - 1]?.author.id !== post.author.id;
+            const showName = showAvatar && !isOwn;
+            const isFiltered = searchQuery && !post.content.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            if (isFiltered) return null;
+
+            return (
+              <div 
+                key={post.id} 
+                className={`tg-message ${isOwn ? 'own' : ''} ${showAvatar ? 'with-avatar' : ''}`}
+              >
+                {!isOwn && showAvatar && (
+                  <div className="tg-message-avatar">
+                    {getAvatarContent(post.author)}
+                  </div>
+                )}
+
+                <div className="tg-message-bubble">
+                  {showName && (
+                    <div className="tg-message-name" style={{ color: stringToColor(post.author.username) }}>
+                      @{post.author.username}
+                    </div>
+                  )}
+
+                  {/* Reply indicator */}
+                  {post.replyTo && (
+                    <div className="tg-message-reply">
+                      <span>↩ Reply to {post.replyTo.author}</span>
+                    </div>
+                  )}
+
+                  {/* Image */}
+                  {post.imageUrl && (
+                    <div 
+                      className="tg-message-media"
+                      onClick={() => setSelectedMedia({ type: 'image', url: post.imageUrl })}
+                    >
+                      <img src={post.imageUrl} alt="" loading="lazy" />
+                    </div>
+                  )}
+
+                  {/* File */}
+                  {post.fileUrl && !post.imageUrl && (
+                    <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="tg-message-file">
+                      <div className="tg-file-icon">
+                        {React.createElement(getFileIcon(post.fileType), { size: 24 })}
+                      </div>
+                      <div className="tg-file-info">
+                        <span className="tg-file-name">{post.fileName || 'File'}</span>
+                        <span className="tg-file-size">{formatFileSize(post.fileSize)}</span>
+                      </div>
+                      <Download size={18} className="tg-file-download" />
+                    </a>
+                  )}
+
+                  {/* Text content */}
+                  {post.content && (
+                    <div className="tg-message-text">{post.content}</div>
+                  )}
+
+                  {/* Message footer */}
+                  <div className="tg-message-footer">
+                    <span className="tg-message-time">{formatTime(post.createdAt)}</span>
+                    {isOwn && (
+                      <span className="tg-message-status">
+                        <CheckCheck size={14} />
+                      </span>
                     )}
                   </div>
-                  <span>@{currentUser?.username || 'anonymous'}</span>
-                </div>
-                <button onClick={() => setComposerOpen(false)} className="close-btn">
-                  <X size={18} />
-                </button>
-              </div>
 
-              <textarea
-                value={postContent}
-                onChange={(e) => setPostContent(e.target.value)}
-                placeholder="Share your thoughts, strategies, or results..."
-                className="composer-input"
-                rows={4}
-                maxLength={5000}
-              />
-
-              {imagePreview && (
-                <div className="image-preview">
-                  <img src={imagePreview} alt="Preview" />
-                  <button onClick={removeImage} className="remove-image">
-                    <X size={16} />
-                  </button>
-                </div>
-              )}
-
-              <div className="composer-footer">
-                <div className="composer-actions">
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="action-btn"
-                    title="Add image"
-                  >
-                    <Camera size={18} />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleImageSelect}
-                    hidden
-                  />
-
-                  <select 
-                    value={postType} 
-                    onChange={(e) => setPostType(e.target.value)}
-                    className="type-select"
-                  >
-                    {Object.entries(POST_TYPES).map(([key, { label }]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="composer-submit">
-                  <span className="char-count">{postContent.length}/5000</span>
-                  <button 
-                    onClick={createPost}
-                    disabled={posting || (!postContent.trim() && !postImage)}
-                    className="post-btn"
-                  >
-                    {posting ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
-                    <span>Post</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {}
-          <div className="feed-filters">
-            <div className="filter-group">
-              <button
-                onClick={() => setFilter('all')}
-                className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              >
-                All
-              </button>
-              {Object.entries(POST_TYPES).map(([key, { label, icon: Icon }]) => (
-                <button
-                  key={key}
-                  onClick={() => setFilter(key)}
-                  className={`filter-btn ${filter === key ? 'active' : ''}`}
-                >
-                  <Icon size={14} />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <select 
-              value={sortBy} 
-              onChange={(e) => setSortBy(e.target.value)}
-              className="sort-select"
-            >
-              <option value="newest">Newest</option>
-              <option value="trending">Trending</option>
-              <option value="top">Top</option>
-            </select>
-          </div>
-
-          {}
-          <div className="posts-list">
-            {posts.map(post => (
-              <article key={post.id} className="post-card">
-                {}
-                <div className="post-header">
-                  <div 
-                    className="post-author"
-                    onClick={() => {}}
-                  >
-                    <div className="author-avatar">
-                      {post.author.avatarUrl ? (
-                        <img src={post.author.avatarUrl} alt="" />
-                      ) : (
-                        <span>{post.author.username?.[0] || '?'}</span>
-                      )}
-                    </div>
-                    <div className="author-info">
-                      <span className="author-name">
-                        @{post.author.username}
-                      </span>
-                      <span className="post-time">
-                        <Clock size={12} />
-                        {timeAgo(post.createdAt)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="post-meta">
-                    <span 
-                      className="post-type-badge"
-                      style={{ backgroundColor: POST_TYPES[post.postType]?.color + '20', color: POST_TYPES[post.postType]?.color }}
+                  {/* Actions */}
+                  <div className="tg-message-actions">
+                    <button 
+                      onClick={() => likePost(post.id)}
+                      className={`tg-action ${post.liked ? 'active' : ''}`}
                     >
-                      {POST_TYPES[post.postType]?.label || 'General'}
-                    </span>
-
-                    {post.author.id === currentUser?.id && (
-                      <button 
-                        onClick={() => deletePost(post.id)}
-                        className="delete-btn"
-                        title="Delete post"
-                      >
-                        <Trash2 size={14} />
+                      <Heart size={16} fill={post.liked ? 'currentColor' : 'none'} />
+                      {post.likeCount > 0 && <span>{post.likeCount}</span>}
+                    </button>
+                    <button 
+                      onClick={() => toggleComments(post.id)}
+                      className={`tg-action ${expandedPost === post.id ? 'active' : ''}`}
+                    >
+                      <MessageCircle size={16} />
+                      {post.commentCount > 0 && <span>{post.commentCount}</span>}
+                    </button>
+                    <button 
+                      onClick={() => setReplyingTo(post)}
+                      className="tg-action"
+                    >
+                      <Share2 size={16} />
+                    </button>
+                    {isOwn && (
+                      <button onClick={() => deletePost(post.id)} className="tg-action delete">
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {}
-                <div className="post-content">
-                  <p>{post.content}</p>
-                  {post.imageUrl && (
-                    <div className="post-image">
-                      <img src={post.imageUrl} alt="" loading="lazy" />
-                    </div>
-                  )}
-                </div>
-
-                {}
-                <div className="post-actions">
-                  <button 
-                    onClick={() => likePost(post.id)}
-                    className={`action-btn ${post.liked ? 'liked' : ''}`}
-                  >
-                    <Heart size={18} fill={post.liked ? 'currentColor' : 'none'} />
-                    <span>{post.likeCount}</span>
-                  </button>
-
-                  <button 
-                    onClick={() => toggleComments(post.id)}
-                    className={`action-btn ${expandedPost === post.id ? 'active' : ''}`}
-                  >
-                    <MessageCircle size={18} />
-                    <span>{post.commentCount}</span>
-                  </button>
-
-                  <button className="action-btn">
-                    <Share2 size={18} />
-                  </button>
-                </div>
-
-                {}
+                {/* Comments/Replies */}
                 {expandedPost === post.id && (
-                  <div className="comments-section">
+                  <div className="tg-replies">
                     {loadingComments[post.id] ? (
-                      <div className="comments-loading">
+                      <div className="tg-replies-loading">
                         <Loader2 size={16} className="spin" />
                       </div>
                     ) : (
                       <>
-                        <div className="comments-list">
-                          {(comments[post.id] || []).map(comment => (
-                            <div key={comment.id} className="comment">
-                              <div className="comment-avatar">
-                                {comment.author.avatarUrl ? (
-                                  <img src={comment.author.avatarUrl} alt="" />
-                                ) : (
-                                  <span>{comment.author.username?.[0] || '?'}</span>
-                                )}
-                              </div>
-                              <div className="comment-body">
-                                <span className="comment-author">@{comment.author.username}</span>
-                                <p>{comment.content}</p>
-                                <span className="comment-time">{timeAgo(comment.createdAt)}</span>
-                              </div>
+                        {(comments[post.id] || []).map(comment => (
+                          <div key={comment.id} className="tg-reply">
+                            <div className="tg-reply-avatar">
+                              {getAvatarContent(comment.author)}
                             </div>
-                          ))}
-                        </div>
-
-                        <div className="comment-input-wrapper">
+                            <div className="tg-reply-content">
+                              <span className="tg-reply-author">@{comment.author.username}</span>
+                              <p>{comment.content}</p>
+                              <span className="tg-reply-time">{formatTime(comment.createdAt)}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="tg-reply-input">
                           <input
                             type="text"
+                            placeholder="Write a reply..."
                             value={commentInputs[post.id] || ''}
                             onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            placeholder="Write a comment..."
                             onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)}
                           />
                           <button 
@@ -754,66 +764,232 @@ const Community = () => {
                     )}
                   </div>
                 )}
-              </article>
-            ))}
-
-            {feedLoading && (
-              <>
-                <PostSkeleton />
-                <PostSkeleton />
-              </>
-            )}
-
-            {!feedLoading && posts.length === 0 && (
-              <div className="empty-feed">
-                <MessageCircle size={48} />
-                <h3>No posts yet</h3>
-                <p>Be the first to share something with the community!</p>
               </div>
-            )}
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
 
-            {!hasMore && posts.length > 0 && (
-              <div className="end-of-feed">
-                <p>You've seen all posts</p>
-              </div>
-            )}
+        {/* Typing indicator */}
+        {typingUsers.length > 0 && (
+          <div className="tg-typing">
+            <div className="tg-typing-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <span>{typingUsers.map(u => u.username).join(', ')} typing...</span>
           </div>
-        </main>
-
-        {}
-        <aside className="community-sidebar users-sidebar">
-          <h2 className="sidebar-title">
-            <Users size={16} />
-            Online
-            <span className="online-count">{onlineUsers.length}</span>
-          </h2>
-          <div className="online-users-list">
-            {onlineUsers.slice(0, 20).map(user => (
-              <div key={user.id || user.derivId} className="online-user">
-                <div className="user-avatar">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" />
-                  ) : (
-                    <span>{user.username?.[0] || '?'}</span>
-                  )}
-                  <span className="online-dot" />
-                </div>
-                <span className="user-name">@{user.username}</span>
-              </div>
-            ))}
-
-            {onlineUsers.length === 0 && (
-              <p className="no-users">No users online</p>
-            )}
-
-            {onlineUsers.length > 20 && (
-              <p className="more-users">+{onlineUsers.length - 20} more</p>
-            )}
-          </div>
-        </aside>
+        )}
       </div>
+
+      {/* Reply preview */}
+      {replyingTo && (
+        <div className="tg-reply-preview">
+          <div className="tg-reply-preview-content">
+            <span className="tg-reply-preview-name">@{replyingTo.author.username}</span>
+            <span className="tg-reply-preview-text">{replyingTo.content?.slice(0, 50)}...</span>
+          </div>
+          <button onClick={() => setReplyingTo(null)}>
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* File previews */}
+      {filePreviews.length > 0 && (
+        <div className="tg-file-previews">
+          {filePreviews.map((item, index) => (
+            <div key={index} className="tg-file-preview">
+              {item.type === 'image' ? (
+                <img src={item.preview} alt="" />
+              ) : (
+                <div className="tg-file-preview-icon">
+                  {React.createElement(getFileIcon(item.file.type), { size: 24 })}
+                  <span>{item.file.name}</span>
+                </div>
+              )}
+              <button onClick={() => removeFile(index)} className="tg-file-preview-remove">
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input area */}
+      <div className="tg-input-area">
+        <button 
+          onClick={() => setShowEmojiPicker(!showEmojiPicker)} 
+          className="tg-input-btn"
+        >
+          <Smile size={22} />
+        </button>
+
+        {showEmojiPicker && (
+          <div className="tg-emoji-picker">
+            {EMOJI_LIST.map(emoji => (
+              <button key={emoji} onClick={() => insertEmoji(emoji)}>
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <button onClick={() => fileInputRef.current?.click()} className="tg-input-btn">
+          <Paperclip size={22} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          onChange={handleFileSelect}
+          multiple
+          hidden
+        />
+
+        <div className="tg-input-wrapper">
+          <textarea
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Message..."
+            rows={1}
+          />
+        </div>
+
+        <button 
+          onClick={createPost}
+          disabled={posting || (!messageInput.trim() && selectedFiles.length === 0)}
+          className="tg-send-btn"
+        >
+          {posting ? (
+            <Loader2 size={20} className="spin" />
+          ) : (
+            <Send size={20} />
+          )}
+        </button>
+      </div>
+
+      {/* Media Gallery Modal */}
+      {showMediaGallery && (
+        <div className="tg-modal-overlay" onClick={() => setShowMediaGallery(false)}>
+          <div className="tg-media-gallery" onClick={e => e.stopPropagation()}>
+            <div className="tg-gallery-header">
+              <h2>Shared Media</h2>
+              <button onClick={() => setShowMediaGallery(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            <div className="tg-gallery-tabs">
+              <button className="active">
+                <ImageIcon size={16} /> Photos
+              </button>
+              <button>
+                <File size={16} /> Files
+              </button>
+            </div>
+            <div className="tg-gallery-grid">
+              {mediaGalleryItems
+                .filter(m => m.type === 'image')
+                .map(media => (
+                  <div 
+                    key={media.id} 
+                    className="tg-gallery-item"
+                    onClick={() => setSelectedMedia({ type: 'image', url: media.url })}
+                  >
+                    <img src={media.url} alt="" loading="lazy" />
+                  </div>
+                ))}
+              {mediaGalleryItems.filter(m => m.type === 'image').length === 0 && (
+                <div className="tg-gallery-empty">
+                  <ImageIcon size={48} />
+                  <p>No shared photos yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image viewer */}
+      {selectedMedia && (
+        <div className="tg-image-viewer" onClick={() => setSelectedMedia(null)}>
+          <button className="tg-viewer-close">
+            <X size={28} />
+          </button>
+          <img src={selectedMedia.url} alt="" />
+        </div>
+      )}
+
+      {/* Sidebar */}
+      {showSidebar && (
+        <div className="tg-sidebar-overlay" onClick={() => setShowSidebar(false)}>
+          <div className="tg-sidebar" onClick={e => e.stopPropagation()}>
+            <div className="tg-sidebar-header">
+              <div className="tg-sidebar-avatar">💬</div>
+              <h2>TraderMind Community</h2>
+              <p>{onlineUsers.length} members online</p>
+            </div>
+
+            <div className="tg-sidebar-section">
+              <h3>
+                <Users size={16} /> Online Now
+              </h3>
+              <div className="tg-online-list">
+                {onlineUsers.slice(0, 15).map(user => (
+                  <div key={user.id || user.derivId} className="tg-online-user">
+                    <div className="tg-online-avatar">
+                      {getAvatarContent(user)}
+                      <span className="tg-online-dot"></span>
+                    </div>
+                    <span>@{user.username}</span>
+                  </div>
+                ))}
+                {onlineUsers.length > 15 && (
+                  <div className="tg-online-more">
+                    +{onlineUsers.length - 15} more online
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="tg-sidebar-section">
+              <h3>
+                <ImageIcon size={16} /> Shared Media
+              </h3>
+              <div className="tg-sidebar-media-preview">
+                {mediaGalleryItems.slice(0, 6).map(media => (
+                  <div 
+                    key={media.id} 
+                    className="tg-sidebar-media-item"
+                    onClick={() => { setSelectedMedia({ type: 'image', url: media.url }); setShowSidebar(false); }}
+                  >
+                    {media.type === 'image' && <img src={media.url} alt="" />}
+                  </div>
+                ))}
+              </div>
+              <button 
+                className="tg-sidebar-view-all"
+                onClick={() => { setShowMediaGallery(true); setShowSidebar(false); }}
+              >
+                View All Media
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// Helper function to generate consistent color from string
+const stringToColor = (str) => {
+  if (!str) return '#8b5cf6';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const colors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+  return colors[Math.abs(hash) % colors.length];
 };
 
 export default Community;
