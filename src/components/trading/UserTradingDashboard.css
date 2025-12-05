@@ -1,0 +1,556 @@
+/**
+ * User Trading Dashboard Styles
+ */
+
+.user-trading-dashboard {
+  padding: 24px;
+  background: #0a0a0a;
+  min-height: 100vh;
+  color: #ffffff;
+}
+
+/* Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header-info h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #888;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.status-dot.disconnected {
+  background: #ef4444;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh:hover {
+  background: #252525;
+  color: #fff;
+}
+
+/* Live Ticker */
+.live-ticker {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, #22c55e10, #3b82f610);
+  border: 1px solid #22c55e30;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.ticker-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.ticker-label .pulse {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ticker-info {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.ticker-index {
+  color: #888;
+}
+
+.ticker-price {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Monaco', monospace;
+}
+
+.ticker-digit {
+  padding: 4px 12px;
+  background: #22c55e20;
+  border-radius: 20px;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+/* Invitations */
+.invitations-section {
+  margin-bottom: 24px;
+}
+
+.invitations-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.invitations-list {
+  display: grid;
+  gap: 12px;
+}
+
+.invitation-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #111;
+  border: 1px solid #f9731650;
+  border-radius: 10px;
+}
+
+.invitation-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+}
+
+.invitation-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+}
+
+.invitation-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-accept,
+.btn-decline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-accept {
+  background: #22c55e;
+  color: #fff;
+}
+
+.btn-accept:hover {
+  background: #16a34a;
+}
+
+.btn-decline {
+  background: #333;
+  color: #888;
+}
+
+.btn-decline:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.stat-icon.sessions { background: #3b82f620; color: #3b82f6; }
+.stat-icon.active { background: #22c55e20; color: #22c55e; }
+.stat-icon.accounts { background: #f9731620; color: #f97316; }
+.stat-icon.bot { background: #8b5cf620; color: #8b5cf6; }
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Sessions Section */
+.sessions-section {
+  margin-bottom: 32px;
+}
+
+.sessions-section h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-row {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.session-row:hover {
+  border-color: #333;
+}
+
+.session-row.active {
+  border-color: #22c55e50;
+}
+
+.session-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+}
+
+.session-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-icon {
+  opacity: 0.8;
+}
+.status-icon.active { color: #22c55e; }
+.status-icon.paused { color: #f97316; }
+.status-icon.completed { color: #3b82f6; }
+.status-icon.cancelled { color: #666; }
+.status-icon.pending { color: #fbbf24; }
+
+.session-name {
+  font-weight: 600;
+}
+
+.session-strategy {
+  padding: 3px 10px;
+  background: #222;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #888;
+}
+
+.session-metrics {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #888;
+}
+
+.metric.win { color: #22c55e; }
+.metric.loss { color: #ef4444; }
+.metric.profit { color: #22c55e; }
+
+.session-details {
+  padding: 0 20px 20px;
+  border-top: 1px solid #1a1a1a;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item .label {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.detail-item .value {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.detail-item .value.win { color: #22c55e; }
+.detail-item .value.loss { color: #ef4444; }
+
+/* Trades Section */
+.trades-section {
+  margin-bottom: 32px;
+}
+
+.trades-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.trades-table-container {
+  overflow-x: auto;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+}
+
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.trades-table th,
+.trades-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.trades-table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+  background: #0a0a0a;
+}
+
+.trades-table td {
+  font-size: 13px;
+}
+
+.trade-row.win { background: #22c55e05; }
+.trade-row.loss { background: #ef444405; }
+
+.trade-row .result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: capitalize;
+}
+
+.trade-row .result.win { color: #22c55e; }
+.trade-row .result.loss { color: #ef4444; }
+
+.trade-row .profit.positive { color: #22c55e; }
+.trade-row .profit.negative { color: #ef4444; }
+
+.empty-trades {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+}
+
+/* Ticks Section */
+.ticks-section {
+  margin-bottom: 32px;
+}
+
+.ticks-section h2 {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.ticks-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tick-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.tick-time {
+  color: #666;
+}
+
+.tick-quote {
+  font-family: 'Monaco', monospace;
+}
+
+.tick-digit {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #22c55e20;
+  border-radius: 50%;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+}
+
+.empty-state svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state p {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.empty-state span {
+  font-size: 13px;
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-trading-dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .live-ticker {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .ticker-info {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .session-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .session-metrics {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .details-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .trades-table th,
+  .trades-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}

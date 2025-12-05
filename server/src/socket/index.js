@@ -3,7 +3,7 @@
 const { supabase } = require('../db/supabase');
 const { verifyToken } = require('../services/auth');
 const { v4: uuidv4 } = require('uuid');
-const { setupTradingSocketHandlers } = require('./trading');
+const { setupTradingHandlers } = require('./trading');
 
 const activeConnections = new Map(); 
 const userSockets = new Map(); 
@@ -95,9 +95,7 @@ function setupSocketHandlers(io) {
     }
 
     // Setup trading socket handlers
-    setupTradingSocketHandlers(io, socket);
-
-    
+    setupTradingHandlers(io, socket);
 
     
     socket.on('joinRoom', async (data) => {

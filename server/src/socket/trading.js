@@ -1,497 +1,427 @@
 /**
- * Trading Socket Handlers - Real-time WebSocket communication for trading
+ * Trading Socket Handlers
+ * Real-time trading events and notifications
  */
 
-const WebSocket = require('ws');
-const tradingService = require('../services/trading');
+const { supabase } = require('../db/supabase');
+const trading = require('../services/trading');
 
-// Active Deriv connections per account
-const derivConnections = new Map();
-
-// Tick buffers for strategy analysis
-const tickBuffers = new Map();
-
-// Session subscriptions (socket.id -> sessionId)
-const sessionSubscriptions = new Map();
+// Track active trading connections
+const tradingConnections = new Map(); // sessionId -> Set of socket ids
+const userTradingSockets = new Map(); // userId -> Set of socket ids
 
 /**
  * Setup trading socket handlers
+ * @param {Server} io - Socket.IO server instance
+ * @param {Socket} socket - Socket connection
  */
-function setupTradingSocketHandlers(io, socket) {
+function setupTradingHandlers(io, socket) {
   const userId = socket.userId;
   
-  // ==================== Session Subscription ====================
-  
+  // Track user's trading socket
+  if (!userTradingSockets.has(userId)) {
+    userTradingSockets.set(userId, new Set());
+  }
+  userTradingSockets.get(userId).add(socket.id);
+
+  // ==================== Session Events ====================
+
   /**
-   * Subscribe to session updates
+   * Join a trading session room for real-time updates
    */
-  socket.on('trading:subscribe', async (data) => {
+  socket.on('trading:joinSession', async (data) => {
     const { sessionId } = data;
     
     try {
-      const session = await tradingService.getSession(sessionId);
-      if (!session) {
-        socket.emit('trading:error', { message: 'Session not found' });
+      // Verify user has access to this session
+      const { data: invitation } = await supabase
+        .from('session_invitations')
+        .select('*')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .eq('status', 'accepted')
+        .single();
+
+      const { data: session } = await supabase
+        .from('trading_sessions')
+        .select('admin_id')
+        .eq('id', sessionId)
+        .single();
+
+      if (!invitation && session?.admin_id !== userId) {
+        socket.emit('trading:error', { 
+          message: 'Not authorized to join this session' 
+        });
         return;
       }
-      
-      // Join session room
-      socket.join(`trading:${sessionId}`);
-      sessionSubscriptions.set(socket.id, sessionId);
-      
-      socket.emit('trading:subscribed', {
+
+      const roomId = `trading:${sessionId}`;
+      socket.join(roomId);
+
+      // Track connection
+      if (!tradingConnections.has(sessionId)) {
+        tradingConnections.set(sessionId, new Set());
+      }
+      tradingConnections.get(sessionId).add(socket.id);
+
+      socket.emit('trading:joinedSession', { 
         sessionId,
-        session,
+        message: 'Successfully joined session' 
       });
-      
-      console.log(`User ${userId} subscribed to session ${sessionId}`);
+
+      // Notify others in session
+      socket.to(roomId).emit('trading:userJoined', {
+        sessionId,
+        userId,
+        username: socket.username,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`User ${socket.username} joined trading session ${sessionId}`);
     } catch (error) {
-      console.error('Error subscribing to session:', error);
+      console.error('Error joining trading session:', error);
       socket.emit('trading:error', { message: error.message });
     }
   });
-  
+
   /**
-   * Unsubscribe from session updates
+   * Leave a trading session room
    */
-  socket.on('trading:unsubscribe', (data) => {
+  socket.on('trading:leaveSession', (data) => {
     const { sessionId } = data;
+    const roomId = `trading:${sessionId}`;
     
-    socket.leave(`trading:${sessionId}`);
-    sessionSubscriptions.delete(socket.id);
+    socket.leave(roomId);
     
-    socket.emit('trading:unsubscribed', { sessionId });
-    console.log(`User ${userId} unsubscribed from session ${sessionId}`);
+    // Remove from tracking
+    if (tradingConnections.has(sessionId)) {
+      tradingConnections.get(sessionId).delete(socket.id);
+    }
+
+    socket.to(roomId).emit('trading:userLeft', {
+      sessionId,
+      userId,
+      username: socket.username,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log(`User ${socket.username} left trading session ${sessionId}`);
   });
-  
+
   // ==================== Tick Streaming ====================
-  
+
   /**
-   * Start tick stream for a volatility index
+   * Subscribe to tick updates for a volatility index
    */
-  socket.on('trading:startTicks', async (data) => {
-    const { accountId, volatilityIndex } = data;
+  socket.on('trading:subscribeTicks', async (data) => {
+    const { volatilityIndex, sessionId } = data;
+    const tickRoom = `ticks:${volatilityIndex}`;
     
-    try {
-      // Get account to verify and get token
-      const accounts = await tradingService.getAdminAccounts(userId);
-      const account = accounts.find(a => a.id === accountId || a.account_id === accountId);
-      
-      if (!account) {
-        socket.emit('trading:error', { message: 'Account not found' });
-        return;
-      }
-      
-      const connectionKey = `${accountId}:${volatilityIndex}`;
-      
-      // Check if already connected
-      if (derivConnections.has(connectionKey)) {
-        socket.emit('trading:ticksStarted', { accountId, volatilityIndex });
-        return;
-      }
-      
-      // Create Deriv WebSocket connection
-      const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
-      
-      ws.on('open', () => {
-        // Authorize first
-        ws.send(JSON.stringify({ authorize: account.deriv_token }));
-      });
-      
-      ws.on('message', (data) => {
-        const response = JSON.parse(data.toString());
-        
-        if (response.authorize) {
-          // Start tick subscription after authorization
-          ws.send(JSON.stringify({
-            ticks: volatilityIndex,
-            subscribe: 1,
-          }));
-          
-          socket.emit('trading:ticksStarted', { accountId, volatilityIndex });
-        }
-        
-        if (response.tick) {
-          const tick = {
-            symbol: response.tick.symbol,
-            epoch: response.tick.epoch,
-            quote: response.tick.quote,
-            digit: parseInt(response.tick.quote.toString().slice(-1)),
-          };
-          
-          // Store in buffer
-          if (!tickBuffers.has(volatilityIndex)) {
-            tickBuffers.set(volatilityIndex, []);
-          }
-          const buffer = tickBuffers.get(volatilityIndex);
-          buffer.push(tick);
-          
-          // Keep only last 100 ticks
-          if (buffer.length > 100) {
-            buffer.shift();
-          }
-          
-          // Emit tick to all subscribers
-          io.to(`ticks:${volatilityIndex}`).emit('trading:tick', {
-            volatilityIndex,
-            tick,
-            bufferSize: buffer.length,
-          });
-        }
-        
-        if (response.error) {
-          socket.emit('trading:error', { 
-            message: response.error.message,
-            code: response.error.code,
-          });
-        }
-      });
-      
-      ws.on('error', (err) => {
-        console.error(`Deriv WS error for ${connectionKey}:`, err);
-        socket.emit('trading:error', { message: 'Connection error' });
-      });
-      
-      ws.on('close', () => {
-        derivConnections.delete(connectionKey);
-        console.log(`Deriv connection closed for ${connectionKey}`);
-      });
-      
-      derivConnections.set(connectionKey, ws);
-      socket.join(`ticks:${volatilityIndex}`);
-      
-    } catch (error) {
-      console.error('Error starting ticks:', error);
-      socket.emit('trading:error', { message: error.message });
-    }
-  });
-  
-  /**
-   * Stop tick stream
-   */
-  socket.on('trading:stopTicks', (data) => {
-    const { accountId, volatilityIndex } = data;
-    const connectionKey = `${accountId}:${volatilityIndex}`;
+    socket.join(tickRoom);
     
-    const ws = derivConnections.get(connectionKey);
-    if (ws) {
-      ws.close();
-      derivConnections.delete(connectionKey);
-    }
-    
-    socket.leave(`ticks:${volatilityIndex}`);
-    socket.emit('trading:ticksStopped', { accountId, volatilityIndex });
-  });
-  
-  /**
-   * Get current tick buffer
-   */
-  socket.on('trading:getTickBuffer', (data) => {
-    const { volatilityIndex } = data;
-    const buffer = tickBuffers.get(volatilityIndex) || [];
-    
-    socket.emit('trading:tickBuffer', {
+    socket.emit('trading:ticksSubscribed', {
       volatilityIndex,
-      ticks: buffer,
+      message: `Subscribed to ${volatilityIndex} ticks`
+    });
+
+    console.log(`User ${socket.username} subscribed to ${volatilityIndex} ticks`);
+  });
+
+  /**
+   * Unsubscribe from tick updates
+   */
+  socket.on('trading:unsubscribeTicks', (data) => {
+    const { volatilityIndex } = data;
+    const tickRoom = `ticks:${volatilityIndex}`;
+    
+    socket.leave(tickRoom);
+    
+    socket.emit('trading:ticksUnsubscribed', {
+      volatilityIndex,
+      message: `Unsubscribed from ${volatilityIndex} ticks`
     });
   });
-  
-  // ==================== Trade Execution ====================
-  
+
+  // ==================== Trade Events ====================
+
   /**
-   * Execute a trade
+   * Request to execute a manual trade
    */
   socket.on('trading:executeTrade', async (data) => {
-    const { 
-      sessionId,
-      accountId, 
-      contractType, 
-      volatilityIndex, 
-      stake, 
-      prediction,
-      strategy 
-    } = data;
+    const { sessionId, accountId, contractType, stake, prediction } = data;
     
     try {
-      // Get account
-      const accounts = await tradingService.getAdminAccounts(userId);
-      const account = accounts.find(a => a.id === accountId || a.account_id === accountId);
-      
+      // Verify user owns this account
+      const { data: account } = await supabase
+        .from('trading_accounts')
+        .select('*')
+        .eq('id', accountId)
+        .eq('user_id', userId)
+        .single();
+
       if (!account) {
-        socket.emit('trading:error', { message: 'Account not found' });
+        socket.emit('trading:error', { 
+          message: 'Account not found or not authorized' 
+        });
         return;
       }
-      
-      // Create WebSocket for trade
-      const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
-      
-      ws.on('open', () => {
-        ws.send(JSON.stringify({ authorize: account.deriv_token }));
+
+      // Execute trade through service
+      const result = await trading.executeTrade({
+        sessionId,
+        userId,
+        accountId,
+        contractType,
+        stake,
+        prediction,
+        volatilityIndex: data.volatilityIndex || 'R_100'
       });
-      
-      ws.on('message', async (rawData) => {
-        const response = JSON.parse(rawData.toString());
-        
-        if (response.authorize) {
-          // Get proposal first
-          const proposalRequest = {
-            proposal: 1,
-            amount: stake,
-            basis: 'stake',
-            contract_type: contractType,
-            currency: account.currency || 'USD',
-            duration: 1,
-            duration_unit: 't',
-            symbol: volatilityIndex,
-          };
-          
-          // Add prediction for digit contracts
-          if (contractType.includes('DIGIT')) {
-            if (contractType === 'DIGITOVER' || contractType === 'DIGITUNDER') {
-              proposalRequest.barrier = prediction.toString();
-            } else if (contractType === 'DIGITMATCH' || contractType === 'DIGITDIFF') {
-              proposalRequest.barrier = prediction.toString();
-            }
-          }
-          
-          ws.send(JSON.stringify(proposalRequest));
-        }
-        
-        if (response.proposal) {
-          // Buy the contract
-          ws.send(JSON.stringify({
-            buy: response.proposal.id,
-            price: stake,
-          }));
-        }
-        
-        if (response.buy) {
-          // Trade executed
-          const trade = {
-            sessionId,
-            accountId,
-            contractId: response.buy.contract_id,
-            contractType,
-            volatilityIndex,
-            strategy,
-            stake,
-            entryTick: response.buy.buy_price,
-            prediction,
-            result: 'pending',
-          };
-          
-          // Record the trade
-          const recordedTrade = await tradingService.recordTrade(trade);
-          
-          // Subscribe to contract updates
-          ws.send(JSON.stringify({
-            proposal_open_contract: 1,
-            contract_id: response.buy.contract_id,
-            subscribe: 1,
-          }));
-          
-          socket.emit('trading:tradeExecuted', {
-            trade: recordedTrade,
-            contractId: response.buy.contract_id,
-          });
-          
-          // Broadcast to session room
-          io.to(`trading:${sessionId}`).emit('trading:newTrade', {
-            trade: recordedTrade,
-          });
-        }
-        
-        if (response.proposal_open_contract) {
-          const contract = response.proposal_open_contract;
-          
-          if (contract.is_sold || contract.is_expired) {
-            const profit = contract.profit;
-            const result = profit > 0 ? 'won' : 'lost';
-            
-            // Update trade result
-            await tradingService.updateTradeResult(
-              contract.contract_id,
-              result,
-              profit,
-              contract.exit_tick
-            );
-            
-            socket.emit('trading:tradeResult', {
-              contractId: contract.contract_id,
-              result,
-              profit,
-              exitTick: contract.exit_tick,
-            });
-            
-            // Broadcast to session room
-            io.to(`trading:${sessionId}`).emit('trading:tradeCompleted', {
-              contractId: contract.contract_id,
-              result,
-              profit,
-            });
-            
-            // Check if session TP/SL reached
-            const session = await tradingService.getSession(sessionId);
-            if (session.status === tradingService.SESSION_STATUS.TP_REACHED) {
-              io.to(`trading:${sessionId}`).emit('trading:tpReached', {
-                sessionId,
-                pnl: session.current_pnl,
-              });
-            } else if (session.status === tradingService.SESSION_STATUS.SL_REACHED) {
-              io.to(`trading:${sessionId}`).emit('trading:slReached', {
-                sessionId,
-                pnl: session.current_pnl,
-              });
-            }
-            
-            ws.close();
-          }
-        }
-        
-        if (response.error) {
-          socket.emit('trading:error', { 
-            message: response.error.message,
-            code: response.error.code,
-          });
-          ws.close();
-        }
-      });
-      
-      ws.on('error', (err) => {
-        console.error('Trade execution error:', err);
-        socket.emit('trading:error', { message: 'Trade execution failed' });
-      });
-      
+
+      socket.emit('trading:tradeExecuted', result);
+
+      // Broadcast to session room
+      if (sessionId) {
+        const roomId = `trading:${sessionId}`;
+        socket.to(roomId).emit('trading:tradeUpdate', {
+          sessionId,
+          trade: result,
+          executedBy: socket.username,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
       console.error('Error executing trade:', error);
       socket.emit('trading:error', { message: error.message });
     }
   });
-  
-  // ==================== Session Control ====================
-  
+
+  // ==================== Bot Control ====================
+
   /**
-   * Start session via socket
+   * Start trading bot
    */
-  socket.on('trading:startSession', async (data) => {
-    const { sessionId } = data;
+  socket.on('trading:startBot', async (data) => {
+    const { sessionId, accountId } = data;
     
     try {
-      const session = await tradingService.updateSession(sessionId, {
-        status: tradingService.SESSION_STATUS.RUNNING,
-        started_at: new Date().toISOString(),
-      });
+      const result = await trading.startBot(userId, sessionId, accountId);
       
-      await tradingService.logActivity('session_started', `Session started via socket`, {
+      socket.emit('trading:botStarted', {
         sessionId,
-        userId,
+        status: 'running',
+        message: 'Trading bot started'
       });
-      
-      io.to(`trading:${sessionId}`).emit('trading:sessionStarted', {
-        session,
+
+      // Notify session room
+      const roomId = `trading:${sessionId}`;
+      io.to(roomId).emit('trading:sessionUpdate', {
+        sessionId,
+        status: 'active',
+        startedBy: socket.username,
+        timestamp: new Date().toISOString()
       });
-      
     } catch (error) {
-      console.error('Error starting session:', error);
+      console.error('Error starting bot:', error);
       socket.emit('trading:error', { message: error.message });
     }
   });
-  
+
   /**
-   * Stop session via socket
+   * Stop trading bot
    */
-  socket.on('trading:stopSession', async (data) => {
+  socket.on('trading:stopBot', async (data) => {
     const { sessionId } = data;
     
     try {
-      const session = await tradingService.updateSession(sessionId, {
-        status: tradingService.SESSION_STATUS.COMPLETED,
-        ended_at: new Date().toISOString(),
-      });
+      const result = await trading.stopBot(userId, sessionId);
       
-      await tradingService.logActivity('session_stopped', `Session stopped via socket`, {
+      socket.emit('trading:botStopped', {
         sessionId,
-        userId,
+        status: 'stopped',
+        message: 'Trading bot stopped'
       });
-      
-      io.to(`trading:${sessionId}`).emit('trading:sessionStopped', {
-        session,
+
+      // Notify session room
+      const roomId = `trading:${sessionId}`;
+      io.to(roomId).emit('trading:sessionUpdate', {
+        sessionId,
+        status: 'paused',
+        stoppedBy: socket.username,
+        timestamp: new Date().toISOString()
       });
-      
     } catch (error) {
-      console.error('Error stopping session:', error);
+      console.error('Error stopping bot:', error);
       socket.emit('trading:error', { message: error.message });
     }
   });
-  
-  // ==================== Cleanup on Disconnect ====================
-  
+
+  // ==================== Notifications ====================
+
+  /**
+   * Mark notification as read
+   */
+  socket.on('trading:markNotificationRead', async (data) => {
+    const { notificationId } = data;
+    
+    try {
+      await supabase
+        .from('trading_notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq('id', notificationId)
+        .eq('user_id', userId);
+
+      socket.emit('trading:notificationRead', { notificationId });
+    } catch (error) {
+      console.error('Error marking notification read:', error);
+    }
+  });
+
+  /**
+   * Get unread notification count
+   */
+  socket.on('trading:getUnreadCount', async () => {
+    try {
+      const { count } = await supabase
+        .from('trading_notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false);
+
+      socket.emit('trading:unreadCount', { count: count || 0 });
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+    }
+  });
+
+  // ==================== Cleanup ====================
+
   socket.on('disconnect', () => {
-    // Clean up session subscriptions
-    const sessionId = sessionSubscriptions.get(socket.id);
-    if (sessionId) {
-      socket.leave(`trading:${sessionId}`);
-      sessionSubscriptions.delete(socket.id);
+    // Remove from user sockets
+    if (userTradingSockets.has(userId)) {
+      userTradingSockets.get(userId).delete(socket.id);
+      if (userTradingSockets.get(userId).size === 0) {
+        userTradingSockets.delete(userId);
+      }
     }
-    
-    console.log(`Trading socket disconnected: ${userId}`);
-  });
-}
 
-/**
- * Broadcast session update to all subscribers
- */
-function broadcastSessionUpdate(io, sessionId, session) {
-  io.to(`trading:${sessionId}`).emit('trading:sessionUpdate', {
-    session,
-  });
-}
-
-/**
- * Broadcast trade to session subscribers
- */
-function broadcastTrade(io, sessionId, trade) {
-  io.to(`trading:${sessionId}`).emit('trading:newTrade', {
-    trade,
-  });
-}
-
-/**
- * Broadcast notification to session subscribers
- */
-function broadcastNotification(io, sessionId, notification) {
-  io.to(`trading:${sessionId}`).emit('trading:notification', {
-    notification,
-  });
-}
-
-/**
- * Get tick buffer for a volatility index
- */
-function getTickBuffer(volatilityIndex) {
-  return tickBuffers.get(volatilityIndex) || [];
-}
-
-/**
- * Close all Deriv connections
- */
-function closeAllConnections() {
-  for (const [key, ws] of derivConnections) {
-    try {
-      ws.close();
-    } catch (err) {
-      console.error(`Error closing connection ${key}:`, err);
+    // Remove from all trading sessions
+    for (const [sessionId, sockets] of tradingConnections.entries()) {
+      if (sockets.has(socket.id)) {
+        sockets.delete(socket.id);
+        const roomId = `trading:${sessionId}`;
+        socket.to(roomId).emit('trading:userLeft', {
+          sessionId,
+          userId,
+          username: socket.username,
+          timestamp: new Date().toISOString()
+        });
+      }
     }
+
+    console.log(`Trading socket disconnected: ${socket.username}`);
+  });
+}
+
+// ==================== Broadcast Functions ====================
+
+/**
+ * Broadcast tick update to subscribers
+ */
+function broadcastTick(io, volatilityIndex, tickData) {
+  const tickRoom = `ticks:${volatilityIndex}`;
+  io.to(tickRoom).emit('trading:tick', {
+    volatilityIndex,
+    tick: tickData,
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
+ * Broadcast trade result to session
+ */
+function broadcastTradeResult(io, sessionId, tradeData) {
+  const roomId = `trading:${sessionId}`;
+  io.to(roomId).emit('trading:tradeResult', {
+    sessionId,
+    trade: tradeData,
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
+ * Broadcast session status update
+ */
+function broadcastSessionStatus(io, sessionId, status, stats = {}) {
+  const roomId = `trading:${sessionId}`;
+  io.to(roomId).emit('trading:sessionStatus', {
+    sessionId,
+    status,
+    stats,
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
+ * Send notification to specific user
+ */
+async function sendTradingNotification(io, userId, notification) {
+  try {
+    // Save to database
+    const { data: savedNotification } = await supabase
+      .from('trading_notifications')
+      .insert({
+        user_id: userId,
+        notification_type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        session_id: notification.sessionId || null,
+        metadata: notification.metadata || {}
+      })
+      .select()
+      .single();
+
+    // Send to user's sockets
+    if (userTradingSockets.has(userId)) {
+      for (const socketId of userTradingSockets.get(userId)) {
+        io.to(socketId).emit('trading:notification', {
+          ...savedNotification,
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    return savedNotification;
+  } catch (error) {
+    console.error('Error sending trading notification:', error);
+    return null;
   }
-  derivConnections.clear();
-  tickBuffers.clear();
+}
+
+/**
+ * Broadcast session invitation
+ */
+async function broadcastInvitation(io, userId, invitation, session) {
+  const notification = {
+    type: 'session_invite',
+    title: 'Trading Session Invitation',
+    message: `You've been invited to join "${session.session_name}"`,
+    sessionId: session.id,
+    metadata: {
+      invitationId: invitation.id,
+      sessionName: session.session_name,
+      strategy: session.strategy_name,
+      volatilityIndex: session.volatility_index
+    }
+  };
+
+  return sendTradingNotification(io, userId, notification);
 }
 
 module.exports = {
-  setupTradingSocketHandlers,
-  broadcastSessionUpdate,
-  broadcastTrade,
-  broadcastNotification,
-  getTickBuffer,
-  closeAllConnections,
+  setupTradingHandlers,
+  broadcastTick,
+  broadcastTradeResult,
+  broadcastSessionStatus,
+  sendTradingNotification,
+  broadcastInvitation
 };

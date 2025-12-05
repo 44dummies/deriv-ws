@@ -1,462 +1,466 @@
 /**
- * Strategy Engine - Core Trading Strategies
+ * Strategy Engine - 8 Trading Strategies for Digit Analysis
  * 
- * Analyzes last 100 ticks to generate trading signals
- * Each strategy returns confidence score (0-1)
- * Signals are aggregated for final decision
+ * Each strategy analyzes tick history and returns a trading signal
+ * with contract type, prediction, and confidence level
  */
 
-import { CONFIDENCE_THRESHOLD, STRATEGY_NAMES, createDigitStats } from './types.js';
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
+import { CONTRACT_TYPE, STRATEGY } from './constants';
 
 /**
- * Extract digit statistics from tick buffer
+ * Calculate digit statistics from tick array
  */
 export function calculateDigitStats(ticks) {
-  const counts = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
-  let evenCount = 0;
-  let oddCount = 0;
+  if (!ticks || ticks.length === 0) return null;
   
-  const digits = ticks.map(t => t.digit);
-  
-  digits.forEach(d => {
-    counts[d]++;
-    if (d % 2 === 0) evenCount++;
-    else oddCount++;
+  const digits = ticks.map(t => {
+    const priceStr = t.quote.toString();
+    return parseInt(priceStr[priceStr.length - 1]);
   });
+  
+  const counts = new Array(10).fill(0);
+  digits.forEach(d => counts[d]++);
+  
+  const frequencies = counts.map(c => c / digits.length);
   
   // Calculate streaks
-  let evenStreak = 0;
-  let oddStreak = 0;
-  let risingStreak = 0;
-  let fallingStreak = 0;
+  const streaks = {};
+  let currentDigit = digits[0];
+  let streak = 1;
   
-  for (let i = digits.length - 1; i >= 0; i--) {
-    if (digits[i] % 2 === 0) {
-      if (evenStreak === digits.length - 1 - i) evenStreak++;
-      else break;
+  for (let i = 1; i < digits.length; i++) {
+    if (digits[i] === currentDigit) {
+      streak++;
+    } else {
+      streaks[currentDigit] = Math.max(streaks[currentDigit] || 0, streak);
+      currentDigit = digits[i];
+      streak = 1;
     }
   }
+  streaks[currentDigit] = Math.max(streaks[currentDigit] || 0, streak);
   
-  for (let i = digits.length - 1; i >= 0; i--) {
-    if (digits[i] % 2 === 1) {
-      if (oddStreak === digits.length - 1 - i) oddStreak++;
-      else break;
-    }
-  }
-  
-  for (let i = digits.length - 1; i > 0; i--) {
-    if (digits[i] > digits[i - 1]) {
-      risingStreak++;
-    } else break;
-  }
-  
-  for (let i = digits.length - 1; i > 0; i--) {
-    if (digits[i] < digits[i - 1]) {
-      fallingStreak++;
-    } else break;
-  }
-  
-  return createDigitStats({
-    counts,
-    evenCount,
-    oddCount,
-    lastNDigits: digits.slice(-20),
-    streaks: { even: evenStreak, odd: oddStreak, rising: risingStreak, falling: fallingStreak },
-  });
-}
-
-/**
- * Get transition probabilities between digits
- */
-function getTransitionMatrix(digits) {
-  const matrix = Array(10).fill(null).map(() => Array(10).fill(0));
-  const fromCounts = Array(10).fill(0);
-  
+  // Calculate transitions
+  const transitions = {};
   for (let i = 0; i < digits.length - 1; i++) {
-    const from = digits[i];
-    const to = digits[i + 1];
-    matrix[from][to]++;
-    fromCounts[from]++;
+    const key = `${digits[i]}_${digits[i + 1]}`;
+    transitions[key] = (transitions[key] || 0) + 1;
   }
-  
-  // Convert to probabilities
-  for (let i = 0; i < 10; i++) {
-    if (fromCounts[i] > 0) {
-      for (let j = 0; j < 10; j++) {
-        matrix[i][j] /= fromCounts[i];
-      }
-    }
-  }
-  
-  return matrix;
-}
-
-// ============================================
-// STRATEGY IMPLEMENTATIONS
-// ============================================
-
-/**
- * DFPM - Digit Frequency Pattern Matcher
- * Analyzes digit frequency distribution and identifies underrepresented digits
- */
-export function strategyDFPM(ticks) {
-  const stats = calculateDigitStats(ticks);
-  const expectedFreq = ticks.length / 10;
-  
-  // Find most overdue digits
-  let mostOverdue = 0;
-  let lowestCount = Infinity;
-  
-  for (let d = 0; d <= 9; d++) {
-    if (stats.counts[d] < lowestCount) {
-      lowestCount = stats.counts[d];
-      mostOverdue = d;
-    }
-  }
-  
-  // Calculate deviation from expected
-  const deviation = (expectedFreq - lowestCount) / expectedFreq;
-  const confidence = Math.min(0.95, Math.max(0, deviation * 0.8));
-  
-  // For Even/Odd based on overdue digit
-  const direction = mostOverdue % 2 === 0 ? 'EVEN' : 'ODD';
   
   return {
-    strategy: STRATEGY_NAMES.DFPM,
-    direction,
-    confidence,
-    timestamp: Date.now(),
-    reasoning: `Digit ${mostOverdue} is ${((expectedFreq - lowestCount) / expectedFreq * 100).toFixed(1)}% underrepresented`,
+    digits,
+    counts,
+    frequencies,
+    streaks,
+    transitions,
+    lastDigit: digits[digits.length - 1],
+    lastDigits: digits.slice(-10)
   };
 }
 
 /**
- * VCS - Velocity-Crossover Strategy
- * Analyzes rate of change in digit values
+ * Calculate Shannon entropy
  */
-export function strategyVCS(ticks) {
-  if (ticks.length < 20) {
-    return { strategy: STRATEGY_NAMES.VCS, direction: 'CALL', confidence: 0, timestamp: Date.now(), reasoning: 'Insufficient data' };
-  }
-  
-  const digits = ticks.map(t => t.digit);
-  
-  // Calculate short-term and long-term moving averages of digits
-  const shortWindow = 5;
-  const longWindow = 20;
-  
-  const shortMA = digits.slice(-shortWindow).reduce((a, b) => a + b, 0) / shortWindow;
-  const longMA = digits.slice(-longWindow).reduce((a, b) => a + b, 0) / longWindow;
-  
-  // Previous MAs
-  const prevShortMA = digits.slice(-(shortWindow + 1), -1).reduce((a, b) => a + b, 0) / shortWindow;
-  const prevLongMA = digits.slice(-(longWindow + 1), -1).reduce((a, b) => a + b, 0) / longWindow;
-  
-  // Detect crossover
-  const currentDiff = shortMA - longMA;
-  const prevDiff = prevShortMA - prevLongMA;
-  
-  let direction;
-  let confidence;
-  let reasoning;
-  
-  if (prevDiff <= 0 && currentDiff > 0) {
-    direction = 'CALL';
-    confidence = Math.min(0.9, Math.abs(currentDiff) / 3);
-    reasoning = `Bullish crossover: Short MA (${shortMA.toFixed(2)}) crossed above Long MA (${longMA.toFixed(2)})`;
-  } else if (prevDiff >= 0 && currentDiff < 0) {
-    direction = 'PUT';
-    confidence = Math.min(0.9, Math.abs(currentDiff) / 3);
-    reasoning = `Bearish crossover: Short MA (${shortMA.toFixed(2)}) crossed below Long MA (${longMA.toFixed(2)})`;
-  } else {
-    direction = currentDiff > 0 ? 'CALL' : 'PUT';
-    confidence = Math.min(0.6, Math.abs(currentDiff) / 5);
-    reasoning = `Trend continuation: ${direction === 'CALL' ? 'Upward' : 'Downward'} momentum`;
-  }
-  
-  return { strategy: STRATEGY_NAMES.VCS, direction, confidence, timestamp: Date.now(), reasoning };
+function calculateEntropy(frequencies) {
+  return -frequencies
+    .filter(f => f > 0)
+    .reduce((sum, f) => sum + f * Math.log2(f), 0);
 }
 
 /**
- * DER - Digit Even/Odd Ratio
- * Analyzes even/odd distribution and predicts correction
+ * Detect volatility regime (low/medium/high)
  */
-export function strategyDER(ticks) {
+function detectVolatilityRegime(ticks) {
+  if (ticks.length < 20) return 'unknown';
+  
+  const prices = ticks.map(t => t.quote);
+  const returns = [];
+  
+  for (let i = 1; i < prices.length; i++) {
+    returns.push(Math.abs(prices[i] - prices[i - 1]) / prices[i - 1]);
+  }
+  
+  const avg = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const stdDev = Math.sqrt(
+    returns.reduce((sum, r) => sum + Math.pow(r - avg, 2), 0) / returns.length
+  );
+  
+  if (stdDev < 0.001) return 'low';
+  if (stdDev < 0.003) return 'medium';
+  return 'high';
+}
+
+/**
+ * DFPM - Digit Frequency Pattern Matching
+ * Finds underrepresented digits that are statistically "due"
+ */
+export function runDFPM(ticks) {
   const stats = calculateDigitStats(ticks);
-  const total = stats.evenCount + stats.oddCount;
+  if (!stats) return null;
   
-  const evenRatio = stats.evenCount / total;
-  const oddRatio = stats.oddCount / total;
+  const expected = 0.1;
+  let maxDeviation = 0;
+  let targetDigit = -1;
   
-  // Expected is 50/50
-  const deviation = Math.abs(evenRatio - 0.5);
-  
-  let direction;
-  let reasoning;
-  
-  if (evenRatio > 0.5) {
-    direction = 'ODD';
-    reasoning = `Even ratio ${(evenRatio * 100).toFixed(1)}% - expecting correction to ODD`;
-  } else {
-    direction = 'EVEN';
-    reasoning = `Odd ratio ${(oddRatio * 100).toFixed(1)}% - expecting correction to EVEN`;
-  }
-  
-  const confidence = Math.min(0.85, deviation * 2);
-  
-  return { strategy: STRATEGY_NAMES.DER, direction, confidence, timestamp: Date.now(), reasoning };
-}
-
-/**
- * TPC - Trend Prediction by Clustering
- * Groups recent digits into clusters and predicts next cluster
- */
-export function strategyTPC(ticks) {
-  const digits = ticks.map(t => t.digit);
-  
-  // Define clusters: Low (0-3), Mid (4-6), High (7-9)
-  const clusters = digits.map(d => {
-    if (d <= 3) return 'low';
-    if (d <= 6) return 'mid';
-    return 'high';
+  stats.frequencies.forEach((freq, digit) => {
+    const deviation = expected - freq;
+    if (deviation > maxDeviation) {
+      maxDeviation = deviation;
+      targetDigit = digit;
+    }
   });
   
-  // Count recent cluster distribution
-  const recent = clusters.slice(-30);
-  const clusterCounts = { low: 0, mid: 0, high: 0 };
-  recent.forEach(c => clusterCounts[c]++);
+  const confidence = Math.min(maxDeviation * 10, 1) * 100;
+  if (targetDigit === -1 || confidence < 30) return null;
   
-  // Find underrepresented cluster
-  let minCluster = 'low';
-  let minCount = clusterCounts.low;
-  if (clusterCounts.mid < minCount) { minCluster = 'mid'; minCount = clusterCounts.mid; }
-  if (clusterCounts.high < minCount) { minCluster = 'high'; }
+  // Check even/odd balance
+  const evenSum = [0, 2, 4, 6, 8].reduce((s, d) => s + stats.frequencies[d], 0);
   
-  // Map cluster to direction
-  let direction;
+  let contractType = CONTRACT_TYPE.DIGITMATCH;
+  let prediction = targetDigit;
   
-  if (minCluster === 'low') {
-    direction = 'PUT';
-  } else if (minCluster === 'high') {
-    direction = 'CALL';
-  } else {
-    const lastDigit = digits[digits.length - 1];
-    direction = lastDigit % 2 === 0 ? 'ODD' : 'EVEN';
+  if (Math.abs(evenSum - 0.5) > 0.1) {
+    contractType = evenSum < 0.5 ? CONTRACT_TYPE.DIGITEVEN : CONTRACT_TYPE.DIGITODD;
+    prediction = null;
   }
   
-  const expectedCount = 30 / 3;
-  const deviation = (expectedCount - clusterCounts[minCluster]) / expectedCount;
-  const confidence = Math.min(0.8, deviation * 0.7);
+  return {
+    strategy: STRATEGY.DFPM,
+    contractType,
+    prediction,
+    confidence,
+    reasoning: `Digit ${targetDigit} underrepresented by ${(maxDeviation * 100).toFixed(1)}%`
+  };
+}
+
+/**
+ * VCS - Volatility Cluster Strategy
+ * Uses volatility clustering to predict direction
+ */
+export function runVCS(ticks) {
+  if (ticks.length < 30) return null;
+  
+  const regime = detectVolatilityRegime(ticks);
+  const prices = ticks.map(t => t.quote);
+  
+  const shortMA = prices.slice(-5).reduce((a, b) => a + b, 0) / 5;
+  const longMA = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
+  const momentum = (shortMA - longMA) / longMA;
+  
+  let contractType, confidence;
+  
+  if (regime === 'high') {
+    if (Math.abs(momentum) < 0.001) return null;
+    contractType = momentum > 0 ? CONTRACT_TYPE.CALL : CONTRACT_TYPE.PUT;
+    confidence = Math.min(Math.abs(momentum) * 5000, 85);
+  } else if (regime === 'low') {
+    if (Math.abs(momentum) < 0.0005) return null;
+    contractType = momentum > 0 ? CONTRACT_TYPE.PUT : CONTRACT_TYPE.CALL;
+    confidence = Math.min(Math.abs(momentum) * 3000, 70);
+  } else {
+    if (Math.abs(momentum) < 0.0008) return null;
+    contractType = momentum > 0 ? CONTRACT_TYPE.CALL : CONTRACT_TYPE.PUT;
+    confidence = Math.min(Math.abs(momentum) * 4000, 60);
+  }
   
   return {
-    strategy: STRATEGY_NAMES.TPC,
-    direction,
+    strategy: STRATEGY.VCS,
+    contractType,
+    prediction: null,
     confidence,
-    timestamp: Date.now(),
-    reasoning: `Cluster '${minCluster}' underrepresented (${clusterCounts[minCluster]}/30 vs expected 10)`,
+    reasoning: `${regime} volatility with ${momentum > 0 ? 'bullish' : 'bearish'} momentum`
+  };
+}
+
+/**
+ * DER - Digit Entropy and Randomness
+ * Uses entropy to detect non-random patterns
+ */
+export function runDER(ticks) {
+  if (ticks.length < 50) return null;
+  
+  const stats = calculateDigitStats(ticks);
+  if (!stats) return null;
+  
+  const entropy = calculateEntropy(stats.frequencies);
+  const maxEntropy = Math.log2(10);
+  const normalized = entropy / maxEntropy;
+  
+  if (normalized > 0.95) return null;
+  
+  const deviations = stats.frequencies.map(f => Math.abs(f - 0.1));
+  const maxIdx = deviations.indexOf(Math.max(...deviations));
+  const isOver = stats.frequencies[maxIdx] > 0.1;
+  
+  const contractType = isOver ? CONTRACT_TYPE.DIGITDIFF : CONTRACT_TYPE.DIGITMATCH;
+  const confidence = (1 - normalized) * 80;
+  
+  if (confidence < 25) return null;
+  
+  return {
+    strategy: STRATEGY.DER,
+    contractType,
+    prediction: maxIdx,
+    confidence,
+    reasoning: `Entropy ${(normalized * 100).toFixed(1)}% - digit ${maxIdx} ${isOver ? 'over' : 'under'}represented`
+  };
+}
+
+/**
+ * TPC - Temporal Pattern Cycle
+ * Detects cyclical patterns in digit sequences
+ */
+export function runTPC(ticks) {
+  if (ticks.length < 40) return null;
+  
+  const stats = calculateDigitStats(ticks);
+  if (!stats) return null;
+  
+  const digits = stats.digits;
+  const patternScores = {};
+  
+  for (let len = 2; len <= 5; len++) {
+    const pattern = digits.slice(-len);
+    
+    for (let i = 0; i <= digits.length - len * 2; i++) {
+      const historical = digits.slice(i, i + len);
+      if (JSON.stringify(pattern) === JSON.stringify(historical)) {
+        const next = digits[i + len];
+        if (next !== undefined) {
+          patternScores[next] = (patternScores[next] || 0) + 1;
+        }
+      }
+    }
+  }
+  
+  const entries = Object.entries(patternScores);
+  if (entries.length === 0) return null;
+  
+  entries.sort((a, b) => b[1] - a[1]);
+  const [predicted, matches] = entries[0];
+  const total = entries.reduce((s, [_, c]) => s + c, 0);
+  const confidence = (matches / total) * (Math.min(total, 10) / 10) * 100;
+  
+  if (confidence < 30) return null;
+  
+  return {
+    strategy: STRATEGY.TPC,
+    contractType: CONTRACT_TYPE.DIGITMATCH,
+    prediction: parseInt(predicted),
+    confidence,
+    reasoning: `Pattern predicts digit ${predicted} (${matches}/${total} matches)`
   };
 }
 
 /**
  * DTP - Digit Transition Probability
- * Uses Markov chain to predict next digit based on transition probabilities
+ * Uses Markov chain transitions
  */
-export function strategyDTP(ticks) {
-  const digits = ticks.map(t => t.digit);
+export function runDTP(ticks) {
+  if (ticks.length < 50) return null;
   
-  if (digits.length < 10) {
-    return { strategy: STRATEGY_NAMES.DTP, direction: 'EVEN', confidence: 0, timestamp: Date.now(), reasoning: 'Insufficient data' };
+  const stats = calculateDigitStats(ticks);
+  if (!stats) return null;
+  
+  const last = stats.lastDigit;
+  const fromLast = {};
+  let total = 0;
+  
+  Object.entries(stats.transitions).forEach(([key, count]) => {
+    const [from, to] = key.split('_').map(Number);
+    if (from === last) {
+      fromLast[to] = count;
+      total += count;
+    }
+  });
+  
+  if (total < 5) return null;
+  
+  let maxProb = 0;
+  let predicted = -1;
+  
+  Object.entries(fromLast).forEach(([digit, count]) => {
+    const prob = count / total;
+    if (prob > maxProb) {
+      maxProb = prob;
+      predicted = parseInt(digit);
+    }
+  });
+  
+  if (predicted === -1) return null;
+  
+  const confidence = Math.min((maxProb / 0.1 - 1) * 50 + 40, 85);
+  if (confidence < 30) return null;
+  
+  return {
+    strategy: STRATEGY.DTP,
+    contractType: CONTRACT_TYPE.DIGITMATCH,
+    prediction: predicted,
+    confidence,
+    reasoning: `After ${last}, digit ${predicted} has ${(maxProb * 100).toFixed(1)}% probability`
+  };
+}
+
+/**
+ * DPB - Digit Pair Breakout
+ * Looks for breakout from digit clusters
+ */
+export function runDPB(ticks) {
+  if (ticks.length < 30) return null;
+  
+  const stats = calculateDigitStats(ticks);
+  if (!stats) return null;
+  
+  const last5 = stats.lastDigits.slice(-5);
+  const unique = new Set(last5).size;
+  
+  if (unique <= 2) {
+    // Low diversity - expect breakout
+    const counts = {};
+    last5.forEach(d => counts[d] = (counts[d] || 0) + 1);
+    const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    
+    return {
+      strategy: STRATEGY.DPB,
+      contractType: CONTRACT_TYPE.DIGITDIFF,
+      prediction: parseInt(dominant),
+      confidence: Math.min(60 + (5 - unique) * 15, 80),
+      reasoning: `Run of digit ${dominant} - expecting breakout`
+    };
   }
   
-  const matrix = getTransitionMatrix(digits);
-  const lastDigit = digits[digits.length - 1];
+  if (unique >= 4) {
+    // High diversity - expect consolidation
+    const least = stats.frequencies.indexOf(Math.min(...stats.frequencies));
+    
+    return {
+      strategy: STRATEGY.DPB,
+      contractType: CONTRACT_TYPE.DIGITMATCH,
+      prediction: least,
+      confidence: 45,
+      reasoning: `High diversity - expecting digit ${least}`
+    };
+  }
   
-  // Get probabilities for next digit from last digit
-  const probs = matrix[lastDigit];
+  return null;
+}
+
+/**
+ * MTD - Mean Time Between Digits
+ * Finds overdue digits based on average intervals
+ */
+export function runMTD(ticks) {
+  if (ticks.length < 60) return null;
   
-  // Calculate even vs odd probability
-  let evenProb = 0;
-  let oddProb = 0;
+  const stats = calculateDigitStats(ticks);
+  if (!stats) return null;
+  
+  const digits = stats.digits;
+  const intervals = {};
+  const lastSeen = {};
+  
+  digits.forEach((d, i) => {
+    if (lastSeen[d] !== undefined) {
+      if (!intervals[d]) intervals[d] = [];
+      intervals[d].push(i - lastSeen[d]);
+    }
+    lastSeen[d] = i;
+  });
+  
+  let maxOverdue = 0;
+  let overdueDigit = -1;
   
   for (let d = 0; d <= 9; d++) {
-    if (d % 2 === 0) evenProb += probs[d];
-    else oddProb += probs[d];
-  }
-  
-  const direction = evenProb > oddProb ? 'EVEN' : 'ODD';
-  const confidence = Math.abs(evenProb - oddProb);
-  
-  return {
-    strategy: STRATEGY_NAMES.DTP,
-    direction,
-    confidence: Math.min(0.9, confidence * 1.5),
-    timestamp: Date.now(),
-    reasoning: `From digit ${lastDigit}: Even prob ${(evenProb * 100).toFixed(1)}%, Odd prob ${(oddProb * 100).toFixed(1)}%`,
-  };
-}
-
-/**
- * DPB - Digit Pattern Breakout
- * Detects when current pattern deviates from historical patterns
- */
-export function strategyDPB(ticks) {
-  const digits = ticks.map(t => t.digit);
-  
-  if (digits.length < 50) {
-    return { strategy: STRATEGY_NAMES.DPB, direction: 'EVEN', confidence: 0, timestamp: Date.now(), reasoning: 'Insufficient data' };
-  }
-  
-  // Look for repeating patterns
-  const patternLengths = [3, 4, 5];
-  let bestPatternMatch = 0;
-  let predictedDirection = 'EVEN';
-  
-  for (const len of patternLengths) {
-    const recentPattern = digits.slice(-len);
-    let matchCount = 0;
-    let nextDigitSum = 0;
-    let predictions = 0;
-    
-    // Search for this pattern in history
-    for (let i = 0; i < digits.length - len - 1; i++) {
-      const historicalPattern = digits.slice(i, i + len);
-      if (JSON.stringify(historicalPattern) === JSON.stringify(recentPattern)) {
-        matchCount++;
-        nextDigitSum += digits[i + len];
-        predictions++;
+    if (intervals[d] && intervals[d].length >= 3) {
+      const mean = intervals[d].reduce((a, b) => a + b, 0) / intervals[d].length;
+      const ticksSince = digits.length - lastSeen[d];
+      const ratio = ticksSince / mean;
+      
+      if (ratio > maxOverdue && ratio > 1.5) {
+        maxOverdue = ratio;
+        overdueDigit = d;
       }
     }
-    
-    if (matchCount > bestPatternMatch && predictions > 0) {
-      bestPatternMatch = matchCount;
-      const avgNextDigit = nextDigitSum / predictions;
-      predictedDirection = Math.round(avgNextDigit) % 2 === 0 ? 'EVEN' : 'ODD';
-    }
   }
   
-  const confidence = Math.min(0.85, bestPatternMatch / 10);
+  if (overdueDigit === -1) return null;
   
   return {
-    strategy: STRATEGY_NAMES.DPB,
-    direction: predictedDirection,
-    confidence,
-    timestamp: Date.now(),
-    reasoning: `Found ${bestPatternMatch} historical pattern matches`,
+    strategy: STRATEGY.MTD,
+    contractType: CONTRACT_TYPE.DIGITMATCH,
+    prediction: overdueDigit,
+    confidence: Math.min((maxOverdue - 1) * 30 + 30, 75),
+    reasoning: `Digit ${overdueDigit} is ${maxOverdue.toFixed(1)}x overdue`
   };
 }
 
 /**
- * MTD - Mean/Trend Divergence
- * Detects divergence between mean reversion and trend following
+ * RDS - Regime Detection Strategy
+ * Combines multiple indicators
  */
-export function strategyMTD(ticks) {
-  const digits = ticks.map(t => t.digit);
+export function runRDS(ticks) {
+  if (ticks.length < 50) return null;
   
-  if (digits.length < 30) {
-    return { strategy: STRATEGY_NAMES.MTD, direction: 'EVEN', confidence: 0, timestamp: Date.now(), reasoning: 'Insufficient data' };
-  }
-  
-  // Calculate mean
-  const mean = digits.reduce((a, b) => a + b, 0) / digits.length;
-  
-  // Recent trend (last 10)
-  const recent = digits.slice(-10);
-  const recentMean = recent.reduce((a, b) => a + b, 0) / recent.length;
-  
-  // Trend direction
-  const trendUp = recent[recent.length - 1] > recent[0];
-  
-  // Divergence: mean reversion vs trend continuation
-  const distanceFromMean = recentMean - mean;
-  
-  let direction;
-  let confidence;
-  let reasoning;
-  
-  if (Math.abs(distanceFromMean) > 1.5) {
-    direction = distanceFromMean > 0 ? 'PUT' : 'CALL';
-    confidence = Math.min(0.8, Math.abs(distanceFromMean) / 3);
-    reasoning = `Mean reversion: Recent avg (${recentMean.toFixed(1)}) deviates from mean (${mean.toFixed(1)})`;
-  } else {
-    direction = trendUp ? 'CALL' : 'PUT';
-    confidence = Math.min(0.6, 0.3 + (Math.abs(recent[recent.length - 1] - recent[0]) / 10));
-    reasoning = `Trend continuation: ${trendUp ? 'Upward' : 'Downward'} momentum near mean`;
-  }
-  
-  return { strategy: STRATEGY_NAMES.MTD, direction, confidence, timestamp: Date.now(), reasoning };
-}
-
-/**
- * RDS - Recent Digit Streak
- * Analyzes consecutive digit patterns (streaks)
- */
-export function strategyRDS(ticks) {
   const stats = calculateDigitStats(ticks);
-  const { streaks } = stats;
+  if (!stats) return null;
   
-  let direction;
-  let confidence;
-  let reasoning;
+  const regime = detectVolatilityRegime(ticks);
+  const entropy = calculateEntropy(stats.frequencies);
+  const normalized = entropy / Math.log2(10);
   
-  // Check for significant streaks
-  if (streaks.even >= 4) {
-    direction = 'ODD';
-    confidence = Math.min(0.9, 0.5 + (streaks.even * 0.1));
-    reasoning = `Even streak of ${streaks.even} - expecting ODD break`;
-  } else if (streaks.odd >= 4) {
-    direction = 'EVEN';
-    confidence = Math.min(0.9, 0.5 + (streaks.odd * 0.1));
-    reasoning = `Odd streak of ${streaks.odd} - expecting EVEN break`;
+  // Even/odd analysis
+  const evenCount = [0, 2, 4, 6, 8].reduce((s, d) => s + stats.counts[d], 0);
+  const evenRatio = evenCount / stats.digits.length;
+  
+  // Over/under from last 10
+  const avg10 = stats.lastDigits.reduce((a, b) => a + b, 0) / stats.lastDigits.length;
+  
+  let contractType, prediction = null, confidence, reasoning;
+  
+  if (regime === 'high' && (avg10 < 4 || avg10 > 6)) {
+    contractType = avg10 < 4 ? CONTRACT_TYPE.DIGITOVER : CONTRACT_TYPE.DIGITUNDER;
+    prediction = avg10 < 4 ? 4 : 5;
+    confidence = 60;
+    reasoning = `High volatility with ${avg10 < 4 ? 'over' : 'under'} signal`;
+  } else if (regime === 'low' && Math.abs(evenRatio - 0.5) > 0.1) {
+    contractType = evenRatio < 0.5 ? CONTRACT_TYPE.DIGITEVEN : CONTRACT_TYPE.DIGITODD;
+    confidence = 55;
+    reasoning = `Low volatility favoring ${evenRatio < 0.5 ? 'even' : 'odd'}`;
+  } else if (normalized < 0.9) {
+    const minDigit = stats.frequencies.indexOf(Math.min(...stats.frequencies));
+    contractType = CONTRACT_TYPE.DIGITMATCH;
+    prediction = minDigit;
+    confidence = (1 - normalized) * 80;
+    reasoning = `Low entropy - digit ${minDigit} underrepresented`;
   } else {
-    const evenRatio = stats.evenCount / (stats.evenCount + stats.oddCount);
-    direction = evenRatio > 0.5 ? 'ODD' : 'EVEN';
-    confidence = Math.abs(evenRatio - 0.5) * 1.2;
-    reasoning = `No significant streak - using frequency analysis`;
+    return null;
   }
   
-  return { strategy: STRATEGY_NAMES.RDS, direction, confidence, timestamp: Date.now(), reasoning };
+  if (confidence < 30) return null;
+  
+  return {
+    strategy: STRATEGY.RDS,
+    contractType,
+    prediction,
+    confidence,
+    reasoning
+  };
 }
 
-// ============================================
-// STRATEGY AGGREGATOR
-// ============================================
-
-export const DEFAULT_STRATEGY_CONFIGS = [
-  { name: STRATEGY_NAMES.DFPM, enabled: true, weight: 1.0, parameters: {} },
-  { name: STRATEGY_NAMES.VCS, enabled: true, weight: 0.8, parameters: {} },
-  { name: STRATEGY_NAMES.DER, enabled: true, weight: 1.2, parameters: {} },
-  { name: STRATEGY_NAMES.TPC, enabled: true, weight: 0.7, parameters: {} },
-  { name: STRATEGY_NAMES.DTP, enabled: true, weight: 1.0, parameters: {} },
-  { name: STRATEGY_NAMES.DPB, enabled: true, weight: 0.9, parameters: {} },
-  { name: STRATEGY_NAMES.MTD, enabled: true, weight: 0.8, parameters: {} },
-  { name: STRATEGY_NAMES.RDS, enabled: true, weight: 1.1, parameters: {} },
-];
-
 /**
- * Run all enabled strategies and get individual signals
+ * Run all strategies and return signals
  */
-export function runAllStrategies(ticks, configs = DEFAULT_STRATEGY_CONFIGS) {
-  const strategies = {
-    [STRATEGY_NAMES.DFPM]: strategyDFPM,
-    [STRATEGY_NAMES.VCS]: strategyVCS,
-    [STRATEGY_NAMES.DER]: strategyDER,
-    [STRATEGY_NAMES.TPC]: strategyTPC,
-    [STRATEGY_NAMES.DTP]: strategyDTP,
-    [STRATEGY_NAMES.DPB]: strategyDPB,
-    [STRATEGY_NAMES.MTD]: strategyMTD,
-    [STRATEGY_NAMES.RDS]: strategyRDS,
-  };
-  
+export function runAllStrategies(ticks) {
+  const strategies = [runDFPM, runVCS, runDER, runTPC, runDTP, runDPB, runMTD, runRDS];
   const signals = [];
   
-  for (const config of configs) {
-    if (config.enabled && strategies[config.name]) {
-      const signal = strategies[config.name](ticks);
-      signals.push(signal);
+  for (const fn of strategies) {
+    try {
+      const signal = fn(ticks);
+      if (signal && signal.confidence >= 30) {
+        signals.push(signal);
+      }
+    } catch (err) {
+      console.error('Strategy error:', err);
     }
   }
   
@@ -464,80 +468,65 @@ export function runAllStrategies(ticks, configs = DEFAULT_STRATEGY_CONFIGS) {
 }
 
 /**
- * Aggregate signals using weighted voting
+ * Aggregate multiple signals into best trade recommendation
  */
-export function aggregateSignals(signals, configs = DEFAULT_STRATEGY_CONFIGS) {
-  if (signals.length === 0) {
-    return {
-      direction: null,
-      confidence: 0,
-      signals: [],
-      shouldTrade: false,
-      timestamp: Date.now(),
-    };
-  }
+export function aggregateSignals(signals) {
+  if (!signals || signals.length === 0) return null;
   
-  // Create weight map
-  const weights = new Map();
-  configs.forEach(c => weights.set(c.name, c.weight));
+  const grouped = {};
   
-  // Group signals by direction type
-  const evenOddVotes = { EVEN: 0, ODD: 0 };
-  const callPutVotes = { CALL: 0, PUT: 0 };
-  
-  for (const signal of signals) {
-    const weight = weights.get(signal.strategy) || 1.0;
-    const weightedConfidence = signal.confidence * weight;
-    
-    if (signal.direction === 'EVEN' || signal.direction === 'ODD') {
-      evenOddVotes[signal.direction] += weightedConfidence;
-    } else if (signal.direction === 'CALL' || signal.direction === 'PUT') {
-      callPutVotes[signal.direction] += weightedConfidence;
+  signals.forEach(s => {
+    const key = `${s.contractType}:${s.prediction ?? 'null'}`;
+    if (!grouped[key]) {
+      grouped[key] = { contractType: s.contractType, prediction: s.prediction, signals: [], total: 0 };
     }
-  }
+    grouped[key].signals.push(s);
+    grouped[key].total += s.confidence;
+  });
   
-  // Determine winning direction
-  let finalDirection = null;
-  let maxVote = 0;
-  
-  const allVotes = { ...evenOddVotes, ...callPutVotes };
-  for (const [dir, vote] of Object.entries(allVotes)) {
-    if (vote > maxVote) {
-      maxVote = vote;
-      finalDirection = dir;
-    }
-  }
-  
-  // Calculate final confidence
-  const totalVotes = evenOddVotes.EVEN + evenOddVotes.ODD + callPutVotes.CALL + callPutVotes.PUT;
-  const confidence = totalVotes > 0 ? maxVote / totalVotes : 0;
-  
-  // Normalize confidence to 0-1 range
-  const normalizedConfidence = Math.min(1, confidence);
+  const best = Object.values(grouped).sort((a, b) => b.total - a.total)[0];
+  const avgConf = best.total / best.signals.length;
+  const bonus = Math.min((best.signals.length - 1) * 5, 20);
   
   return {
-    direction: finalDirection,
-    confidence: normalizedConfidence,
-    signals,
-    shouldTrade: normalizedConfidence >= CONFIDENCE_THRESHOLD,
-    timestamp: Date.now(),
+    contractType: best.contractType,
+    prediction: best.prediction,
+    confidence: Math.min(avgConf + bonus, 95),
+    strategies: best.signals.map(s => s.strategy),
+    reasoning: best.signals.map(s => `${s.strategy}: ${s.reasoning}`).join('; ')
   };
 }
 
 /**
- * Main entry point - analyze ticks and get trading signal
+ * Main analysis function
  */
-export function analyzeTicksForSignal(ticks, configs) {
-  if (ticks.length < 20) {
-    return {
-      direction: null,
-      confidence: 0,
-      signals: [],
-      shouldTrade: false,
-      timestamp: Date.now(),
-    };
+export function analyzeForSignal(ticks, preferredStrategy = null) {
+  if (!ticks || ticks.length < 20) {
+    return { shouldTrade: false, reason: 'Need at least 20 ticks' };
   }
   
-  const signals = runAllStrategies(ticks, configs);
-  return aggregateSignals(signals, configs);
+  if (preferredStrategy && preferredStrategy !== 'ALL') {
+    const strategyMap = {
+      DFPM: runDFPM, VCS: runVCS, DER: runDER, TPC: runTPC,
+      DTP: runDTP, DPB: runDPB, MTD: runMTD, RDS: runRDS
+    };
+    
+    const fn = strategyMap[preferredStrategy];
+    if (!fn) return { shouldTrade: false, reason: `Unknown strategy: ${preferredStrategy}` };
+    
+    const signal = fn(ticks);
+    if (!signal) return { shouldTrade: false, reason: 'No signal from strategy' };
+    if (signal.confidence < 40) return { shouldTrade: false, reason: 'Low confidence', signal };
+    
+    return { shouldTrade: true, signal };
+  }
+  
+  const signals = runAllStrategies(ticks);
+  if (signals.length === 0) return { shouldTrade: false, reason: 'No valid signals' };
+  
+  const aggregated = aggregateSignals(signals);
+  if (!aggregated) return { shouldTrade: false, reason: 'Could not aggregate' };
+  if (aggregated.confidence < 50) return { shouldTrade: false, reason: 'Low aggregated confidence', signal: aggregated };
+  
+  return { shouldTrade: true, signal: aggregated, allSignals: signals };
 }

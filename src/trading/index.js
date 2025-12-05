@@ -1,70 +1,29 @@
 /**
- * Trading Module - Main Export Index
- * 
- * Exports all trading system components
+ * Trading Module - Main exports
  */
 
-// Types and Constants
-export {
-  ACCOUNT_STATUS,
-  SESSION_TYPE,
-  SESSION_STATUS,
-  CONTRACT_TYPES,
-  STAKING_MODES,
-  NOTIFICATION_TYPES,
-  STRATEGY_NAMES,
-  VOLATILITY_INDICES,
-  TRADE_STATUS,
-  SESSION_DEFAULTS,
-  CONFIDENCE_THRESHOLD,
-  createTradingAccount,
-  createTradingSession,
-  createStrategySignal,
-  createDigitStats,
-  createTradeExecution,
-  createAppNotification,
-  createRecoveryState,
-} from './types.js';
+// Constants
+export * from './constants';
 
 // Strategy Engine
-export {
+export { 
   calculateDigitStats,
-  strategyDFPM,
-  strategyVCS,
-  strategyDER,
-  strategyTPC,
-  strategyDTP,
-  strategyDPB,
-  strategyMTD,
-  strategyRDS,
-  runAllStrategies,
-  aggregateSignals,
-  analyzeTicksForSignal,
-  DEFAULT_STRATEGY_CONFIGS,
-} from './strategyEngine.js';
+  runDFPM, runVCS, runDER, runTPC, runDTP, runDPB, runMTD, runRDS,
+  runAllStrategies, aggregateSignals, analyzeForSignal 
+} from './strategyEngine';
 
-// Session Manager
-export {
-  SessionManager,
-  sessionManager,
-} from './sessionManager.js';
+// WebSocket Services
+export { 
+  createDerivConnection, subscribeTicks, unsubscribeTicks,
+  getProposal, buyContract, subscribeContract,
+  MultiAccountManager, accountManager 
+} from './derivWebSocket';
 
-// Trade Executor
-export {
-  TradeExecutor,
-  createTradeExecutor,
-} from './tradeExecutor.js';
+// API Client
+export * as tradingApi from './tradingApi';
 
-// Bot Engine
-export {
-  TradingBotEngine,
-  tradingBot,
-} from './botEngine.js';
-
-// Notification Service
-export {
-  notificationService,
-  requestNotificationPermission,
-  sendBrowserNotification,
-  useNotifications,
-} from './notificationService.js';
+// React Hooks
+export { 
+  useAccounts, useSessions, useSession, 
+  useTickStream, useBotStatus, useActivityLogs 
+} from './hooks';

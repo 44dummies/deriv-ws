@@ -1,0 +1,594 @@
+/**
+ * Admin Control Panel
+ * Dashboard for managing trading sessions, accounts, and strategies
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Play, Pause, Square, Plus, Settings, Users, TrendingUp, TrendingDown,
+  Activity, DollarSign, Clock, AlertCircle, CheckCircle, XCircle,
+  RefreshCw, Eye, Edit, Trash2, UserPlus, BarChart2, Zap
+} from 'lucide-react';
+import { 
+  useTradingSessions, 
+  useTradingAccounts, 
+  useTradingBot 
+} from '../../trading/hooks';
+import { tradingApi } from '../../trading/tradingApi';
+import { 
+  STRATEGY_NAMES, 
+  VOLATILITY_INDICES, 
+  CONTRACT_TYPES, 
+  SESSION_TYPE, 
+  STAKING_MODE 
+} from '../../trading/constants';
+import './AdminControlPanel.css';
+
+const AdminControlPanel = ({ user }) => {
+  // State
+  const [activeTab, setActiveTab] = useState('sessions');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [formData, setFormData] = useState({
+    sessionName: '',
+    sessionType: SESSION_TYPE.DAY,
+    strategyName: 'DFPM',
+    volatilityIndex: 'R_100',
+    contractType: 'DIGITEVEN',
+    stakingMode: STAKING_MODE.FIXED,
+    initialStake: 1,
+    maxStake: 100,
+    martingaleMultiplier: 2,
+    profitThreshold: 50,
+    lossThreshold: 25,
+    maxTrades: 100,
+    durationMinutes: 60
+  });
+  const [inviteUserId, setInviteUserId] = useState('');
+  const [constants, setConstants] = useState(null);
+
+  // Hooks
+  const { 
+    sessions, 
+    loading: sessionsLoading, 
+    refresh: refreshSessions,
+    createSession,
+    updateSession,
+    deleteSession,
+    startSession,
+    stopSession,
+    pauseSession,
+    resumeSession
+  } = useTradingSessions();
+
+  const {
+    accounts,
+    loading: accountsLoading,
+    refresh: refreshAccounts
+  } = useTradingAccounts();
+
+  const {
+    status: botStatus,
+    startBot,
+    stopBot
+  } = useTradingBot();
+
+  // Load constants
+  useEffect(() => {
+    const loadConstants = async () => {
+      try {
+        const data = await tradingApi.getConstants();
+        setConstants(data);
+      } catch (error) {
+        console.error('Failed to load constants:', error);
+      }
+    };
+    loadConstants();
+  }, []);
+
+  // Handlers
+  const handleCreateSession = async (e) => {
+    e.preventDefault();
+    try {
+      await createSession({
+        session_name: formData.sessionName,
+        session_type: formData.sessionType,
+        strategy_name: formData.strategyName,
+        volatility_index: formData.volatilityIndex,
+        contract_type: formData.contractType,
+        staking_mode: formData.stakingMode,
+        initial_stake: formData.initialStake,
+        max_stake: formData.maxStake,
+        martingale_multiplier: formData.martingaleMultiplier,
+        profit_threshold: formData.profitThreshold,
+        loss_threshold: formData.lossThreshold,
+        max_trades: formData.maxTrades,
+        duration_minutes: formData.durationMinutes
+      });
+      setShowCreateModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Failed to create session:', error);
+    }
+  };
+
+  const handleInviteUser = async (e) => {
+    e.preventDefault();
+    if (!selectedSession || !inviteUserId) return;
+    
+    try {
+      await tradingApi.createInvitation({
+        sessionId: selectedSession.id,
+        userId: inviteUserId
+      });
+      setShowInviteModal(false);
+      setInviteUserId('');
+    } catch (error) {
+      console.error('Failed to invite user:', error);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      sessionName: '',
+      sessionType: SESSION_TYPE.DAY,
+      strategyName: 'DFPM',
+      volatilityIndex: 'R_100',
+      contractType: 'DIGITEVEN',
+      stakingMode: STAKING_MODE.FIXED,
+      initialStake: 1,
+      maxStake: 100,
+      martingaleMultiplier: 2,
+      profitThreshold: 50,
+      lossThreshold: 25,
+      maxTrades: 100,
+      durationMinutes: 60
+    });
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: '#fbbf24',
+      active: '#22c55e',
+      paused: '#f97316',
+      completed: '#3b82f6',
+      cancelled: '#6b7280',
+      failed: '#ef4444'
+    };
+    return colors[status] || '#6b7280';
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount || 0);
+  };
+
+  // Render session card
+  const renderSessionCard = (session) => (
+    <div key={session.id} className="session-card">
+      <div className="session-header">
+        <div className="session-info">
+          <h3>{session.session_name}</h3>
+          <span 
+            className="session-status"
+            style={{ backgroundColor: getStatusColor(session.status) }}
+          >
+            {session.status}
+          </span>
+        </div>
+        <div className="session-actions">
+          {session.status === 'pending' && (
+            <button onClick={() => startSession(session.id)} className="btn-icon start">
+              <Play size={16} />
+            </button>
+          )}
+          {session.status === 'active' && (
+            <>
+              <button onClick={() => pauseSession(session.id)} className="btn-icon pause">
+                <Pause size={16} />
+              </button>
+              <button onClick={() => stopSession(session.id)} className="btn-icon stop">
+                <Square size={16} />
+              </button>
+            </>
+          )}
+          {session.status === 'paused' && (
+            <button onClick={() => resumeSession(session.id)} className="btn-icon resume">
+              <Play size={16} />
+            </button>
+          )}
+          <button 
+            onClick={() => {
+              setSelectedSession(session);
+              setShowInviteModal(true);
+            }} 
+            className="btn-icon invite"
+          >
+            <UserPlus size={16} />
+          </button>
+          <button 
+            onClick={() => deleteSession(session.id)}
+            className="btn-icon delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+      
+      <div className="session-details">
+        <div className="detail-row">
+          <span className="label">Strategy:</span>
+          <span className="value">{session.strategy_name}</span>
+        </div>
+        <div className="detail-row">
+          <span className="label">Index:</span>
+          <span className="value">{session.volatility_index}</span>
+        </div>
+        <div className="detail-row">
+          <span className="label">Contract:</span>
+          <span className="value">{session.contract_type}</span>
+        </div>
+        <div className="detail-row">
+          <span className="label">Stake:</span>
+          <span className="value">{formatCurrency(session.initial_stake)} ({session.staking_mode})</span>
+        </div>
+      </div>
+
+      <div className="session-stats">
+        <div className="stat">
+          <Activity size={14} />
+          <span>{session.total_trades || 0} trades</span>
+        </div>
+        <div className="stat win">
+          <TrendingUp size={14} />
+          <span>{session.winning_trades || 0} W</span>
+        </div>
+        <div className="stat loss">
+          <TrendingDown size={14} />
+          <span>{session.losing_trades || 0} L</span>
+        </div>
+        <div className={`stat ${(session.net_pnl || 0) >= 0 ? 'profit' : 'loss'}`}>
+          <DollarSign size={14} />
+          <span>{formatCurrency(session.net_pnl)}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render account card
+  const renderAccountCard = (account) => (
+    <div key={account.id} className="account-card">
+      <div className="account-header">
+        <div className="account-info">
+          <h4>{account.deriv_account_id}</h4>
+          <span className={`account-type ${account.is_virtual ? 'virtual' : 'real'}`}>
+            {account.is_virtual ? 'Demo' : 'Real'}
+          </span>
+        </div>
+        <span className={`account-status ${account.is_active ? 'active' : 'inactive'}`}>
+          {account.is_active ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+      <div className="account-balance">
+        <DollarSign size={20} />
+        <span>{formatCurrency(account.balance)}</span>
+        <span className="currency">{account.currency}</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="admin-control-panel">
+      {/* Header */}
+      <div className="panel-header">
+        <h1>Trading Control Panel</h1>
+        <div className="header-actions">
+          <button onClick={() => { refreshSessions(); refreshAccounts(); }} className="btn-refresh">
+            <RefreshCw size={18} />
+            Refresh
+          </button>
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+            <Plus size={18} />
+            New Session
+          </button>
+        </div>
+      </div>
+
+      {/* Bot Status */}
+      <div className="bot-status-bar">
+        <div className="bot-indicator">
+          <Zap size={20} className={botStatus.isRunning ? 'active' : ''} />
+          <span>Bot Status: {botStatus.isRunning ? 'Running' : 'Stopped'}</span>
+        </div>
+        {botStatus.sessionId && (
+          <span>Active Session: {botStatus.sessionId}</span>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="panel-tabs">
+        <button 
+          className={`tab ${activeTab === 'sessions' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sessions')}
+        >
+          <Activity size={18} />
+          Sessions
+        </button>
+        <button 
+          className={`tab ${activeTab === 'accounts' ? 'active' : ''}`}
+          onClick={() => setActiveTab('accounts')}
+        >
+          <Users size={18} />
+          Accounts
+        </button>
+        <button 
+          className={`tab ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab('analytics')}
+        >
+          <BarChart2 size={18} />
+          Analytics
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="panel-content">
+        {activeTab === 'sessions' && (
+          <div className="sessions-grid">
+            {sessionsLoading ? (
+              <div className="loading">Loading sessions...</div>
+            ) : sessions.length === 0 ? (
+              <div className="empty-state">
+                <Activity size={48} />
+                <p>No trading sessions yet</p>
+                <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+                  Create Your First Session
+                </button>
+              </div>
+            ) : (
+              sessions.map(renderSessionCard)
+            )}
+          </div>
+        )}
+
+        {activeTab === 'accounts' && (
+          <div className="accounts-grid">
+            {accountsLoading ? (
+              <div className="loading">Loading accounts...</div>
+            ) : accounts.length === 0 ? (
+              <div className="empty-state">
+                <Users size={48} />
+                <p>No trading accounts connected</p>
+              </div>
+            ) : (
+              accounts.map(renderAccountCard)
+            )}
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="analytics-placeholder">
+            <BarChart2 size={64} />
+            <p>Analytics coming soon</p>
+          </div>
+        )}
+      </div>
+
+      {/* Create Session Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Create Trading Session</h2>
+              <button onClick={() => setShowCreateModal(false)} className="close-btn">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateSession} className="modal-form">
+              <div className="form-group">
+                <label>Session Name</label>
+                <input
+                  type="text"
+                  value={formData.sessionName}
+                  onChange={e => setFormData({...formData, sessionName: e.target.value})}
+                  placeholder="e.g., Morning Session"
+                  required
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Session Type</label>
+                  <select
+                    value={formData.sessionType}
+                    onChange={e => setFormData({...formData, sessionType: e.target.value})}
+                  >
+                    {Object.values(SESSION_TYPE).map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Strategy</label>
+                  <select
+                    value={formData.strategyName}
+                    onChange={e => setFormData({...formData, strategyName: e.target.value})}
+                  >
+                    {Object.keys(STRATEGY_NAMES).map(key => (
+                      <option key={key} value={key}>{STRATEGY_NAMES[key]}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Volatility Index</label>
+                  <select
+                    value={formData.volatilityIndex}
+                    onChange={e => setFormData({...formData, volatilityIndex: e.target.value})}
+                  >
+                    {Object.keys(VOLATILITY_INDICES).map(key => (
+                      <option key={key} value={key}>{VOLATILITY_INDICES[key]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Contract Type</label>
+                  <select
+                    value={formData.contractType}
+                    onChange={e => setFormData({...formData, contractType: e.target.value})}
+                  >
+                    {Object.keys(CONTRACT_TYPES).map(key => (
+                      <option key={key} value={key}>{CONTRACT_TYPES[key]}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Staking Mode</label>
+                  <select
+                    value={formData.stakingMode}
+                    onChange={e => setFormData({...formData, stakingMode: e.target.value})}
+                  >
+                    {Object.values(STAKING_MODE).map(mode => (
+                      <option key={mode} value={mode}>{mode}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Initial Stake ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.35"
+                    value={formData.initialStake}
+                    onChange={e => setFormData({...formData, initialStake: parseFloat(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              {formData.stakingMode === STAKING_MODE.MARTINGALE && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Max Stake ($)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.maxStake}
+                      onChange={e => setFormData({...formData, maxStake: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Multiplier</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="1.1"
+                      max="5"
+                      value={formData.martingaleMultiplier}
+                      onChange={e => setFormData({...formData, martingaleMultiplier: parseFloat(e.target.value)})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Profit Target ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.profitThreshold}
+                    onChange={e => setFormData({...formData, profitThreshold: parseFloat(e.target.value)})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Loss Limit ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.lossThreshold}
+                    onChange={e => setFormData({...formData, lossThreshold: parseFloat(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Max Trades</label>
+                  <input
+                    type="number"
+                    value={formData.maxTrades}
+                    onChange={e => setFormData({...formData, maxTrades: parseInt(e.target.value)})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Duration (minutes)</label>
+                  <input
+                    type="number"
+                    value={formData.durationMinutes}
+                    onChange={e => setFormData({...formData, durationMinutes: parseInt(e.target.value)})}
+                  />
+                </div>
+              </div>
+
+              <div className="form-actions">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  Create Session
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invite User Modal */}
+      {showInviteModal && selectedSession && (
+        <div className="modal-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="modal modal-small" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Invite User to Session</h2>
+              <button onClick={() => setShowInviteModal(false)} className="close-btn">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleInviteUser} className="modal-form">
+              <p className="modal-description">
+                Inviting to: <strong>{selectedSession.session_name}</strong>
+              </p>
+              <div className="form-group">
+                <label>User ID</label>
+                <input
+                  type="text"
+                  value={inviteUserId}
+                  onChange={e => setInviteUserId(e.target.value)}
+                  placeholder="Enter user ID"
+                  required
+                />
+              </div>
+              <div className="form-actions">
+                <button type="button" onClick={() => setShowInviteModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  <UserPlus size={16} />
+                  Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AdminControlPanel;
