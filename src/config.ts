@@ -7,7 +7,7 @@ interface Config {
 }
 
 export const APP_ID = process.env.REACT_APP_DERIV_APP_ID || '114042';
-export const REDIRECT_URL = process.env.REACT_APP_REDIRECT_URL || 'https://tradermind.site/callback';
+export const REDIRECT_URL = process.env.REACT_APP_REDIRECT_URL || 'https://www.tradermind.site/callback';
 export const WS_URL = process.env.REACT_APP_DERIV_WS_URL || 'wss://tradermind-server.up.railway.app';
 export const SERVER_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 export const OAUTH_URL = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
