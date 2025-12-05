@@ -21,6 +21,7 @@ import aiInsightsService from '../services/aiInsightsService';
 import realtimeSocket from '../services/realtimeSocket';
 import apiClient from '../services/apiClient';
 import { TierChatroom } from '../components/community';
+import { AdminControlPanel, UserTradingDashboard, NotificationBell } from '../components/trading';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
@@ -241,6 +242,7 @@ const Dashboard = () => {
           case 'j': e.preventDefault(); setActiveTab('journal'); break;
           case 'd': e.preventDefault(); setActiveTab('digit'); break;
           case 't': e.preventDefault(); setActiveTab('timeline'); break;
+          case 'r': e.preventDefault(); setActiveTab('trading'); break;
           case 'a': e.preventDefault(); setActiveTab('analytics'); break;
           case 's': e.preventDefault(); setActiveTab('sync'); break;
           default: break;
@@ -1321,6 +1323,7 @@ const Dashboard = () => {
 
   const tabs = [
     { id: 'sync', icon: <RefreshCw className="w-5 h-5" />, label: 'Sync Data' },
+    { id: 'trading', icon: <Zap className="w-5 h-5" />, label: 'Trading' },
     { id: 'analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics' },
     { id: 'digit', icon: <Hash className="w-5 h-5" />, label: 'Digit Analyzer' },
     { id: 'timeline', icon: <Clock className="w-5 h-5" />, label: 'Trade Timeline' },
@@ -1560,7 +1563,10 @@ const Dashboard = () => {
               <h2 className="font-semibold text-base sm:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {}
+              {/* Notification Bell */}
+              <NotificationBell socket={realtimeSocket.socket} />
+              
+              {/* Supabase Status */}
               {supabaseStatus === 'connected' && (
                 <div 
                   className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-500"
@@ -1681,7 +1687,19 @@ const Dashboard = () => {
             </div>
           )}
 
-          {}
+          {/* Trading Tab */}
+          {activeTab === 'trading' && (
+            <div className="space-y-6">
+              {/* Check if user is admin or has trading access */}
+              {userProfile?.role === 'admin' || userProfile?.is_admin ? (
+                <AdminControlPanel user={userInfo} />
+              ) : (
+                <UserTradingDashboard user={userInfo} />
+              )}
+            </div>
+          )}
+
+          {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <div className="space-y-4 sm:space-y-6">
               <div><h1 className="text-xl sm:text-2xl font-bold">Analytics</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
