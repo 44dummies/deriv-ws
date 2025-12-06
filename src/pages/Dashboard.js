@@ -646,11 +646,8 @@ const Dashboard = () => {
             is_admin: response.profile.is_admin
           });
           
-          // Redirect admin users to /admin page
-          if (response.profile.is_admin || response.profile.role === 'admin') {
-            console.log('Admin user detected, redirecting to /admin');
-            window.location.href = '/admin';
-          }
+          // Note: Admin redirect is handled in Callback.js after login
+          // Dashboard is accessible to admins if they manually navigate here
         }
       } catch (error) {
         console.log('Could not load user profile:', error);

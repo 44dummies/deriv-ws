@@ -78,27 +78,35 @@ const Callback = () => {
         
         // Check if user is admin
         const derivId = authResponse.authorize?.loginid;
+        console.log('[Callback] Checking admin status for:', derivId);
+        
         if (derivId) {
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
-              .select('is_admin')
+              .select('is_admin, role')
               .eq('deriv_id', derivId)
               .single();
             
-            if (profile?.is_admin) {
-              console.log('Admin user detected, redirecting to /admin');
+            console.log('[Callback] Profile data:', profile);
+            console.log('[Callback] Profile error:', profileError);
+            console.log('[Callback] is_admin value:', profile?.is_admin);
+            
+            if (profile?.is_admin || profile?.role === 'admin') {
+              console.log('[Callback] ✅ Admin user detected! Redirecting to /admin');
               setStatus('Admin access granted! Redirecting...');
-              navigate('/admin');
+              setTimeout(() => navigate('/admin'), 500);
               return;
+            } else {
+              console.log('[Callback] ℹ️ Regular user, redirecting to /dashboard');
             }
           } catch (err) {
-            console.log('Could not check admin status, using default redirect:', err);
+            console.error('[Callback] Error checking admin status:', err);
           }
         }
 
         setStatus('Success! Redirecting...');
-        navigate('/dashboard');
+        setTimeout(() => navigate('/dashboard'), 500);
       } catch (err) {
         console.error('Callback error:', err);
         setError(err.message || 'An error occurred during authentication');
