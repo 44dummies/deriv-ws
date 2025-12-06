@@ -46,7 +46,7 @@ function App() {
             } 
           />
           <Route 
-            path="/trading-admin" 
+            path="/admin" 
             element={
               <ProtectedRoute>
                 <TradingAdmin />

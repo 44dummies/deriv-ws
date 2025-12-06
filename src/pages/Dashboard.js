@@ -1544,7 +1544,7 @@ const Dashboard = () => {
               {/* Admin Panel Button - Only visible to admins */}
               {(userProfile?.role === 'admin' || userProfile?.is_admin) && (
                 <button
-                  onClick={() => window.location.href = '/trading-admin'}
+                  onClick={() => window.location.href = '/admin'}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 transition-colors text-sm font-medium"
                   title="Open Trading Admin Panel"
                 >
