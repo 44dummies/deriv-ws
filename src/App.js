@@ -51,12 +51,12 @@ function App() {
             }
           />
 
-          {/* User routes - Authenticated users */}
+          {/* User routes - Use full Dashboard with community tab */}
           <Route
             path="/user/dashboard"
             element={
               <UserRoute>
-                <UserDashboard />
+                <Dashboard />
               </UserRoute>
             }
           />
@@ -64,7 +64,7 @@ function App() {
             path="/user/*"
             element={
               <UserRoute>
-                <UserDashboard />
+                <Dashboard />
               </UserRoute>
             }
           />
