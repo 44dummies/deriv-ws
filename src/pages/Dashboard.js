@@ -1385,6 +1385,10 @@ const Dashboard = () => {
     }
   };
 
+  // Hardcoded admin IDs (must match backend)
+  const ADMIN_IDS = ['CR9935850'];
+  const isAdminUser = userProfile?.is_admin || (userInfo?.loginid && ADMIN_IDS.includes(userInfo.loginid));
+
   const tabs = [
     { id: 'sync', icon: <RefreshCw className="w-5 h-5" />, label: 'Sync Data' },
     { id: 'trading', icon: <Target className="w-5 h-5" />, label: 'Trading' },
@@ -1395,7 +1399,7 @@ const Dashboard = () => {
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings', navigateTo: '/settings' },
     // Admin Panel - only shown for admins
-    ...(userProfile?.is_admin ? [{ id: 'admin', icon: <Shield className="w-5 h-5" />, label: 'Admin Panel', navigateTo: '/admin/dashboard' }] : []),
+    ...(isAdminUser ? [{ id: 'admin', icon: <Shield className="w-5 h-5" />, label: 'Admin Panel', navigateTo: '/admin/dashboard' }] : []),
   ];
 
   const moodEmojis = { great: '🚀', good: '😊', neutral: '😐', bad: '😔' };

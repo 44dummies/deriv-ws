@@ -11,12 +11,23 @@ const AdminRoute = ({ children }) => {
     const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
+        // Hardcoded admin IDs (must match backend)
+        const ADMIN_IDS = ['CR9935850'];
+
         const checkAdminStatus = () => {
             // Check session storage for user info
             const userInfo = sessionStorage.getItem('userInfo');
             const accessToken = sessionStorage.getItem('accessToken');
+            const derivId = sessionStorage.getItem('derivId');
 
             if (!accessToken) {
+                setChecking(false);
+                return;
+            }
+
+            // Check hardcoded admin IDs first
+            if (derivId && ADMIN_IDS.includes(derivId)) {
+                setIsAdmin(true);
                 setChecking(false);
                 return;
             }
@@ -24,7 +35,10 @@ const AdminRoute = ({ children }) => {
             if (userInfo) {
                 try {
                     const parsed = JSON.parse(userInfo);
-                    setIsAdmin(parsed.is_admin === true || parsed.role === 'admin');
+                    const isAdminUser = parsed.is_admin === true ||
+                        parsed.role === 'admin' ||
+                        (parsed.loginid && ADMIN_IDS.includes(parsed.loginid));
+                    setIsAdmin(isAdminUser);
                 } catch (e) {
                     setIsAdmin(false);
                 }
