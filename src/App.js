@@ -7,6 +7,15 @@ import Settings from './pages/Settings';
 import Community from './pages/Community';
 import TradingAdmin from './pages/TradingAdmin';
 import UserTrading from './pages/UserTrading';
+
+// New role-based dashboards
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserDashboard from './pages/user/UserDashboard';
+
+// Route guards
+import AdminRoute from './components/routing/AdminRoute';
+import UserRoute from './components/routing/UserRoute';
+
 import { TokenService } from './services/tokenService';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -20,48 +29,89 @@ function App() {
     <ThemeProvider>
       <Router>
         <Routes>
+          {/* Public routes */}
           <Route path="/" element={<Login />} />
           <Route path="/callback" element={<Callback />} />
-          <Route 
-            path="/dashboard" 
+
+          {/* Admin routes - Admin only */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+
+          {/* User routes - Authenticated users */}
+          <Route
+            path="/user/dashboard"
+            element={
+              <UserRoute>
+                <UserDashboard />
+              </UserRoute>
+            }
+          />
+          <Route
+            path="/user/*"
+            element={
+              <UserRoute>
+                <UserDashboard />
+              </UserRoute>
+            }
+          />
+
+          {/* Legacy routes - Keep for backwards compatibility */}
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/settings" 
+          <Route
+            path="/settings"
             element={
               <ProtectedRoute>
                 <Settings />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/community" 
+          <Route
+            path="/community"
             element={
               <ProtectedRoute>
                 <Community />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/admin" 
+          <Route
+            path="/admin"
             element={
               <ProtectedRoute>
                 <TradingAdmin />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/trading" 
+          <Route
+            path="/trading"
             element={
               <ProtectedRoute>
                 <UserTrading />
               </ProtectedRoute>
-            } 
+            }
           />
+
+          {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
