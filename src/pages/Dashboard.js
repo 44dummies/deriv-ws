@@ -1394,6 +1394,8 @@ const Dashboard = () => {
     { id: 'community', icon: <Users className="w-5 h-5" />, label: 'Community' },
     { id: 'journal', icon: <BookOpen className="w-5 h-5" />, label: 'Journal' },
     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Settings', navigateTo: '/settings' },
+    // Admin Panel - only shown for admins
+    ...(userProfile?.is_admin ? [{ id: 'admin', icon: <Shield className="w-5 h-5" />, label: 'Admin Panel', navigateTo: '/admin/dashboard' }] : []),
   ];
 
   const moodEmojis = { great: '🚀', good: '😊', neutral: '😐', bad: '😔' };
@@ -1769,9 +1771,9 @@ const Dashboard = () => {
                         <h3 className="text-lg font-medium">Session Status</h3>
                         {currentSession?.userStatus && (
                           <span className={`px-3 py-1 rounded-full text-sm ${currentSession.userStatus === 'active' ? 'bg-green-500/20 text-green-400' :
-                              currentSession.userStatus === 'removed_tp' ? 'bg-blue-500/20 text-blue-400' :
-                                currentSession.userStatus === 'removed_sl' ? 'bg-red-500/20 text-red-400' :
-                                  'bg-gray-500/20 text-gray-400'
+                            currentSession.userStatus === 'removed_tp' ? 'bg-blue-500/20 text-blue-400' :
+                              currentSession.userStatus === 'removed_sl' ? 'bg-red-500/20 text-red-400' :
+                                'bg-gray-500/20 text-gray-400'
                             }`}>
                             {currentSession.userStatus === 'active' ? 'Active' :
                               currentSession.userStatus === 'removed_tp' ? 'TP Hit ✓' :
