@@ -19,30 +19,31 @@ const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089';
 
 // ==================== Account Operations ====================
 
-async function getAccounts(adminId) {
+async function getAccounts(userId) {
   const { data, error } = await supabase
     .from('trading_accounts')
     .select('*')
-    .eq('admin_id', adminId)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
   
   if (error) throw error;
   return data || [];
 }
 
-async function addAccount(adminId, accountData) {
+async function addAccount(userId, accountData) {
   const { data, error } = await supabase
     .from('trading_accounts')
     .insert({
       id: uuidv4(),
-      admin_id: adminId,
-      account_id: accountData.accountId,
+      user_id: userId,
+      deriv_account_id: accountData.accountId,
       deriv_token: accountData.derivToken,
       account_type: accountData.accountType || 'real',
       currency: accountData.currency || 'USD',
       balance: accountData.balance || 0,
-      status: ACCOUNT_STATUS.ACTIVE,
-      last_connected: new Date().toISOString(),
+      is_active: true,
+      is_virtual: accountData.isVirtual || false,
+      last_balance_update: new Date().toISOString(),
       created_at: new Date().toISOString()
     })
     .select()
