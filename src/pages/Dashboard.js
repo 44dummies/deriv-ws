@@ -641,8 +641,16 @@ const Dashboard = () => {
             username: response.profile.username,
             displayName: response.profile.display_name || response.profile.fullname,
             profilePhoto: response.profile.profile_photo,
-            isProfileComplete: response.profile.is_profile_complete
+            isProfileComplete: response.profile.is_profile_complete,
+            role: response.profile.role,
+            is_admin: response.profile.is_admin
           });
+          
+          // Redirect admin users to /admin page
+          if (response.profile.is_admin || response.profile.role === 'admin') {
+            console.log('Admin user detected, redirecting to /admin');
+            window.location.href = '/admin';
+          }
         }
       } catch (error) {
         console.log('Could not load user profile:', error);
@@ -1541,18 +1549,6 @@ const Dashboard = () => {
               <h2 className="font-semibold text-base sm:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Admin Panel Button - Only visible to admins */}
-              {(userProfile?.role === 'admin' || userProfile?.is_admin) && (
-                <button
-                  onClick={() => window.location.href = '/admin'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 transition-colors text-sm font-medium"
-                  title="Open Trading Admin Panel"
-                >
-                  <Zap className="w-4 h-4" />
-                  <span className="hidden sm:inline">Admin Panel</span>
-                </button>
-              )}
-              
               {/* Notification Bell */}
               <NotificationBell socket={realtimeSocket.socket} />
               

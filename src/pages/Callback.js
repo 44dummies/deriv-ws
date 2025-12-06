@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
+import { supabase } from '../services/supabaseService';
 
 const Callback = () => {
   const navigate = useNavigate();
@@ -73,8 +74,30 @@ const Callback = () => {
           TokenService.setAccount(authResponse.authorize);
         }
 
-        setStatus('Success! Redirecting...');
+        setStatus('Checking user permissions...');
         
+        // Check if user is admin
+        const derivId = authResponse.authorize?.loginid;
+        if (derivId) {
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('is_admin')
+              .eq('deriv_id', derivId)
+              .single();
+            
+            if (profile?.is_admin) {
+              console.log('Admin user detected, redirecting to /admin');
+              setStatus('Admin access granted! Redirecting...');
+              navigate('/admin');
+              return;
+            }
+          } catch (err) {
+            console.log('Could not check admin status, using default redirect:', err);
+          }
+        }
+
+        setStatus('Success! Redirecting...');
         navigate('/dashboard');
       } catch (err) {
         console.error('Callback error:', err);
