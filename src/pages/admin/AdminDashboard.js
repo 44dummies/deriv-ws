@@ -4,9 +4,11 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
     Play, Square, Pause, AlertTriangle, Activity, Users, DollarSign,
     BarChart3, Settings, Bell, RefreshCw, ChevronRight, Plus, Eye,
-    TrendingUp, TrendingDown, Server, Shield, Zap, Globe
+    TrendingUp, TrendingDown, Server, Shield, Zap, Globe, Clock
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import * as tradingApi from '../../trading/tradingApi';
+import LiveMarketAnalysis from '../../components/admin/LiveMarketAnalysis';
 
 // Premium Card Component with Glassmorphism
 const Card = ({ children, className = '' }) => (
@@ -28,9 +30,9 @@ const AdminDashboard = () => {
     const loadDashboard = useCallback(async () => {
         try {
             const [sessionsRes, botRes, statsRes] = await Promise.all([
-                apiClient.get('/admin/sessions?limit=10'),
-                apiClient.get('/admin/bot/status'),
-                apiClient.get('/admin/stats')
+                tradingApi.getSessions({ limit: 10 }),
+                tradingApi.getBotStatus(),
+                tradingApi.getStats()
             ]);
 
             setSessions(sessionsRes?.sessions || []);
@@ -67,7 +69,7 @@ const AdminDashboard = () => {
             return;
         }
         try {
-            await apiClient.post('/admin/bot/start', { sessionId: activeSession.id });
+            await tradingApi.startBot(activeSession.id);
             toast.success('Bot started');
             loadDashboard();
         } catch (error) {
@@ -77,7 +79,7 @@ const AdminDashboard = () => {
 
     const handleBotStop = async () => {
         try {
-            await apiClient.post('/admin/bot/stop');
+            await tradingApi.stopBot();
             toast.success('Bot stopped');
             loadDashboard();
         } catch (error) {
@@ -90,6 +92,7 @@ const AdminDashboard = () => {
             return;
         }
         try {
+            // Use direct API client for override if not in tradingApi yet, or add it
             await apiClient.post('/admin/bot/override', { reason: 'Manual emergency stop' });
             toast.success('Emergency stop executed');
             loadDashboard();
@@ -273,21 +276,9 @@ const AdminDashboard = () => {
                                 <Card className="p-6">
                                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                                         <BarChart3 className="w-5 h-5 text-purple-400" />
-                                        Performance
+                                        Live Market Data
                                     </h3>
-                                    <div className="space-y-6">
-                                        <InfoRow label="Max Win Streak" value={stats?.maxWinStreak || 0} valueColor="text-green-400" />
-                                        <InfoRow label="Max Loss Streak" value={stats?.maxLossStreak || 0} valueColor="text-red-400" />
-                                        <InfoRow label="Avg Profit / Trade" value={`$${(stats?.avgProfit || 0).toFixed(2)}`} valueColor="text-blue-400" />
-                                        <InfoRow label="Return on Investment" value={`${(stats?.roi || 0).toFixed(2)}%`} valueColor={stats?.roi >= 0 ? "text-green-400" : "text-red-400"} />
-
-                                        <div className="pt-6 border-t border-white/10 mt-6">
-                                            <div className="p-4 rounded-xl bg-gradient-to-br from-blue-900/20 to-purple-900/20 border border-white/5">
-                                                <p className="text-xs text-gray-400 mb-1">PROJECTED DAILY</p>
-                                                <p className="text-2xl font-bold text-white">$1,240.50</p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <LiveMarketAnalysis />
                                 </Card>
                             </div>
                         )}

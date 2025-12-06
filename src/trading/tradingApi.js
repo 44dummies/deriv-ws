@@ -169,32 +169,55 @@ export async function getTradeStats(sessionId, accountId = null) {
 // ==================== Bot Control APIs ====================
 
 export async function getBotStatus() {
-  return apiRequest('/api/trading/bot/status');
+  return apiRequest('/api/admin/bot/status');
 }
 
-export async function startBot() {
-  return apiRequest('/api/trading/bot/start', { method: 'POST' });
+export async function startBot(sessionId) {
+  return apiRequest('/api/admin/bot/start', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId })
+  });
 }
 
 export async function stopBot() {
-  return apiRequest('/api/trading/bot/stop', { method: 'POST' });
+  return apiRequest('/api/admin/bot/stop', {
+    method: 'POST'
+  });
 }
 
-// ==================== Activity Log APIs ====================
-
-export async function getActivityLogs(options = {}) {
-  const params = new URLSearchParams();
-  if (options.type) params.append('type', options.type);
-  if (options.limit) params.append('limit', options.limit);
-  
-  const query = params.toString();
-  return apiRequest(`/api/trading/logs${query ? '?' + query : ''}`);
+export async function pauseBot() {
+  return apiRequest('/api/admin/bot/pause', {
+    method: 'POST'
+  });
 }
 
-// ==================== Constants APIs ====================
+export async function resumeBot() {
+  return apiRequest('/api/admin/bot/resume', {
+    method: 'POST'
+  });
+}
 
-export async function getTradingConstants() {
-  return apiRequest('/api/trading/constants');
+// ==================== Analytics APIs ====================
+
+export async function getLiveStats() {
+  return apiRequest('/api/admin/stats/live');
+}
+
+export async function getStats(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiRequest(`/api/admin/stats${query ? '?' + query : ''}`);
+}
+
+// ==================== Recovery APIs ====================
+
+export async function getRecoveryState(sessionId) {
+  return apiRequest(`/api/admin/recovery/${sessionId}`);
+}
+
+export async function resetRecovery(sessionId) {
+  return apiRequest(`/api/admin/recovery/${sessionId}/reset`, {
+    method: 'POST'
+  });
 }
 
 // ==================== Unified Export ====================
@@ -234,10 +257,20 @@ export const tradingApi = {
   startBot,
   stopBot,
   getBotStatus,
+  pauseBot,
+  resumeBot,
   
   // Activity Logs
   getActivityLogs,
   
   // Constants
-  getConstants: getTradingConstants
+  getConstants: getTradingConstants,
+  
+  // Analytics
+  getLiveStats,
+  getStats,
+  
+  // Recovery
+  getRecoveryState,
+  resetRecovery
 };

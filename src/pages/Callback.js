@@ -14,7 +14,7 @@ const Callback = () => {
     const handleCallback = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
-
+        
         if (urlParams.has('error')) {
           const errorMsg = urlParams.get('error') || 'Unknown OAuth error';
           console.error('OAuth error from Deriv:', errorMsg);
@@ -25,7 +25,7 @@ const Callback = () => {
 
         const accounts = [];
         let i = 1;
-
+        
         while (urlParams.has(`acct${i}`)) {
           accounts.push({
             account: urlParams.get(`acct${i}`),
@@ -46,7 +46,7 @@ const Callback = () => {
 
         const primaryAccount = accounts[0];
         console.log('Using account:', primaryAccount.account);
-
+        
         TokenService.setTokens({
           account: primaryAccount.account,
           token: primaryAccount.token,
@@ -54,10 +54,10 @@ const Callback = () => {
         });
 
         setStatus('Connecting to Deriv...');
-
+        
         await websocketService.connect();
         console.log('WebSocket connected, authorizing...');
-
+        
         setStatus('Authorizing your account...');
         const authResponse = await websocketService.authorize(primaryAccount.token);
 
@@ -70,7 +70,7 @@ const Callback = () => {
         }
 
         console.log('Authorization successful:', authResponse.authorize?.loginid);
-
+        
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
           // Persist basic profile info for later use (balance, currency, derivId)
@@ -82,26 +82,26 @@ const Callback = () => {
         }
 
         setStatus('Checking user permissions...');
-
+        
         // Check if user is admin
         const derivId = authResponse.authorize?.loginid;
         console.log('[Callback] Checking admin status for:', derivId);
-
+        
         if (derivId) {
           // Store derivId in sessionStorage for other pages to use
           sessionStorage.setItem('derivId', derivId);
-
+          
           try {
             const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
-              .select('is_admin, role')
-              .eq('deriv_id', derivId)
+              .select('is_admin')
+              .eq('deriv_account_id', derivId)
               .single();
-
+            
             console.log('[Callback] Profile data:', profile);
             console.log('[Callback] Profile error:', profileError);
             console.log('[Callback] is_admin value:', profile?.is_admin);
-
+            
             // Also authenticate with backend so REST calls have JWT
             try {
               const loginResult = await apiClient.loginWithDeriv({
@@ -111,43 +111,20 @@ const Callback = () => {
                 currency: authResponse.authorize.currency,
                 fullname: authResponse.authorize.fullname
               });
-
-              // Store backend tokens
               TokenService.setBackendTokens(loginResult.accessToken, loginResult.refreshToken);
-
-              // Store user info including role from backend response
-              const userInfo = {
-                id: loginResult.user?.id,
-                derivId: loginResult.user?.derivId,
-                email: loginResult.user?.email,
-                fullName: loginResult.user?.fullName,
-                role: loginResult.user?.role || (profile?.is_admin ? 'admin' : 'user'),
-                is_admin: loginResult.user?.is_admin || profile?.is_admin || false
-              };
-              sessionStorage.setItem('userInfo', JSON.stringify(userInfo));
-
-              console.log('[Callback] User info stored:', userInfo);
-
             } catch (apiErr) {
               console.error('[Callback] Backend auth failed:', apiErr);
-              // Still store basic info from Supabase if backend fails
-              sessionStorage.setItem('userInfo', JSON.stringify({
-                derivId,
-                is_admin: profile?.is_admin || false,
-                role: profile?.is_admin ? 'admin' : 'user'
-              }));
             }
 
-            // Redirect based on role
             if (profile?.is_admin) {
-              console.log('[Callback] ✅ Admin user detected! Redirecting to /admin/dashboard');
+              console.log('[Callback] ✅ Admin user detected! Redirecting to /admin');
               setStatus('Admin access granted! Redirecting...');
-              setTimeout(() => navigate('/admin/dashboard'), 500);
+              setTimeout(() => navigate('/admin'), 500);
               return;
             } else {
-              console.log('[Callback] ℹ️ Regular user, redirecting to /user/dashboard');
+              console.log('[Callback] ℹ️ Regular user, redirecting to /trading');
               setStatus('Redirecting to your dashboard...');
-              setTimeout(() => navigate('/user/dashboard'), 500);
+              setTimeout(() => navigate('/trading'), 500);
               return;
             }
           } catch (err) {
@@ -155,9 +132,9 @@ const Callback = () => {
           }
         }
 
-        // Fallback to user dashboard for regular users
+        // Fallback to trading page for regular users
         setStatus('Success! Redirecting...');
-        setTimeout(() => navigate('/user/dashboard'), 500);
+        setTimeout(() => navigate('/trading'), 500);
       } catch (err) {
         console.error('Callback error:', err);
         setError(err.message || 'An error occurred during authentication');
@@ -174,7 +151,7 @@ const Callback = () => {
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-6 text-white">
           T
         </div>
-
+        
         {error ? (
           <>
             <h2 className="text-xl font-semibold text-red-400 mb-2">Authentication Error</h2>

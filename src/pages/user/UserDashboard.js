@@ -137,34 +137,35 @@ const UserDashboard = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-4 md:p-6">
-            <Toaster position="top-right" />
+        <div className="min-h-screen bg-[#0a0a0f] text-white selection:bg-blue-500/30">
+            <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+            <div className="fixed top-0 left-0 right-0 h-96 bg-gradient-to-b from-blue-900/20 via-purple-900/10 to-transparent pointer-events-none"></div>
 
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    Trading Dashboard
-                </h1>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={loadDashboard}
-                        className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
-                    >
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => navigate('/user/notifications')}
-                        className="relative p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
-                    >
-                        <Bell className="w-5 h-5" />
-                        {dashboardData?.unreadNotifications > 0 && (
-                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                                {dashboardData.unreadNotifications}
-                            </span>
+            <Toaster position="top-right" toastOptions={{
+                style: { background: '#1a1a20', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
+            }} />
+
+            <div className="relative z-10 max-w-md mx-auto p-4 space-y-6">
+                {/* Header */}
+                <header className="flex items-center justify-between py-4">
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        TraderMind
+                    </h1>
+                    <div className="flex items-center gap-3">
+                        {dashboardData?.currentSession?.session_type === 'recovery' && (
+                            <div className="px-2 py-1 rounded bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold animate-pulse flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                RECOVERY
+                            </div>
                         )}
-                    </button>
-                </div>
-            </div>
+                        <div className="p-2 rounded-full bg-white/5 border border-white/10 relative">
+                            <Bell className="w-5 h-5 text-gray-400" />
+                            {notifications.length > 0 && (
+                                <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0a0f]"></span>
+                            )}
+                        </div>
+                    </div>
+                </header>
 
             <div className="max-w-2xl mx-auto space-y-6">
                 {/* Session Status */}
