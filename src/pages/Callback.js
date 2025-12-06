@@ -84,7 +84,7 @@ const Callback = () => {
           try {
             const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
-              .select('is_admin, role')
+              .select('is_admin')
               .eq('deriv_id', derivId)
               .single();
             
@@ -92,21 +92,25 @@ const Callback = () => {
             console.log('[Callback] Profile error:', profileError);
             console.log('[Callback] is_admin value:', profile?.is_admin);
             
-            if (profile?.is_admin || profile?.role === 'admin') {
+            if (profile?.is_admin) {
               console.log('[Callback] ✅ Admin user detected! Redirecting to /admin');
               setStatus('Admin access granted! Redirecting...');
               setTimeout(() => navigate('/admin'), 500);
               return;
             } else {
-              console.log('[Callback] ℹ️ Regular user, redirecting to /dashboard');
+              console.log('[Callback] ℹ️ Regular user, redirecting to /trading');
+              setStatus('Redirecting to your dashboard...');
+              setTimeout(() => navigate('/trading'), 500);
+              return;
             }
           } catch (err) {
             console.error('[Callback] Error checking admin status:', err);
           }
         }
 
+        // Fallback to trading page for regular users
         setStatus('Success! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 500);
+        setTimeout(() => navigate('/trading'), 500);
       } catch (err) {
         console.error('Callback error:', err);
         setError(err.message || 'An error occurred during authentication');

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Community from './pages/Community';
 import TradingAdmin from './pages/TradingAdmin';
+import UserTrading from './pages/UserTrading';
 import { TokenService } from './services/tokenService';
 import { ThemeProvider } from './context/ThemeContext';
 
@@ -50,6 +51,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <TradingAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/trading" 
+            element={
+              <ProtectedRoute>
+                <UserTrading />
               </ProtectedRoute>
             } 
           />

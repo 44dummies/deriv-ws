@@ -32,7 +32,6 @@ SELECT
   username,
   fullname, 
   is_admin,
-  role,
   created_at
 FROM user_profiles 
 WHERE deriv_id = 'CR6550175';
