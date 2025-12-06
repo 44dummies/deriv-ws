@@ -378,6 +378,7 @@ const UserDashboard = () => {
                 )}
             </div>
         </div>
+    </div>
     );
 };
 

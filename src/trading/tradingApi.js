@@ -197,6 +197,24 @@ export async function resumeBot() {
   });
 }
 
+// ==================== Activity Logs ====================
+
+export async function getActivityLogs(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiRequest(`/api/admin/logs${query ? '?' + query : ''}`);
+}
+
+// ==================== Constants ====================
+
+export async function getTradingConstants() {
+  // Return hardcoded constants or fetch from backend if endpoint exists
+  return {
+    strategies: ['DFPM', 'VCS'],
+    markets: ['R_100', 'R_50', 'R_25', 'R_10'],
+    staking_modes: ['fixed', 'martingale', 'compounding']
+  };
+}
+
 // ==================== Analytics APIs ====================
 
 export async function getLiveStats() {
