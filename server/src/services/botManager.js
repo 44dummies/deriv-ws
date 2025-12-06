@@ -105,10 +105,10 @@ class BotManager {
     tradeExecutor.paused = true;
     // Update session status
     if (this.state.activeSessionId) {
-        await supabase
-            .from('trading_sessions_v2')
-            .update({ status: 'paused', paused_at: new Date().toISOString() })
-            .eq('id', this.state.activeSessionId);
+      await supabase
+        .from('trading_sessions_v2')
+        .update({ status: 'paused', paused_at: new Date().toISOString() })
+        .eq('id', this.state.activeSessionId);
     }
     return this.getState();
   }
@@ -119,11 +119,40 @@ class BotManager {
     tradeExecutor.paused = false;
     // Update session status
     if (this.state.activeSessionId) {
-        await supabase
-            .from('trading_sessions_v2')
-            .update({ status: 'running' }) // Clear paused_at?
-            .eq('id', this.state.activeSessionId);
+      await supabase
+        .from('trading_sessions_v2')
+        .update({ status: 'running' })
+        .eq('id', this.state.activeSessionId);
     }
+    return this.getState();
+  }
+
+  async emergencyStop(reason = 'Manual override') {
+    const sessionId = this.state.activeSessionId;
+
+    // Immediately stop all components
+    signalWorker.stop();
+    tradeExecutor.disconnectAll();
+    tradeExecutor.paused = true;
+
+    // Reset state
+    this.state.isRunning = false;
+    this.state.isPaused = false;
+    this.state.startTime = null;
+    this.state.activeSessionId = null;
+
+    // Update session status to cancelled
+    if (sessionId) {
+      await supabase
+        .from('trading_sessions_v2')
+        .update({
+          status: 'cancelled',
+          ended_at: new Date().toISOString()
+        })
+        .eq('id', sessionId);
+    }
+
+    console.log(`[BotManager] EMERGENCY STOP executed. Reason: ${reason}`);
     return this.getState();
   }
 }

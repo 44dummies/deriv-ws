@@ -80,11 +80,7 @@ function App() {
           />
           <Route
             path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard" replace />}
           />
           <Route
             path="/community"
@@ -104,11 +100,7 @@ function App() {
           />
           <Route
             path="/trading"
-            element={
-              <ProtectedRoute>
-                <UserTrading />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard" replace />}
           />
 
           {/* Catch-all redirect */}
