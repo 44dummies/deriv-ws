@@ -1,479 +1,600 @@
-/**
- * Trade Executor Service
- * Multi-account synchronized trade execution with TP/SL management
- */
-
+const { createClient } = require('@supabase/supabase-js');
 const WebSocket = require('ws');
-const { v4: uuidv4 } = require('uuid');
-const { supabase } = require('../db/supabase');
+const crypto = require('crypto');
 
-const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089';
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
-// Rate limiting
-const RATE_LIMIT_DELAY = 500; // ms between trades
-
+/**
+ * Trade Executor - Multi-Account Synchronized Trading
+ * Executes trades across multiple accounts simultaneously
+ * Applies individual TP/SL per account
+ * Monitors and closes trades at TP/SL levels
+ */
 class TradeExecutor {
-    constructor() {
-        this.accountConnections = new Map(); // userId -> WebSocket
-        this.activeContracts = new Map(); // contractId -> contract info
-        this.balanceCache = new Map(); // userId -> balance
-    }
+  constructor() {
+    this.activeConnections = new Map(); // derivAccountId -> WebSocket
+    this.activeMonitors = new Map(); // tradeId -> monitor interval
+    this.rateLimitDelay = 500; // 500ms between trades
+  }
 
-    /**
-     * Connect to Deriv API for an account
-     */
-    async connectAccount(userId, apiToken) {
-        if (this.accountConnections.has(userId)) {
-            const existing = this.accountConnections.get(userId);
-            if (existing.readyState === WebSocket.OPEN) {
-                return existing;
-            }
-        }
+  /**
+   * Execute trade for multiple accounts
+   */
+  async executeMultiAccountTrade(signal, sessionId) {
+    try {
+      console.log(`[TradeExecutor] 🚀 Executing multi-account trade for session ${sessionId}`);
+      console.log(`[TradeExecutor] Signal: ${signal.side} ${signal.digit} (${(signal.confidence * 100).toFixed(1)}%)`);
 
-        return new Promise((resolve, reject) => {
-            const ws = new WebSocket(DERIV_WS_URL);
+      // Get session details
+      const { data: session, error: sessionError } = await supabase
+        .from('trading_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .eq('status', 'active')
+        .single();
 
-            const timeout = setTimeout(() => {
-                ws.close();
-                reject(new Error('Connection timeout'));
-            }, 15000);
+      if (sessionError || !session) {
+        throw new Error('Session not found or not active');
+      }
 
-            ws.on('open', () => {
-                // Authorize
-                ws.send(JSON.stringify({ authorize: apiToken }));
-            });
+      // Get accepted accounts
+      const { data: invitations, error: invError } = await supabase
+        .from('session_invitations')
+        .select(`
+          *,
+          trading_accounts (*)
+        `)
+        .eq('session_id', sessionId)
+        .eq('status', 'accepted')
+        .eq('is_removed', false);
 
-            ws.on('message', (data) => {
-                const msg = JSON.parse(data.toString());
+      if (invError) {
+        throw new Error(`Failed to fetch invitations: ${invError.message}`);
+      }
 
-                if (msg.authorize) {
-                    clearTimeout(timeout);
-                    this.accountConnections.set(userId, ws);
-                    this.balanceCache.set(userId, msg.authorize.balance);
-                    resolve(ws);
-                }
-
-                if (msg.error) {
-                    clearTimeout(timeout);
-                    ws.close();
-                    reject(new Error(msg.error.message));
-                }
-            });
-
-            ws.on('error', (err) => {
-                clearTimeout(timeout);
-                reject(err);
-            });
-        });
-    }
-
-    /**
-     * Get account balance
-     */
-    async getBalance(userId, ws) {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Balance timeout')), 5000);
-
-            const handler = (data) => {
-                const msg = JSON.parse(data.toString());
-                if (msg.balance) {
-                    clearTimeout(timeout);
-                    ws.off('message', handler);
-                    this.balanceCache.set(userId, msg.balance.balance);
-                    resolve(msg.balance.balance);
-                }
-            };
-
-            ws.on('message', handler);
-            ws.send(JSON.stringify({ balance: 1, subscribe: 0 }));
-        });
-    }
-
-    /**
-     * Execute a single trade for one account
-     */
-    async executeTrade(userId, ws, tradeParams) {
-        return new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('Trade execution timeout'));
-            }, 30000);
-
-            const buyRequest = {
-                buy: 1,
-                price: tradeParams.stake,
-                parameters: {
-                    contract_type: tradeParams.contractType,
-                    symbol: tradeParams.market,
-                    duration: tradeParams.duration || 1,
-                    duration_unit: tradeParams.durationUnit || 't',
-                    basis: 'stake',
-                    amount: tradeParams.stake
-                }
-            };
-
-            // Add prediction for digit contracts
-            if (tradeParams.prediction !== null && tradeParams.prediction !== undefined) {
-                buyRequest.parameters.barrier = tradeParams.prediction.toString();
-            }
-
-            const handler = (data) => {
-                const msg = JSON.parse(data.toString());
-
-                if (msg.buy) {
-                    clearTimeout(timeout);
-                    ws.off('message', handler);
-                    resolve({
-                        success: true,
-                        contractId: msg.buy.contract_id,
-                        transactionId: msg.buy.transaction_id,
-                        buyPrice: msg.buy.buy_price,
-                        startTime: msg.buy.start_time,
-                        purchaseTime: msg.buy.purchase_time
-                    });
-                }
-
-                if (msg.error && msg.msg_type === 'buy') {
-                    clearTimeout(timeout);
-                    ws.off('message', handler);
-                    reject(new Error(msg.error.message));
-                }
-            };
-
-            ws.on('message', handler);
-            ws.send(JSON.stringify(buyRequest));
-        });
-    }
-
-    /**
-     * Monitor a contract for completion
-     */
-    async monitorContract(userId, ws, contractId) {
-        return new Promise((resolve) => {
-            const handler = (data) => {
-                const msg = JSON.parse(data.toString());
-
-                if (msg.proposal_open_contract && msg.proposal_open_contract.contract_id == contractId) {
-                    const contract = msg.proposal_open_contract;
-
-                    if (contract.is_sold || contract.is_expired) {
-                        ws.off('message', handler);
-                        ws.send(JSON.stringify({ forget_all: 'proposal_open_contract' }));
-
-                        resolve({
-                            contractId,
-                            result: contract.profit >= 0 ? 'won' : 'lost',
-                            profit: contract.profit,
-                            sellPrice: contract.sell_price,
-                            exitTick: contract.exit_tick,
-                            exitTime: contract.exit_tick_time
-                        });
-                    }
-                }
-            };
-
-            ws.on('message', handler);
-            ws.send(JSON.stringify({
-                proposal_open_contract: 1,
-                contract_id: contractId,
-                subscribe: 1
-            }));
-        });
-    }
-
-    /**
-     * Execute trades for multiple accounts simultaneously
-     */
-    async executeMultiAccountTrade(sessionId, signal, accounts, baseStake) {
-        const results = [];
-        const startTime = Date.now();
-
-        for (const account of accounts) {
-            try {
-                const ws = this.accountConnections.get(account.userId);
-                if (!ws || ws.readyState !== WebSocket.OPEN) {
-                    results.push({
-                        userId: account.userId,
-                        success: false,
-                        error: 'Not connected'
-                    });
-                    continue;
-                }
-
-                // Check balance
-                const balance = await this.getBalance(account.userId, ws);
-                if (balance < account.minBalance) {
-                    // Notify about low balance
-                    await this.notifyUser(account.userId, 'low_balance',
-                        `Balance (${balance}) is below minimum (${account.minBalance})`);
-
-                    results.push({
-                        userId: account.userId,
-                        success: false,
-                        error: 'Insufficient balance'
-                    });
-                    continue;
-                }
-
-                // Execute trade
-                const tradeResult = await this.executeTrade(account.userId, ws, {
-                    market: signal.market,
-                    contractType: signal.contractType,
-                    prediction: signal.prediction,
-                    stake: account.stake || baseStake,
-                    duration: 1,
-                    durationUnit: 't'
-                });
-
-                // Log trade
-                await this.logTrade({
-                    sessionId,
-                    userId: account.userId,
-                    accountId: account.accountId,
-                    contractId: tradeResult.contractId,
-                    market: signal.market,
-                    contractType: signal.contractType,
-                    strategy: signal.strategies?.join(',') || 'UNKNOWN',
-                    stake: account.stake || baseStake,
-                    prediction: signal.prediction,
-                    entryTick: null,
-                    confidence: signal.confidence,
-                    signalReason: signal.reasoning
-                });
-
-                // Start monitoring in background
-                this.monitorTradeForTPSL(sessionId, account, tradeResult.contractId, ws);
-
-                results.push({
-                    userId: account.userId,
-                    success: true,
-                    contractId: tradeResult.contractId,
-                    buyPrice: tradeResult.buyPrice
-                });
-
-                // Rate limiting
-                await this.delay(RATE_LIMIT_DELAY);
-
-            } catch (error) {
-                console.error(`Trade execution error for user ${account.userId}:`, error);
-                results.push({
-                    userId: account.userId,
-                    success: false,
-                    error: error.message
-                });
-            }
-        }
-
+      if (!invitations || invitations.length === 0) {
+        console.log('[TradeExecutor] ⚠️ No accepted accounts for this session');
         return {
-            totalAccounts: accounts.length,
-            successful: results.filter(r => r.success).length,
-            failed: results.filter(r => !r.success).length,
-            executionTime: Date.now() - startTime,
-            results
+          success: false,
+          message: 'No accepted accounts'
         };
-    }
+      }
 
-    /**
-     * Monitor trade for TP/SL and handle removal
-     */
-    async monitorTradeForTPSL(sessionId, account, contractId, ws) {
+      console.log(`[TradeExecutor] Found ${invitations.length} accepted accounts`);
+
+      // Validate balances and prepare accounts
+      const validAccounts = [];
+      const invalidAccounts = [];
+
+      for (const invitation of invitations) {
+        const account = invitation.trading_accounts;
+        
+        // Check balance
+        if (account.balance < session.minimum_balance) {
+          invalidAccounts.push({
+            accountId: account.id,
+            userId: account.user_id,
+            reason: `Balance too low: $${account.balance} < $${session.minimum_balance}`,
+            derivAccountId: account.deriv_account_id
+          });
+          
+          // Send notification
+          await this.sendNotification(account.user_id, {
+            type: 'low_balance',
+            message: `Your balance ($${account.balance}) is below the minimum required ($${session.minimum_balance})`,
+            sessionId
+          });
+          
+          continue;
+        }
+
+        // Check TP/SL
+        if (!invitation.take_profit || !invitation.stop_loss) {
+          invalidAccounts.push({
+            accountId: account.id,
+            userId: account.user_id,
+            reason: 'TP/SL not set',
+            derivAccountId: account.deriv_account_id
+          });
+          continue;
+        }
+
+        validAccounts.push({
+          invitation,
+          account
+        });
+      }
+
+      console.log(`[TradeExecutor] Valid accounts: ${validAccounts.length}, Invalid: ${invalidAccounts.length}`);
+
+      if (validAccounts.length === 0) {
+        return {
+          success: false,
+          message: 'No valid accounts to trade',
+          invalidAccounts
+        };
+      }
+
+      // Execute trades for all valid accounts
+      const tradeResults = [];
+
+      for (const { invitation, account } of validAccounts) {
         try {
-            const result = await this.monitorContract(account.userId, ws, contractId);
+          // Rate limiting
+          await this.sleep(this.rateLimitDelay);
 
-            // Update trade log
-            await supabase
-                .from('trade_logs')
-                .update({
-                    result: result.result,
-                    profit: result.profit,
-                    exit_tick: result.exitTick,
-                    closed_at: new Date().toISOString()
-                })
-                .eq('contract_id', contractId);
+          const tradeResult = await this.executeSingleTrade(
+            account,
+            invitation,
+            signal,
+            session
+          );
 
-            // Update participant PnL
-            const { data: participant } = await supabase
-                .from('session_participants')
-                .select('current_pnl, tp, sl')
-                .eq('session_id', sessionId)
-                .eq('user_id', account.userId)
-                .single();
+          tradeResults.push(tradeResult);
 
-            if (participant) {
-                const newPnl = (participant.current_pnl || 0) + result.profit;
+          // Log trade
+          await this.logTrade(tradeResult, sessionId);
 
-                // Check TP/SL
-                if (newPnl >= participant.tp) {
-                    // TP hit - remove from session
-                    await this.removeFromSession(sessionId, account.userId, 'tp_hit', newPnl);
-                    await this.notifyUser(account.userId, 'tp_hit',
-                        `Congratulations! Take Profit reached! Final PnL: ${newPnl.toFixed(2)}`);
-                } else if (newPnl <= -participant.sl) {
-                    // SL hit - remove from session and flag for recovery
-                    await this.removeFromSession(sessionId, account.userId, 'sl_hit', newPnl);
-                    await this.flagForRecovery(account.userId);
-                    await this.notifyUser(account.userId, 'sl_hit',
-                        `Stop Loss reached. PnL: ${newPnl.toFixed(2)}. You are now eligible for recovery sessions.`);
-                } else {
-                    // Update PnL only
-                    await supabase
-                        .from('session_participants')
-                        .update({ current_pnl: newPnl })
-                        .eq('session_id', sessionId)
-                        .eq('user_id', account.userId);
-                }
-            }
+          // Start TP/SL monitor
+          if (tradeResult.success) {
+            this.startTPSLMonitor(tradeResult, invitation, session);
+          }
+
         } catch (error) {
-            console.error('Monitor trade error:', error);
+          console.error(`[TradeExecutor] Trade failed for account ${account.deriv_account_id}:`, error);
+          
+          tradeResults.push({
+            success: false,
+            accountId: account.id,
+            userId: account.user_id,
+            derivAccountId: account.deriv_account_id,
+            error: error.message
+          });
+
+          await this.sendNotification(account.user_id, {
+            type: 'trade_failed',
+            message: `Trade execution failed: ${error.message}`,
+            sessionId
+          });
         }
+      }
+
+      const successCount = tradeResults.filter(r => r.success).length;
+      console.log(`[TradeExecutor] ✅ Executed ${successCount}/${validAccounts.length} trades successfully`);
+
+      return {
+        success: true,
+        executed: successCount,
+        total: validAccounts.length,
+        results: tradeResults,
+        invalidAccounts
+      };
+
+    } catch (error) {
+      console.error('[TradeExecutor] Multi-account trade error:', error);
+      throw error;
     }
+  }
 
-    /**
-     * Remove user from session
-     */
-    async removeFromSession(sessionId, userId, reason, finalPnl) {
-        await supabase
-            .from('session_participants')
-            .update({
-                status: reason === 'tp_hit' ? 'removed_tp' : 'removed_sl',
-                current_pnl: finalPnl,
-                removed_at: new Date().toISOString(),
-                removal_reason: reason
-            })
-            .eq('session_id', sessionId)
-            .eq('user_id', userId);
+  /**
+   * Execute single trade for one account
+   */
+  async executeSingleTrade(account, invitation, signal, session) {
+    try {
+      // Decrypt API token
+      const apiToken = this.decryptToken(account.api_token);
 
-        // Log activity
-        await supabase
-            .from('activity_logs_v2')
-            .insert({
-                id: uuidv4(),
-                type: reason,
-                level: 'info',
-                message: `User removed from session: ${reason}`,
-                metadata: { sessionId, userId, finalPnl },
-                user_id: userId,
-                session_id: sessionId,
-                created_at: new Date().toISOString()
-            });
-    }
+      // Connect to Deriv WebSocket
+      const ws = await this.getConnection(account.deriv_account_id, apiToken);
 
-    /**
-     * Flag user for recovery session eligibility
-     */
-    async flagForRecovery(userId) {
-        await supabase
-            .from('user_trading_settings')
-            .upsert({
-                user_id: userId,
-                can_join_recovery: true,
-                last_sl_hit_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            });
-    }
+      // Calculate stake
+      const stake = this.calculateStake(account.balance, session);
 
-    /**
-     * Send notification to user
-     */
-    async notifyUser(userId, type, message) {
-        await supabase
-            .from('system_notifications')
-            .insert({
-                id: uuidv4(),
-                user_id: userId,
-                type,
-                title: this.getNotificationTitle(type),
-                message,
-                metadata: {},
-                read: false,
-                created_at: new Date().toISOString()
-            });
-    }
-
-    /**
-     * Get notification title based on type
-     */
-    getNotificationTitle(type) {
-        const titles = {
-            'low_balance': '⚠️ Low Balance Warning',
-            'tp_hit': '🎉 Take Profit Reached!',
-            'sl_hit': '🛑 Stop Loss Reached',
-            'trade_executed': '📈 Trade Executed',
-            'trade_failed': '❌ Trade Failed',
-            'session_invite': '📋 Session Invitation',
-            'recovery_invite': '🔄 Recovery Session Available'
-        };
-        return titles[type] || 'Notification';
-    }
-
-    /**
-     * Log trade to database
-     */
-    async logTrade(tradeData) {
-        await supabase
-            .from('trade_logs')
-            .insert({
-                id: uuidv4(),
-                session_id: tradeData.sessionId,
-                user_id: tradeData.userId,
-                account_id: tradeData.accountId,
-                contract_id: tradeData.contractId,
-                market: tradeData.market,
-                contract_type: tradeData.contractType,
-                strategy: tradeData.strategy,
-                stake: tradeData.stake,
-                prediction: tradeData.prediction,
-                entry_tick: tradeData.entryTick,
-                result: 'pending',
-                confidence: tradeData.confidence,
-                signal_reason: tradeData.signalReason,
-                created_at: new Date().toISOString()
-            });
-    }
-
-    /**
-     * Disconnect an account
-     */
-    disconnectAccount(userId) {
-        const ws = this.accountConnections.get(userId);
-        if (ws) {
-            try { ws.close(); } catch (e) { }
-            this.accountConnections.delete(userId);
-            this.balanceCache.delete(userId);
+      // Prepare contract parameters
+      const contractParams = {
+        buy: 1,
+        price: stake,
+        parameters: {
+          contract_type: signal.side === 'OVER' ? 'DIGITOVER' : 'DIGITUNDER',
+          symbol: session.market || 'R_100',
+          duration: session.duration || 1,
+          duration_unit: session.duration_unit || 't',
+          basis: 'stake',
+          amount: stake,
+          barrier: signal.digit.toString()
         }
+      };
+
+      // Execute buy
+      const buyResponse = await this.sendRequest(ws, contractParams);
+
+      if (buyResponse.error) {
+        throw new Error(buyResponse.error.message);
+      }
+
+      const contract = buyResponse.buy;
+
+      console.log(`[TradeExecutor] ✅ Trade executed for ${account.deriv_account_id}: Contract ${contract.contract_id}`);
+
+      return {
+        success: true,
+        accountId: account.id,
+        userId: account.user_id,
+        derivAccountId: account.deriv_account_id,
+        contractId: contract.contract_id,
+        buyPrice: contract.buy_price,
+        payout: contract.payout,
+        signal,
+        stake,
+        takeProfit: invitation.take_profit,
+        stopLoss: invitation.stop_loss,
+        timestamp: new Date()
+      };
+
+    } catch (error) {
+      console.error(`[TradeExecutor] Single trade error for ${account.deriv_account_id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Start TP/SL monitor for a trade
+   */
+  startTPSLMonitor(tradeResult, invitation, session) {
+    const monitorId = `${tradeResult.contractId}_${tradeResult.accountId}`;
+
+    if (this.activeMonitors.has(monitorId)) {
+      console.log(`[TradeExecutor] Monitor already active for ${monitorId}`);
+      return;
     }
 
-    /**
-     * Disconnect all accounts
-     */
-    disconnectAll() {
-        for (const [userId, ws] of this.accountConnections) {
-            try { ws.close(); } catch (e) { }
+    console.log(`[TradeExecutor] 📊 Starting TP/SL monitor for contract ${tradeResult.contractId}`);
+
+    const interval = setInterval(async () => {
+      try {
+        await this.checkTPSL(tradeResult, invitation, session);
+      } catch (error) {
+        console.error(`[TradeExecutor] TP/SL monitor error for ${monitorId}:`, error);
+        // Clear monitor on error
+        clearInterval(interval);
+        this.activeMonitors.delete(monitorId);
+      }
+    }, 2000); // Check every 2 seconds
+
+    this.activeMonitors.set(monitorId, interval);
+  }
+
+  /**
+   * Check TP/SL levels and close if hit
+   */
+  async checkTPSL(tradeResult, invitation, session) {
+    try {
+      const ws = this.activeConnections.get(tradeResult.derivAccountId);
+      
+      if (!ws) {
+        console.error(`[TradeExecutor] No connection for ${tradeResult.derivAccountId}`);
+        return;
+      }
+
+      // Get contract status
+      const statusResponse = await this.sendRequest(ws, {
+        proposal_open_contract: 1,
+        contract_id: tradeResult.contractId
+      });
+
+      if (statusResponse.error) {
+        console.error('[TradeExecutor] Status check error:', statusResponse.error);
+        return;
+      }
+
+      const contract = statusResponse.proposal_open_contract;
+
+      // Check if contract is still open
+      if (!contract.is_sold && !contract.is_settleable) {
+        const currentPL = contract.profit || 0;
+
+        console.log(`[TradeExecutor] Contract ${tradeResult.contractId} P&L: $${currentPL.toFixed(2)}`);
+
+        // Check TP
+        if (currentPL >= invitation.take_profit) {
+          console.log(`[TradeExecutor] 🎯 TP HIT! Closing contract ${tradeResult.contractId}`);
+          await this.closeTrade(tradeResult, 'tp_hit', currentPL, invitation, session);
+          return;
         }
-        this.accountConnections.clear();
-        this.balanceCache.clear();
-        this.activeContracts.clear();
+
+        // Check SL
+        if (currentPL <= -Math.abs(invitation.stop_loss)) {
+          console.log(`[TradeExecutor] 🛑 SL HIT! Closing contract ${tradeResult.contractId}`);
+          await this.closeTrade(tradeResult, 'sl_hit', currentPL, invitation, session);
+          return;
+        }
+      } else {
+        // Contract already closed
+        console.log(`[TradeExecutor] Contract ${tradeResult.contractId} already closed`);
+        
+        const finalPL = contract.profit || 0;
+        const status = finalPL > 0 ? 'win' : 'loss';
+        
+        await this.closeTrade(tradeResult, status, finalPL, invitation, session);
+      }
+
+    } catch (error) {
+      console.error('[TradeExecutor] TP/SL check error:', error);
+    }
+  }
+
+  /**
+   * Close trade and remove account from session
+   */
+  async closeTrade(tradeResult, reason, finalPL, invitation, session) {
+    try {
+      const monitorId = `${tradeResult.contractId}_${tradeResult.accountId}`;
+
+      // Stop monitor
+      if (this.activeMonitors.has(monitorId)) {
+        clearInterval(this.activeMonitors.get(monitorId));
+        this.activeMonitors.delete(monitorId);
+      }
+
+      // Sell contract if still open
+      const ws = this.activeConnections.get(tradeResult.derivAccountId);
+      if (ws) {
+        try {
+          await this.sendRequest(ws, {
+            sell: tradeResult.contractId,
+            price: 0 // Market price
+          });
+        } catch (error) {
+          console.error('[TradeExecutor] Sell error:', error);
+        }
+      }
+
+      // Update trade record
+      await supabase
+        .from('trades')
+        .update({
+          status: reason,
+          profit_loss: finalPL,
+          closed_at: new Date().toISOString()
+        })
+        .eq('contract_id', tradeResult.contractId);
+
+      // Remove account from session
+      await supabase
+        .from('session_invitations')
+        .update({
+          is_removed: true,
+          removed_reason: reason,
+          removed_at: new Date().toISOString()
+        })
+        .eq('id', invitation.id);
+
+      // If SL hit, flag for recovery
+      if (reason === 'sl_hit') {
+        await supabase
+          .from('recovery_states')
+          .insert({
+            user_id: tradeResult.userId,
+            account_id: tradeResult.accountId,
+            original_session_id: session.id,
+            sl_hit_at: new Date().toISOString(),
+            status: 'eligible'
+          });
+      }
+
+      // Send notification
+      const message = reason === 'tp_hit' 
+        ? `✅ Take Profit hit! Profit: $${finalPL.toFixed(2)}`
+        : reason === 'sl_hit'
+        ? `❌ Stop Loss hit! Loss: $${finalPL.toFixed(2)}`
+        : `Trade closed. P&L: $${finalPL.toFixed(2)}`;
+
+      await this.sendNotification(tradeResult.userId, {
+        type: reason,
+        message,
+        sessionId: session.id,
+        profitLoss: finalPL
+      });
+
+      console.log(`[TradeExecutor] ✅ Trade closed: ${reason}, P&L: $${finalPL.toFixed(2)}`);
+
+    } catch (error) {
+      console.error('[TradeExecutor] Close trade error:', error);
+    }
+  }
+
+  /**
+   * Get or create WebSocket connection for account
+   */
+  async getConnection(derivAccountId, apiToken) {
+    if (this.activeConnections.has(derivAccountId)) {
+      return this.activeConnections.get(derivAccountId);
     }
 
-    /**
-     * Helper delay function
-     */
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=114042');
 
-    /**
-     * Get executor status
-     */
-    getStatus() {
-        return {
-            connectedAccounts: this.accountConnections.size,
-            activeContracts: this.activeContracts.size,
-            balances: Object.fromEntries(this.balanceCache)
-        };
+      ws.on('open', () => {
+        // Authorize
+        ws.send(JSON.stringify({ authorize: apiToken }));
+      });
+
+      ws.on('message', (data) => {
+        const message = JSON.parse(data.toString());
+
+        if (message.msg_type === 'authorize') {
+          console.log(`[TradeExecutor] ✅ Connected & authorized for ${derivAccountId}`);
+          this.activeConnections.set(derivAccountId, ws);
+          resolve(ws);
+        } else if (message.msg_type === 'error') {
+          reject(new Error(message.error.message));
+        }
+      });
+
+      ws.on('error', (error) => {
+        reject(error);
+      });
+
+      // Timeout after 30 seconds
+      setTimeout(() => {
+        reject(new Error('Connection timeout'));
+      }, 30000);
+    });
+  }
+
+  /**
+   * Send request and wait for response
+   */
+  async sendRequest(ws, request) {
+    return new Promise((resolve, reject) => {
+      const reqId = `req_${Date.now()}_${Math.random()}`;
+      request.req_id = reqId;
+
+      const messageHandler = (data) => {
+        const message = JSON.parse(data.toString());
+
+        if (message.req_id === reqId) {
+          ws.removeListener('message', messageHandler);
+          resolve(message);
+        }
+      };
+
+      ws.on('message', messageHandler);
+
+      ws.send(JSON.stringify(request));
+
+      // Timeout after 15 seconds
+      setTimeout(() => {
+        ws.removeListener('message', messageHandler);
+        reject(new Error('Request timeout'));
+      }, 15000);
+    });
+  }
+
+  /**
+   * Calculate stake based on account balance
+   */
+  calculateStake(balance, session) {
+    // Use 2% of balance as default stake
+    const percentage = session.stake_percentage || 0.02;
+    return Math.max(0.35, balance * percentage); // Minimum stake $0.35
+  }
+
+  /**
+   * Decrypt API token
+   */
+  decryptToken(encryptedToken) {
+    try {
+      const algorithm = 'aes-256-gcm';
+      const key = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+      
+      const parts = encryptedToken.split(':');
+      const iv = Buffer.from(parts[0], 'hex');
+      const authTag = Buffer.from(parts[1], 'hex');
+      const encrypted = Buffer.from(parts[2], 'hex');
+
+      const decipher = crypto.createDecipheriv(algorithm, key, iv);
+      decipher.setAuthTag(authTag);
+
+      let decrypted = decipher.update(encrypted, null, 'utf8');
+      decrypted += decipher.final('utf8');
+
+      return decrypted;
+    } catch (error) {
+      console.error('[TradeExecutor] Token decryption error:', error);
+      throw new Error('Failed to decrypt API token');
     }
+  }
+
+  /**
+   * Send notification to user
+   */
+  async sendNotification(userId, notification) {
+    try {
+      await supabase
+        .from('trading_notifications')
+        .insert({
+          user_id: userId,
+          type: notification.type,
+          message: notification.message,
+          data: notification,
+          created_at: new Date().toISOString()
+        });
+    } catch (error) {
+      console.error('[TradeExecutor] Notification error:', error);
+    }
+  }
+
+  /**
+   * Log trade to database
+   */
+  async logTrade(tradeResult, sessionId) {
+    try {
+      if (!tradeResult.success) return;
+
+      await supabase
+        .from('trades')
+        .insert({
+          session_id: sessionId,
+          account_id: tradeResult.accountId,
+          user_id: tradeResult.userId,
+          contract_id: tradeResult.contractId,
+          buy_price: tradeResult.buyPrice,
+          payout: tradeResult.payout,
+          stake: tradeResult.stake,
+          signal: tradeResult.signal,
+          status: 'open',
+          created_at: tradeResult.timestamp.toISOString()
+        });
+    } catch (error) {
+      console.error('[TradeExecutor] Log trade error:', error);
+    }
+  }
+
+  /**
+   * Sleep utility
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Disconnect all connections
+   */
+  disconnectAll() {
+    console.log('[TradeExecutor] Disconnecting all connections...');
+
+    // Clear all monitors
+    for (const [id, interval] of this.activeMonitors) {
+      clearInterval(interval);
+    }
+    this.activeMonitors.clear();
+
+    // Close all WebSocket connections
+    for (const [id, ws] of this.activeConnections) {
+      try {
+        ws.close();
+      } catch (error) {
+        console.error(`[TradeExecutor] Error closing connection ${id}:`, error);
+      }
+    }
+    this.activeConnections.clear();
+
+    console.log('[TradeExecutor] All connections closed');
+  }
+
+  /**
+   * Get statistics
+   */
+  getStats() {
+    return {
+      activeConnections: this.activeConnections.size,
+      activeMonitors: this.activeMonitors.size
+    };
+  }
 }
 
-// Singleton instance
-const tradeExecutor = new TradeExecutor();
-
-module.exports = { TradeExecutor, tradeExecutor };
+module.exports = new TradeExecutor();

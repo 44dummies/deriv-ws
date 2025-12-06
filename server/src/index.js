@@ -99,6 +99,8 @@ app.use('/api/achievements', achievementsRoutes);
 
 app.use('/api/files', filesRoutes);
 app.use('/api/trading', tradingRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/user', userTradingRoutes);
 
 // Role-protected routes
 app.use('/api/admin', authMiddleware, isAdmin, adminRoutes);
