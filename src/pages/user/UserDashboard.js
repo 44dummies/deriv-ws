@@ -378,38 +378,37 @@ const UserDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Bottom Navigation Bar */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-t border-white/10 z-50">
+                <div className="max-w-md mx-auto flex items-center justify-around py-3">
+                    <button
+                        onClick={() => { }}
+                        className="flex flex-col items-center gap-1 px-6 py-2 text-blue-400"
+                    >
+                        <Home className="w-5 h-5" />
+                        <span className="text-xs font-medium">Dashboard</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/trading')}
+                        className="flex flex-col items-center gap-1 px-6 py-2 text-gray-400 hover:text-white transition"
+                    >
+                        <BarChart3 className="w-5 h-5" />
+                        <span className="text-xs font-medium">Trading</span>
+                    </button>
+                    <button
+                        onClick={() => navigate('/settings')}
+                        className="flex flex-col items-center gap-1 px-6 py-2 text-gray-400 hover:text-white transition"
+                    >
+                        <Settings className="w-5 h-5" />
+                        <span className="text-xs font-medium">Settings</span>
+                    </button>
+                </div>
+            </nav>
+
+            {/* Bottom padding for nav bar */}
+            <div className="h-20"></div>
         </div>
-
-        {/* Bottom Navigation Bar */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-t border-white/10 z-50">
-            <div className="max-w-md mx-auto flex items-center justify-around py-3">
-                <button
-                    onClick={() => {}}
-                    className="flex flex-col items-center gap-1 px-6 py-2 text-blue-400"
-                >
-                    <Home className="w-5 h-5" />
-                    <span className="text-xs font-medium">Dashboard</span>
-                </button>
-                <button
-                    onClick={() => navigate('/trading')}
-                    className="flex flex-col items-center gap-1 px-6 py-2 text-gray-400 hover:text-white transition"
-                >
-                    <BarChart3 className="w-5 h-5" />
-                    <span className="text-xs font-medium">Trading</span>
-                </button>
-                <button
-                    onClick={() => navigate('/settings')}
-                    className="flex flex-col items-center gap-1 px-6 py-2 text-gray-400 hover:text-white transition"
-                >
-                    <Settings className="w-5 h-5" />
-                    <span className="text-xs font-medium">Settings</span>
-                </button>
-            </div>
-        </nav>
-
-        {/* Bottom padding for nav bar */}
-        <div className="h-20"></div>
-    </div>
     );
 };
 
