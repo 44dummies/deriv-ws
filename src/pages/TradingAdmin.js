@@ -21,14 +21,14 @@ const TradingAdmin = () => {
       
       if (!derivId) {
         console.log('[Admin Check] No derivId, redirecting to login');
-        navigate('/login');
+        navigate('/');
         return;
       }
 
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('deriv_id', derivId)
+        .eq('deriv_account_id', derivId)
         .single();
 
       console.log('[Admin Check] Profile data:', profile);
@@ -41,9 +41,9 @@ const TradingAdmin = () => {
       }
 
       if (!profile?.is_admin) {
-        console.log('[Admin Check] Not admin, redirecting to dashboard');
-        // Not an admin, redirect to dashboard
-        navigate('/dashboard');
+        console.log('[Admin Check] Not admin, redirecting to trading');
+        // Not an admin, redirect to trading dashboard
+        navigate('/trading');
         return;
       }
 

@@ -81,11 +81,14 @@ const Callback = () => {
         console.log('[Callback] Checking admin status for:', derivId);
         
         if (derivId) {
+          // Store derivId in sessionStorage for other pages to use
+          sessionStorage.setItem('derivId', derivId);
+          
           try {
             const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
               .select('is_admin')
-              .eq('deriv_id', derivId)
+              .eq('deriv_account_id', derivId)
               .single();
             
             console.log('[Callback] Profile data:', profile);
