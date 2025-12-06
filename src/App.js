@@ -56,7 +56,7 @@ function App() {
             path="/user/dashboard"
             element={
               <UserRoute>
-                <UserDashboard />
+                <Dashboard />
               </UserRoute>
             }
           />
@@ -64,7 +64,7 @@ function App() {
             path="/user/*"
             element={
               <UserRoute>
-                <UserDashboard />
+                <Dashboard />
               </UserRoute>
             }
           />
