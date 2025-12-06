@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 import { supabase } from '../services/supabaseService';
+import apiClient from '../services/apiClient';
 
 const Callback = () => {
   const navigate = useNavigate();
@@ -72,6 +73,12 @@ const Callback = () => {
         
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
+          // Persist basic profile info for later use (balance, currency, derivId)
+          TokenService.setProfileInfo({
+            derivId: authResponse.authorize.loginid,
+            balance: authResponse.authorize.balance,
+            currency: authResponse.authorize.currency
+          });
         }
 
         setStatus('Checking user permissions...');
@@ -95,6 +102,20 @@ const Callback = () => {
             console.log('[Callback] Profile error:', profileError);
             console.log('[Callback] is_admin value:', profile?.is_admin);
             
+            // Also authenticate with backend so REST calls have JWT
+            try {
+              const loginResult = await apiClient.loginWithDeriv({
+                derivUserId: derivId,
+                loginid: derivId,
+                email: authResponse.authorize.email,
+                currency: authResponse.authorize.currency,
+                fullname: authResponse.authorize.fullname
+              });
+              TokenService.setBackendTokens(loginResult.accessToken, loginResult.refreshToken);
+            } catch (apiErr) {
+              console.error('[Callback] Backend auth failed:', apiErr);
+            }
+
             if (profile?.is_admin) {
               console.log('[Callback] ✅ Admin user detected! Redirecting to /admin');
               setStatus('Admin access granted! Redirecting...');
