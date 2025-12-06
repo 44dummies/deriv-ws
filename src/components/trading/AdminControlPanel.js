@@ -29,7 +29,12 @@ const AdminControlPanel = ({ user }) => {
   const [activeTab, setActiveTab] = useState('sessions');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
+  const [accountFormData, setAccountFormData] = useState({
+    derivToken: '',
+    accountId: ''
+  });
   const [formData, setFormData] = useState({
     sessionName: '',
     sessionType: SESSION_TYPE.DAY,
@@ -126,6 +131,27 @@ const AdminControlPanel = ({ user }) => {
       setInviteUserId('');
     } catch (error) {
       console.error('Failed to invite user:', error);
+    }
+  };
+
+  const handleAddAccount = async (e) => {
+    e.preventDefault();
+    if (!accountFormData.derivToken) {
+      alert('Please enter your Deriv API token');
+      return;
+    }
+    
+    try {
+      await tradingApi.addAccount({
+        derivToken: accountFormData.derivToken,
+        accountId: accountFormData.accountId || undefined
+      });
+      setShowAddAccountModal(false);
+      setAccountFormData({ derivToken: '', accountId: '' });
+      refreshAccounts();
+    } catch (error) {
+      console.error('Failed to add account:', error);
+      alert('Failed to connect account. Please check your API token.');
     }
   };
 
@@ -354,17 +380,30 @@ const AdminControlPanel = ({ user }) => {
         )}
 
         {activeTab === 'accounts' && (
-          <div className="accounts-grid">
-            {accountsLoading ? (
-              <div className="loading">Loading accounts...</div>
-            ) : !accounts || accounts.length === 0 ? (
-              <div className="empty-state">
-                <Users size={48} />
-                <p>No trading accounts connected</p>
-              </div>
-            ) : (
-              accounts.map(renderAccountCard)
-            )}
+          <div className="accounts-section">
+            <div className="section-header">
+              <h3>Connected Accounts</h3>
+              <button onClick={() => setShowAddAccountModal(true)} className="btn-primary">
+                <Plus size={16} />
+                Add Account
+              </button>
+            </div>
+            <div className="accounts-grid">
+              {accountsLoading ? (
+                <div className="loading">Loading accounts...</div>
+              ) : !accounts || accounts.length === 0 ? (
+                <div className="empty-state">
+                  <Users size={48} />
+                  <p>No trading accounts connected</p>
+                  <button onClick={() => setShowAddAccountModal(true)} className="btn-secondary">
+                    <Plus size={16} />
+                    Connect Your First Account
+                  </button>
+                </div>
+              ) : (
+                accounts.map(renderAccountCard)
+              )}
+            </div>
           </div>
         )}
 
@@ -581,6 +620,53 @@ const AdminControlPanel = ({ user }) => {
                 <button type="submit" className="btn-primary">
                   <UserPlus size={16} />
                   Send Invitation
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Account Modal */}
+      {showAddAccountModal && (
+        <div className="modal-overlay" onClick={() => setShowAddAccountModal(false)}>
+          <div className="modal modal-small" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Connect Deriv Account</h2>
+              <button onClick={() => setShowAddAccountModal(false)} className="close-btn">
+                <XCircle size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleAddAccount}>
+              <div className="form-group">
+                <label>Deriv API Token *</label>
+                <input
+                  type="password"
+                  value={accountFormData.derivToken}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, derivToken: e.target.value })}
+                  placeholder="Enter your Deriv API token"
+                  required
+                />
+                <small className="help-text">
+                  Get your API token from <a href="https://app.deriv.com/account/api-token" target="_blank" rel="noopener noreferrer">Deriv API Settings</a>
+                </small>
+              </div>
+              <div className="form-group">
+                <label>Account ID (Optional)</label>
+                <input
+                  type="text"
+                  value={accountFormData.accountId}
+                  onChange={(e) => setAccountFormData({ ...accountFormData, accountId: e.target.value })}
+                  placeholder="e.g., CR12345 (leave empty to auto-detect)"
+                />
+              </div>
+              <div className="form-actions">
+                <button type="button" onClick={() => setShowAddAccountModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary">
+                  <Plus size={16} />
+                  Connect Account
                 </button>
               </div>
             </form>

@@ -738,7 +738,7 @@ const Dashboard = () => {
 
         if (useSupabase && userInfo?.loginid) {
           await supabaseService.upsertUserProfile(userInfo);
-          await supabaseService.syncTradeHistory(userInfo.loginid, trades);
+          // Trade history now handled by new trading system API
         }
       }
       
