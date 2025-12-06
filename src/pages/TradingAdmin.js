@@ -17,28 +17,40 @@ const TradingAdmin = () => {
     try {
       const derivId = sessionStorage.getItem('derivId');
       
+      console.log('[Admin Check] Deriv ID:', derivId);
+      
       if (!derivId) {
+        console.log('[Admin Check] No derivId, redirecting to login');
         navigate('/login');
         return;
       }
 
       const { data: profile, error } = await supabase
         .from('user_profiles')
-        .select('is_admin')
+        .select('*')
         .eq('deriv_id', derivId)
         .single();
 
-      if (error) throw error;
+      console.log('[Admin Check] Profile data:', profile);
+      console.log('[Admin Check] Error:', error);
+      console.log('[Admin Check] is_admin value:', profile?.is_admin);
+
+      if (error) {
+        console.error('[Admin Check] Supabase error:', error);
+        throw error;
+      }
 
       if (!profile?.is_admin) {
+        console.log('[Admin Check] Not admin, redirecting to dashboard');
         // Not an admin, redirect to dashboard
         navigate('/dashboard');
         return;
       }
 
+      console.log('[Admin Check] Admin verified! Setting isAdmin to true');
       setIsAdmin(true);
     } catch (error) {
-      console.error('Error checking admin access:', error);
+      console.error('[Admin Check] Error checking admin access:', error);
       navigate('/dashboard');
     } finally {
       setLoading(false);
