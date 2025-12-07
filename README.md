@@ -1,81 +1,106 @@
-# Deriv Authentication App
+# TraderMind
 
-A React application that implements Deriv OAuth authentication and WebSocket integration.
+A trading community platform for Deriv traders with real-time chat, analytics, and social features.
+
+## Live Site
+
+https://tradermind.site
+
+## Tech Stack
+
+### Frontend
+- React 18 with TypeScript
+- Tailwind CSS for styling
+- Socket.IO client for real-time features
+- Zustand for state management
+
+### Backend
+- Node.js with Express
+- Socket.IO for WebSocket communication
+- Supabase PostgreSQL database
+- JWT authentication
 
 ## Features
 
-- OAuth authentication with Deriv API
-- WebSocket connection for real-time data
-- Display user account information
-- Show all wallets and their balances
-- Secure token management
-- Logout functionality
-
-## Setup
-
-1. Install dependencies:
-```bash
-npm install
-```
-
-2. Configure your app:
-   - App ID: `114042` (already configured in `.env`)
-   - The redirect URL is set to `http://localhost:3001/callback`
-
-3. Start the development server:
-```bash
-npm start
-```
-
-4. Open [http://localhost:3001](http://localhost:3001) in your browser
-
-## Usage
-
-1. Click "Login with Deriv" on the login page
-2. Authorize the application on Deriv's OAuth page
-3. You'll be redirected back to the callback page
-4. After successful authentication, you'll see the dashboard with:
-   - Your account information (name, email, account ID, currency)
-   - All your wallets with their balances
-5. Click "Logout" to disconnect and return to login
-
-## Environment Variables
-
-The app uses the following environment variables (configured in `.env`):
-
-- `REACT_APP_DERIV_APP_ID`: Your Deriv app ID (114042)
-- `REACT_APP_REDIRECT_URL`: OAuth redirect URL
-- `REACT_APP_DERIV_OAUTH_URL`: Deriv OAuth endpoint
-- `REACT_APP_DERIV_WS_URL`: Deriv WebSocket endpoint
+- Deriv OAuth authentication
+- Real-time tier-based chatrooms
+- Community feed with posts and comments
+- Trading portfolio tracking
+- Analytics dashboard
+- Leaderboard system
+- Achievement system
+- AI trading mentor
+- User profiles with avatars
+- Settings management
 
 ## Project Structure
 
 ```
-src/
-├── config.js                    # App configuration
-├── services/
-│   ├── tokenService.js         # Token management (localStorage)
-│   └── websocketService.js     # WebSocket communication
-├── pages/
-│   ├── Login.js                # Login page
-│   ├── Callback.js             # OAuth callback handler
-│   └── Dashboard.js            # User dashboard
-├── App.js                      # Main app with routing
-├── index.js                    # App entry point
-└── index.css                   # Global styles
+/
+├── src/                    # React frontend
+│   ├── components/         # Reusable components
+│   ├── pages/              # Page components
+│   ├── services/           # API and WebSocket services
+│   └── store/              # State management
+├── server/                 # Express backend
+│   ├── src/
+│   │   ├── routes/         # API routes
+│   │   ├── services/       # Business logic
+│   │   ├── db/             # Database config
+│   │   └── socket/         # WebSocket handlers
+│   └── package.json
+└── public/                 # Static assets
 ```
 
-## How It Works
+## Environment Variables
 
-1. **Login Flow**: User clicks login → redirected to Deriv OAuth → authorizes → redirected to callback
-2. **Callback**: Extracts tokens from URL → stores in localStorage → clears URL → connects WebSocket
-3. **Authorization**: Connects to Deriv WebSocket → authorizes with token → fetches user data
-4. **Dashboard**: Displays user info → fetches account list → gets balances for each account
-5. **Logout**: Disconnects WebSocket → clears localStorage → redirects to login
+### Frontend (.env)
+```
+REACT_APP_DERIV_APP_ID=your_deriv_app_id
+REACT_APP_API_URL=https://your-backend-url
+REACT_APP_WS_URL=wss://your-backend-url
+```
 
-## Security
+### Backend (server/.env)
+```
+PORT=3001
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_KEY=your_service_key
+JWT_SECRET=your_jwt_secret
+DERIV_APP_ID=your_deriv_app_id
+CORS_ORIGIN=https://tradermind.site
+```
 
-- Tokens are stored in localStorage
-- Tokens are cleared from URL after extraction
-- Protected routes ensure authentication
-- WebSocket connection is closed on logout
+## Development
+
+### Frontend
+```bash
+npm install
+npm start
+```
+
+### Backend
+```bash
+cd server
+npm install
+npm run dev
+```
+
+## Deployment
+
+- Frontend: Vercel (auto-deploy from main branch)
+- Backend: Railway (auto-deploy from main branch)
+- Database: Supabase PostgreSQL
+
+## Tier System
+
+Users are automatically assigned to chatrooms based on their trading performance:
+- Beginner: New traders
+- Intermediate: 50+ trades, 45%+ win rate
+- Advanced: 200+ trades, 55%+ win rate
+- Expert: 500+ trades, 65%+ win rate
+- Master: 1000+ trades, 80%+ win rate
+
+## License
+
+MIT
