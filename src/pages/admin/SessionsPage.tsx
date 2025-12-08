@@ -22,6 +22,12 @@ interface Session {
     created_at?: string;
     min_balance?: number;
     initial_stake?: number;
+    // Legacy support (V1 schema)
+    session_name?: string;
+    total_trades?: number;
+    net_pnl?: number;
+    // V2 schema
+    type?: string;
 }
 
 interface FormData {
@@ -236,11 +242,11 @@ const SessionsPage: React.FC = () => {
                             {filteredSessions.map(session => (
                                 <tr key={session.id}>
                                     <td>
-                                        <div style={{ fontWeight: 600 }}>{session.name}</div>
+                                        <div style={{ fontWeight: 600 }}>{session.name || session.session_name}</div>
                                     </td>
                                     <td>
                                         <span className="badge badge-info">
-                                            {session.session_type || 'Standard'}
+                                            {session.session_type || session.type || 'Standard'}
                                         </span>
                                     </td>
                                     <td>
@@ -252,13 +258,13 @@ const SessionsPage: React.FC = () => {
                                             {session.status}
                                         </span>
                                     </td>
-                                    <td>{session.trade_count || 0}</td>
+                                    <td>{session.trade_count || session.total_trades || 0}</td>
                                     <td style={{
                                         fontFamily: 'monospace',
                                         fontWeight: 600,
-                                        color: (session.current_pnl || 0) >= 0 ? '#10b981' : '#ef4444'
+                                        color: (session.current_pnl || session.net_pnl || 0) >= 0 ? '#10b981' : '#ef4444'
                                     }}>
-                                        {formatCurrency(session.current_pnl)}
+                                        {formatCurrency(session.current_pnl || session.net_pnl)}
                                     </td>
                                     <td style={{ color: '#9ca3af' }}>{formatDate(session.created_at)}</td>
                                     <td>
