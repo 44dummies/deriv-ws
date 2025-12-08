@@ -98,6 +98,7 @@ const SessionsPage: React.FC = () => {
                 max_consecutive_losses: 4,
                 description: ''
             });
+            // Refresh list
             loadSessions();
         } catch (error: any) {
             toast.error(error.message || 'Failed to create session');
