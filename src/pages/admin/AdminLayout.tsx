@@ -40,7 +40,7 @@ const AdminLayout: React.FC = () => {
         { icon: <Activity />, label: 'Sessions', path: '/admin/sessions' },
         { icon: <Users />, label: 'Users', path: '/admin/users' },
         { icon: <BarChart3 />, label: 'Analytics', path: '/admin/analytics' },
-        { icon: <Bell />, label: 'Notifications', path: '/admin/notifications', badge: 3 },
+        { icon: <Bell />, label: 'Notifications', path: '/admin/notifications' },
         { icon: <FileText />, label: 'Activity Logs', path: '/admin/logs' },
     ];
 
