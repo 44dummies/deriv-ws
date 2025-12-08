@@ -725,6 +725,13 @@ const Dashboard = () => {
         if (balanceRes.balance) {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
         }
+
+        // Fetch specific accounts (Demo/Real) via API
+        const accountsRes = await apiClient.get<any>('/trading/accounts');
+        if (accountsRes.success && accountsRes.data) {
+          const demoAccount = accountsRes.data.find((a: any) => a.account_type === 'demo');
+          setUserInfo(prev => prev ? { ...prev, demo_balance: demoAccount?.balance || 0 } : null);
+        }
       } catch (balanceErr) {
 
       }
@@ -1697,7 +1704,23 @@ const Dashboard = () => {
                 )}
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  <StatCard icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Balance" value={`${userInfo?.currency || ''} ${userInfo?.balance?.toFixed(2) || '0.00'}`} trend="" color="from-green-500 to-emerald-500" />
+                  {/* Dual Balance Display */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <StatCard
+                      icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+                      label="Real Balance"
+                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.balance || 0).toFixed(2)}`}
+                      trend=""
+                      color="from-green-500 to-emerald-500"
+                    />
+                    <StatCard
+                      icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
+                      label="Demo Balance"
+                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance || 0).toFixed(2)}`}
+                      trend="Practice"
+                      color="from-blue-500 to-indigo-500"
+                    />
+                  </div>
                   <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Trades" value={tradeHistory.length} trend="" color="from-blue-500 to-cyan-500" />
                   <StatCard icon={<Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
                   <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Profit" value={`${(analytics.totalProfit ?? 0).toFixed(2)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
