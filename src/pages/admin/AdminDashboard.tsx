@@ -51,7 +51,7 @@ const AdminDashboard: React.FC = () => {
                 tradingApi.getStats()
             ]);
 
-            setSessions(sessionsRes?.sessions || []);
+            setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
         } catch (error: any) {
