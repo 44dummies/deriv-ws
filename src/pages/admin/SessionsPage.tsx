@@ -69,7 +69,7 @@ const SessionsPage: React.FC = () => {
     const loadSessions = useCallback(async () => {
         try {
             const res = await tradingApi.getSessions({ limit: 50 });
-            setSessions(res?.sessions || []);
+            setSessions(res?.data || res?.sessions || []);
         } catch (error) {
             console.error('Failed to load sessions:', error);
             toast.error('Failed to load sessions');
