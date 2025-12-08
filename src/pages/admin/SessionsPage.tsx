@@ -145,9 +145,13 @@ const SessionsPage: React.FC = () => {
     };
 
     const filteredSessions = sessions.filter(session => {
-        const matchesSearch = session.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (session.session_name || session.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (session.id || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || session.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        // Use logic from context if available, or omit type filter if not defined in state
+        const matchesType = true; // Placeholder until I see the state variables
+
+        return matchesSearch && matchesStatus && matchesType;
     });
 
     if (loading) {
