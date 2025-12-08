@@ -726,11 +726,17 @@ const Dashboard = () => {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
         }
 
-        // Fetch specific accounts (Demo/Real) via API
+        // Fetch specific accounts (Demo/Real) via API to ensure correct display
         const accountsRes = await apiClient.get<any>('/trading/accounts');
         if (accountsRes.success && accountsRes.data) {
           const demoAccount = accountsRes.data.find((a: any) => a.account_type === 'demo');
-          setUserInfo(prev => prev ? { ...prev, demo_balance: demoAccount?.balance || 0 } : null);
+          const realAccount = accountsRes.data.find((a: any) => a.account_type === 'real' || a.account_type === 'binary'); // binary is often used for real
+
+          setUserInfo(prev => prev ? {
+            ...prev,
+            demo_balance: demoAccount?.balance || 0,
+            real_balance: realAccount?.balance || 0
+          } : null);
         }
       } catch (balanceErr) {
 
@@ -1709,14 +1715,14 @@ const Dashboard = () => {
                     <StatCard
                       icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
                       label="Real Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.balance || 0).toFixed(2)}`}
+                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.real_balance !== undefined ? userInfo.real_balance : (userInfo?.is_virtual ? 0 : userInfo?.balance || 0)).toFixed(2)}`}
                       trend=""
                       color="from-green-500 to-emerald-500"
                     />
                     <StatCard
                       icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
                       label="Demo Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance || 0).toFixed(2)}`}
+                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance !== undefined ? userInfo.demo_balance : (userInfo?.is_virtual ? userInfo?.balance || 0 : 0)).toFixed(2)}`}
                       trend="Practice"
                       color="from-blue-500 to-indigo-500"
                     />
