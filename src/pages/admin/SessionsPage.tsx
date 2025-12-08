@@ -47,7 +47,7 @@ const SessionsPage: React.FC = () => {
     const [creating, setCreating] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         name: '',
-        session_type: 'standard',
+        session_type: 'day',
         min_balance: 100,
         initial_stake: 0.35,
         stake_percentage: 1.5,
@@ -88,7 +88,7 @@ const SessionsPage: React.FC = () => {
             setShowCreateModal(false);
             setFormData({
                 name: '',
-                session_type: 'standard',
+                session_type: 'day',
                 min_balance: 100,
                 initial_stake: 0.35,
                 stake_percentage: 1.5,
@@ -244,9 +244,9 @@ const SessionsPage: React.FC = () => {
                                     </td>
                                     <td>
                                         <span className={`badge ${session.status === 'running' ? 'badge-success' :
-                                                session.status === 'pending' ? 'badge-warning' :
-                                                    session.status === 'completed' ? 'badge-info' :
-                                                        'badge-neutral'
+                                            session.status === 'pending' ? 'badge-warning' :
+                                                session.status === 'completed' ? 'badge-info' :
+                                                    'badge-neutral'
                                             }`}>
                                             {session.status}
                                         </span>
@@ -359,7 +359,8 @@ const SessionsPage: React.FC = () => {
                                                 cursor: 'pointer'
                                             }}
                                         >
-                                            <option value="standard">Standard</option>
+                                            <option value="day">Day Trading</option>
+                                            <option value="one_time">One Time</option>
                                             <option value="recovery">Recovery</option>
                                         </select>
                                     </div>
