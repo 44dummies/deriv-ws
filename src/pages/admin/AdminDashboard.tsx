@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
     Play, Square, AlertTriangle, Activity, Users, DollarSign,
-    TrendingUp, Server, Clock, Zap, Plus, ArrowUpRight, BarChart2
+    TrendingUp, Server, Clock, Zap, Plus, ArrowUpRight, BarChart2,
+    CreditCard, Wallet
 } from 'lucide-react';
 import * as tradingApi from '../../trading/tradingApi';
 
@@ -40,20 +41,29 @@ const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [sessions, setSessions] = useState<Session[]>([]);
+
     const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
     const [stats, setStats] = useState<Stats | null>(null);
+    const [balances, setBalances] = useState({ real: 0, demo: 0 });
 
     const loadDashboard = useCallback(async () => {
         try {
-            const [sessionsRes, botRes, statsRes] = await Promise.all([
+            const [sessionsRes, botRes, statsRes, accountsRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
-                tradingApi.getStats()
+                tradingApi.getStats(),
+                tradingApi.getAccounts()
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
+
+            if (accountsRes?.data) {
+                const real = accountsRes.data.find((a: any) => a.account_type === 'real' || a.account_type === 'standard')?.balance || 0;
+                const demo = accountsRes.data.find((a: any) => a.account_type === 'demo')?.balance || 0;
+                setBalances({ real, demo });
+            }
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
             if (error.status === 403) {
@@ -145,6 +155,29 @@ const AdminDashboard: React.FC = () => {
                     }
                 }}
             />
+
+            {/* Wallet Overview */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <div className="admin-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div>
+                        <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>Real Balance</p>
+                        <h3 style={{ fontSize: '28px', fontWeight: 700, color: '#fff' }}>{formatCurrency(balances.real)}</h3>
+                    </div>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                        <Wallet size={24} />
+                    </div>
+                </div>
+
+                <div className="admin-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <div>
+                        <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>Demo Balance</p>
+                        <h3 style={{ fontSize: '28px', fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(balances.demo)}</h3>
+                    </div>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+                        <CreditCard size={24} />
+                    </div>
+                </div>
+            </div>
 
             {/* Bot Control Panel */}
             <div className="admin-card bot-control">
