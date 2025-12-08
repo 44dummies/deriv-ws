@@ -114,17 +114,43 @@ const NotificationsPage: React.FC = () => {
             return;
         }
 
-        const newItem: Notification = {
-            id: Date.now().toString(),
-            ...newNotification,
-            read: false,
-            created_at: new Date().toISOString()
-        };
+        try {
+            // Call backend to create and broadcast notification
+            const response = await apiClient.post<{ success: boolean; notification: Notification }>('/admin/notifications/broadcast', {
+                title: newNotification.title,
+                message: newNotification.message,
+                metadata: { type: newNotification.type }
+            });
 
-        setNotifications(prev => [newItem, ...prev]);
+            if (response?.success && response.notification) {
+                setNotifications(prev => [response.notification, ...prev]);
+                toast.success('Announcement sent to all users!');
+            } else {
+                // Fallback to local only
+                const newItem: Notification = {
+                    id: Date.now().toString(),
+                    ...newNotification,
+                    read: false,
+                    created_at: new Date().toISOString()
+                };
+                setNotifications(prev => [newItem, ...prev]);
+                toast.success('Notification created locally');
+            }
+        } catch (error) {
+            console.error('Failed to broadcast notification:', error);
+            // Fallback to local only
+            const newItem: Notification = {
+                id: Date.now().toString(),
+                ...newNotification,
+                read: false,
+                created_at: new Date().toISOString()
+            };
+            setNotifications(prev => [newItem, ...prev]);
+            toast.success('Notification created (offline mode)');
+        }
+
         setShowCreateModal(false);
         setNewNotification({ type: 'info', title: '', message: '' });
-        toast.success('Notification created');
     };
 
     const getIcon = (type: string) => {
