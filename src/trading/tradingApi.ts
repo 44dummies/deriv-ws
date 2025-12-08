@@ -22,6 +22,26 @@ interface TradeQueryOptions {
   limit?: string | number;
 }
 
+
+
+interface SessionData {
+  name: string;
+  session_type: string;
+  mode?: 'real' | 'demo'; // Add mode
+  min_balance?: number;
+  initial_stake?: number;
+  martingale_multiplier?: number;
+  default_tp?: number;
+  default_sl?: number;
+  markets?: string[];
+  duration?: number;
+  duration_unit?: string;
+  stake_percentage?: number;
+  contract_type?: string;
+  strategy?: string;
+  description?: string;
+}
+
 /**
  * Helper to make authenticated requests
  */

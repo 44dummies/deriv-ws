@@ -5,7 +5,7 @@ import Callback from './pages/Callback';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
 import Community from './pages/Community';
-import TradingAdmin from './pages/TradingAdmin';
+
 import UserTrading from './pages/UserTrading';
 
 // New modern admin dashboard
@@ -20,7 +20,7 @@ import NotificationsPage from './pages/admin/NotificationsPage';
 import UserDetailsPage from './pages/admin/UserDetailsPage';
 
 // Legacy imports
-import UserDashboard from './pages/user/UserDashboard';
+
 
 // Route guards
 import UserRoute from './components/routing/UserRoute';

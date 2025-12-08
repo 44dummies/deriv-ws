@@ -33,6 +33,7 @@ interface Session {
 interface FormData {
     name: string;
     session_type: string;
+    mode: 'real' | 'demo';
     min_balance: number;
     initial_stake: number;
     stake_percentage: number;
@@ -54,13 +55,14 @@ const SessionsPage: React.FC = () => {
     const [formData, setFormData] = useState<FormData>({
         name: '',
         session_type: 'day',
+        mode: 'real',
         min_balance: 100,
-        initial_stake: 0.35,
+        initial_stake: 1.0,
         stake_percentage: 1.5,
-        default_tp: 10,
-        default_sl: 10,
-        martingale_multiplier: 2.1,
+        martingale_multiplier: 2.0,
         max_consecutive_losses: 4,
+        default_tp: 10,
+        default_sl: 5,
         description: ''
     });
 
@@ -95,12 +97,13 @@ const SessionsPage: React.FC = () => {
             setFormData({
                 name: '',
                 session_type: 'day',
+                mode: 'real',
                 min_balance: 100,
-                initial_stake: 0.35,
+                initial_stake: 1.0,
                 stake_percentage: 1.5,
                 default_tp: 10,
-                default_sl: 10,
-                martingale_multiplier: 2.1,
+                default_sl: 5,
+                martingale_multiplier: 2.0,
                 max_consecutive_losses: 4,
                 description: ''
             });
@@ -373,12 +376,11 @@ const SessionsPage: React.FC = () => {
                                     </div>
                                     <div>
                                         <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
-                                            Min Balance ($)
+                                            Mode
                                         </label>
-                                        <input
-                                            type="number"
-                                            value={formData.min_balance}
-                                            onChange={(e) => setFormData({ ...formData, min_balance: Number(e.target.value) })}
+                                        <select
+                                            value={formData.mode || 'real'}
+                                            onChange={(e) => setFormData({ ...formData, mode: e.target.value as 'real' | 'demo' })}
                                             style={{
                                                 width: '100%',
                                                 padding: '14px 16px',
@@ -387,11 +389,36 @@ const SessionsPage: React.FC = () => {
                                                 border: '1px solid rgba(255,255,255,0.1)',
                                                 color: '#fff',
                                                 fontSize: '14px',
-                                                outline: 'none'
+                                                outline: 'none',
+                                                cursor: 'pointer'
                                             }}
-                                            min="0"
-                                        />
+                                        >
+                                            <option value="real">Real Account</option>
+                                            <option value="demo">Demo Account</option>
+                                        </select>
                                     </div>
+                                </div>
+                                {/* Min Balance Row */}
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        Min Balance ($)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={formData.min_balance}
+                                        onChange={(e) => setFormData({ ...formData, min_balance: Number(e.target.value) })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px 16px',
+                                            borderRadius: '12px',
+                                            background: 'rgba(0,0,0,0.3)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            color: '#fff',
+                                            fontSize: '14px',
+                                            outline: 'none'
+                                        }}
+                                        min="0"
+                                    />
                                 </div>
 
                                 {/* Stake Settings */}
@@ -535,8 +562,8 @@ const SessionsPage: React.FC = () => {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                    </div >
+                </div >
             )}
         </>
     );
