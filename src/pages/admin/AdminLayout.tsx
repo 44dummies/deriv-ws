@@ -99,7 +99,7 @@ const AdminLayout: React.FC = () => {
                                 <Shield size={22} className="text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                                <h1 className="text-lg md:text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                                     TraderMind
                                 </h1>
                                 <p className="text-xs text-gray-500 -mt-0.5">Admin Dashboard</p>
