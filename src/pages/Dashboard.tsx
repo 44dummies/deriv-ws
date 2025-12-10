@@ -1450,47 +1450,33 @@ const Dashboard = () => {
   const handleAcceptSession = async (sessionId, sessionMode?: string) => {
     if (!sessionId) {
       console.error('Session ID is undefined. Available sessions:', availableSessions);
-      console.error('First session object keys:', availableSessions[0] ? Object.keys(availableSessions[0]) : 'no sessions');
-      console.error('First session object:', availableSessions[0]);
       toast.error('Cannot join session: Invalid session ID');
       return;
     }
-
-    // Select correct token based on session mode (demo/real)
-    // Demo sessions use VRTC token, real sessions use CR token
+    
+    // Get available tokens - prefer demo for testing, fall back to real
     const demoToken = sessionStorage.getItem('derivDemoToken');
     const realToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
-
-    console.log('Session mode:', sessionMode);
+    
     console.log('Available tokens - Demo:', !!demoToken, 'Real:', !!realToken);
-
-    let derivToken;
-    const isDemo = sessionMode?.toLowerCase()?.includes('demo');
-
-    if (isDemo) {
-      derivToken = demoToken;
-      if (!derivToken) {
-        console.error('No demo token found in sessionStorage');
-        toast.error('No DEMO trading account found. Please logout and login again.');
-        return;
-      }
-    } else {
-      derivToken = realToken;
-      if (!derivToken) {
-        console.error('No real token found in sessionStorage');
-        toast.error('No trading token found. Please logout and login again.');
-        return;
-      }
+    
+    // Use demo token if available (safer for testing), otherwise use real
+    const derivToken = demoToken || realToken;
+    
+    if (!derivToken) {
+      console.error('No tokens found in sessionStorage');
+      toast.error('No trading account found. Please logout and login again.');
+      return;
     }
-
-    console.log('Using token for session mode:', sessionMode, 'isDemo:', isDemo, 'Token exists:', !!derivToken);
-
+    
+    console.log('Using token:', demoToken ? 'DEMO' : 'REAL');
+    
     setAcceptingSession(true);
     try {
       await apiClient.post(`/user/sessions/${sessionId}/accept`, {
         tp,
         sl,
-        derivToken // Pass token for bot trading
+        derivToken
       });
       toast.success('Successfully joined session!');
       loadTradingData();
