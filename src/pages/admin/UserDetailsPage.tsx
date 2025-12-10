@@ -152,57 +152,30 @@ const UserDetailsPage: React.FC = () => {
             {/* Back Button */}
             <button
                 onClick={() => navigate('/admin/users')}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: '#9ca3af',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    marginBottom: '24px',
-                    fontSize: '14px'
-                }}
+                className="flex items-center gap-2 text-gray-400 bg-transparent border-none cursor-pointer mb-4 sm:mb-6 text-sm hover:text-white transition-colors"
             >
                 <ArrowLeft size={18} />
                 Back to Users
             </button>
 
             {/* User Header Card */}
-            <div className="admin-card" style={{ padding: '32px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{
-                            width: '80px',
-                            height: '80px',
-                            borderRadius: '20px',
-                            background: user.is_admin
-                                ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)'
-                                : 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '28px',
-                            fontWeight: 700,
-                            color: 'white'
-                        }}>
+            <div className="admin-card p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
+                    <div className="flex items-center gap-3 sm:gap-5">
+                        <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-3xl font-bold text-white ${user.is_admin
+                            ? 'bg-gradient-to-br from-purple-500 to-purple-600'
+                            : 'bg-gradient-to-br from-blue-500 to-blue-600'
+                            }`}>
                             {(user.fullname || user.username || 'U').slice(0, 2).toUpperCase()}
                         </div>
                         <div>
-                            <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '4px' }}>
+                            <h2 className="text-lg sm:text-2xl font-bold mb-1">
                                 {user.fullname || user.username || 'Unknown User'}
                             </h2>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#9ca3af' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <code style={{
-                                        padding: '4px 8px',
-                                        borderRadius: '6px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        fontSize: '12px'
-                                    }}>
-                                        {user.deriv_id}
-                                    </code>
-                                </span>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-400">
+                                <code className="px-2 py-1 rounded bg-white/5 text-[10px] sm:text-xs">
+                                    {user.deriv_id}
+                                </code>
                                 <span className={`badge ${user.is_online ? 'badge-success' : 'badge-neutral'}`}>
                                     {user.is_online ? 'Online' : 'Offline'}
                                 </span>
@@ -213,46 +186,37 @@ const UserDetailsPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <button
-                            className={`btn ${user.is_admin ? 'btn-danger' : 'btn-primary'}`}
-                            onClick={toggleAdminRole}
-                        >
-                            {user.is_admin ? <ShieldOff size={18} /> : <Shield size={18} />}
-                            {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                        </button>
-                    </div>
+                    <button
+                        className={`btn w-full sm:w-auto text-sm ${user.is_admin ? 'btn-danger' : 'btn-primary'}`}
+                        onClick={toggleAdminRole}
+                    >
+                        {user.is_admin ? <ShieldOff size={16} /> : <Shield size={16} />}
+                        {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                    </button>
                 </div>
 
                 {/* User Info Grid */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                    gap: '24px',
-                    marginTop: '32px',
-                    paddingTop: '24px',
-                    borderTop: '1px solid rgba(255,255,255,0.08)'
-                }}>
-                    <InfoItem icon={<Mail />} label="Email" value={user.email || '-'} />
-                    <InfoItem icon={<Calendar />} label="Joined" value={formatDate(user.created_at)} />
-                    <InfoItem icon={<Clock />} label="Last Seen" value={formatTime(user.last_seen || '')} />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/10">
+                    <InfoItem icon={<Mail size={16} />} label="Email" value={user.email || '-'} />
+                    <InfoItem icon={<Calendar size={16} />} label="Joined" value={formatDate(user.created_at)} />
+                    <InfoItem icon={<Clock size={16} />} label="Last Seen" value={formatTime(user.last_seen || '')} />
                     <InfoItem
-                        icon={<TrendingUp />}
+                        icon={<TrendingUp size={16} />}
                         label="Performance Tier"
-                        value={<span style={{ textTransform: 'capitalize' }}>{user.performance_tier || 'Beginner'}</span>}
+                        value={<span className="capitalize">{user.performance_tier || 'Beginner'}</span>}
                     />
                 </div>
             </div>
 
             {/* Stats & Activity Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Stats */}
-                <div className="admin-card" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <BarChart2 size={20} style={{ color: '#3b82f6' }} />
+                <div className="admin-card p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
+                        <BarChart2 size={18} className="text-blue-500" />
                         Trading Stats
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                         <StatBox label="Total Trades" value={String(user.stats?.totalTrades || 0)} />
                         <StatBox label="Win Rate" value={`${(user.stats?.winRate || 0).toFixed(1)}%`} color={(user.stats?.winRate || 0) >= 50 ? '#10b981' : '#ef4444'} />
                         <StatBox label="Total Profit" value={formatCurrency(user.stats?.totalProfit || 0)} color={(user.stats?.totalProfit || 0) >= 0 ? '#10b981' : '#ef4444'} />
@@ -261,37 +225,26 @@ const UserDetailsPage: React.FC = () => {
                 </div>
 
                 {/* Recent Activity */}
-                <div className="admin-card" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Activity size={20} style={{ color: '#8b5cf6' }} />
+                <div className="admin-card p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
+                        <Activity size={18} className="text-purple-500" />
                         Recent Activity
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="flex flex-col gap-2 sm:gap-3">
                         {user.recentActivity?.length === 0 ? (
-                            <p style={{ color: '#9ca3af', textAlign: 'center', padding: '20px' }}>No recent activity</p>
+                            <p className="text-gray-400 text-center py-5">No recent activity</p>
                         ) : (
                             user.recentActivity?.slice(0, 5).map((activity, i) => (
                                 <div
                                     key={i}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '12px',
-                                        padding: '12px',
-                                        borderRadius: '10px',
-                                        background: 'rgba(255,255,255,0.03)'
-                                    }}
+                                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03]"
                                 >
-                                    <div style={{
-                                        width: '8px',
-                                        height: '8px',
-                                        borderRadius: '50%',
-                                        background: activity.type === 'trade' ? '#3b82f6' :
-                                            activity.type === 'session' ? '#8b5cf6' :
-                                                '#10b981'
-                                    }} />
-                                    <span style={{ flex: 1, fontSize: '14px' }}>{activity.description}</span>
-                                    <span style={{ fontSize: '12px', color: '#9ca3af' }}>{formatTime(activity.timestamp)}</span>
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${activity.type === 'trade' ? 'bg-blue-500' :
+                                        activity.type === 'session' ? 'bg-purple-500' :
+                                            'bg-green-500'
+                                        }`} />
+                                    <span className="flex-1 text-xs sm:text-sm truncate">{activity.description}</span>
+                                    <span className="text-[10px] sm:text-xs text-gray-400 shrink-0">{formatTime(activity.timestamp)}</span>
                                 </div>
                             ))
                         )}
@@ -310,11 +263,11 @@ interface InfoItemProps {
 }
 
 const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value }) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{ color: '#9ca3af' }}>{icon}</div>
-        <div>
-            <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '2px' }}>{label}</div>
-            <div style={{ fontWeight: 500 }}>{value}</div>
+    <div className="flex items-center gap-2 sm:gap-3">
+        <div className="text-gray-400 shrink-0">{icon}</div>
+        <div className="min-w-0">
+            <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5">{label}</div>
+            <div className="font-medium text-xs sm:text-sm truncate">{value}</div>
         </div>
     </div>
 );
@@ -327,14 +280,9 @@ interface StatBoxProps {
 }
 
 const StatBox: React.FC<StatBoxProps> = ({ label, value, color }) => (
-    <div style={{
-        padding: '16px',
-        borderRadius: '12px',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.05)'
-    }}>
-        <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '8px' }}>{label}</div>
-        <div style={{ fontSize: '24px', fontWeight: 700, color: color || 'inherit' }}>{value}</div>
+    <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5">
+        <div className="text-[10px] sm:text-xs text-gray-400 mb-1 sm:mb-2">{label}</div>
+        <div className="text-base sm:text-2xl font-bold" style={{ color: color || 'inherit' }}>{value}</div>
     </div>
 );
 
