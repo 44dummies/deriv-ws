@@ -7,8 +7,8 @@ import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Activity, Settings, LogOut,
-    ChevronLeft, Bell, RefreshCw, Shield, BarChart3,
-    FileText, Menu, Sun, Moon
+    Bell, RefreshCw, Shield, BarChart3,
+    FileText, Sun, Moon
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import MobileNavigation from '../../components/layout/MobileNavigation';
@@ -25,7 +25,6 @@ const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { themeId, setTheme } = useTheme();
-    const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
     const isDarkMode = themeId !== 'light';
@@ -37,7 +36,7 @@ const AdminLayout: React.FC = () => {
     const userInitials = userName.slice(0, 2).toUpperCase();
 
     const mainNav: NavItem[] = [
-        { icon: <LayoutDashboard />, label: 'Dashboard', path: '/admin/dashboard' },
+        { icon: <LayoutDashboard />, label: 'Overview', path: '/admin/dashboard' },
         { icon: <Activity />, label: 'Sessions', path: '/admin/sessions' },
         { icon: <Users />, label: 'Users', path: '/admin/users' },
         { icon: <BarChart3 />, label: 'Analytics', path: '/admin/analytics' },
@@ -66,28 +65,82 @@ const AdminLayout: React.FC = () => {
     };
 
     return (
-        <div className={`admin-layout ${!isDarkMode ? 'light-theme' : ''}`}>
-            {/* Sidebar */}
-            <aside className={`admin-sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
+        <div className={`admin-layout sidebar-right ${!isDarkMode ? 'light-theme' : ''}`}>
+
+            {/* Liquid Background */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6]/15 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
+                <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-[#8b5cf6]/15 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style={{ animationDelay: '2s' }} />
+            </div>
+
+            {/* Main Content */}
+            <main className="admin-main">
+                {/* Header */}
+                <header className="admin-header glass-card border-x-0 border-t-0 rounded-none">
+                    <div className="header-left">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] flex items-center justify-center shadow-lg shadow-[#3b82f6]/30">
+                                <Shield size={22} className="text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                                    TraderMind
+                                </h1>
+                                <p className="text-xs text-gray-500 -mt-0.5">Admin Dashboard</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="header-right">
+                        {/* Theme Toggle */}
+                        <button
+                            className="header-btn glossy-btn"
+                            onClick={toggleTheme}
+                            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        >
+                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                        </button>
+                        <button
+                            className="header-btn glossy-btn has-notification"
+                            onClick={() => navigate('/admin/notifications')}
+                        >
+                            <Bell size={20} />
+                        </button>
+                        <button className="header-btn glossy-btn" onClick={() => window.location.reload()}>
+                            <RefreshCw size={20} />
+                        </button>
+                        <div className="system-status glass-card px-3 py-1.5 rounded-full hidden sm:flex">
+                            <span className="status-dot active"></span>
+                            <span className="status-text text-xs">System Online</span>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Content */}
+                <div className="admin-content pb-[80px] lg:pb-0">
+                    <Outlet />
+                </div>
+            </main>
+
+            {/* Sidebar - Right Side */}
+            <aside className={`admin-sidebar sidebar-right ${mobileOpen ? 'open' : ''}`}>
                 {/* Header */}
                 <div className="sidebar-header">
-                    <div className="sidebar-logo">
-                        <Shield />
-                    </div>
+                    <div className="user-avatar-large">{userInitials}</div>
                     <div className="sidebar-header-text">
-                        <h1>TraderMind</h1>
-                        <p>Admin Console</p>
+                        <h1>{userName}</h1>
+                        <p>Administrator</p>
                     </div>
                 </div>
 
                 {/* Navigation */}
                 <nav className="sidebar-nav">
                     <div className="nav-section">
-                        <div className="nav-section-title">Main Menu</div>
+                        <div className="nav-section-title">Navigation</div>
                         {mainNav.map((item) => (
                             <div
                                 key={item.path}
-                                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                                className={`nav-item glass-card-hover ${isActive(item.path) ? 'active' : ''}`}
                                 onClick={() => handleNavClick(item.path)}
                             >
                                 <span className="nav-icon">{item.icon}</span>
@@ -102,7 +155,7 @@ const AdminLayout: React.FC = () => {
                         {systemNav.map((item) => (
                             <div
                                 key={item.path}
-                                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                                className={`nav-item glass-card-hover ${isActive(item.path) ? 'active' : ''}`}
                                 onClick={() => handleNavClick(item.path)}
                             >
                                 <span className="nav-icon">{item.icon}</span>
@@ -112,78 +165,17 @@ const AdminLayout: React.FC = () => {
                     </div>
                 </nav>
 
-                {/* User Section */}
-                <div className="sidebar-user">
-                    <div className="user-avatar">{userInitials}</div>
-                    <div className="user-info">
-                        <p className="user-name">{userName}</p>
-                        <p className="user-role">Administrator</p>
-                    </div>
+                {/* Logout Button */}
+                <div className="sidebar-footer">
                     <button
-                        className="btn btn-icon btn-secondary"
+                        className="btn btn-logout glass-card w-full flex items-center justify-center gap-2 py-3 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-colors"
                         onClick={handleLogout}
-                        title="Logout"
-                        style={{ marginLeft: 'auto' }}
                     >
                         <LogOut size={18} />
+                        <span>Sign Out</span>
                     </button>
                 </div>
             </aside>
-
-            {/* Main Content */}
-            <main className="admin-main">
-                {/* Header */}
-                <header className="admin-header">
-                    <div className="header-left">
-                        <button
-                            className="toggle-sidebar"
-                            onClick={() => {
-                                if (window.innerWidth <= 1024) {
-                                    setMobileOpen(!mobileOpen);
-                                } else {
-                                    setCollapsed(!collapsed);
-                                }
-                            }}
-                        >
-                            {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-                        </button>
-                        <h1 className="page-title">
-                            {mainNav.find(n => isActive(n.path))?.label ||
-                                systemNav.find(n => isActive(n.path))?.label ||
-                                'Dashboard'}
-                        </h1>
-                    </div>
-
-                    <div className="header-right">
-                        {/* Theme Toggle */}
-                        <button
-                            className="header-btn"
-                            onClick={toggleTheme}
-                            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                        >
-                            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
-                        <button
-                            className="header-btn has-notification"
-                            onClick={() => navigate('/admin/notifications')}
-                        >
-                            <Bell size={20} />
-                        </button>
-                        <button className="header-btn" onClick={() => window.location.reload()}>
-                            <RefreshCw size={20} />
-                        </button>
-                        <div className="system-status">
-                            <span className="status-dot active"></span>
-                            <span className="status-text">System Online</span>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Content */}
-                <div className="admin-content pb-[80px] lg:pb-0">
-                    <Outlet />
-                </div>
-            </main>
 
             {/* Mobile Navigation */}
             <MobileNavigation
@@ -208,4 +200,5 @@ const AdminLayout: React.FC = () => {
 };
 
 export default AdminLayout;
+
 
