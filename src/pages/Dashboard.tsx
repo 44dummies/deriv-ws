@@ -588,7 +588,36 @@ const Dashboard = () => {
 
           setUserInfo(userData);
 
+          // Fetch all account balances from Deriv API immediately after auth
+          try {
+            const allBalancesRes = await websocketService.getAllBalances();
+            console.log('Initial all balances response:', allBalancesRes);
 
+            if (allBalancesRes.balance?.accounts) {
+              const accounts = allBalancesRes.balance.accounts;
+              let demoBalance = 0;
+              let realBalance = 0;
+
+              Object.entries(accounts).forEach(([loginid, accountData]: [string, any]) => {
+                console.log('Initial account:', loginid, accountData);
+                if (accountData.demo_account === 1 || loginid.startsWith('VRTC')) {
+                  demoBalance = accountData.balance || 0;
+                } else {
+                  realBalance = accountData.balance || 0;
+                }
+              });
+
+              setUserInfo(prev => prev ? {
+                ...prev,
+                demo_balance: demoBalance,
+                real_balance: realBalance
+              } : null);
+
+              console.log('Initial balances set - Demo:', demoBalance, 'Real:', realBalance);
+            }
+          } catch (balErr) {
+            console.error('Failed to fetch initial all balances:', balErr);
+          }
 
           if (supabaseService.isSupabaseConfigured() && !profileSynced.current && loginid) {
             profileSynced.current = true;
