@@ -1524,145 +1524,79 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Sidebar - Desktop Only */}
-        <aside
-          ref={sidebarRef}
-          className={`!hidden lg:!flex ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
-            } fixed z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex-col`}
-        >
-          { }
-          <div className="p-4 border-b border-white/10">
-            <div className="flex items-center gap-3 w-full">
-              <div
-                onClick={() => {
-                  if (window.innerWidth < 1024) {
-                    setMobileSidebarOpen(!mobileSidebarOpen);
-                  } else {
-                    setSidebarOpen(!sidebarOpen);
-                  }
-                }}
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white cursor-pointer hover:scale-105 transition-transform active:scale-95"
-                title={window.innerWidth >= 1024 ? "Toggle sidebar" : undefined}
-              >
-                T
-              </div>
-              {!sidebarCollapsed && <span className="font-semibold text-lg whitespace-nowrap hidden lg:inline">TraderMind</span>}
-              <span className="font-semibold text-lg whitespace-nowrap lg:hidden">TraderMind</span>
-            </div>
-          </div>
-
-          { }
-          {userInfo && (
-            <div className={`p-4 border-b border-white/10 ${sidebarCollapsed ? 'lg:text-center' : ''}`}>
-              { }
-              {(!sidebarCollapsed || window.innerWidth < 1024) && (
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-2xl">
-                      {getAvatarEmoji(userProfile?.profilePhoto)}
-                    </div>
-                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${derivWsConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{userProfile?.displayName || userInfo.fullname || 'Trader'}</p>
-                    { }
-                    <p className="text-xs text-gray-500 truncate">ID: {userInfo.loginid}</p>
-                  </div>
-                </div>
-              )}
-
-              {(!sidebarCollapsed || window.innerWidth < 1024) && (
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>{userInfo.is_virtual ? 'Demo' : 'Real'}</span>
-                  <span className="text-sm font-medium">{userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}</span>
-                </div>
-              )}
-
-              { }
-              {sidebarCollapsed && (
-                <div className="hidden lg:flex flex-col items-center">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-xl">
-                    {getAvatarEmoji(userProfile?.profilePhoto)}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  if (tab.navigateTo) {
-                    navigate(tab.navigateTo);
-                  } else {
-                    setActiveTab(tab.id);
-                    setMobileSidebarOpen(false);
-                  }
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === tab.id && !tab.navigateTo ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-2 border-[#ff3355]' : 'hover:bg-white/5 text-gray-400 hover:text-white'} ${sidebarCollapsed ? 'lg:justify-center' : ''}`}
-                title={sidebarCollapsed ? tab.label : undefined}
-              >
-                {tab.icon}
-                <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          <div className="p-4 border-t border-white/10">
-            <button onClick={handleLogout} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
-              <LogOut className="w-5 h-5" />
-              <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>Logout</span>
-            </button>
-          </div>
-
-          { }
-          <button
-            data-sidebar-toggle
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex absolute top-1/2 -right-3 w-6 h-6 rounded-full items-center justify-center shadow-lg hover:scale-110 transition-transform z-40"
-            style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-secondary)' }}
-          >
-            {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </aside>
+        {/* Desktop Sidebar completely removed - using horizontal tabs instead */}
 
         <main className="flex-1 overflow-auto min-h-screen transition-all duration-300 pb-[80px] lg:pb-0">
-          <div className="sticky top-0 z-20 flex items-center gap-2 sm:gap-4 p-2 sm:p-3 md:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-            <button
-              data-sidebar-toggle
-              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              className="hidden lg:flex w-10 h-10 rounded-xl items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white shrink-0"
-              title={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-sm sm:text-base md:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {/* Notification Bell */}
-              <NotificationBell socket={realtimeSocket.socket} />
+          {/* Header with branding and user info */}
+          <div className="sticky top-0 z-20 border-b border-white/5 bg-black/20 backdrop-blur-xl">
+            <div className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 md:p-4">
+              {/* Logo */}
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-sm sm:text-lg font-bold text-white">
+                  T
+                </div>
+                <span className="font-semibold text-sm sm:text-lg hidden sm:inline">TraderMind</span>
+              </div>
 
-              {/* Supabase Status - hidden on very small screens */}
-              {supabaseStatus === 'connected' && (
-                <div
-                  className="hidden xs:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs bg-green-500/20 text-green-500"
-                  title="Data synced to cloud"
+              <div className="flex-1 min-w-0" />
+
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Notification Bell */}
+                <NotificationBell socket={realtimeSocket.socket} />
+
+                {/* Supabase Status */}
+                {supabaseStatus === 'connected' && (
+                  <div
+                    className="hidden xs:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs bg-green-500/20 text-green-500"
+                    title="Data synced to cloud"
+                  >
+                    <Cloud className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  </div>
+                )}
+
+                {/* User Info */}
+                {userInfo && (
+                  <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5">
+                    <span className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
+                      {userInfo.is_virtual ? 'Demo' : 'Real'}
+                    </span>
+                    <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* Logout button - desktop only */}
+                <button
+                  onClick={handleLogout}
+                  className="hidden lg:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors text-xs sm:text-sm"
                 >
-                  <Cloud className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                </div>
-              )}
-              {userInfo && (
-                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg bg-white/5">
-                  <span className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
-                    {userInfo.is_virtual ? 'D' : 'R'}
-                  </span>
-                  <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
-                </div>
-              )}
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden xl:inline">Logout</span>
+                </button>
+              </div>
             </div>
+
+            {/* Horizontal Tab Bar - Desktop Only */}
+            <nav className="hidden lg:flex items-center gap-1 px-4 pb-2 overflow-x-auto">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    if (tab.navigateTo) {
+                      navigate(tab.navigateTo);
+                    } else {
+                      setActiveTab(tab.id);
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm font-medium ${activeTab === tab.id && !tab.navigateTo
+                      ? 'bg-gradient-to-r from-[#ff3355]/20 to-[#ff8042]/10 text-[#ff5f6d] border border-[#ff3355]/30'
+                      : 'hover:bg-white/5 text-gray-400 hover:text-white'
+                    }`}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
 
           <div className="p-2 sm:p-3 md:p-6">
