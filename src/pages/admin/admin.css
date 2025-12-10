@@ -51,6 +51,34 @@
   z-index: 0;
 }
 
+/* Header - Mobile First */
+.admin-header {
+  background: rgba(10, 10, 15, 0.8);
+  border-bottom: 1px solid var(--admin-border);
+  backdrop-filter: blur(20px);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .admin-header {
+    padding: 16px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-header {
+    padding: 16px 32px;
+  }
+}
+
 /* Sidebar */
 .admin-sidebar {
   width: var(--sidebar-width);
@@ -354,20 +382,6 @@
   margin-left: var(--sidebar-collapsed);
 }
 
-/* Header */
-.admin-header {
-  position: sticky;
-  top: 0;
-  background: rgba(10, 10, 15, 0.8);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--admin-border);
-  padding: 16px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  z-index: 50;
-}
-
 .header-left {
   display: flex;
   align-items: center;
@@ -402,7 +416,14 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .header-right {
+    gap: 12px;
+  }
 }
 
 .header-btn {
@@ -466,18 +487,52 @@
   color: var(--admin-text-muted);
 }
 
-/* Content Area */
+/* Content - Mobile First */
 .admin-content {
-  padding: 32px;
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
-/* Cards */
+/* Tablet and up */
+@media (min-width: 768px) {
+  .admin-content {
+    padding: 24px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+  .admin-content {
+    padding: 32px;
+  }
+}
+
+/* Cards - Mobile First */
 .admin-card {
   background: var(--admin-card);
   border: 1px solid var(--admin-border);
-  border-radius: 16px;
-  backdrop-filter: blur(20px);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 768px) {
+  .admin-card {
+    border-radius: 16px;
+    padding: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-card {
+    padding: 24px;
+  }
 }
 
 .admin-card:hover {
@@ -837,10 +892,6 @@
 }
 
 @media (max-width: 640px) {
-  .admin-content {
-    padding: 16px;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -1054,11 +1105,6 @@
 @media (max-width: 768px) {
 
   /* Fix main content area */
-  .admin-content {
-    padding: 12px;
-    overflow-x: hidden;
-  }
-
   /* Fix header overflow */
   .admin-header {
     padding: 12px 16px;
