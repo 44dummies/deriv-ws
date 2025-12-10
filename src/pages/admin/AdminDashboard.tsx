@@ -258,87 +258,46 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Recent Sessions */}
                 <div className="admin-card card-responsive lg:col-span-2">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                        <h3 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <BarChart2 size={20} style={{ color: '#3b82f6' }} />
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 sm:mb-5">
+                        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+                            <BarChart2 size={18} className="text-blue-500" />
                             Recent Sessions
                         </h3>
                         <button
                             onClick={() => navigate('/admin/sessions')}
-                            style={{
-                                color: '#3b82f6',
-                                fontSize: '14px',
-                                fontWeight: 500,
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                            }}
+                            className="text-blue-500 text-sm font-medium bg-transparent border-none cursor-pointer flex items-center gap-1 hover:text-blue-400 transition-colors"
                         >
-                            View All <ArrowUpRight size={16} />
+                            View All <ArrowUpRight size={14} />
                         </button>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="flex flex-col gap-2 sm:gap-3">
                         {sessions.length === 0 ? (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '40px',
-                                color: '#9ca3af'
-                            }}>
-                                <Activity size={40} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                                <p>No sessions yet</p>
+                            <div className="text-center py-8 sm:py-10 text-gray-400">
+                                <Activity size={36} className="mx-auto mb-4 opacity-30" />
+                                <p className="text-sm">No sessions yet</p>
                             </div>
                         ) : (
                             sessions.map(session => (
                                 <div
                                     key={session.id}
                                     onClick={() => navigate(`/admin/sessions/${session.id}`)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        padding: '16px',
-                                        borderRadius: '12px',
-                                        background: 'rgba(255,255,255,0.03)',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseOver={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                                    }}
-                                    onMouseOut={(e) => {
-                                        e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-                                    }}
+                                    className="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5 cursor-pointer hover:bg-white/[0.06] hover:border-white/10 transition-all"
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                                        <div style={{
-                                            width: '4px',
-                                            height: '40px',
-                                            borderRadius: '2px',
-                                            background: session.status === 'running' ? '#10b981' : '#374151'
-                                        }} />
-                                        <div>
-                                            <h4 style={{ fontWeight: 600, marginBottom: '4px' }}>{session.name}</h4>
-                                            <p style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-1 h-8 sm:h-10 rounded-sm ${session.status === 'running' ? 'bg-green-500' : 'bg-gray-600'}`} />
+                                        <div className="min-w-0">
+                                            <h4 className="font-semibold text-sm sm:text-base truncate">{session.name}</h4>
+                                            <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide">
                                                 {session.type || 'Standard'} • {session.trade_count || 0} trades
                                             </p>
                                         </div>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span style={{
-                                            fontFamily: 'monospace',
-                                            fontWeight: 700,
-                                            color: (session.current_pnl || 0) >= 0 ? '#10b981' : '#ef4444'
-                                        }}>
+                                    <div className="text-right shrink-0 ml-2">
+                                        <span className={`font-mono font-bold text-sm sm:text-base ${(session.current_pnl || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                             {formatCurrency(session.current_pnl)}
                                         </span>
-                                        <span className={`badge ${session.status === 'running' ? 'badge-success' : 'badge-neutral'}`} style={{ display: 'block', marginTop: '4px' }}>
+                                        <span className={`badge block mt-1 text-[10px] ${session.status === 'running' ? 'badge-success' : 'badge-neutral'}`}>
                                             {session.status}
                                         </span>
                                     </div>
@@ -348,31 +307,9 @@ const AdminDashboard: React.FC = () => {
 
                         <button
                             onClick={() => navigate('/admin/sessions/new')}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                padding: '16px',
-                                borderRadius: '12px',
-                                border: '1px dashed rgba(255,255,255,0.1)',
-                                background: 'transparent',
-                                color: '#9ca3af',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-                                e.currentTarget.style.color = '#fff';
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                                e.currentTarget.style.color = '#9ca3af';
-                                e.currentTarget.style.background = 'transparent';
-                            }}
+                            className="flex items-center justify-center gap-2 p-3 sm:p-4 rounded-lg sm:rounded-xl border border-dashed border-white/10 bg-transparent text-gray-400 cursor-pointer hover:border-white/20 hover:text-white hover:bg-white/[0.03] transition-all text-sm"
                         >
-                            <Plus size={20} />
+                            <Plus size={18} />
                             Create New Session
                         </button>
                     </div>
@@ -380,12 +317,12 @@ const AdminDashboard: React.FC = () => {
 
                 {/* Quick Actions */}
                 <div className="admin-card card-responsive">
-                    <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Zap size={20} style={{ color: '#8b5cf6' }} />
+                    <h3 className="text-base sm:text-lg font-semibold mb-4 sm:mb-5 flex items-center gap-2">
+                        <Zap size={18} className="text-purple-500" />
                         Quick Actions
                     </h3>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div className="flex flex-col gap-2 sm:gap-3">
                         <QuickAction
                             label="Create Session"
                             description="Start a new trading session"
@@ -461,29 +398,10 @@ interface QuickActionProps {
 const QuickAction: React.FC<QuickActionProps> = ({ label, description, onClick }) => (
     <button
         onClick={onClick}
-        style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            padding: '16px',
-            borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.05)',
-            background: 'rgba(255,255,255,0.03)',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            textAlign: 'left'
-        }}
-        onMouseOver={(e) => {
-            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
-        }}
-        onMouseOut={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
-        }}
+        className="flex flex-col items-start p-3 sm:p-4 rounded-lg sm:rounded-xl border border-white/5 bg-white/[0.03] cursor-pointer transition-all text-left hover:bg-blue-500/10 hover:border-blue-500/30"
     >
-        <span style={{ color: '#fff', fontWeight: 600, fontSize: '14px' }}>{label}</span>
-        <span style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>{description}</span>
+        <span className="text-white font-semibold text-sm">{label}</span>
+        <span className="text-gray-400 text-xs mt-1">{description}</span>
     </button>
 );
 
