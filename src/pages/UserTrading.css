@@ -315,6 +315,22 @@
   .user-content {
     grid-template-columns: 1fr;
     padding: 1rem;
+    gap: 1rem;
+  }
+
+  .header-content {
+    padding: 0 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .header-left h1 {
+    font-size: 1.25rem;
+  }
+
+  .balance-display {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
   }
 
   .session-item {
@@ -325,5 +341,125 @@
 
   .btn-accept {
     width: 100%;
+  }
+
+  /* Cards mobile */
+  .status-card,
+  .tpsl-card,
+  .sessions-card,
+  .active-session-card {
+    padding: 1rem;
+    border-radius: 0.75rem;
+  }
+
+  .status-card h2,
+  .tpsl-card h2,
+  .sessions-card h2,
+  .active-session-card h2 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Status badge mobile */
+  .status-badge {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Session stats mobile */
+  .session-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-item {
+    padding: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+  }
+
+  /* Input groups mobile */
+  .input-group input {
+    padding: 0.625rem 0.75rem;
+    font-size: 16px;
+    /* Prevent zoom on iOS */
+  }
+
+  .btn-primary {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Empty state mobile */
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Session details mobile */
+  .session-details h3 {
+    font-size: 0.875rem;
+  }
+
+  .session-details p {
+    font-size: 0.75rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 400px) {
+  .user-content {
+    padding: 0.75rem;
+  }
+
+  .header-content {
+    padding: 0 0.75rem;
+  }
+
+  .header-left h1 {
+    font-size: 1rem;
+  }
+
+  .status-card,
+  .tpsl-card,
+  .sessions-card,
+  .active-session-card {
+    padding: 0.75rem;
+  }
+
+  .session-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .stat-value {
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+  }
+}
+
+/* Touch-friendly targets */
+@media (pointer: coarse) {
+
+  .btn-accept,
+  .btn-primary {
+    min-height: 44px;
+  }
+
+  .input-group input {
+    min-height: 44px;
   }
 }

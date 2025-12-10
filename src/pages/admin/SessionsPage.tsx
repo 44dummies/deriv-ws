@@ -225,7 +225,7 @@ const SessionsPage: React.FC = () => {
             </div>
 
             {/* Sessions Table */}
-            <div className="admin-card" style={{ overflow: 'hidden' }}>
+            <div className="admin-card admin-table-container">
                 {filteredSessions.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
                         <Activity size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />

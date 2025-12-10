@@ -157,24 +157,24 @@ const AdminDashboard: React.FC = () => {
             />
 
             {/* Wallet Overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                <div className="admin-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                <div className="admin-card card-responsive flex items-center justify-between" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
                     <div>
-                        <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>Real Balance</p>
-                        <h3 style={{ fontSize: '28px', fontWeight: 700, color: '#fff' }}>{formatCurrency(balances.real)}</h3>
+                        <p className="text-gray-400 text-sm mb-1">Real Balance</p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-white">{formatCurrency(balances.real)}</h3>
                     </div>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
-                        <Wallet size={24} />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-blue-500" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
+                        <Wallet className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                 </div>
 
-                <div className="admin-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                <div className="admin-card card-responsive flex items-center justify-between" style={{ background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
                     <div>
-                        <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '4px' }}>Demo Balance</p>
-                        <h3 style={{ fontSize: '28px', fontWeight: 700, color: '#f59e0b' }}>{formatCurrency(balances.demo)}</h3>
+                        <p className="text-gray-400 text-sm mb-1">Demo Balance</p>
+                        <h3 className="text-xl sm:text-2xl font-bold text-amber-500">{formatCurrency(balances.demo)}</h3>
                     </div>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
-                        <CreditCard size={24} />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center text-amber-500" style={{ background: 'rgba(245, 158, 11, 0.2)' }}>
+                        <CreditCard className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                 </div>
             </div>
@@ -255,9 +255,9 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Sessions & Quick Actions Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Recent Sessions */}
-                <div className="admin-card" style={{ padding: '24px' }}>
+                <div className="admin-card card-responsive lg:col-span-2">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <BarChart2 size={20} style={{ color: '#3b82f6' }} />
@@ -379,7 +379,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="admin-card" style={{ padding: '24px' }}>
+                <div className="admin-card card-responsive">
                     <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <Zap size={20} style={{ color: '#8b5cf6' }} />
                         Quick Actions

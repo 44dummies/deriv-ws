@@ -1373,7 +1373,7 @@ const Dashboard = () => {
   const handleAcceptSession = async (sessionId) => {
     setAcceptingSession(true);
     try {
-      await apiClient.post('/user/sessions/accept', { sessionId, tp, sl });
+      await apiClient.post(`/user/sessions/${sessionId}/accept`, { tp, sl });
       toast.success('Successfully joined session!');
       loadTradingData();
     } catch (error) {
@@ -1388,9 +1388,7 @@ const Dashboard = () => {
       return;
     }
     try {
-      await apiClient.post('/user/sessions/leave', {
-        sessionId: currentSession?.sessionId
-      });
+      await apiClient.post(`/user/sessions/${currentSession?.sessionId}/leave`, {});
       toast.success('Left session');
       loadTradingData();
     } catch (error) {
@@ -1622,7 +1620,7 @@ const Dashboard = () => {
         </aside>
 
         { }
-        <main className={`flex-1 overflow-auto min-h-screen transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-0'}`}>
+        <main className="flex-1 overflow-auto min-h-screen transition-all duration-300">
           { }
           <div className="sticky top-0 z-20 flex items-center gap-4 p-3 sm:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
             { }
@@ -1709,7 +1707,7 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   {/* Dual Balance Display */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <StatCard
@@ -1956,7 +1954,7 @@ const Dashboard = () => {
             {activeTab === 'analytics' && (
               <div className="space-y-4 sm:space-y-6">
                 <div><h1 className="text-xl sm:text-2xl font-bold">Analytics</h1><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your trading performance overview</p></div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Trades" value={analytics.totalTrades} trend="" color="from-blue-500 to-cyan-500" />
                   <StatCard icon={<Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-green-500 to-emerald-500" />
                   <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Profit" value={(analytics.totalProfit ?? 0).toFixed(2)} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
@@ -2165,7 +2163,7 @@ const Dashboard = () => {
                         <Scale className="w-5 h-5 text-blue-500" />
                         Risk Management
                       </h3>
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <div className="p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
                           <p className="text-xl sm:text-2xl font-bold">{(fullAnalytics.riskAnalysis.avgRiskPercent ?? 0).toFixed(1)}%</p>
                           <p className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Avg Risk/Trade</p>

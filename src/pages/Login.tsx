@@ -94,62 +94,62 @@ const Login: React.FC = () => {
                 </div>
             </nav>
 
-            <section className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-32">
-                <div className="grid lg:grid-cols-2 gap-16 items-center">
-                    <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm">
-                            <Sparkles className="w-4 h-4 text-[#ff5f6d]" />
+            <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-16 sm:pb-32">
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+                    <div className="space-y-6 sm:space-y-8">
+                        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm">
+                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#ff5f6d]" />
                             <span className="text-gray-400">Trusted by 50,000+ traders worldwide</span>
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
+                        <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold leading-tight">
                             <span className="block">Your Trading</span>
                             <span className="block bg-gradient-to-r from-[#ff3355] via-[#ff5f6d] to-[#ff8042] bg-clip-text text-transparent">
                                 Command Center
                             </span>
                         </h1>
 
-                        <p className="text-xl text-gray-400 max-w-lg leading-relaxed">
+                        <p className="text-base sm:text-xl text-gray-400 max-w-lg leading-relaxed">
                             Advanced analytics, real-time sync with Deriv, digit analysis, and a powerful trading journal.
                             Everything you need to become a better trader.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                             <button
                                 onClick={handleLogin}
-                                className="group flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-semibold text-lg hover:opacity-90 transition-all shadow-lg shadow-[#ff3355]/20"
+                                className="group flex items-center justify-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-semibold text-base sm:text-lg hover:opacity-90 transition-all shadow-lg shadow-[#ff3355]/20"
                             >
-                                <Shield className="w-5 h-5" />
+                                <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
                                 Connect with Deriv
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                             </button>
                             <a
                                 href="#features"
-                                className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-medium"
+                                className="flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-medium text-sm sm:text-base"
                             >
                                 Explore Features
                             </a>
                         </div>
 
-                        <div className="flex items-center gap-6 pt-4">
-                            <div className="flex -space-x-3">
+                        <div className="flex items-center gap-4 sm:gap-6 pt-2 sm:pt-4">
+                            <div className="flex -space-x-2 sm:-space-x-3">
                                 {['🎯', '👑', '🚀', '💎'].map((emoji, i) => (
-                                    <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 border-2 border-[#0a0a0a] flex items-center justify-center text-lg">
+                                    <div key={i} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-white/10 to-white/5 border-2 border-[#0a0a0a] flex items-center justify-center text-sm sm:text-lg">
                                         {emoji}
                                     </div>
                                 ))}
                             </div>
                             <div>
-                                <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
+                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                    {[1, 2, 3, 4, 5].map(i => <Star key={i} className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />)}
                                 </div>
-                                <p className="text-sm text-gray-400 mt-1">Rated 4.9/5 by traders</p>
+                                <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">Rated 4.9/5 by traders</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Dashboard Preview */}
-                    <div className="relative lg:block hidden">
+                    {/* Dashboard Preview - hidden on mobile */}
+                    <div className="relative hidden lg:block">
                         <div className="absolute inset-0 bg-gradient-to-br from-[#ff3355]/20 to-[#5d5dff]/20 rounded-3xl blur-3xl" />
                         <div className="relative rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl p-8 shadow-2xl">
                             <div className="flex items-center justify-between mb-6">
@@ -197,73 +197,73 @@ const Login: React.FC = () => {
             </section>
 
             <section id="stats" className="relative z-10 border-y border-white/5 bg-white/[0.02]">
-                <div className="max-w-7xl mx-auto px-6 py-16">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
                         {stats.map((stat, i) => (
                             <div key={i} className="text-center">
-                                <p className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#ff3355] to-[#ff8042] bg-clip-text text-transparent">
+                                <p className="text-2xl sm:text-4xl md:text-5xl font-bold bg-gradient-to-r from-[#ff3355] to-[#ff8042] bg-clip-text text-transparent">
                                     {stat.value}
                                 </p>
-                                <p className="text-gray-400 mt-2">{stat.label}</p>
+                                <p className="text-xs sm:text-sm text-gray-400 mt-1 sm:mt-2">{stat.label}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            <section id="features" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <section id="features" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-24">
+                <div className="text-center mb-8 sm:mb-16">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 sm:mb-4">
                         Everything You Need to
                         <span className="bg-gradient-to-r from-[#ff3355] to-[#ff8042] bg-clip-text text-transparent"> Trade Smarter</span>
                     </h2>
-                    <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                    <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto px-4">
                         Powerful tools designed to give you an edge in the markets
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {features.map((feature, i) => (
                         <div
                             key={i}
-                            className="group p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all duration-300"
+                            className="group p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all duration-300"
                         >
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff3355]/20 to-[#ff8042]/20 flex items-center justify-center text-[#ff5f6d] mb-4 group-hover:scale-110 transition-transform">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#ff3355]/20 to-[#ff8042]/20 flex items-center justify-center text-[#ff5f6d] mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
                                 {feature.icon}
                             </div>
-                            <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-                            <p className="text-gray-400 leading-relaxed">{feature.description}</p>
+                            <h3 className="text-base sm:text-xl font-semibold mb-1.5 sm:mb-2">{feature.title}</h3>
+                            <p className="text-sm text-gray-400 leading-relaxed">{feature.description}</p>
                         </div>
                     ))}
                 </div>
             </section>
 
-            <section id="testimonials" className="relative z-10 max-w-7xl mx-auto px-6 py-24">
-                <div className="text-center mb-16">
-                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <section id="testimonials" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-24">
+                <div className="text-center mb-8 sm:mb-16">
+                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-3 sm:mb-4">
                         Loved by
                         <span className="bg-gradient-to-r from-[#ff3355] to-[#ff8042] bg-clip-text text-transparent"> Traders</span>
                     </h2>
-                    <p className="text-gray-400 text-lg">See what our community has to say</p>
+                    <p className="text-gray-400 text-sm sm:text-lg">See what our community has to say</p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                     {testimonials.map((testimonial, i) => (
                         <div
                             key={i}
-                            className="p-6 rounded-2xl border border-white/10 bg-white/[0.02]"
+                            className="p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/10 bg-white/[0.02]"
                         >
-                            <div className="flex items-center gap-1 mb-4">
-                                {[1, 2, 3, 4, 5].map(j => <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />)}
+                            <div className="flex items-center gap-0.5 sm:gap-1 mb-3 sm:mb-4">
+                                {[1, 2, 3, 4, 5].map(j => <Star key={j} className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />)}
                             </div>
-                            <p className="text-gray-300 mb-6 leading-relaxed">"{testimonial.content}"</p>
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-2xl">
+                            <p className="text-sm sm:text-base text-gray-300 mb-4 sm:mb-6 leading-relaxed">"{testimonial.content}"</p>
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center text-xl sm:text-2xl">
                                     {testimonial.avatar}
                                 </div>
                                 <div>
-                                    <p className="font-medium">{testimonial.name}</p>
-                                    <p className="text-sm text-gray-400">{testimonial.role}</p>
+                                    <p className="text-sm sm:text-base font-medium">{testimonial.name}</p>
+                                    <p className="text-xs sm:text-sm text-gray-400">{testimonial.role}</p>
                                 </div>
                             </div>
                         </div>
@@ -271,25 +271,25 @@ const Login: React.FC = () => {
                 </div>
             </section>
 
-            <section className="relative z-10 max-w-7xl mx-auto px-6 py-24">
-                <div className="relative rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-12 md:p-16 text-center overflow-hidden">
-                    <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[#ff3355]/20 blur-[100px]" />
-                    <div className="absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-[#5d5dff]/20 blur-[100px]" />
+            <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-24">
+                <div className="relative rounded-2xl sm:rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.05] to-transparent p-6 sm:p-12 md:p-16 text-center overflow-hidden">
+                    <div className="absolute -top-20 -right-20 h-40 sm:h-80 w-40 sm:w-80 rounded-full bg-[#ff3355]/20 blur-[60px] sm:blur-[100px]" />
+                    <div className="absolute -bottom-20 -left-20 h-40 sm:h-80 w-40 sm:w-80 rounded-full bg-[#5d5dff]/20 blur-[60px] sm:blur-[100px]" />
 
                     <div className="relative z-10">
-                        <h2 className="text-3xl md:text-5xl font-bold mb-6">
+                        <h2 className="text-xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6">
                             Ready to Transform Your Trading?
                         </h2>
-                        <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-8">
+                        <p className="text-gray-400 text-sm sm:text-lg max-w-2xl mx-auto mb-6 sm:mb-8 px-2">
                             Join thousands of traders who use TraderMind to analyze, track, and improve their trading performance.
                         </p>
                         <button
                             onClick={handleLogin}
-                            className="group inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-semibold text-lg hover:opacity-90 transition-all shadow-lg shadow-[#ff3355]/20"
+                            className="group inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-10 py-3 sm:py-5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-semibold text-base sm:text-lg hover:opacity-90 transition-all shadow-lg shadow-[#ff3355]/20"
                         >
-                            <Zap className="w-5 h-5" />
+                            <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                             Get Started Now
-                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
                 </div>

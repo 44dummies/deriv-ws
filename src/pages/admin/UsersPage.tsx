@@ -173,7 +173,7 @@ const UsersPage: React.FC = () => {
             </div>
 
             {/* Users Table */}
-            <div className="admin-card" style={{ overflow: 'hidden' }}>
+            <div className="admin-card admin-table-container">
                 {filteredUsers.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
                         <User size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
