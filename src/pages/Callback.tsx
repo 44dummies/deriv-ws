@@ -36,6 +36,7 @@ const Callback = () => {
         }
 
         console.log('Received accounts:', accounts.length);
+        console.log('All accounts:', accounts.map(a => ({ account: a.account, hasToken: !!a.token })));
 
         if (accounts.length === 0) {
           console.error('No accounts in callback. URL params:', window.location.search);
@@ -45,7 +46,7 @@ const Callback = () => {
         }
 
         const primaryAccount = accounts[0];
-        console.log('Using account:', primaryAccount.account);
+        console.log('Using account:', primaryAccount.account, 'Has token:', !!primaryAccount.token);
 
         TokenService.setTokens({
           account: primaryAccount.account,
