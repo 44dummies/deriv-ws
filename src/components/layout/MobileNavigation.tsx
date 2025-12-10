@@ -24,22 +24,35 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ items, onMoreClick 
         const isPathActive = item.path ? (location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) : false;
         const isActive = item.isActive !== undefined ? item.isActive : isPathActive;
 
-        const commonClasses = `
-      flex flex-col items-center justify-center w-full h-full space-y-1
-      ${isActive ? 'text-[var(--theme-primary)]' : 'text-gray-400'}
-      active:scale-95 transition-transform bg-transparent border-none p-0 cursor-pointer text-decoration-none
-    `;
+        // Premium Active/Inactive Styles
+        const baseClasses = "flex flex-col items-center justify-center w-full h-full transition-all duration-300 relative group";
+        const activeClasses = "text-[var(--theme-primary)] scale-105";
+        const inactiveClasses = "text-gray-400 hover:text-gray-200";
 
-        const icon = React.cloneElement(item.icon as React.ReactElement, { size: 20 });
-        const label = <span className="text-[10px] font-medium">{item.label}</span>;
+        const icon = React.cloneElement(item.icon as React.ReactElement, {
+            size: 24, // Larger icon
+            className: `transition-all duration-300 ${isActive ? 'drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]' : ''}`
+        } as any);
+
+        const label = (
+            <span className={`text-[11px] font-medium mt-1 ${isActive ? 'font-bold' : ''}`}>
+                {item.label}
+            </span>
+        );
+
+        // Active Indicator Dot
+        const indicator = isActive && (
+            <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-primary)]" />
+        );
 
         if (item.path && !item.onClick) {
             return (
                 <NavLink
                     key={item.label}
                     to={item.path}
-                    className={commonClasses}
+                    className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
                 >
+                    {indicator}
                     {icon}
                     {label}
                 </NavLink>
@@ -50,9 +63,10 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ items, onMoreClick 
             <button
                 key={item.label}
                 onClick={item.onClick || (() => { })}
-                className={commonClasses}
+                className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
                 type="button"
             >
+                {indicator}
                 {icon}
                 {label}
             </button>
@@ -60,18 +74,21 @@ const MobileNavigation: React.FC<MobileNavigationProps> = ({ items, onMoreClick 
     };
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-[60] bg-[var(--theme-bg)] border-t border-[var(--theme-border)] md:hidden">
-            <div className="flex justify-around items-center h-16 pb-[env(safe-area-inset-bottom)]">
+        <div className="fixed bottom-0 left-0 right-0 z-[100] lg:hidden">
+            {/* Glassmorphism Background Container */}
+            <div className="absolute inset-0 bg-[#0e1621]/90 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]" />
+
+            <div className="relative flex justify-around items-center h-[72px] pb-[env(safe-area-inset-bottom)] max-w-lg mx-auto">
                 {mainItems.map(renderItem)}
 
                 {hasMore && (
                     <button
                         onClick={onMoreClick}
-                        className="flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-400 active:scale-95 transition-transform bg-transparent border-none p-0 cursor-pointer"
+                        className="flex flex-col items-center justify-center w-full h-full text-gray-400 hover:text-white transition-all duration-300 active:scale-95"
                         type="button"
                     >
-                        <MoreHorizontal size={20} />
-                        <span className="text-[10px] font-medium">More</span>
+                        <MoreHorizontal size={24} />
+                        <span className="text-[11px] font-medium mt-1">More</span>
                     </button>
                 )}
             </div>

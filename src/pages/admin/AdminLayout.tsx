@@ -180,7 +180,7 @@ const AdminLayout: React.FC = () => {
                 </header>
 
                 {/* Content */}
-                <div className="admin-content pb-20 md:pb-0">
+                <div className="admin-content pb-[80px] lg:pb-0">
                     <Outlet />
                 </div>
             </main>
