@@ -1455,9 +1455,21 @@ const Dashboard = () => {
       toast.error('Cannot join session: Invalid session ID');
       return;
     }
+
+    // Get user's Deriv token from sessionStorage
+    const derivToken = sessionStorage.getItem('derivToken');
+    if (!derivToken) {
+      toast.error('No trading token found. Please login again.');
+      return;
+    }
+
     setAcceptingSession(true);
     try {
-      await apiClient.post(`/user/sessions/${sessionId}/accept`, { tp, sl });
+      await apiClient.post(`/user/sessions/${sessionId}/accept`, {
+        tp,
+        sl,
+        derivToken // Pass token for bot trading
+      });
       toast.success('Successfully joined session!');
       loadTradingData();
     } catch (error) {
