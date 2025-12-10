@@ -1899,47 +1899,53 @@ const Dashboard = () => {
                       <Card>
                         <h3 className="text-lg font-medium mb-4">Available Sessions</h3>
                         <div className="space-y-3">
-                          {availableSessions.map(session => (
-                            <div
-                              key={session.id}
-                              className="p-4 rounded-xl border"
-                              style={{ backgroundColor: 'var(--accent-bg)', borderColor: 'var(--card-border)' }}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <h4 className="font-medium">{session.name}</h4>
-                                <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 capitalize">
-                                  {session.type}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-3 gap-2 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-                                <div>
-                                  <span className="block text-xs">Min Balance</span>
-                                  <span style={{ color: 'var(--text-primary)' }}>${session.min_balance}</span>
-                                </div>
-                                <div>
-                                  <span className="block text-xs">Default TP</span>
-                                  <span className="text-green-400">${session.default_tp}</span>
-                                </div>
-                                <div>
-                                  <span className="block text-xs">Default SL</span>
-                                  <span className="text-red-400">${session.default_sl}</span>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleAcceptSession(session.id)}
-                                disabled={acceptingSession || session.hasJoined}
-                                className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                          {availableSessions.map(session => {
+                            // Support both formats: direct fields or nested trading_sessions
+                            const sessionId = session.id || session.session_id;
+                            const sessionDetails = session.trading_sessions || session;
+
+                            return (
+                              <div
+                                key={sessionId}
+                                className="p-4 rounded-xl border"
+                                style={{ backgroundColor: 'var(--accent-bg)', borderColor: 'var(--card-border)' }}
                               >
-                                {session.hasJoined ? (
-                                  <>✓ Already Joined</>
-                                ) : acceptingSession ? (
-                                  'Joining...'
-                                ) : (
-                                  <>✓ Accept Trading Session</>
-                                )}
-                              </button>
-                            </div>
-                          ))}
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="font-medium">{sessionDetails.name}</h4>
+                                  <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 capitalize">
+                                    {sessionDetails.type}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                                  <div>
+                                    <span className="block text-xs">Min Balance</span>
+                                    <span style={{ color: 'var(--text-primary)' }}>${sessionDetails.min_balance}</span>
+                                  </div>
+                                  <div>
+                                    <span className="block text-xs">Default TP</span>
+                                    <span className="text-green-400">${sessionDetails.default_tp}</span>
+                                  </div>
+                                  <div>
+                                    <span className="block text-xs">Default SL</span>
+                                    <span className="text-red-400">${sessionDetails.default_sl}</span>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleAcceptSession(sessionId)}
+                                  disabled={acceptingSession || session.hasJoined}
+                                  className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                  {session.hasJoined ? (
+                                    <>✓ Already Joined</>
+                                  ) : acceptingSession ? (
+                                    'Joining...'
+                                  ) : (
+                                    <>✓ Accept Trading Session</>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </Card>
                     )}
