@@ -560,38 +560,41 @@ const Dashboard = () => {
 
           console.log('Extracted loginid:', loginid);
 
-          // Extract demo and real balances from account_list
-          const accountList = authResponse.authorize.account_list || [];
-          const demoAccount = accountList.find((a: any) => a.is_virtual === 1);
-          const realAccount = accountList.find((a: any) => a.is_virtual === 0);
+          // Current account balance - set demo or real based on account type
+          const currentBalance = authResponse.authorize.balance || 0;
+          const isDemo = authResponse.authorize.is_virtual === 1;
 
           const userData = {
-            balance: authResponse.authorize.balance,
+            balance: currentBalance,
             currency: authResponse.authorize.currency,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
             loginid: loginid,
-            is_virtual: authResponse.authorize.is_virtual === 1,
-            // Set demo and real balances from account list
-            demo_balance: demoAccount?.balance || (authResponse.authorize.is_virtual === 1 ? authResponse.authorize.balance : 0),
-            real_balance: realAccount?.balance || (authResponse.authorize.is_virtual === 0 ? authResponse.authorize.balance : 0),
+            is_virtual: isDemo,
+            // Set the appropriate balance based on current account type
+            demo_balance: isDemo ? currentBalance : 0,
+            real_balance: isDemo ? 0 : currentBalance,
           };
 
           console.log('Auth response data:', {
             loginid: loginid,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
-            hasAccountList: !!authResponse.authorize.account_list,
+            isDemo: isDemo,
+            currentBalance: currentBalance,
             demoBalance: userData.demo_balance,
             realBalance: userData.real_balance
           });
 
+          // Save to sessionStorage FIRST so admin dashboard can access it
+          sessionStorage.setItem('userInfo', JSON.stringify(userData));
+
           setUserInfo(userData);
 
-          // Fetch all account balances from Deriv API immediately after auth
+          // Try to fetch all account balances from Deriv API to get BOTH demo and real
           try {
             const allBalancesRes = await websocketService.getAllBalances();
-            console.log('Initial all balances response:', allBalancesRes);
+            console.log('All balances response:', JSON.stringify(allBalancesRes, null, 2));
 
             if (allBalancesRes.balance?.accounts) {
               const accounts = allBalancesRes.balance.accounts;
