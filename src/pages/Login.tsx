@@ -64,7 +64,7 @@ const Login: React.FC = () => {
     ];
 
     return (
-    return (
+
         <div className={`min-h-screen overflow-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
             <div className="fixed inset-0 pointer-events-none">
                 {/* Reduced opacity on mobile for better text readability */}
