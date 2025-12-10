@@ -78,6 +78,17 @@ const AdminLayout: React.FC = () => {
                 {/* Header */}
                 <header className="admin-header glass-card border-x-0 border-t-0 rounded-none">
                     <div className="header-left">
+                        {/* Mobile Menu Button */}
+                        <button
+                            className="lg:hidden p-2 mr-3 text-gray-400 hover:text-white transition-colors"
+                            onClick={() => setMobileOpen(!mobileOpen)}
+                            aria-label="Toggle menu"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] flex items-center justify-center shadow-lg shadow-[#3b82f6]/30">
                                 <Shield size={22} className="text-white" />
