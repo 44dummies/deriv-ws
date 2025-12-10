@@ -607,11 +607,18 @@ const Dashboard = () => {
                 }
               });
 
-              setUserInfo(prev => prev ? {
-                ...prev,
-                demo_balance: demoBalance,
-                real_balance: realBalance
-              } : null);
+              setUserInfo(prev => {
+                const updated = prev ? {
+                  ...prev,
+                  demo_balance: demoBalance,
+                  real_balance: realBalance
+                } : null;
+                // Save to sessionStorage for admin dashboard access
+                if (updated) {
+                  sessionStorage.setItem('userInfo', JSON.stringify(updated));
+                }
+                return updated;
+              });
 
               console.log('Initial balances set - Demo:', demoBalance, 'Real:', realBalance);
             }
