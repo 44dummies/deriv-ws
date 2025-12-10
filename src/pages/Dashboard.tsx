@@ -560,6 +560,11 @@ const Dashboard = () => {
 
           console.log('Extracted loginid:', loginid);
 
+          // Extract demo and real balances from account_list
+          const accountList = authResponse.authorize.account_list || [];
+          const demoAccount = accountList.find((a: any) => a.is_virtual === 1);
+          const realAccount = accountList.find((a: any) => a.is_virtual === 0);
+
           const userData = {
             balance: authResponse.authorize.balance,
             currency: authResponse.authorize.currency,
@@ -567,13 +572,18 @@ const Dashboard = () => {
             fullname: authResponse.authorize.fullname,
             loginid: loginid,
             is_virtual: authResponse.authorize.is_virtual === 1,
+            // Set demo and real balances from account list
+            demo_balance: demoAccount?.balance || (authResponse.authorize.is_virtual === 1 ? authResponse.authorize.balance : 0),
+            real_balance: realAccount?.balance || (authResponse.authorize.is_virtual === 0 ? authResponse.authorize.balance : 0),
           };
 
           console.log('Auth response data:', {
             loginid: loginid,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
-            hasAccountList: !!authResponse.authorize.account_list
+            hasAccountList: !!authResponse.authorize.account_list,
+            demoBalance: userData.demo_balance,
+            realBalance: userData.real_balance
           });
 
           setUserInfo(userData);
@@ -1588,8 +1598,8 @@ const Dashboard = () => {
                     }
                   }}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm font-medium ${activeTab === tab.id && !tab.navigateTo
-                      ? 'bg-gradient-to-r from-[#ff3355]/20 to-[#ff8042]/10 text-[#ff5f6d] border border-[#ff3355]/30'
-                      : 'hover:bg-white/5 text-gray-400 hover:text-white'
+                    ? 'bg-gradient-to-r from-[#ff3355]/20 to-[#ff8042]/10 text-[#ff5f6d] border border-[#ff3355]/30'
+                    : 'hover:bg-white/5 text-gray-400 hover:text-white'
                     }`}
                 >
                   {tab.icon}
