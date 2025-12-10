@@ -75,10 +75,10 @@ const Login: React.FC = () => {
     ];
 
     return (
-        <div className={`min-h-screen overflow-x-hidden bg-[#050510] text-[#e0e0ed] font-sans selection:bg-[#ff3355]/30 ${is Loaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
-            
+        <div className={`min-h-screen overflow-x-hidden bg-[#050510] text-[#e0e0ed] font-sans selection:bg-[#ff3355]/30 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
+
             {/* Mouse Spotlight - Desktop Only */}
-            <div 
+            <div
                 className="hidden md:block fixed w-[600px] h-[600px] rounded-full pointer-events-none z-0 transition-all duration-300 ease-out"
                 style={{
                     left: mousePosition.x - 300,
@@ -200,7 +200,7 @@ const Login: React.FC = () => {
                             <span className="text-[#ff3355] text-[11px] sm:text-xs">#1 Analytics Platform for Deriv</span>
                             <
 
-CheckCircle2 size={12} className="text-green-400" />
+                                CheckCircle2 size={12} className="text-green-400" />
                         </div>
 
                         <h1 className="text-[32px] leading-[1.1] sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight">
@@ -271,10 +271,10 @@ CheckCircle2 size={12} className="text-green-400" />
 
                             <div className="h-56 flex items-end justify-between gap-1.5 mb-6 px-2">
                                 {[35, 55, 48, 65, 82, 72, 88, 78, 95, 90, 82, 88].map((h, i) => (
-                                    <div 
-                                        key={i} 
+                                    <div
+                                        key={i}
                                         className="w-full rounded-t-md relative group transition-all duration-300 hover:scale-105"
-                                        style={{ 
+                                        style={{
                                             height: `${h}%`,
                                             background: `linear-gradient(to top, rgba(255,51,85,0.6) 0%, rgba(255,128,66,0.3) 100%)`,
                                         }}
