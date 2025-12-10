@@ -1943,6 +1943,9 @@ const Dashboard = () => {
                             const sessionId = session.id || session.session_id;
                             const sessionDetails = session.trading_sessions || session;
 
+                            // Debug log session structure
+                            console.log('Session data:', { sessionId, sessionDetails, raw: session });
+
                             return (
                               <div
                                 key={sessionId}
