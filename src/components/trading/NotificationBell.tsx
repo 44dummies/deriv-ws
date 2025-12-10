@@ -34,18 +34,55 @@ const NotificationBell = ({ socket = null }: { socket?: any }) => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Load notifications
+  // Load notifications and invitations
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      // This would need a backend endpoint to fetch notifications
-      // For now, we'll use socket events
+      // Fetch accounts first to get ID
+      const { tradingApi } = await import('../trading/tradingApi');
+      const accountRes = await tradingApi.getAccounts();
+
+      let newNotifications = [];
+
+      if (accountRes && accountRes.data && accountRes.data.length > 0) {
+        const activeAccount = accountRes.data.find((a: any) => a.is_active) || accountRes.data[0];
+
+        // Fetch invitations
+        const invitesRes = await tradingApi.getInvitations(activeAccount.id);
+        if (invitesRes && invitesRes.data) {
+          const invites = invitesRes.data.map((inv: any) => ({
+            id: inv.id,
+            notification_type: 'session_invite',
+            title: 'New Session Invitation',
+            message: `You have been invited to join session "${inv.trading_sessions?.session_name}"`,
+            created_at: inv.created_at,
+            is_read: false,
+            data: inv
+          }));
+          newNotifications = [...invites];
+        }
+      }
+
+      setNotifications(prev => {
+        // Merge with existing logic if needed, but for now just replacing with invites + existing
+        // De-duplicate by ID
+        const layout = [...newNotifications, ...prev];
+        const unique = Array.from(new Map(layout.map(item => [item.id, item])).values());
+        return unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 50);
+      });
+
+      setUnreadCount(prev => prev + newNotifications.length);
+
     } catch (error) {
       console.error('Failed to load notifications:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
   // Socket listeners
   useEffect(() => {

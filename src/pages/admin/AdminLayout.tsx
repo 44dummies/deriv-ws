@@ -11,6 +11,7 @@ import {
     FileText, Menu, Sun, Moon
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import MobileNavigation from '../../components/layout/MobileNavigation';
 import './admin.css';
 
 interface NavItem {
@@ -179,10 +180,16 @@ const AdminLayout: React.FC = () => {
                 </header>
 
                 {/* Content */}
-                <div className="admin-content">
+                <div className="admin-content pb-20 md:pb-0">
                     <Outlet />
                 </div>
             </main>
+
+            {/* Mobile Navigation */}
+            <MobileNavigation
+                items={[...mainNav, ...systemNav]}
+                onMoreClick={() => setMobileOpen(true)}
+            />
 
             {/* Mobile overlay */}
             {mobileOpen && (

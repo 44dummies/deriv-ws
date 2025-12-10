@@ -1095,125 +1095,181 @@
 
   .bot-stat {
     font-size: 11px;
+    white-space: nowrap;
   }
 
   .bot-actions {
     flex-direction: column;
+    gap: 12px;
     width: 100%;
   }
 
   .bot-actions .btn {
     width: 100%;
     justify-content: center;
-    padding: 10px 16px;
-    font-size: 13px;
-  }
-
-  /* Buttons mobile */
-  .btn {
-    padding: 10px 16px;
-    font-size: 13px;
-    border-radius: 10px;
-  }
-
-  .btn-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  /* Table mobile */
-  .admin-table-container {
-    margin: 0 -12px;
-    padding: 0 12px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .admin-table {
-    min-width: 600px;
-  }
-
-  .admin-table th,
-  .admin-table td {
-    padding: 8px 12px;
-    font-size: 11px;
-    white-space: nowrap;
-  }
-
-  .admin-table th {
-    font-size: 9px;
-  }
-
-  /* Badge mobile */
-  .badge {
-    padding: 3px 6px;
-    font-size: 9px;
-  }
-
-  /* Cards mobile */
-  .admin-card {
-    border-radius: 12px;
-    overflow: hidden;
-  }
-
-  /* Navigation mobile */
-  .nav-item {
-    padding: 12px 14px;
-    gap: 12px;
-  }
-
-  .nav-label {
-    font-size: 13px;
-  }
-
-  .nav-section-title {
-    font-size: 9px;
-    padding: 0 14px 10px;
-  }
-
-  /* User section mobile */
-  .sidebar-user {
     padding: 12px;
-    gap: 10px;
+    /* Larger touch target */
   }
 
-  .user-avatar {
-    width: 36px;
-    height: 36px;
-    font-size: 12px;
-  }
-
-  .user-name {
-    font-size: 13px;
-  }
-
-  .user-role {
-    font-size: 10px;
-  }
-
-  /* Sidebar header mobile */
-  .sidebar-header {
-    padding: 16px;
+  /* Session list mobile fix */
+  .session-item-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
     gap: 12px;
+    align-items: center;
   }
 
-  .sidebar-logo {
-    width: 36px;
-    height: 36px;
+  .session-info h4 {
+    font-size: 15px;
+    margin-bottom: 4px;
+    white-space: normal;
+    /* Allow wrapping */
   }
 
-  .sidebar-logo svg {
-    width: 20px;
-    height: 20px;
+  .session-meta {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .sidebar-header-text h1 {
-    font-size: 16px;
+  .badge {
+    white-space: nowrap;
+    display: inline-flex;
+    /* Ensure inline display */
+    align-items: center;
+    max-width: 100%;
+    /* Prevent overflow */
   }
 
-  .sidebar-header-text p {
-    font-size: 10px;
+  /* Prevent Stat overlap */
+  .stat-card-content {
+    min-width: 0;
+    /* Allow flex item shrinking */
   }
+
+  .stat-value {
+    word-break: break-word;
+    /* Allow number wrapping if needed */
+    font-size: 18px;
+    /* Adjusted size */
+    line-height: 1.2;
+  }
+
+  flex-direction: column;
+  width: 100%;
+}
+
+.bot-actions .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+/* Buttons mobile */
+.btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+}
+
+/* Table mobile */
+.admin-table-container {
+  margin: 0 -12px;
+  padding: 0 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-table {
+  min-width: 600px;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.admin-table th {
+  font-size: 9px;
+}
+
+/* Badge mobile */
+.badge {
+  padding: 3px 6px;
+  font-size: 9px;
+}
+
+/* Cards mobile */
+.admin-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Navigation mobile */
+.nav-item {
+  padding: 12px 14px;
+  gap: 12px;
+}
+
+.nav-label {
+  font-size: 13px;
+}
+
+.nav-section-title {
+  font-size: 9px;
+  padding: 0 14px 10px;
+}
+
+/* User section mobile */
+.sidebar-user {
+  padding: 12px;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 12px;
+}
+
+.user-name {
+  font-size: 13px;
+}
+
+.user-role {
+  font-size: 10px;
+}
+
+/* Sidebar header mobile */
+.sidebar-header {
+  padding: 16px;
+  gap: 12px;
+}
+
+.sidebar-logo {
+  width: 36px;
+  height: 36px;
+}
+
+.sidebar-logo svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-header-text h1 {
+  font-size: 16px;
+}
+
+.sidebar-header-text p {
+  font-size: 10px;
+}
 }
 
 /* Extra small screens */

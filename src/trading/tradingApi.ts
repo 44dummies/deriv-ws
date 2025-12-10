@@ -123,10 +123,10 @@ export async function getMyActiveSession() {
 }
 
 // Stub for accepting a session with TP/SL
-export async function acceptSession(data: { sessionId: string; takeProfit: number; stopLoss: number }) {
-  return apiRequest(`/api/trading/sessions/${data.sessionId}/accept`, {
+export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number }) {
+  return apiRequest(`/api/trading/sessions/${data.sessionId}/join`, {
     method: 'POST',
-    body: JSON.stringify({ takeProfit: data.takeProfit, stopLoss: data.stopLoss })
+    body: JSON.stringify({ accountId: data.accountId }) // TP/SL currently ignored by backend but passed for future use
   });
 }
 

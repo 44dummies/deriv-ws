@@ -64,21 +64,23 @@ const Login: React.FC = () => {
     ];
 
     return (
+    return (
         <div className={`min-h-screen overflow-hidden transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`} style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
             <div className="fixed inset-0 pointer-events-none">
-                <div className="absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-[#ff3355]/20 blur-[160px] animate-pulse" />
-                <div className="absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full bg-[#5d5dff]/15 blur-[180px] animate-pulse" style={{ animationDelay: '1s' }} />
-                <div className="absolute -bottom-40 left-1/3 h-[400px] w-[400px] rounded-full bg-[#ff8042]/10 blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
+                {/* Reduced opacity on mobile for better text readability */}
+                <div className="absolute -top-40 -left-40 h-[400px] w-[400px] sm:h-[600px] sm:w-[600px] rounded-full bg-[var(--theme-primary)]/10 sm:bg-[var(--theme-primary)]/20 blur-[120px] sm:blur-[160px] animate-pulse" />
+                <div className="absolute top-1/2 -right-40 h-[300px] w-[300px] sm:h-[500px] sm:w-[500px] rounded-full bg-[var(--theme-accent)]/10 sm:bg-[var(--theme-accent)]/15 blur-[120px] sm:blur-[180px] animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute -bottom-40 left-1/3 h-[300px] w-[300px] sm:h-[400px] sm:w-[400px] rounded-full bg-[var(--theme-primary)]/5 sm:bg-[var(--theme-primary)]/10 blur-[100px] sm:blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] sm:bg-[size:60px_60px]" />
             </div>
 
-            <nav className="relative z-20 border-b border-white/5">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-xl font-bold shadow-lg shadow-[#ff3355]/20">
+            <nav className="relative z-20 border-b border-white/5 bg-black/20 backdrop-blur-sm">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[var(--theme-primary)] to-[var(--theme-accent)] flex items-center justify-center text-lg sm:text-xl font-bold shadow-lg shadow-[var(--theme-primary)]/20">
                             T
                         </div>
-                        <span className="text-xl font-bold">TraderMind</span>
+                        <span className="text-lg sm:text-xl font-bold tracking-tight">TraderMind</span>
                     </div>
                     <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
                         <a href="#features" className="hover:text-white transition-colors">Features</a>
@@ -87,29 +89,29 @@ const Login: React.FC = () => {
                     </div>
                     <button
                         onClick={handleLogin}
-                        className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium"
+                        className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-sm font-medium active:scale-95 touch-manipulation"
                     >
                         Sign In
                     </button>
                 </div>
             </nav>
 
-            <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-16 sm:pb-32">
+            <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-20 pb-12 sm:pb-32">
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-                    <div className="space-y-6 sm:space-y-8">
-                        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 text-xs sm:text-sm">
-                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[#ff5f6d]" />
+                    <div className="space-y-6 sm:space-y-8 text-center sm:text-left">
+                        <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/5 border border-white/10 text-[10px] sm:text-sm mx-auto sm:mx-0">
+                            <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--theme-primary)]" />
                             <span className="text-gray-400">Trusted by 50,000+ traders worldwide</span>
                         </div>
 
-                        <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold leading-tight">
-                            <span className="block">Your Trading</span>
-                            <span className="block bg-gradient-to-r from-[#ff3355] via-[#ff5f6d] to-[#ff8042] bg-clip-text text-transparent">
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
+                            <span className="block mb-2">Your Trading</span>
+                            <span className="block bg-gradient-to-r from-[var(--theme-primary)] via-[var(--theme-accent)] to-[var(--theme-primary)] bg-clip-text text-transparent pb-2">
                                 Command Center
                             </span>
                         </h1>
 
-                        <p className="text-base sm:text-xl text-gray-400 max-w-lg leading-relaxed">
+                        <p className="text-sm sm:text-xl text-gray-400 max-w-lg leading-relaxed mx-auto sm:mx-0 px-2 sm:px-0">
                             Advanced analytics, real-time sync with Deriv, digit analysis, and a powerful trading journal.
                             Everything you need to become a better trader.
                         </p>

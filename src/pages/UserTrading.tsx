@@ -32,15 +32,31 @@ const UserTrading = () => {
 
   const loadUserData = async () => {
     try {
+      // Load from session storage for immediate display
       const derivId = sessionStorage.getItem('derivId');
       const balance = sessionStorage.getItem('balance');
       const currency = sessionStorage.getItem('currency');
 
-      setUserInfo({
+      let currentInfo = {
         derivId,
+        id: null, // Internal UUID
         balance: parseFloat(balance) || 0,
         currency: currency || 'USD'
-      });
+      };
+
+      // Fetch actual account data from backend to get internal UUID
+      const response = await tradingApi.getAccounts();
+      if (response && response.data && response.data.length > 0) {
+        const activeAccount = response.data.find((acc: any) => acc.is_active) || response.data[0];
+        if (activeAccount) {
+          currentInfo.id = activeAccount.id;
+          currentInfo.derivId = activeAccount.deriv_account_id;
+          currentInfo.balance = activeAccount.balance;
+          currentInfo.currency = activeAccount.currency;
+        }
+      }
+
+      setUserInfo(currentInfo);
     } catch (error) {
       console.error('Failed to load user data:', error);
     }
@@ -77,9 +93,15 @@ const UserTrading = () => {
       return;
     }
 
+    if (!userInfo?.id) {
+      alert('Account information not loaded. Please refresh.');
+      return;
+    }
+
     try {
       await tradingApi.acceptSession({
         sessionId,
+        accountId: userInfo.id,
         takeProfit: parseFloat(takeProfit),
         stopLoss: parseFloat(stopLoss)
       });

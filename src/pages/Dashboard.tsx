@@ -8,7 +8,7 @@ import {
   Wallet, ExternalLink, Shield, Cloud, CloudOff, Menu, Timer, User,
   Flame, AlertTriangle, Tag, Snowflake, Sparkles, Keyboard, Filter, Zap,
   Brain, HeartPulse, Gauge, Lightbulb, ArrowUpDown, PieChart, Scale,
-  MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot, Wifi, WifiOff
+  MessageSquare, Crown, Star, Send, ThumbsUp, Eye, Lock, Bot, Wifi, WifiOff, Home
 } from 'lucide-react';
 
 import { TokenService } from '../services/tokenService';
@@ -22,6 +22,7 @@ import realtimeSocket from '../services/realtimeSocket';
 import apiClient from '../services/apiClient';
 import { TierChatroom } from '../components/community';
 import { NotificationBell } from '../components/trading';
+import MobileNavigation from '../components/layout/MobileNavigation';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
@@ -1620,14 +1621,14 @@ const Dashboard = () => {
         </aside>
 
         { }
-        <main className="flex-1 overflow-auto min-h-screen transition-all duration-300">
+        <main className="flex-1 overflow-auto min-h-screen transition-all duration-300 pb-20 lg:pb-0">
           { }
           <div className="sticky top-0 z-20 flex items-center gap-2 sm:gap-4 p-2 sm:p-3 md:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-            { }
+            {/* Sidebar Toggle - Hidden on mobile as we use bottom nav */}
             <button
               data-sidebar-toggle
               onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              className="lg:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white shrink-0"
+              className="hidden lg:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white shrink-0"
               title={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
               <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2589,6 +2590,23 @@ const Dashboard = () => {
           </div>
         </main>
       </div>
+      <MobileNavigation
+        items={tabs.map(tab => ({
+          label: tab.id === 'sync' ? 'Home' : tab.label,
+          icon: tab.id === 'sync' ? <Home size={20} /> : tab.icon,
+          onClick: () => {
+            if (tab.navigateTo) {
+              navigate(tab.navigateTo);
+            } else {
+              setActiveTab(tab.id);
+              // Scroll to top
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          },
+          isActive: activeTab === tab.id
+        }))}
+        onMoreClick={() => setMobileSidebarOpen(true)}
+      />
     </div>
   );
 };
