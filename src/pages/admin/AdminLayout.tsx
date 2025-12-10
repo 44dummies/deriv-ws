@@ -26,6 +26,7 @@ const AdminLayout: React.FC = () => {
     const location = useLocation();
     const { themeId, setTheme } = useTheme();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false); // Desktop sidebar visibility
 
     const isDarkMode = themeId !== 'light';
 
@@ -89,7 +90,11 @@ const AdminLayout: React.FC = () => {
                             </svg>
                         </button>
 
-                        <div className="flex items-center gap-3">
+                        <div
+                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            title="Toggle sidebar"
+                        >
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] flex items-center justify-center shadow-lg shadow-[#3b82f6]/30">
                                 <Shield size={22} className="text-white" />
                             </div>
@@ -133,8 +138,8 @@ const AdminLayout: React.FC = () => {
                 </div>
             </main>
 
-            {/* Sidebar - Right Side */}
-            <aside className={`admin-sidebar sidebar-right ${mobileOpen ? 'open' : ''}`}>
+            {/* Sidebar - Right Side - Desktop Only */}
+            <aside className={`admin-sidebar sidebar-right ${mobileOpen ? 'open' : ''} ${sidebarOpen ? 'lg:open' : ''} hidden lg:block`}>
                 {/* Header */}
                 <div className="sidebar-header">
                     <div className="user-avatar-large">{userInitials}</div>
@@ -188,24 +193,102 @@ const AdminLayout: React.FC = () => {
                 </div>
             </aside>
 
-            {/* Mobile Navigation */}
+            {/* Bottom Sheet - Mobile Only */}
+            {mobileOpen && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                        onClick={() => setMobileOpen(false)}
+                    />
+
+                    {/* Bottom Sheet */}
+                    <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden transform transition-transform duration-300 ease-out">
+                        <div className="bg-[#0a0a0f]/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col">
+                            {/* Handle Bar */}
+                            <div className="flex justify-center pt-3 pb-2">
+                                <div className="w-12 h-1 rounded-full bg-white/30" />
+                            </div>
+
+                            {/* User Info Section */}
+                            <div className="px-6 py-4 border-b border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="user-avatar-large">{userInitials}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-base truncate text-white">{userName}</p>
+                                        <p className="text-xs text-gray-400">Administrator</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Navigation Items */}
+                            <nav className="flex-1 overflow-y-auto px-4 py-2">
+                                <div className="space-y-1">
+                                    {/* Main Navigation */}
+                                    <div className="mb-4">
+                                        <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2">
+                                            Navigation
+                                        </div>
+                                        {mainNav.map((item) => (
+                                            <div
+                                                key={item.path}
+                                                className={`nav-item glass-card-hover ${isActive(item.path) ? 'active' : ''} cursor-pointer`}
+                                                onClick={() => {
+                                                    handleNavClick(item.path);
+                                                    setMobileOpen(false);
+                                                }}
+                                            >
+                                                <span className="nav-icon">{item.icon}</span>
+                                                <span className="nav-label">{item.label}</span>
+                                                {item.badge && <span className="nav-badge">{item.badge}</span>}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* System Navigation */}
+                                    <div>
+                                        <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-4 py-2">
+                                            System
+                                        </div>
+                                        {systemNav.map((item) => (
+                                            <div
+                                                key={item.path}
+                                                className={`nav-item glass-card-hover ${isActive(item.path) ? 'active' : ''} cursor-pointer`}
+                                                onClick={() => {
+                                                    handleNavClick(item.path);
+                                                    setMobileOpen(false);
+                                                }}
+                                            >
+                                                <span className="nav-icon">{item.icon}</span>
+                                                <span className="nav-label">{item.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </nav>
+
+                            {/* Logout Button */}
+                            <div className="p-4 border-t border-white/10">
+                                <button
+                                    className="btn btn-logout glass-card w-full flex items-center justify-center gap-3 py-3.5 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all active:scale-[0.98]"
+                                    onClick={() => {
+                                        setMobileOpen(false);
+                                        handleLogout();
+                                    }}
+                                >
+                                    <LogOut size={18} />
+                                    <span className="font-semibold">Sign Out</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
             <MobileNavigation
                 items={[...mainNav, ...systemNav]}
                 onMoreClick={() => setMobileOpen(true)}
             />
-
-            {/* Mobile overlay */}
-            {mobileOpen && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        zIndex: 99,
-                    }}
-                    onClick={() => setMobileOpen(false)}
-                />
-            )}
         </div>
     );
 };

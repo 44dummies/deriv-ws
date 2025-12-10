@@ -140,6 +140,7 @@ const Dashboard = () => {
   }, [searchParams]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Desktop sidebar visibility
   const [tradeHistory, setTradeHistory] = useState([]);
   const [journalEntries, setJournalEntries] = useState([]);
   const [digitStats, setDigitStats] = useState({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 });
@@ -1523,12 +1524,11 @@ const Dashboard = () => {
           />
         )}
 
-        { }
+        {/* Sidebar - Desktop Only */}
         <aside
           ref={sidebarRef}
-          className={`${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            } lg:translate-x-0 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
-            } w-64 fixed lg:relative z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex flex-col`}
+          className={`hidden lg:flex ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+            } fixed z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex-col`}
         >
           { }
           <div className="p-4 border-b border-white/10">
@@ -1538,10 +1538,11 @@ const Dashboard = () => {
                   if (window.innerWidth < 1024) {
                     setMobileSidebarOpen(!mobileSidebarOpen);
                   } else {
-                    setSidebarCollapsed(!sidebarCollapsed);
+                    setSidebarOpen(!sidebarOpen);
                   }
                 }}
                 className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-lg font-bold shrink-0 text-white cursor-pointer hover:scale-105 transition-transform active:scale-95"
+                title={window.innerWidth >= 1024 ? "Toggle sidebar" : undefined}
               >
                 T
               </div>
@@ -2593,24 +2594,117 @@ const Dashboard = () => {
 
           </div>
         </main>
-      </div >
-      <MobileNavigation
-        items={tabs.map(tab => ({
-          label: tab.id === 'sync' ? 'Home' : tab.label,
-          icon: tab.id === 'sync' ? <Home size={20} /> : tab.icon,
-          onClick: () => {
-            if (tab.navigateTo) {
-              navigate(tab.navigateTo);
-            } else {
-              setActiveTab(tab.id);
-              // Scroll to top
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          },
-          isActive: activeTab === tab.id
-        }))}
-        onMoreClick={() => setMobileSidebarOpen(true)}
-      />
+
+        {/* Bottom Sheet - Mobile Only */}
+        {mobileSidebarOpen && (
+          <>
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+
+            {/* Bottom Sheet */}
+            <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden transform transition-transform duration-300 ease-out">
+              <div className="bg-black/95 backdrop-blur-xl border-t border-white/10 rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col">
+                {/* Handle Bar */}
+                <div className="flex justify-center pt-3 pb-2">
+                  <div className="w-12 h-1 rounded-full bg-white/30" />
+                </div>
+
+                {/* User Info Section */}
+                {userInfo && (
+                  <div className="px-6 py-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center text-3xl">
+                          {getAvatarEmoji(userProfile?.profilePhoto)}
+                        </div>
+                        <div className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-black ${derivWsConnected ? 'bg-green-500' : 'bg-gray-500'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-base truncate text-white">
+                          {userProfile?.displayName || userInfo.fullname || 'Trader'}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                          ID: {userInfo.loginid}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
+                            {userInfo.is_virtual ? 'Demo' : 'Real'}
+                          </span>
+                          <span className="text-sm font-medium text-white">
+                            {userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation Items */}
+                <nav className="flex-1 overflow-y-auto px-4 py-2">
+                  <div className="space-y-1">
+                    {tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          if (tab.navigateTo) {
+                            navigate(tab.navigateTo);
+                          } else {
+                            setActiveTab(tab.id);
+                          }
+                          setMobileSidebarOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all ${activeTab === tab.id && !tab.navigateTo
+                          ? 'bg-gradient-to-r from-[#ff3355]/20 to-transparent text-[#ff5f6d] border-l-4 border-[#ff3355]'
+                          : 'hover:bg-white/5 text-gray-300 hover:text-white active:scale-[0.98]'
+                          }`}
+                      >
+                        <span className="flex-shrink-0">{tab.icon}</span>
+                        <span className="font-medium">{tab.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </nav>
+
+                {/* Logout Button */}
+                <div className="p-4 border-t border-white/10">
+                  <button
+                    onClick={() => {
+                      setMobileSidebarOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all active:scale-[0.98]"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span className="font-semibold">Logout</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Mobile Bottom Navigation */}
+        <MobileNavigation
+          items={tabs.map(tab => ({
+            label: tab.id === 'sync' ? 'Home' : tab.label,
+            icon: tab.id === 'sync' ? <Home size={20} /> : tab.icon,
+            onClick: () => {
+              if (tab.navigateTo) {
+                navigate(tab.navigateTo);
+              } else {
+                setActiveTab(tab.id);
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            },
+            isActive: activeTab === tab.id
+          }))}
+          onMoreClick={() => setMobileSidebarOpen(true)}
+        />
+      </div>
     </div >
   );
 };

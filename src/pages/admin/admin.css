@@ -104,12 +104,25 @@
 
 /* Right-side layout adjustments - Desktop only */
 @media (min-width: 1025px) {
+
+  /* Hide sidebar by default on desktop */
   .admin-layout.sidebar-right .admin-sidebar {
+    transform: translateX(100%);
+  }
+
+  /* Show sidebar when open on desktop */
+  .admin-layout.sidebar-right .admin-sidebar.lg\:open {
     transform: translateX(0);
   }
 
+  /* Adjust main content margin - no sidebar visible by default */
   .admin-layout.sidebar-right .admin-main {
     margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* When sidebar is open, add margin */
+  .admin-layout.sidebar-right .admin-sidebar.lg\:open~.admin-main {
     margin-right: var(--sidebar-width);
   }
 }
