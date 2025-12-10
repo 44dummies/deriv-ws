@@ -58,7 +58,7 @@ const getAvatarEmoji = (profilePhoto) => {
 const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
 const Card = ({ children, className = '' }) => (
-  <div className={`rounded-xl sm:rounded-2xl border backdrop-blur-xl p-4 sm:p-6 
+  <div className={`rounded-xl sm:rounded-2xl border backdrop-blur-xl p-3 sm:p-4 md:p-6 
     border-white/10 dark-mode:bg-white/5 
     light-card ${className}`}
     style={{
@@ -70,23 +70,23 @@ const Card = ({ children, className = '' }) => (
 );
 
 const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-500' }) => (
-  <div className="rounded-xl sm:rounded-2xl border p-3 sm:p-5 stat-card"
+  <div className="rounded-lg sm:rounded-xl border p-2.5 sm:p-4 stat-card overflow-hidden"
     style={{
       backgroundColor: 'var(--card-bg)',
       borderColor: 'var(--card-border)'
     }}>
-    <div className="flex items-center justify-between mb-2 sm:mb-3">
-      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br ${color} flex items-center justify-center`}>
+    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shrink-0`}>
         {icon}
       </div>
-      {trend && (
-        <div className={`flex items-center gap-1 text-xs ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-          {trend === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+      {trend && trend !== '' && (
+        <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-gray-400'}`}>
+          {trend === 'up' ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : trend === 'down' ? <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <span className="text-[9px] sm:text-[10px]">{trend}</span>}
         </div>
       )}
     </div>
-    <p className="text-lg sm:text-2xl font-bold truncate">{value}</p>
-    <p className="text-xs sm:text-sm mt-0.5 sm:mt-1 truncate" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+    <p className="text-sm sm:text-xl font-bold truncate leading-tight">{value}</p>
+    <p className="text-[10px] sm:text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>{label}</p>
   </div>
 );
 
@@ -1622,112 +1622,95 @@ const Dashboard = () => {
         { }
         <main className="flex-1 overflow-auto min-h-screen transition-all duration-300">
           { }
-          <div className="sticky top-0 z-20 flex items-center gap-4 p-3 sm:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
+          <div className="sticky top-0 z-20 flex items-center gap-2 sm:gap-4 p-2 sm:p-3 md:p-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
             { }
             <button
               data-sidebar-toggle
               onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white"
+              className="lg:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white shrink-0"
               title={mobileSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-base sm:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
+              <h2 className="font-semibold text-sm sm:text-base md:text-lg truncate">{tabs.find(t => t.id === activeTab)?.label || 'Dashboard'}</h2>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Notification Bell */}
               <NotificationBell socket={realtimeSocket.socket} />
 
-              {/* Supabase Status */}
+              {/* Supabase Status - hidden on very small screens */}
               {supabaseStatus === 'connected' && (
                 <div
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-500"
+                  className="hidden xs:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs bg-green-500/20 text-green-500"
                   title="Data synced to cloud"
                 >
-                  <Cloud className="w-3 h-3" />
-                  <span className="hidden sm:inline">Synced</span>
+                  <Cloud className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </div>
               )}
               {userInfo && (
-                <>
-                  <span className={`hidden sm:inline text-xs px-2 py-1 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-600' : 'bg-green-500/20 text-green-600'}`}>
-                    {userInfo.is_virtual ? 'Demo' : 'Real'}
+                <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg bg-white/5">
+                  <span className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
+                    {userInfo.is_virtual ? 'D' : 'R'}
                   </span>
-                  <span className="text-xs sm:text-sm font-medium">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
-                </>
+                  <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
+                </div>
               )}
             </div>
           </div>
 
-          <div className="p-3 sm:p-4 md:p-6">
+          <div className="p-2 sm:p-3 md:p-6">
             { }
             {activeTab === 'sync' && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h1 className="text-xl sm:text-2xl font-bold">Live Sync</h1>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Your data syncs automatically every minute</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    { }
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>Auto-sync</span>
-                      <button
-                        onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
-                        className={`w-10 h-5 rounded-full transition-colors relative ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
-                      >
-                        <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${autoSyncEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                      </button>
+              <div className="space-y-3 sm:space-y-4 md:space-y-6">
+                <div className="flex flex-col gap-2 sm:gap-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-base sm:text-xl md:text-2xl font-bold">Live Sync</h1>
+                      <p className="text-[10px] sm:text-xs md:text-sm" style={{ color: 'var(--text-secondary)' }}>Auto syncs every minute</p>
                     </div>
-                    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-white text-sm sm:text-base">
-                      <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${syncing ? 'animate-spin' : ''}`} />
-                      <span className="hidden sm:inline">{syncing ? 'Syncing...' : 'Sync Now'}</span>
+                    <button onClick={handleSync} disabled={syncing} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-white text-xs sm:text-sm">
+                      <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${syncing ? 'animate-spin' : ''}`} />
+                      <span>{syncing ? 'Sync' : 'Sync'}</span>
+                    </button>
+                  </div>
+
+                  {/* Auto-sync toggle - compact */}
+                  <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-white/5">
+                    <div className="flex items-center gap-2">
+                      {autoSyncEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+                      <span className="text-[10px] sm:text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        Auto-sync {autoSyncEnabled ? 'on' : 'off'}
+                        {lastSyncTime && autoSyncEnabled && <span className="hidden sm:inline"> • Last: {lastSyncTime.toLocaleTimeString()}</span>}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
+                      className={`w-8 h-4 sm:w-10 sm:h-5 rounded-full transition-colors relative ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
+                    >
+                      <div className={`absolute top-0.5 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white transition-transform ${autoSyncEnabled ? 'translate-x-4 sm:translate-x-5' : 'translate-x-0.5'}`} />
                     </button>
                   </div>
                 </div>
 
-                { }
-                {autoSyncEnabled && (
-                  <div className="flex flex-wrap items-center gap-4 p-3 sm:p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-green-500 text-sm font-medium">Auto-sync active</span>
-                    </div>
-                    {lastSyncTime && (
-                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Last synced: {lastSyncTime.toLocaleTimeString()}
-                      </span>
-                    )}
-                    {nextSyncTime && (
-                      <span className="text-xs sm:text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Next sync: {nextSyncTime.toLocaleTimeString()}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                  {/* Dual Balance Display */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <StatCard
-                      icon={<Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
-                      label="Real Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.real_balance !== undefined ? userInfo.real_balance : (userInfo?.is_virtual ? 0 : userInfo?.balance || 0)).toFixed(2)}`}
-                      trend=""
-                      color="from-green-500 to-emerald-500"
-                    />
-                    <StatCard
-                      icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />}
-                      label="Demo Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance !== undefined ? userInfo.demo_balance : (userInfo?.is_virtual ? userInfo?.balance || 0 : 0)).toFixed(2)}`}
-                      trend="Practice"
-                      color="from-blue-500 to-indigo-500"
-                    />
-                  </div>
-                  <StatCard icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Trades" value={tradeHistory.length} trend="" color="from-blue-500 to-cyan-500" />
-                  <StatCard icon={<Target className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                  <StatCard icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-white" />} label="Total Profit" value={`${(analytics.totalProfit ?? 0).toFixed(2)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
+                {/* Stats Grid - 2x2 on mobile, 4 cols on desktop */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                  <StatCard
+                    icon={<Wallet className="w-3 h-3 sm:w-4 sm:h-4 text-white" />}
+                    label="Real Balance"
+                    value={`${userInfo?.currency || 'USD'} ${(userInfo?.real_balance !== undefined ? userInfo.real_balance : (userInfo?.is_virtual ? 0 : userInfo?.balance || 0)).toFixed(2)}`}
+                    trend=""
+                    color="from-green-500 to-emerald-500"
+                  />
+                  <StatCard
+                    icon={<Activity className="w-3 h-3 sm:w-4 sm:h-4 text-white" />}
+                    label="Demo Balance"
+                    value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance !== undefined ? userInfo.demo_balance : (userInfo?.is_virtual ? userInfo?.balance || 0 : 0)).toFixed(2)}`}
+                    trend=""
+                    color="from-blue-500 to-indigo-500"
+                  />
+                  <StatCard icon={<Target className="w-3 h-3 sm:w-4 sm:h-4 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
+                  <StatCard icon={<DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-white" />} label="Total Profit" value={`$${(analytics.totalProfit ?? 0).toFixed(0)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
                 </div>
                 <Card>
                   <h3 className="text-base sm:text-lg font-medium mb-4">Connection Status</h3>
