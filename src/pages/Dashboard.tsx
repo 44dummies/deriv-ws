@@ -1450,6 +1450,8 @@ const Dashboard = () => {
   const handleAcceptSession = async (sessionId) => {
     if (!sessionId) {
       console.error('Session ID is undefined. Available sessions:', availableSessions);
+      console.error('First session object keys:', availableSessions[0] ? Object.keys(availableSessions[0]) : 'no sessions');
+      console.error('First session object:', availableSessions[0]);
       toast.error('Cannot join session: Invalid session ID');
       return;
     }
