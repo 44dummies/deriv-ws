@@ -39,7 +39,7 @@ const NotificationBell = ({ socket = null }: { socket?: any }) => {
     setLoading(true);
     try {
       // Fetch accounts first to get ID
-      const { tradingApi } = await import('../trading/tradingApi');
+      const { tradingApi } = await import('../../trading/tradingApi');
       const accountRes = await tradingApi.getAccounts();
 
       let newNotifications = [];
