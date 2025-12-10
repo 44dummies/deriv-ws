@@ -1447,30 +1447,49 @@ const Dashboard = () => {
   };
 
   // Accept trading session
-  const handleAcceptSession = async (sessionId, sessionMode?: string) => {
+  const handleAcceptSession = async (sessionId, sessionMode?: string, minBalance?: number) => {
     if (!sessionId) {
       console.error('Session ID is undefined. Available sessions:', availableSessions);
       toast.error('Cannot join session: Invalid session ID');
       return;
     }
-    
-    // Get available tokens - prefer demo for testing, fall back to real
-    const demoToken = sessionStorage.getItem('derivDemoToken');
-    const realToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
-    
-    console.log('Available tokens - Demo:', !!demoToken, 'Real:', !!realToken);
-    
-    // Use demo token if available (safer for testing), otherwise use real
-    const derivToken = demoToken || realToken;
-    
-    if (!derivToken) {
-      console.error('No tokens found in sessionStorage');
-      toast.error('No trading account found. Please logout and login again.');
+
+    // Check user balance against session minimum balance
+    const isDemo = sessionMode?.toLowerCase()?.includes('demo');
+    const userBalance = isDemo ? (userInfo?.demo_balance || 0) : (userInfo?.real_balance || 0);
+
+    if (minBalance && userBalance < minBalance) {
+      toast.error(
+        `💰 Your ${isDemo ? 'demo' : 'real'} balance ($${userBalance.toFixed(2)}) is below the session minimum ($${minBalance}). ` +
+        `Please wait for a session with a lower minimum balance requirement.`,
+        { duration: 6000 }
+      );
       return;
     }
-    
-    console.log('Using token:', demoToken ? 'DEMO' : 'REAL');
-    
+
+    // Select correct token based on session mode
+    const demoToken = sessionStorage.getItem('derivDemoToken');
+    const realToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
+
+    console.log('Session mode:', sessionMode, 'isDemo:', isDemo);
+    console.log('Available tokens - Demo:', !!demoToken, 'Real:', !!realToken);
+    console.log('User balance - Demo:', userInfo?.demo_balance, 'Real:', userInfo?.real_balance);
+
+    let derivToken;
+    if (isDemo) {
+      derivToken = demoToken;
+      if (!derivToken) {
+        toast.error('No DEMO account token found. Please logout and login again.');
+        return;
+      }
+    } else {
+      derivToken = realToken;
+      if (!derivToken) {
+        toast.error('No trading account token found. Please logout and login again.');
+        return;
+      }
+    }
+
     setAcceptingSession(true);
     try {
       await apiClient.post(`/user/sessions/${sessionId}/accept`, {
@@ -1478,7 +1497,7 @@ const Dashboard = () => {
         sl,
         derivToken
       });
-      toast.success('Successfully joined session!');
+      toast.success('✅ Successfully joined session!');
       loadTradingData();
     } catch (error) {
       toast.error(error.message || 'Failed to join session');
@@ -1951,7 +1970,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                                 <button
-                                  onClick={() => handleAcceptSession(sessionId, sessionDetails.mode || sessionDetails.type)}
+                                  onClick={() => handleAcceptSession(sessionId, sessionDetails.mode || sessionDetails.type, sessionDetails.min_balance)}
                                   disabled={acceptingSession || session.hasJoined}
                                   className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
                                 >

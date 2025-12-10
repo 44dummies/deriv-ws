@@ -255,6 +255,47 @@ const AdminDashboard: React.FC = () => {
                 />
             </div>
 
+            {/* Trading System Performance */}
+            <div className="admin-card card-responsive mb-6" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2 text-emerald-400">
+                        <TrendingUp size={18} />
+                        Trading System Performance
+                    </h3>
+                    <span className={`px-2 py-1 rounded text-xs ${botStatus?.isRunning ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                        {botStatus?.isRunning ? '● Live' : '○ Stopped'}
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1">Active Participants</p>
+                        <p className="text-xl font-bold text-white">{stats?.activeUsers || 0}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1">Win Rate</p>
+                        <p className="text-xl font-bold text-emerald-400">{(stats?.winRate || 0).toFixed(1)}%</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1">Total P&L</p>
+                        <p className={`text-xl font-bold ${(stats?.totalProfit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {formatCurrency(stats?.totalProfit)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-400 mb-1">Est. Daily Earning</p>
+                        <p className="text-xl font-bold text-amber-400">
+                            {formatCurrency(((stats?.totalProfit || 0) / Math.max(1, stats?.totalTrades || 1)) * ((stats?.winRate || 50) / 100) * 100)}
+                        </p>
+                    </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-gray-700/50">
+                    <p className="text-xs text-gray-500">
+                        💡 Projected based on current win rate of {(stats?.winRate || 0).toFixed(1)}% across {stats?.totalTrades || 0} trades.
+                        With {stats?.activeUsers || 0} active participants, the system executes trades automatically based on signal analysis.
+                    </p>
+                </div>
+            </div>
+
             {/* Sessions & Quick Actions Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Recent Sessions */}
