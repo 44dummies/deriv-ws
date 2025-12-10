@@ -1,9 +1,9 @@
 import React, { useState, useEffect, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    Zap, BarChart3, Users, Shield, ChevronRight, Star, TrendingUp,
-    Activity, Target, Award, Clock, ArrowRight, Sparkles, LineChart,
-    LucideIcon
+    Zap, BarChart3, Users, Shield, Star, TrendingUp,
+    Activity, Target, Award, Clock, ArrowRight, Sparkles,
+    Quote, CheckCircle2
 } from 'lucide-react';
 import { TokenService } from '../services/tokenService';
 import { OAUTH_URL } from '../config';
@@ -17,6 +17,8 @@ interface Feature {
 interface Stat {
     value: string;
     label: string;
+    icon: ReactElement;
+    color: string;
 }
 
 interface Testimonial {
@@ -24,6 +26,7 @@ interface Testimonial {
     role: string;
     content: string;
     avatar: string;
+    rating: number;
 }
 
 const Login: React.FC = () => {
@@ -58,149 +61,211 @@ const Login: React.FC = () => {
     ];
 
     const stats: Stat[] = [
-        { value: '50K+', label: 'Active Traders' },
-        { value: '$2M+', label: 'Daily Volume' },
-        { value: '99.9%', label: 'Uptime' },
-        { value: '4.9/5', label: 'User Rating' },
+        { value: '50K+', label: 'Active Traders', icon: <Users size={20} />, color: 'from-blue-500 to-cyan-400' },
+        { value: '$2M+', label: 'Daily Volume', icon: <TrendingUp size={20} />, color: 'from-green-500 to-emerald-400' },
+        { value: '99.9%', label: 'Uptime', icon: <Activity size={20} />, color: 'from-purple-500 to-pink-400' },
+        { value: '4.9/5', label: 'User Rating', icon: <Star size={20} />, color: 'from-amber-500 to-orange-400' },
     ];
 
     const testimonials: Testimonial[] = [
-        { name: 'Sarah K.', role: 'Professional Trader', content: 'TraderMind transformed my analysis. The digit analyzer alone improved my win rate by 15%.', avatar: '👩‍💼' },
-        { name: 'Michael R.', role: 'Day Trader', content: 'Finally a tool that syncs perfectly with Deriv. The analytics are incredible and the UI is beautiful.', avatar: '👨‍💻' },
-        { name: 'Emma L.', role: 'Binary Options', content: 'The trading journal helped me understand my psychology. Now I make informed decisions.', avatar: '👩‍🔬' },
+        { name: 'Sarah K.', role: 'Professional Trader', content: 'TraderMind transformed my analysis. The digit analyzer alone improved my win rate by 15%.', avatar: '👩‍💼', rating: 5 },
+        { name: 'Michael R.', role: 'Day Trader', content: 'Finally a tool that syncs perfectly with Deriv. The analytics are incredible and the UI is beautiful.', avatar: '👨‍💻', rating: 5 },
+        { name: 'Emma L.', role: 'Binary Options', content: 'The trading journal helped me understand my psychology. Now I make informed decisions.', avatar: '👩‍🔬', rating: 5 },
     ];
 
     return (
         <div className={`min-h-screen overflow-hidden bg-[#050510] text-[#e0e0ed] font-sans selection:bg-[#ff3355]/30 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
+
+            {/* Mouse-following Spotlight */}
+            <div
+                className="fixed w-[600px] h-[600px] rounded-full pointer-events-none z-0 transition-all duration-300 ease-out"
+                style={{
+                    left: mousePosition.x - 300,
+                    top: mousePosition.y - 300,
+                    background: 'radial-gradient(circle, rgba(255,51,85,0.08) 0%, transparent 70%)',
+                }}
+            />
+
             {/* Liquid Background */}
             <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#ff3355]/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob" />
-                <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6]/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob animation-delay-2000" />
-                <div className="absolute -bottom-32 left-1/3 w-96 h-96 bg-[#a855f7]/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000" />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
+                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#ff3355]/25 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
+                <div className="absolute top-0 right-1/4 w-[400px] h-[400px] bg-[#3b82f6]/25 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style={{ animationDelay: '2s' }} />
+                <div className="absolute -bottom-32 left-1/3 w-[500px] h-[500px] bg-[#a855f7]/20 rounded-full mix-blend-screen filter blur-[120px] animate-blob" style={{ animationDelay: '4s' }} />
+                <div className="absolute top-1/2 right-0 w-[300px] h-[300px] bg-[#10b981]/15 rounded-full mix-blend-screen filter blur-[80px] animate-blob" style={{ animationDelay: '3s' }} />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
+            </div>
+
+            {/* Floating Particles */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                {[...Array(20)].map((_, i) => (
+                    <div
+                        key={i}
+                        className="absolute w-1 h-1 bg-white/20 rounded-full animate-float"
+                        style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 5}s`,
+                            animationDuration: `${10 + Math.random() * 10}s`,
+                        }}
+                    />
+                ))}
             </div>
 
             {/* Navigation */}
-            <nav className="fixed top-0 w-full z-50 transition-all duration-300 glass-card border-b-0 rounded-none bg-black/20">
+            <nav className="fixed top-0 w-full z-50 glass-card border-b-0 rounded-none bg-black/30 backdrop-blur-xl">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="relative group">
-                            <div className="absolute -inset-1 bg-gradient-to-r from-[#ff3355] to-[#ff8042] rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-200" />
-                            <div className="relative w-10 h-10 rounded-lg bg-black flex items-center justify-center border border-white/10">
-                                <span className="text-xl font-bold bg-gradient-to-br from-[#ff3355] to-[#ff8042] bg-clip-text text-transparent">T</span>
+                            <div className="absolute -inset-1 bg-gradient-to-r from-[#ff3355] to-[#ff8042] rounded-xl blur opacity-40 group-hover:opacity-75 transition duration-300" />
+                            <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center shadow-lg shadow-[#ff3355]/30">
+                                <span className="text-xl font-bold text-white">T</span>
                             </div>
                         </div>
-                        <span className="text-xl font-bold tracking-tight">TraderMind</span>
+                        <div>
+                            <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">TraderMind</span>
+                            <p className="text-[10px] text-gray-500 -mt-0.5 uppercase tracking-widest">Analytics Platform</p>
+                        </div>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
-                        <a href="#features" className="hover:text-white transition-colors">Features</a>
-                        <a href="#stats" className="hover:text-white transition-colors">Stats</a>
-                        <a href="#testimonials" className="hover:text-white transition-colors">Testimonials</a>
+                    <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+                        <a href="#features" className="hover:text-white transition-colors relative group">
+                            Features
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
+                        </a>
+                        <a href="#stats" className="hover:text-white transition-colors relative group">
+                            Stats
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
+                        </a>
+                        <a href="#testimonials" className="hover:text-white transition-colors relative group">
+                            Reviews
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
+                        </a>
                     </div>
 
                     <button
                         onClick={handleLogin}
-                        className="glossy-btn px-6 py-2.5 rounded-xl text-sm font-medium hover:text-white transition-all hover:border-[var(--theme-primary)]"
+                        className="group relative px-6 py-2.5 rounded-xl text-sm font-semibold overflow-hidden"
                     >
-                        Member Login
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355] to-[#ff8042] opacity-80 group-hover:opacity-100 transition-opacity" />
+                        <span className="relative text-white flex items-center gap-2">
+                            Get Started
+                            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
+                        </span>
                     </button>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <section className="relative z-10 pt-32 pb-20 px-6">
+            <section className="relative z-10 pt-32 pb-24 px-6">
                 <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center">
                     <div className="space-y-8">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-xs font-medium text-[#ff3355] border-[#ff3355]/20 animate-fade-in-up">
-                            <Sparkles size={14} className="animate-pulse" />
-                            <span>The #1 Analytics Platform for Deriv</span>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-xs font-medium border border-[#ff3355]/30">
+                            <Sparkles size={14} className="text-[#ff3355] animate-pulse" />
+                            <span className="text-[#ff3355]">The #1 Analytics Platform for Deriv</span>
+                            <CheckCircle2 size={14} className="text-green-400" />
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
+                        <h1 className="text-5xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
                             Master the Markets <br />
                             <span className="text-gradient-primary">With Precision</span>
                         </h1>
 
                         <p className="text-lg text-gray-400 max-w-xl leading-relaxed">
-                            Elevate your trading with institutional-grade analytics, real-time sync, and intelligent pattern recognition. Built for serious traders.
+                            Elevate your trading with institutional-grade analytics, real-time sync, and intelligent pattern recognition. <span className="text-white font-medium">Built for serious traders.</span>
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
                             <button
                                 onClick={handleLogin}
-                                className="group relative px-8 py-4 rounded-xl font-semibold text-white shadow-lg transition-all hover:scale-105 active:scale-95"
-                                style={{ background: 'linear-gradient(135deg, #ff3355 0%, #ff8042 100%)' }}
+                                className="group relative px-8 py-4 rounded-2xl font-semibold text-white shadow-2xl shadow-[#ff3355]/30 transition-all hover:scale-[1.02] hover:shadow-[#ff3355]/40 active:scale-[0.98]"
                             >
-                                <span className="flex items-center gap-2">
-                                    <Shield size={20} />
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355] to-[#ff8042] rounded-2xl" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />
+                                <span className="relative flex items-center justify-center gap-3">
+                                    <Shield size={22} />
                                     Connect Deriv Account
                                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </button>
-                            <button className="px-8 py-4 rounded-xl glass-card hover:bg-white/5 transition-all font-medium flex items-center gap-2">
+                            <button className="px-8 py-4 rounded-2xl glass-card hover:bg-white/5 transition-all font-medium flex items-center justify-center gap-2 border border-white/10 hover:border-white/20">
                                 <Zap size={20} className="text-[#ff3355]" />
                                 View Demo
                             </button>
                         </div>
 
-                        <div className="pt-8 flex items-center gap-8 border-t border-white/5">
-                            <div>
-                                <div className="text-2xl font-bold">50K+</div>
-                                <div className="text-xs text-gray-500 uppercase tracking-widest mt-1">Traders</div>
+                        <div className="pt-8 flex flex-wrap items-center gap-8 border-t border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="flex -space-x-2">
+                                    {['🧑‍💼', '👨‍💻', '👩‍🔬', '🧑‍🎨'].map((emoji, i) => (
+                                        <div key={i} className="w-10 h-10 rounded-full border-2 border-[#050510] bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-lg">
+                                            {emoji}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div>
+                                    <div className="text-lg font-bold">50K+</div>
+                                    <div className="text-xs text-gray-500">Active Traders</div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="text-2xl font-bold text-green-400">98%</div>
-                                <div className="text-xs text-gray-500 uppercase tracking-widest mt-1">Satisfaction</div>
-                            </div>
-                            <div className="flex -space-x-3">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="w-10 h-10 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-xs">
-                                        {'User'[i - 1]}
-                                    </div>
+                            <div className="h-10 w-px bg-white/10 hidden sm:block" />
+                            <div className="flex items-center gap-2">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} size={18} className="text-amber-400 fill-amber-400" />
                                 ))}
+                                <span className="ml-2 font-bold">4.9/5</span>
+                                <span className="text-gray-500 text-sm">(2.5k reviews)</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Cosmetic Dashboard Preview */}
-                    <div className="relative hidden lg:block perspective-1000">
-                        <div className="absolute -inset-4 bg-gradient-to-r from-[#ff3355] to-[#3b82f6] rounded-[2rem] opacity-30 blur-2xl animate-pulse" />
-                        <div className="relative glass-card rounded-[2rem] p-8 transform rotate-y-6 hover:rotate-y-0 transition-transform duration-700">
-                            {/* Fake Header */}
-                            <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
-                                <div className="flex items-center gap-3">
+                    {/* Dashboard Preview */}
+                    <div className="relative hidden lg:block">
+                        <div className="absolute -inset-8 bg-gradient-to-r from-[#ff3355]/30 to-[#3b82f6]/30 rounded-[3rem] blur-3xl animate-pulse" />
+                        <div className="relative glass-card rounded-[2rem] p-8 border border-white/10 backdrop-blur-2xl">
+                            <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                                <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 rounded-full bg-red-500" />
                                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
                                     <div className="w-3 h-3 rounded-full bg-green-500" />
                                 </div>
-                                <div className="text-xs text-gray-500 font-mono">dashboard.tradermind.app</div>
+                                <div className="text-xs text-gray-500 font-mono bg-white/5 px-3 py-1 rounded-full">app.tradermind.com</div>
                             </div>
 
-                            {/* Fake Chart Area */}
-                            <div className="h-64 flex items-end justify-between gap-2 mb-8 px-4">
-                                {[30, 50, 45, 60, 80, 70, 90, 85, 100, 95, 80, 85].map((h, i) => (
-                                    <div key={i} style={{ height: `${h}%` }} className="w-full bg-gradient-to-t from-[#ff3355]/50 to-[#ff8042]/50 rounded-t-sm relative group">
-                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-black px-2 py-1 rounded text-[#ff8042] font-bold">
+                            <div className="h-56 flex items-end justify-between gap-1.5 mb-6 px-2">
+                                {[35, 55, 48, 65, 82, 72, 88, 78, 95, 90, 82, 88].map((h, i) => (
+                                    <div
+                                        key={i}
+                                        className="w-full rounded-t-md relative group transition-all duration-300 hover:scale-105"
+                                        style={{
+                                            height: `${h}%`,
+                                            background: `linear-gradient(to top, rgba(255,51,85,0.6) 0%, rgba(255,128,66,0.3) 100%)`,
+                                            animationDelay: `${i * 0.1}s`
+                                        }}
+                                    >
+                                        <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] bg-black/80 px-2 py-0.5 rounded text-[#ff8042] font-bold whitespace-nowrap">
                                             {h}%
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-white/5">
-                                    <div className="p-2 rounded-lg bg-green-500/20 text-green-400"><TrendingUp size={20} /></div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-green-500/5 border border-green-500/20">
+                                    <div className="p-2.5 rounded-xl bg-green-500/20 text-green-400">
+                                        <TrendingUp size={20} />
+                                    </div>
                                     <div>
-                                        <div className="text-xs text-gray-400">Profit Adjustment</div>
-                                        <div className="font-bold text-green-400">+$245.50</div>
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider">Today's Profit</div>
+                                        <div className="font-bold text-green-400 text-lg">+$1,245.50</div>
                                     </div>
                                 </div>
-                                <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-white/5">
-                                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400"><Activity size={20} /></div>
+                                <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-blue-500/5 border border-blue-500/20">
+                                    <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
+                                        <Activity size={20} />
+                                    </div>
                                     <div>
-                                        <div className="text-xs text-gray-400">Win Rate</div>
-                                        <div className="font-bold text-white">68.5%</div>
+                                        <div className="text-[10px] text-gray-500 uppercase tracking-wider">Win Rate</div>
+                                        <div className="font-bold text-white text-lg">73.5%</div>
                                     </div>
                                 </div>
                             </div>
@@ -209,18 +274,39 @@ const Login: React.FC = () => {
                 </div>
             </section>
 
-            {/* Features Glass Grid */}
-            <section className="relative z-10 py-24 px-6 bg-black/20 backdrop-blur-sm">
+            {/* Stats Section */}
+            <section id="stats" className="relative z-10 py-20 px-6">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                        {stats.map((stat, i) => (
+                            <div key={i} className="glass-card glass-card-hover rounded-2xl p-6 text-center group">
+                                <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
+                                    {stat.icon}
+                                </div>
+                                <div className="text-3xl md:text-4xl font-bold mb-1">{stat.value}</div>
+                                <div className="text-sm text-gray-500">{stat.label}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Features Grid */}
+            <section id="features" className="relative z-10 py-24 px-6 bg-gradient-to-b from-transparent via-black/30 to-transparent">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-5xl font-bold mb-4">Unleash Your Potential</h2>
-                        <p className="text-gray-400">Powerful tools in a beautiful interface</p>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-xs font-medium text-purple-400 border border-purple-500/30 mb-6">
+                            <Sparkles size={14} />
+                            <span>Powerful Features</span>
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-bold mb-4">Everything You Need</h2>
+                        <p className="text-gray-400 max-w-2xl mx-auto">Powerful tools wrapped in a beautiful, intuitive interface designed for professional traders.</p>
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {features.map((f, i) => (
-                            <div key={i} className="glass-card glass-card-hover rounded-2xl p-8 transition-all duration-300 group">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#ff3355]/20 to-[#ff8042]/20 flex items-center justify-center text-[#ff3355] mb-6 group-hover:scale-110 transition-transform">
+                            <div key={i} className="glass-card glass-card-hover rounded-2xl p-8 transition-all duration-300 group border border-white/5 hover:border-[#ff3355]/30">
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ff3355]/20 to-[#ff8042]/10 flex items-center justify-center text-[#ff3355] mb-6 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-[#ff3355]/20 transition-all">
                                     {f.icon}
                                 </div>
                                 <h3 className="text-xl font-bold mb-3 group-hover:text-[#ff8042] transition-colors">{f.title}</h3>
@@ -231,14 +317,85 @@ const Login: React.FC = () => {
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="relative z-10 pt-20 pb-10 px-6 border-t border-white/5 bg-black/40">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center font-bold text-white">T</div>
-                        <span className="font-bold text-gray-300">TraderMind</span>
+            {/* Testimonials */}
+            <section id="testimonials" className="relative z-10 py-24 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <div className="text-center mb-16">
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card text-xs font-medium text-amber-400 border border-amber-500/30 mb-6">
+                            <Star size={14} className="fill-amber-400" />
+                            <span>Trusted by Thousands</span>
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-bold mb-4">What Traders Say</h2>
+                        <p className="text-gray-400 max-w-2xl mx-auto">Join thousands of successful traders who have transformed their analysis with TraderMind.</p>
                     </div>
-                    <div className="text-gray-500 text-sm">© 2025 TraderMind. All rights reserved.</div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {testimonials.map((t, i) => (
+                            <div key={i} className="glass-card rounded-2xl p-8 group hover:border-amber-500/30 transition-colors border border-white/5">
+                                <Quote size={32} className="text-[#ff3355]/30 mb-4" />
+                                <p className="text-gray-300 mb-6 leading-relaxed">{t.content}</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-2xl border-2 border-white/10">
+                                        {t.avatar}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold">{t.name}</div>
+                                        <div className="text-sm text-gray-500">{t.role}</div>
+                                    </div>
+                                    <div className="ml-auto flex gap-0.5">
+                                        {[...Array(t.rating)].map((_, j) => (
+                                            <Star key={j} size={14} className="text-amber-400 fill-amber-400" />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="relative z-10 py-24 px-6">
+                <div className="max-w-4xl mx-auto">
+                    <div className="glass-card rounded-3xl p-12 text-center relative overflow-hidden border border-[#ff3355]/20">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355]/10 to-[#ff8042]/10" />
+                        <div className="relative">
+                            <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Level Up?</h2>
+                            <p className="text-gray-400 mb-8 max-w-2xl mx-auto">
+                                Join 50,000+ traders who are already using TraderMind to make smarter decisions and grow their accounts.
+                            </p>
+                            <button
+                                onClick={handleLogin}
+                                className="group inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-semibold text-white shadow-2xl shadow-[#ff3355]/30 transition-all hover:scale-[1.02] hover:shadow-[#ff3355]/40"
+                                style={{ background: 'linear-gradient(135deg, #ff3355 0%, #ff8042 100%)' }}
+                            >
+                                <Shield size={24} />
+                                Start Trading Smarter Today
+                                <ArrowRight size={22} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                            <p className="text-sm text-gray-500 mt-6">Free to use • No credit card required • Connect in 30 seconds</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="relative z-10 pt-16 pb-8 px-6 border-t border-white/5 bg-black/40">
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center font-bold text-white shadow-lg shadow-[#ff3355]/30">T</div>
+                            <span className="font-bold text-lg">TraderMind</span>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-500">
+                            <a href="#features" className="hover:text-white transition-colors">Features</a>
+                            <a href="#stats" className="hover:text-white transition-colors">Stats</a>
+                            <a href="#testimonials" className="hover:text-white transition-colors">Reviews</a>
+                            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+                            <a href="#" className="hover:text-white transition-colors">Terms</a>
+                        </div>
+                    </div>
+                    <div className="text-center text-gray-600 text-sm">© 2025 TraderMind. All rights reserved. Not affiliated with Deriv.com</div>
                 </div>
             </footer>
         </div>
@@ -246,3 +403,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
