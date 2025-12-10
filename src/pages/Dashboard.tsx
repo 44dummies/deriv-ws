@@ -1527,7 +1527,7 @@ const Dashboard = () => {
         {/* Sidebar - Desktop Only */}
         <aside
           ref={sidebarRef}
-          className={`hidden lg:flex ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+          className={`!hidden lg:!flex ${sidebarOpen ? 'lg:translate-x-0' : 'lg:-translate-x-full'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
             } fixed z-30 min-h-screen border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 flex-col`}
         >
           { }
