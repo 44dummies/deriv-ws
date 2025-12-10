@@ -1447,7 +1447,7 @@ const Dashboard = () => {
   };
 
   // Accept trading session
-  const handleAcceptSession = async (sessionId) => {
+  const handleAcceptSession = async (sessionId, sessionMode?: string) => {
     if (!sessionId) {
       console.error('Session ID is undefined. Available sessions:', availableSessions);
       console.error('First session object keys:', availableSessions[0] ? Object.keys(availableSessions[0]) : 'no sessions');
@@ -1456,12 +1456,24 @@ const Dashboard = () => {
       return;
     }
 
-    // Get user's Deriv token from sessionStorage
-    const derivToken = sessionStorage.getItem('derivToken');
-    if (!derivToken) {
-      toast.error('No trading token found. Please login again.');
-      return;
+    // Select correct token based on session mode (demo/real)
+    // Demo sessions use VRTC token, real sessions use CR token
+    let derivToken;
+    if (sessionMode === 'demo' || sessionMode === 'Demo') {
+      derivToken = sessionStorage.getItem('derivDemoToken');
+      if (!derivToken) {
+        toast.error('No DEMO trading account found. Please connect a DEMO account.');
+        return;
+      }
+    } else {
+      derivToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
+      if (!derivToken) {
+        toast.error('No trading token found. Please login again.');
+        return;
+      }
     }
+
+    console.log('Using token for session mode:', sessionMode, 'Token exists:', !!derivToken);
 
     setAcceptingSession(true);
     try {
@@ -1943,7 +1955,7 @@ const Dashboard = () => {
                                   </div>
                                 </div>
                                 <button
-                                  onClick={() => handleAcceptSession(sessionId)}
+                                  onClick={() => handleAcceptSession(sessionId, sessionDetails.mode || sessionDetails.type)}
                                   disabled={acceptingSession || session.hasJoined}
                                   className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
                                 >

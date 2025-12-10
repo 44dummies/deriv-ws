@@ -91,6 +91,23 @@ const Callback = () => {
           // Store derivId in sessionStorage for other pages to use
           sessionStorage.setItem('derivId', derivId);
 
+          // Store all accounts so we can use the correct token for demo/real sessions
+          // Demo accounts start with VRTC, real accounts start with CR
+          const demoAccount = accounts.find(a => a.account?.startsWith('VRTC'));
+          const realAccount = accounts.find(a => a.account?.startsWith('CR'));
+
+          if (demoAccount) {
+            sessionStorage.setItem('derivDemoToken', demoAccount.token);
+            sessionStorage.setItem('derivDemoAccount', demoAccount.account);
+          }
+          if (realAccount) {
+            sessionStorage.setItem('derivRealToken', realAccount.token);
+            sessionStorage.setItem('derivRealAccount', realAccount.account);
+          }
+          // Also store the current account's token for general use
+          sessionStorage.setItem('derivToken', primaryAccount.token);
+          console.log('[Callback] Saved tokens - Demo:', demoAccount?.account, 'Real:', realAccount?.account);
+
           // Check Supabase database for is_admin flag
           let isAdminUser = false;
           try {
