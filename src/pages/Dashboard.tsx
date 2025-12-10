@@ -1448,6 +1448,11 @@ const Dashboard = () => {
 
   // Accept trading session
   const handleAcceptSession = async (sessionId) => {
+    if (!sessionId) {
+      console.error('Session ID is undefined. Available sessions:', availableSessions);
+      toast.error('Cannot join session: Invalid session ID');
+      return;
+    }
     setAcceptingSession(true);
     try {
       await apiClient.post(`/user/sessions/${sessionId}/accept`, { tp, sl });
