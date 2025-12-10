@@ -1154,122 +1154,120 @@
     line-height: 1.2;
   }
 
-  flex-direction: column;
-  width: 100%;
-}
 
-.bot-actions .btn {
-  width: 100%;
-  justify-content: center;
-  padding: 10px 16px;
-  font-size: 13px;
-}
 
-/* Buttons mobile */
-.btn {
-  padding: 10px 16px;
-  font-size: 13px;
-  border-radius: 10px;
-}
+  .bot-actions .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
 
-.btn-icon {
-  width: 36px;
-  height: 36px;
-}
+  /* Buttons mobile */
+  .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
 
-/* Table mobile */
-.admin-table-container {
-  margin: 0 -12px;
-  padding: 0 12px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
+  .btn-icon {
+    width: 36px;
+    height: 36px;
+  }
 
-.admin-table {
-  min-width: 600px;
-}
+  /* Table mobile */
+  .admin-table-container {
+    margin: 0 -12px;
+    padding: 0 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 
-.admin-table th,
-.admin-table td {
-  padding: 8px 12px;
-  font-size: 11px;
-  white-space: nowrap;
-}
+  .admin-table {
+    min-width: 600px;
+  }
 
-.admin-table th {
-  font-size: 9px;
-}
+  .admin-table th,
+  .admin-table td {
+    padding: 8px 12px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
 
-/* Badge mobile */
-.badge {
-  padding: 3px 6px;
-  font-size: 9px;
-}
+  .admin-table th {
+    font-size: 9px;
+  }
 
-/* Cards mobile */
-.admin-card {
-  border-radius: 12px;
-  overflow: hidden;
-}
+  /* Badge mobile */
+  .badge {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
 
-/* Navigation mobile */
-.nav-item {
-  padding: 12px 14px;
-  gap: 12px;
-}
+  /* Cards mobile */
+  .admin-card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
 
-.nav-label {
-  font-size: 13px;
-}
+  /* Navigation mobile */
+  .nav-item {
+    padding: 12px 14px;
+    gap: 12px;
+  }
 
-.nav-section-title {
-  font-size: 9px;
-  padding: 0 14px 10px;
-}
+  .nav-label {
+    font-size: 13px;
+  }
 
-/* User section mobile */
-.sidebar-user {
-  padding: 12px;
-  gap: 10px;
-}
+  .nav-section-title {
+    font-size: 9px;
+    padding: 0 14px 10px;
+  }
 
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  font-size: 12px;
-}
+  /* User section mobile */
+  .sidebar-user {
+    padding: 12px;
+    gap: 10px;
+  }
 
-.user-name {
-  font-size: 13px;
-}
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+  }
 
-.user-role {
-  font-size: 10px;
-}
+  .user-name {
+    font-size: 13px;
+  }
 
-/* Sidebar header mobile */
-.sidebar-header {
-  padding: 16px;
-  gap: 12px;
-}
+  .user-role {
+    font-size: 10px;
+  }
 
-.sidebar-logo {
-  width: 36px;
-  height: 36px;
-}
+  /* Sidebar header mobile */
+  .sidebar-header {
+    padding: 16px;
+    gap: 12px;
+  }
 
-.sidebar-logo svg {
-  width: 20px;
-  height: 20px;
-}
+  .sidebar-logo {
+    width: 36px;
+    height: 36px;
+  }
 
-.sidebar-header-text h1 {
-  font-size: 16px;
-}
+  .sidebar-logo svg {
+    width: 20px;
+    height: 20px;
+  }
 
-.sidebar-header-text p {
-  font-size: 10px;
-}
+  .sidebar-header-text h1 {
+    font-size: 16px;
+  }
+
+  .sidebar-header-text p {
+    font-size: 10px;
+  }
 }
 
 /* Extra small screens */
