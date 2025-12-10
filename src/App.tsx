@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './pages/Login';
 import Callback from './pages/Callback';
 import Dashboard from './pages/Dashboard';
@@ -100,19 +100,11 @@ function App(): React.ReactElement {
           />
           <Route
             path="/community"
-            element={
-              <ProtectedRoute>
-                <Community />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard?tab=community" replace />}
           />
           <Route
             path="/trading"
-            element={
-              <ProtectedRoute>
-                <UserTrading />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard?tab=trading" replace />}
           />
 
           {/* Catch-all redirect */}

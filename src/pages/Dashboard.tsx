@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
   RefreshCw, BarChart3, Hash, Clock, Users, BookOpen, Settings,
@@ -127,10 +127,19 @@ const WARNING_BEFORE_LOGOUT = 60 * 1000;
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('sync');
+
+  // Sync tab with URL search params
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [tradeHistory, setTradeHistory] = useState([]);
