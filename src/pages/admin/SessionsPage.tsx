@@ -7,8 +7,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-    Plus, Search, Filter, Play, Square, Trash2,
-    Calendar, DollarSign, Activity, MoreVertical, X
+    Plus, Search, Play, Square, Trash2,
+    Calendar, Activity, X, Users, UserX, Eye
 } from 'lucide-react';
 import * as tradingApi from '../../trading/tradingApi';
 
@@ -28,6 +28,35 @@ interface Session {
     net_pnl?: number;
     // V2 schema
     type?: string;
+}
+
+interface Participant {
+    id: string;
+    user_id: string;
+    session_id: string;
+    tp: number;
+    sl: number;
+    status: string;
+    current_pnl: number;
+    initial_balance: number;
+    accepted_at: string;
+    removed_at?: string;
+    removal_reason?: string;
+    user_profiles?: {
+        id: string;
+        deriv_id?: string;
+        username?: string;
+        fullname?: string;
+        email?: string;
+    };
+}
+
+interface ParticipantStats {
+    total: number;
+    active: number;
+    removed: number;
+    totalPnl: number;
+    totalInitialBalance: number;
 }
 
 interface FormData {
@@ -65,6 +94,10 @@ const SessionsPage: React.FC = () => {
         default_sl: 5,
         description: ''
     });
+    const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+    const [participants, setParticipants] = useState<Participant[]>([]);
+    const [participantStats, setParticipantStats] = useState<ParticipantStats | null>(null);
+    const [loadingParticipants, setLoadingParticipants] = useState(false);
 
     const loadSessions = useCallback(async () => {
         try {
@@ -125,6 +158,35 @@ const SessionsPage: React.FC = () => {
             loadSessions();
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete session');
+        }
+    };
+
+    const loadParticipants = async (session: Session) => {
+        setSelectedSession(session);
+        setLoadingParticipants(true);
+        try {
+            const res = await tradingApi.getSessionParticipants(session.id);
+            setParticipants(res?.participants || []);
+            setParticipantStats(res?.stats || null);
+        } catch (error: any) {
+            console.error('Failed to load participants:', error);
+            toast.error(error.message || 'Failed to load participants');
+        } finally {
+            setLoadingParticipants(false);
+        }
+    };
+
+    const handleKickUser = async (userId: string, userName: string) => {
+        if (!selectedSession) return;
+        if (!window.confirm(`Are you sure you want to remove ${userName} from this session?`)) return;
+
+        try {
+            await tradingApi.kickParticipant(selectedSession.id, userId, 'admin_kick');
+            toast.success(`${userName} removed from session`);
+            // Refresh participants
+            loadParticipants(selectedSession);
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to remove user');
         }
     };
 
@@ -251,6 +313,13 @@ const SessionsPage: React.FC = () => {
                                     <td style={{ color: '#9ca3af' }}>{formatDate(session.created_at)}</td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button
+                                                className="btn btn-icon btn-secondary"
+                                                onClick={() => loadParticipants(session)}
+                                                title="View Participants"
+                                            >
+                                                <Eye size={16} />
+                                            </button>
                                             <button
                                                 className="btn btn-icon btn-secondary"
                                                 onClick={() => handleDeleteSession(session.id)}
@@ -446,6 +515,113 @@ const SessionsPage: React.FC = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Participants Panel */}
+            {selectedSession && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-3 sm:p-5">
+                    <div className="admin-card w-full max-w-[700px] max-h-[90vh] overflow-auto">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-white/10">
+                            <div>
+                                <h2 className="text-base sm:text-xl font-bold flex items-center gap-2">
+                                    <Users size={20} />
+                                    {selectedSession.name || selectedSession.session_name}
+                                </h2>
+                                <p className="text-sm text-gray-400 mt-1">Session Participants</p>
+                            </div>
+                            <button
+                                onClick={() => setSelectedSession(null)}
+                                className="bg-transparent border-none text-gray-400 cursor-pointer p-1"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Stats Row */}
+                        {participantStats && (
+                            <div className="grid grid-cols-4 gap-3 p-4 border-b border-white/10">
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-white">{participantStats.total}</div>
+                                    <div className="text-xs text-gray-400">Total</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-green-400">{participantStats.active}</div>
+                                    <div className="text-xs text-gray-400">Active</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className="text-lg font-bold text-red-400">{participantStats.removed}</div>
+                                    <div className="text-xs text-gray-400">Removed</div>
+                                </div>
+                                <div className="text-center">
+                                    <div className={`text-lg font-bold ${participantStats.totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {formatCurrency(participantStats.totalPnl)}
+                                    </div>
+                                    <div className="text-xs text-gray-400">Total PnL</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Participants List */}
+                        <div className="p-4">
+                            {loadingParticipants ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                </div>
+                            ) : participants.length === 0 ? (
+                                <div className="text-center py-8 text-gray-400">
+                                    <Users size={32} className="mx-auto mb-2 opacity-50" />
+                                    <p>No participants in this session</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {participants.map(p => (
+                                        <div
+                                            key={p.id}
+                                            className={`flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 ${p.status !== 'active' ? 'opacity-60' : ''}`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center text-sm font-bold">
+                                                    {(p.user_profiles?.fullname || p.user_profiles?.username || 'U')[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="font-medium text-white">
+                                                        {p.user_profiles?.fullname || p.user_profiles?.username || p.user_id.slice(0, 8)}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400">
+                                                        TP: ${p.tp} / SL: ${p.sl}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <div className={`font-mono font-bold ${(p.current_pnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {formatCurrency(p.current_pnl)}
+                                                    </div>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${p.status === 'active' ? 'bg-green-500/20 text-green-400' :
+                                                            p.status === 'removed' ? 'bg-red-500/20 text-red-400' :
+                                                                p.status === 'left' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                    'bg-gray-500/20 text-gray-400'
+                                                        }`}>
+                                                        {p.status}
+                                                    </span>
+                                                </div>
+                                                {p.status === 'active' && (
+                                                    <button
+                                                        onClick={() => handleKickUser(p.user_id, p.user_profiles?.fullname || p.user_profiles?.username || 'User')}
+                                                        className="btn btn-icon bg-red-500/20 hover:bg-red-500/30 text-red-400 border-none"
+                                                        title="Remove from session"
+                                                    >
+                                                        <UserX size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

@@ -182,6 +182,17 @@ export async function resumeSession(sessionId) {
   });
 }
 
+export async function getSessionParticipants(sessionId: string) {
+  return apiRequest(`/api/admin/sessions/${sessionId}/participants`);
+}
+
+export async function kickParticipant(sessionId: string, userId: string, reason?: string) {
+  return apiRequest(`/api/admin/sessions/${sessionId}/kick/${userId}`, {
+    method: 'POST',
+    body: JSON.stringify({ reason })
+  });
+}
+
 // ==================== Invitation APIs ====================
 
 export async function inviteAccounts(sessionId, accountIds) {
@@ -324,6 +335,8 @@ export const tradingApi = {
   stopSession,
   pauseSession,
   resumeSession,
+  getSessionParticipants,
+  kickParticipant,
 
   // Invitations
   inviteAccounts,
