@@ -55,44 +55,35 @@ const SettingsPage: React.FC = () => {
     ];
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '24px' }}>
-            {/* Settings Navigation */}
-            <div className="admin-card" style={{ padding: '16px', height: 'fit-content' }}>
-                <div style={{ marginBottom: '16px', padding: '0 12px' }}>
-                    <h3 style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px' }}>
+        <div className="flex flex-col lg:grid lg:grid-cols-[220px_1fr] gap-4 lg:gap-6">
+            {/* Settings Navigation - Horizontal scroll on mobile, sidebar on desktop */}
+            <div className="admin-card p-3 lg:p-4 lg:h-fit">
+                <div className="hidden lg:block mb-4 px-3">
+                    <h3 className="text-xs text-gray-400 uppercase tracking-wider">
                         Settings
                     </h3>
                 </div>
-                {sections.map(section => (
-                    <button
-                        key={section.id}
-                        onClick={() => setActiveSection(section.id)}
-                        style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            background: activeSection === section.id ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                            color: activeSection === section.id ? '#fff' : '#9ca3af',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            marginBottom: '4px',
-                            textAlign: 'left'
-                        }}
-                    >
-                        <span style={{ color: activeSection === section.id ? '#3b82f6' : 'inherit' }}>
-                            {section.icon}
-                        </span>
-                        {section.label}
-                    </button>
-                ))}
+                <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+                    {sections.map(section => (
+                        <button
+                            key={section.id}
+                            onClick={() => setActiveSection(section.id)}
+                            className={`flex items-center gap-2 lg:gap-3 px-3 py-2 lg:py-3 rounded-lg lg:rounded-xl whitespace-nowrap text-sm transition-all ${activeSection === section.id
+                                ? 'bg-blue-500/15 text-white'
+                                : 'text-gray-400 hover:bg-white/5'
+                                }`}
+                        >
+                            <span className={activeSection === section.id ? 'text-blue-400' : ''}>
+                                {section.icon}
+                            </span>
+                            <span className="lg:inline">{section.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Settings Content */}
-            <div className="admin-card" style={{ padding: '32px' }}>
+            <div className="admin-card p-4 sm:p-6 lg:p-8">
                 {activeSection === 'bot' && (
                     <>
                         <div style={{ marginBottom: '32px' }}>
@@ -324,12 +315,12 @@ interface SettingRowProps {
 }
 
 const SettingRow: React.FC<SettingRowProps> = ({ label, description, children }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '24px' }}>
-        <div>
-            <div style={{ fontWeight: 600, marginBottom: '4px' }}>{label}</div>
-            <div style={{ fontSize: '13px', color: '#9ca3af' }}>{description}</div>
+    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-6">
+        <div className="min-w-0">
+            <div className="font-semibold text-sm sm:text-base mb-1">{label}</div>
+            <div className="text-xs sm:text-sm text-gray-400">{description}</div>
         </div>
-        {children}
+        <div className="shrink-0">{children}</div>
     </div>
 );
 

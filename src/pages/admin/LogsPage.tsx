@@ -134,33 +134,17 @@ const LogsPage: React.FC = () => {
     return (
         <>
             {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', flex: 1, maxWidth: '600px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 max-w-full sm:max-w-[600px]">
                     {/* Search */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        flex: 1
-                    }}>
-                        <Search size={18} style={{ color: '#9ca3af' }} />
+                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex-1">
+                        <Search size={16} className="text-gray-400 shrink-0" />
                         <input
                             type="text"
                             placeholder="Search logs..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                outline: 'none',
-                                color: '#fff',
-                                fontSize: '14px',
-                                width: '100%'
-                            }}
+                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500"
                         />
                     </div>
 
@@ -168,16 +152,7 @@ const LogsPage: React.FC = () => {
                     <select
                         value={levelFilter}
                         onChange={(e) => setLevelFilter(e.target.value)}
-                        style={{
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#fff',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            outline: 'none'
-                        }}
+                        className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-white text-sm cursor-pointer outline-none"
                     >
                         <option value="all">All Levels</option>
                         <option value="info">Info</option>
@@ -187,54 +162,54 @@ const LogsPage: React.FC = () => {
                     </select>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn btn-secondary" onClick={loadLogs}>
-                        <RefreshCw size={18} />
-                        Refresh
+                <div className="flex gap-2 sm:gap-3">
+                    <button className="btn btn-secondary flex-1 sm:flex-none text-sm" onClick={loadLogs}>
+                        <RefreshCw size={16} />
+                        <span className="hidden sm:inline">Refresh</span>
                     </button>
-                    <button className="btn btn-primary" onClick={exportLogs}>
-                        <Download size={18} />
-                        Export
+                    <button className="btn btn-primary flex-1 sm:flex-none text-sm" onClick={exportLogs}>
+                        <Download size={16} />
+                        <span className="hidden sm:inline">Export</span>
                     </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                <div className="admin-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)' }}>
-                        <Info size={20} style={{ color: '#3b82f6' }} />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-2.5 rounded-lg bg-blue-500/15">
+                        <Info size={16} className="text-blue-500 sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '20px', fontWeight: 700 }}>{logs.filter(l => l.level === 'info').length}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>Info</div>
+                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'info').length}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-400">Info</div>
                     </div>
                 </div>
-                <div className="admin-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)' }}>
-                        <CheckCircle size={20} style={{ color: '#10b981' }} />
+                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-2.5 rounded-lg bg-green-500/15">
+                        <CheckCircle size={16} className="text-green-500 sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '20px', fontWeight: 700 }}>{logs.filter(l => l.level === 'success').length}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>Success</div>
+                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'success').length}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-400">Success</div>
                     </div>
                 </div>
-                <div className="admin-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)' }}>
-                        <AlertTriangle size={20} style={{ color: '#f59e0b' }} />
+                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-2.5 rounded-lg bg-yellow-500/15">
+                        <AlertTriangle size={16} className="text-yellow-500 sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '20px', fontWeight: 700 }}>{logs.filter(l => l.level === 'warning').length}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>Warning</div>
+                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'warning').length}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-400">Warning</div>
                     </div>
                 </div>
-                <div className="admin-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.15)' }}>
-                        <AlertTriangle size={20} style={{ color: '#ef4444' }} />
+                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-2.5 rounded-lg bg-red-500/15">
+                        <AlertTriangle size={16} className="text-red-500 sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                        <div style={{ fontSize: '20px', fontWeight: 700 }}>{logs.filter(l => l.level === 'error').length}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>Error</div>
+                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'error').length}</div>
+                        <div className="text-[10px] sm:text-xs text-gray-400">Error</div>
                     </div>
                 </div>
             </div>

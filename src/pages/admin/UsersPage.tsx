@@ -95,33 +95,17 @@ const UsersPage: React.FC = () => {
     return (
         <>
             {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', flex: 1, maxWidth: '500px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 max-w-full sm:max-w-[500px]">
                     {/* Search */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        flex: 1
-                    }}>
-                        <Search size={18} style={{ color: '#9ca3af' }} />
+                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex-1">
+                        <Search size={16} className="text-gray-400 shrink-0" />
                         <input
                             type="text"
                             placeholder="Search users..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                outline: 'none',
-                                color: '#fff',
-                                fontSize: '14px',
-                                width: '100%'
-                            }}
+                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500"
                         />
                     </div>
 
@@ -129,16 +113,7 @@ const UsersPage: React.FC = () => {
                     <select
                         value={roleFilter}
                         onChange={(e) => setRoleFilter(e.target.value)}
-                        style={{
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#fff',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            outline: 'none'
-                        }}
+                        className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-white text-sm cursor-pointer outline-none"
                     >
                         <option value="all">All Roles</option>
                         <option value="admin">Admins</option>
@@ -146,27 +121,27 @@ const UsersPage: React.FC = () => {
                     </select>
                 </div>
 
-                <button className="btn btn-secondary" onClick={loadUsers}>
-                    <RefreshCw size={18} />
+                <button className="btn btn-secondary w-full sm:w-auto text-sm" onClick={loadUsers}>
+                    <RefreshCw size={16} />
                     Refresh
                 </button>
             </div>
 
             {/* Stats Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
-                <div className="admin-card" style={{ padding: '20px' }}>
-                    <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Total Users</div>
-                    <div style={{ fontSize: '28px', fontWeight: 700 }}>{users.length}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="admin-card p-4 sm:p-5">
+                    <div className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">Total Users</div>
+                    <div className="text-xl sm:text-2xl font-bold">{users.length}</div>
                 </div>
-                <div className="admin-card" style={{ padding: '20px' }}>
-                    <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Admins</div>
-                    <div style={{ fontSize: '28px', fontWeight: 700, color: '#8b5cf6' }}>
+                <div className="admin-card p-4 sm:p-5">
+                    <div className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">Admins</div>
+                    <div className="text-xl sm:text-2xl font-bold text-purple-400">
                         {users.filter(u => u.is_admin).length}
                     </div>
                 </div>
-                <div className="admin-card" style={{ padding: '20px' }}>
-                    <div style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '8px' }}>Online Now</div>
-                    <div style={{ fontSize: '28px', fontWeight: 700, color: '#10b981' }}>
+                <div className="admin-card p-4 sm:p-5">
+                    <div className="text-gray-400 text-xs sm:text-sm mb-1 sm:mb-2">Online Now</div>
+                    <div className="text-xl sm:text-2xl font-bold text-green-400">
                         {users.filter(u => u.is_online).length}
                     </div>
                 </div>

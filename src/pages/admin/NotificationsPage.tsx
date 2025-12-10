@@ -190,50 +190,40 @@ const NotificationsPage: React.FC = () => {
     return (
         <>
             {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex gap-2">
                     <button
                         onClick={() => setFilter('all')}
-                        style={{
-                            padding: '10px 20px',
-                            borderRadius: '10px',
-                            background: filter === 'all' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'rgba(255,255,255,0.05)',
-                            border: filter === 'all' ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                            color: filter === 'all' ? '#fff' : '#9ca3af',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            fontSize: '14px'
-                        }}
+                        className={`flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all ${filter === 'all'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                : 'bg-white/5 border border-white/10 text-gray-400'
+                            }`}
                     >
                         All ({notifications.length})
                     </button>
                     <button
                         onClick={() => setFilter('unread')}
-                        style={{
-                            padding: '10px 20px',
-                            borderRadius: '10px',
-                            background: filter === 'unread' ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'rgba(255,255,255,0.05)',
-                            border: filter === 'unread' ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                            color: filter === 'unread' ? '#fff' : '#9ca3af',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            fontSize: '14px'
-                        }}
+                        className={`flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all ${filter === 'unread'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                : 'bg-white/5 border border-white/10 text-gray-400'
+                            }`}
                     >
                         Unread ({unreadCount})
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div className="flex gap-2 sm:gap-3">
                     {unreadCount > 0 && (
-                        <button className="btn btn-secondary" onClick={markAllAsRead}>
-                            <CheckCheck size={18} />
-                            Mark All Read
+                        <button className="btn btn-secondary flex-1 sm:flex-none text-xs sm:text-sm" onClick={markAllAsRead}>
+                            <CheckCheck size={16} />
+                            <span className="hidden sm:inline">Mark All Read</span>
+                            <span className="sm:hidden">Read All</span>
                         </button>
                     )}
-                    <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                        <Plus size={18} />
-                        Create Announcement
+                    <button className="btn btn-primary flex-1 sm:flex-none text-xs sm:text-sm" onClick={() => setShowCreateModal(true)}>
+                        <Plus size={16} />
+                        <span className="hidden sm:inline">Create Announcement</span>
+                        <span className="sm:hidden">Create</span>
                     </button>
                 </div>
             </div>

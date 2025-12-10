@@ -134,43 +134,36 @@ const AnalyticsPage: React.FC = () => {
     return (
         <>
             {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                     {['24h', '7d', '30d', 'all'].map(range => (
                         <button
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            style={{
-                                padding: '10px 20px',
-                                borderRadius: '10px',
-                                background: timeRange === range ? 'linear-gradient(135deg, #3b82f6, #8b5cf6)' : 'rgba(255,255,255,0.05)',
-                                border: timeRange === range ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                                color: timeRange === range ? '#fff' : '#9ca3af',
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                fontSize: '14px',
-                                transition: 'all 0.2s'
-                            }}
+                            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all ${timeRange === range
+                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                    : 'bg-white/5 border border-white/10 text-gray-400'
+                                }`}
                         >
-                            {range === 'all' ? 'All Time' : range.toUpperCase()}
+                            {range === 'all' ? 'All' : range.toUpperCase()}
                         </button>
                     ))}
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <button className="btn btn-secondary" onClick={loadAnalytics}>
-                        <RefreshCw size={18} />
-                        Refresh
+                <div className="flex gap-2 sm:gap-3">
+                    <button className="btn btn-secondary flex-1 sm:flex-none text-xs sm:text-sm" onClick={loadAnalytics}>
+                        <RefreshCw size={16} />
+                        <span className="hidden sm:inline">Refresh</span>
                     </button>
-                    <button className="btn btn-primary" onClick={exportData}>
-                        <Download size={18} />
-                        Export
+                    <button className="btn btn-primary flex-1 sm:flex-none text-xs sm:text-sm" onClick={exportData}>
+                        <Download size={16} />
+                        <span className="hidden sm:inline">Export</span>
                     </button>
                 </div>
             </div>
 
             {/* Key Metrics */}
-            <div className="stats-grid" style={{ marginBottom: '24px' }}>
+            <div className="stats-grid mb-4 sm:mb-6">
                 <MetricCard
                     icon={<BarChart2 />}
                     label="Total Trades"
@@ -202,33 +195,28 @@ const AnalyticsPage: React.FC = () => {
             </div>
 
             {/* Charts Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 sm:gap-6 mb-4 sm:mb-6">
                 {/* Daily Performance Chart */}
-                <div className="admin-card" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Activity size={20} style={{ color: '#3b82f6' }} />
+                <div className="admin-card p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
+                        <Activity size={18} className="text-blue-500" />
                         Daily Performance
                     </h3>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: '200px', gap: '8px' }}>
+                    <div className="flex items-end justify-around h-[150px] sm:h-[200px] gap-1 sm:gap-2">
                         {analytics?.dailyStats.map((day, i) => {
                             const maxProfit = Math.max(...analytics.dailyStats.map(d => Math.abs(d.profit)));
-                            const height = Math.abs(day.profit) / maxProfit * 150;
+                            const height = Math.abs(day.profit) / maxProfit * 120;
                             return (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                <div key={i} className="flex flex-col items-center gap-1 sm:gap-2">
                                     <div
-                                        style={{
-                                            width: '36px',
-                                            height: `${height}px`,
-                                            minHeight: '20px',
-                                            background: day.profit >= 0
-                                                ? 'linear-gradient(to top, #10b981, #059669)'
-                                                : 'linear-gradient(to top, #ef4444, #dc2626)',
-                                            borderRadius: '6px',
-                                            transition: 'height 0.3s'
-                                        }}
+                                        className={`w-6 sm:w-9 min-h-[16px] rounded transition-all ${day.profit >= 0
+                                                ? 'bg-gradient-to-t from-green-500 to-green-400'
+                                                : 'bg-gradient-to-t from-red-500 to-red-400'
+                                            }`}
+                                        style={{ height: `${height}px` }}
                                         title={`${day.date}: ${formatCurrency(day.profit)}`}
                                     />
-                                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>{day.date}</span>
+                                    <span className="text-[10px] sm:text-xs text-gray-400">{day.date}</span>
                                 </div>
                             );
                         })}
@@ -236,25 +224,19 @@ const AnalyticsPage: React.FC = () => {
                 </div>
 
                 {/* Digit Distribution */}
-                <div className="admin-card" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <PieChart size={20} style={{ color: '#8b5cf6' }} />
+                <div className="admin-card p-4 sm:p-6">
+                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
+                        <PieChart size={18} className="text-purple-500" />
                         Digit Distribution
                     </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                    <div className="grid grid-cols-5 gap-1 sm:gap-2">
                         {Object.entries(analytics?.digitDistribution || {}).map(([digit, count]) => (
                             <div
                                 key={digit}
-                                style={{
-                                    textAlign: 'center',
-                                    padding: '12px 8px',
-                                    borderRadius: '10px',
-                                    background: 'rgba(139, 92, 246, 0.1)',
-                                    border: '1px solid rgba(139, 92, 246, 0.2)'
-                                }}
+                                className="text-center p-2 sm:p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
                             >
-                                <div style={{ fontSize: '20px', fontWeight: 700, color: '#8b5cf6' }}>{digit}</div>
-                                <div style={{ fontSize: '12px', color: '#9ca3af' }}>{count as number}</div>
+                                <div className="text-base sm:text-xl font-bold text-purple-400">{digit}</div>
+                                <div className="text-[10px] sm:text-xs text-gray-400">{count as number}</div>
                             </div>
                         ))}
                     </div>

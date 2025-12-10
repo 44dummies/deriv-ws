@@ -165,33 +165,17 @@ const SessionsPage: React.FC = () => {
     return (
         <>
             {/* Header Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', flex: 1, maxWidth: '500px' }}>
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 max-w-full sm:max-w-[500px]">
                     {/* Search */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px 16px',
-                        borderRadius: '12px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        flex: 1
-                    }}>
-                        <Search size={18} style={{ color: '#9ca3af' }} />
+                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex-1">
+                        <Search size={16} className="text-gray-400 shrink-0" />
                         <input
                             type="text"
                             placeholder="Search sessions..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                outline: 'none',
-                                color: '#fff',
-                                fontSize: '14px',
-                                width: '100%'
-                            }}
+                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500"
                         />
                     </div>
 
@@ -199,16 +183,7 @@ const SessionsPage: React.FC = () => {
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        style={{
-                            padding: '12px 16px',
-                            borderRadius: '12px',
-                            background: 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            color: '#fff',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            outline: 'none'
-                        }}
+                        className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-white text-sm cursor-pointer outline-none"
                     >
                         <option value="all">All Status</option>
                         <option value="running">Running</option>
@@ -218,9 +193,9 @@ const SessionsPage: React.FC = () => {
                     </select>
                 </div>
 
-                <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                    <Plus size={20} />
-                    Create Session
+                <button className="btn btn-primary w-full sm:w-auto text-sm py-2.5" onClick={() => setShowCreateModal(true)}>
+                    <Plus size={18} />
+                    <span className="sm:inline">Create Session</span>
                 </button>
             </div>
 
@@ -294,43 +269,23 @@ const SessionsPage: React.FC = () => {
 
             {/* Create Session Modal */}
             {showCreateModal && (
-                <div style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 200,
-                    padding: '20px'
-                }}>
-                    <div className="admin-card" style={{
-                        width: '100%',
-                        maxWidth: '600px',
-                        maxHeight: '90vh',
-                        overflow: 'auto'
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '24px',
-                            borderBottom: '1px solid rgba(255,255,255,0.08)'
-                        }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: 700 }}>Create New Session</h2>
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[200] p-3 sm:p-5">
+                    <div className="admin-card w-full max-w-[600px] max-h-[90vh] overflow-auto">
+                        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-white/10">
+                            <h2 className="text-base sm:text-xl font-bold">Create New Session</h2>
                             <button
                                 onClick={() => setShowCreateModal(false)}
-                                style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}
+                                className="bg-transparent border-none text-gray-400 cursor-pointer p-1"
                             >
-                                <X size={24} />
+                                <X size={20} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleCreateSession} style={{ padding: '24px' }}>
-                            <div style={{ display: 'grid', gap: '20px' }}>
+                        <form onSubmit={handleCreateSession} className="p-4 sm:p-6">
+                            <div className="grid gap-4 sm:gap-5">
                                 {/* Session Name */}
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                    <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                         Session Name *
                                     </label>
                                     <input
@@ -338,40 +293,21 @@ const SessionsPage: React.FC = () => {
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="e.g. Morning Scalp"
-                                        style={{
-                                            width: '100%',
-                                            padding: '14px 16px',
-                                            borderRadius: '12px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
+                                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none"
                                         required
                                     />
                                 </div>
 
-                                {/* Type & Min Balance */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                {/* Type & Mode */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                             Session Type
                                         </label>
                                         <select
                                             value={formData.session_type}
                                             onChange={(e) => setFormData({ ...formData, session_type: e.target.value })}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none',
-                                                cursor: 'pointer'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none cursor-pointer"
                                         >
                                             <option value="day">Day Trading</option>
                                             <option value="one_time">One Time</option>
@@ -379,23 +315,13 @@ const SessionsPage: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                             Mode
                                         </label>
                                         <select
                                             value={formData.mode || 'real'}
                                             onChange={(e) => setFormData({ ...formData, mode: e.target.value as 'real' | 'demo' })}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none',
-                                                cursor: 'pointer'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none cursor-pointer"
                                         >
                                             <option value="real">Real Account</option>
                                             <option value="demo">Demo Account</option>
@@ -437,20 +363,11 @@ const SessionsPage: React.FC = () => {
                                             onChange={(e) => setFormData({ ...formData, initial_stake: Number(e.target.value) })}
                                             step="0.01"
                                             min="0.35"
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none"
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                             Martingale Multiplier
                                         </label>
                                         <input
@@ -458,67 +375,40 @@ const SessionsPage: React.FC = () => {
                                             value={formData.martingale_multiplier}
                                             onChange={(e) => setFormData({ ...formData, martingale_multiplier: Number(e.target.value) })}
                                             step="0.1"
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none"
                                         />
                                     </div>
                                 </div>
 
                                 {/* TP/SL Settings */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                             Take Profit ($)
                                         </label>
                                         <input
                                             type="number"
                                             value={formData.default_tp}
                                             onChange={(e) => setFormData({ ...formData, default_tp: Number(e.target.value) })}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none"
                                         />
                                     </div>
                                     <div>
-                                        <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                        <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                             Stop Loss ($)
                                         </label>
                                         <input
                                             type="number"
                                             value={formData.default_sl}
                                             onChange={(e) => setFormData({ ...formData, default_sl: Number(e.target.value) })}
-                                            style={{
-                                                width: '100%',
-                                                padding: '14px 16px',
-                                                borderRadius: '12px',
-                                                background: 'rgba(0,0,0,0.3)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: '#fff',
-                                                fontSize: '14px',
-                                                outline: 'none'
-                                            }}
+                                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Description */}
                                 <div>
-                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: '#9ca3af' }}>
+                                    <label className="block mb-2 text-xs sm:text-sm text-gray-400">
                                         Description (Optional)
                                     </label>
                                     <textarea
@@ -526,48 +416,38 @@ const SessionsPage: React.FC = () => {
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                         placeholder="Brief plan for this session..."
                                         rows={3}
-                                        style={{
-                                            width: '100%',
-                                            padding: '14px 16px',
-                                            borderRadius: '12px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none',
-                                            resize: 'none'
-                                        }}
+                                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg sm:rounded-xl bg-black/30 border border-white/10 text-white text-sm outline-none resize-none"
                                     />
                                 </div>
                             </div>
 
                             {/* Actions */}
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-6">
                                 <button
                                     type="button"
-                                    className="btn btn-secondary"
+                                    className="btn btn-secondary w-full sm:w-auto"
                                     onClick={() => setShowCreateModal(false)}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="btn btn-primary"
+                                    className="btn btn-primary w-full sm:w-auto"
                                     disabled={creating}
                                 >
                                     {creating ? (
-                                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-t-2 border-b-2 border-white"></div>
                                     ) : (
                                         <>
-                                            <Plus size={20} />
+                                            <Plus size={18} />
                                             Create Session
                                         </>
                                     )}
                                 </button>
                             </div>
                         </form>
-                    </div >
-                </div >
+                    </div>
+                </div>
             )}
         </>
     );
