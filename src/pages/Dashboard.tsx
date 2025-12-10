@@ -745,20 +745,39 @@ const Dashboard = () => {
           setUserInfo(prev => prev ? { ...prev, balance: balanceRes.balance.balance } : null);
         }
 
-        // Fetch specific accounts (Demo/Real) via API to ensure correct display
-        const accountsRes = await apiClient.get<any>('/trading/accounts');
-        if (accountsRes.success && accountsRes.data) {
-          const demoAccount = accountsRes.data.find((a: any) => a.account_type === 'demo');
-          const realAccount = accountsRes.data.find((a: any) => a.account_type === 'real' || a.account_type === 'binary'); // binary is often used for real
+        // Fetch all account balances from Deriv API
+        try {
+          const allBalancesRes = await websocketService.getAllBalances();
+          console.log('All balances response:', allBalancesRes);
 
-          setUserInfo(prev => prev ? {
-            ...prev,
-            demo_balance: demoAccount?.balance || 0,
-            real_balance: realAccount?.balance || 0
-          } : null);
+          if (allBalancesRes.balance?.accounts) {
+            // accounts is an object with loginid as keys
+            const accounts = allBalancesRes.balance.accounts;
+            let demoBalance = 0;
+            let realBalance = 0;
+
+            Object.entries(accounts).forEach(([loginid, accountData]: [string, any]) => {
+              console.log('Account:', loginid, accountData);
+              if (accountData.demo_account === 1 || loginid.startsWith('VRTC')) {
+                demoBalance = accountData.balance || 0;
+              } else {
+                realBalance = accountData.balance || 0;
+              }
+            });
+
+            setUserInfo(prev => prev ? {
+              ...prev,
+              demo_balance: demoBalance,
+              real_balance: realBalance
+            } : null);
+
+            console.log('Set balances - Demo:', demoBalance, 'Real:', realBalance);
+          }
+        } catch (allBalErr) {
+          console.error('Failed to get all balances:', allBalErr);
         }
       } catch (balanceErr) {
-
+        console.error('Balance fetch error:', balanceErr);
       }
 
 

@@ -139,18 +139,18 @@ class DerivWebSocket {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private isConnecting: boolean = false;
-  private isAuthorized: boolean = false; 
-  
+  private isAuthorized: boolean = false;
+
   private connectionListeners: Array<(state: 'open' | 'closed') => void> = [];
-  
+
   private pingIntervalId: ReturnType<typeof setInterval> | null = null;
-  private readonly PING_INTERVAL = 30000; 
+  private readonly PING_INTERVAL = 30000;
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return Promise.resolve();
     }
-    
+
     if (this.isConnecting) {
       return new Promise((resolve) => {
         const checkConnection = setInterval(() => {
@@ -171,10 +171,10 @@ class DerivWebSocket {
         console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        
+
         this.startPingInterval();
-        
-        try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) {  }
+
+        try { this.connectionListeners.forEach(cb => cb('open')); } catch (e) { }
         resolve();
       };
 
@@ -186,8 +186,8 @@ class DerivWebSocket {
 
       this.ws.onmessage = (event: MessageEvent) => {
         const data: DerivResponse = JSON.parse(event.data);
-        
-        
+
+
         if (data.subscription?.id) {
           const callback = this.subscriptions.get(data.subscription.id);
           if (callback) {
@@ -195,7 +195,7 @@ class DerivWebSocket {
           }
         }
 
-        
+
         if (data.req_id && this.pendingRequests.has(data.req_id)) {
           const handlers = this.pendingRequests.get(data.req_id);
           if (handlers) {
@@ -212,18 +212,18 @@ class DerivWebSocket {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.isConnecting = false;
-        
+
         this.stopPingInterval();
-        
-        try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) {  }
+
+        try { this.connectionListeners.forEach(cb => cb('closed')); } catch (e) { }
         this.handleReconnect();
       };
     });
   }
 
-  
+
   private startPingInterval(): void {
-    this.stopPingInterval(); 
+    this.stopPingInterval();
     this.pingIntervalId = setInterval(async () => {
       try {
         if (this.ws?.readyState === WebSocket.OPEN) {
@@ -236,7 +236,7 @@ class DerivWebSocket {
     }, this.PING_INTERVAL);
   }
 
-  
+
   private stopPingInterval(): void {
     if (this.pingIntervalId) {
       clearInterval(this.pingIntervalId);
@@ -244,7 +244,7 @@ class DerivWebSocket {
     }
   }
 
-  
+
   onConnectionChange(cb: (state: 'open' | 'closed') => void): () => void {
     this.connectionListeners.push(cb);
     return () => { this.connectionListeners = this.connectionListeners.filter(c => c !== cb); };
@@ -314,38 +314,43 @@ class DerivWebSocket {
     return this.send({ forget_all: 'candles' });
   }
 
-  
+
   private lastAuthorizeResponse: DerivResponse | null = null;
-  
+
   async authorize(token: string, forceRefresh: boolean = false): Promise<DerivResponse> {
-    
+
     if (this.isAuthorized && this.lastAuthorizeResponse && !forceRefresh) {
       console.log('Returning cached authorize response');
       return this.lastAuthorizeResponse;
     }
-    
-    
+
+
     if (forceRefresh) {
       this.isAuthorized = false;
     }
-    
+
     const response = await this.send({ authorize: token });
     if (!response.error) {
       this.isAuthorized = true;
-      this.lastAuthorizeResponse = response; 
+      this.lastAuthorizeResponse = response;
     }
     return response;
   }
-  
-  
+
+
   resetAuth(): void {
     this.isAuthorized = false;
     this.lastAuthorizeResponse = null;
   }
 
-  
+
   async getBalance(subscribe: boolean = false): Promise<DerivResponse> {
     return await this.send({ balance: 1, subscribe: subscribe ? 1 : 0 });
+  }
+
+  // Get balances for all accounts
+  async getAllBalances(): Promise<DerivResponse> {
+    return await this.send({ balance: 1, account: 'all' });
   }
 
   subscribeBalance(callback: SubscriptionCallback): Promise<string> {
@@ -380,7 +385,7 @@ class DerivWebSocket {
     return await this.send({ profit_table: 1, ...options });
   }
 
-  
+
   async getActiveSymbols(productType: string = 'basic'): Promise<DerivResponse> {
     return await this.send({ active_symbols: productType });
   }
@@ -393,7 +398,7 @@ class DerivWebSocket {
     return await this.send({ trading_times: date });
   }
 
-  
+
   async getTick(symbol: string): Promise<DerivResponse> {
     return await this.send({ ticks: symbol });
   }
@@ -430,7 +435,7 @@ class DerivWebSocket {
     }, callback);
   }
 
-  
+
   async getContractsFor(symbol: string): Promise<DerivResponse> {
     return await this.send({ contracts_for: symbol, currency: 'USD' });
   }
@@ -463,7 +468,7 @@ class DerivWebSocket {
     return this.subscribe({ proposal: 1, ...options }, callback);
   }
 
-  
+
   async buy(proposalId: string, price: number): Promise<DerivResponse> {
     return await this.send({ buy: proposalId, price });
   }
@@ -485,7 +490,7 @@ class DerivWebSocket {
     return await this.send({ sell: contractId, price });
   }
 
-  
+
   async getOpenContracts(): Promise<DerivResponse> {
     return await this.send({ portfolio: 1 });
   }
@@ -506,7 +511,7 @@ class DerivWebSocket {
     return this.subscribe({ proposal_open_contract: 1 }, callback);
   }
 
-  
+
   async ping(): Promise<DerivResponse> {
     return await this.send({ ping: 1 });
   }
@@ -520,16 +525,16 @@ class DerivWebSocket {
   }
 
   disconnect(): void {
-    
+
     this.stopPingInterval();
-    this.unsubscribeAll().catch(() => {});
+    this.unsubscribeAll().catch(() => { });
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
     this.pendingRequests.clear();
     this.subscriptions.clear();
-    this.isAuthorized = false; 
+    this.isAuthorized = false;
   }
 
   isConnected(): boolean {
