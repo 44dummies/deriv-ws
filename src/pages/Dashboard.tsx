@@ -1458,22 +1458,32 @@ const Dashboard = () => {
 
     // Select correct token based on session mode (demo/real)
     // Demo sessions use VRTC token, real sessions use CR token
+    const demoToken = sessionStorage.getItem('derivDemoToken');
+    const realToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
+
+    console.log('Session mode:', sessionMode);
+    console.log('Available tokens - Demo:', !!demoToken, 'Real:', !!realToken);
+
     let derivToken;
-    if (sessionMode === 'demo' || sessionMode === 'Demo') {
-      derivToken = sessionStorage.getItem('derivDemoToken');
+    const isDemo = sessionMode?.toLowerCase()?.includes('demo');
+
+    if (isDemo) {
+      derivToken = demoToken;
       if (!derivToken) {
-        toast.error('No DEMO trading account found. Please connect a DEMO account.');
+        console.error('No demo token found in sessionStorage');
+        toast.error('No DEMO trading account found. Please logout and login again.');
         return;
       }
     } else {
-      derivToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
+      derivToken = realToken;
       if (!derivToken) {
-        toast.error('No trading token found. Please login again.');
+        console.error('No real token found in sessionStorage');
+        toast.error('No trading token found. Please logout and login again.');
         return;
       }
     }
 
-    console.log('Using token for session mode:', sessionMode, 'Token exists:', !!derivToken);
+    console.log('Using token for session mode:', sessionMode, 'isDemo:', isDemo, 'Token exists:', !!derivToken);
 
     setAcceptingSession(true);
     try {
