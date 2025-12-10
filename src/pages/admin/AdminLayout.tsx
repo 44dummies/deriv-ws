@@ -216,7 +216,16 @@ const AdminLayout: React.FC = () => {
                                     <div className="user-avatar-large">{userInitials}</div>
                                     <div className="flex-1 min-w-0">
                                         <p className="font-semibold text-base truncate text-white">{userName}</p>
-                                        <p className="text-xs text-gray-400">Administrator</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
+                                                {userInfo.is_virtual ? 'Demo' : 'Real'}
+                                            </span>
+                                            {userInfo.currency && (
+                                                <span className="text-sm font-medium text-gray-300">
+                                                    {userInfo.currency} {(userInfo.balance ?? 0).toFixed(2)}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
