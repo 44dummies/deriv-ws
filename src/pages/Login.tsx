@@ -72,63 +72,6 @@ const Login: React.FC = () => {
 
     return (
         <div className={`min-h-screen overflow-hidden bg-[#050510] text-[#e0e0ed] font-sans selection:bg-[#ff3355]/30 ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-1000`}>
-            <style>{`
-                @keyframes blob {
-                    0% { transform: translate(0px, 0px) scale(1); }
-                    33% { transform: translate(30px, -50px) scale(1.1); }
-                    66% { transform: translate(-20px, 20px) scale(0.9); }
-                    100% { transform: translate(0px, 0px) scale(1); }
-                }
-                .animate-blob {
-                    animation: blob 7s infinite;
-                }
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.03);
-                    backdrop-filter: blur(20px);
-                    -webkit-backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-                }
-                .glass-card-hover:hover {
-                    background: rgba(255, 255, 255, 0.05);
-                    border-color: rgba(255, 255, 255, 0.1);
-                    transform: translateY(-2px);
-                    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
-                    box-shadow: inset 0 0 20px rgba(255,255,255,0.05);
-                }
-                .glossy-btn {
-                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(255, 255, 255, 0.18);
-                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-                    position: relative;
-                    overflow: hidden;
-                }
-                .glossy-btn::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-                    transition: 0.5s;
-                }
-                .glossy-btn:hover::before {
-                    left: 100%;
-                }
-                .text-gradient {
-                    background: linear-gradient(to right, #ffffff, #a5a5a5);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-                .text-gradient-primary {
-                    background: linear-gradient(to right, #ff3355, #ff8042);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-            `}</style>
-
             {/* Liquid Background */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#ff3355]/20 rounded-full mix-blend-screen filter blur-[100px] animate-blob" />
@@ -149,7 +92,7 @@ const Login: React.FC = () => {
                         </div>
                         <span className="text-xl font-bold tracking-tight">TraderMind</span>
                     </div>
-                    
+
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-300">
                         <a href="#features" className="hover:text-white transition-colors">Features</a>
                         <a href="#stats" className="hover:text-white transition-colors">Stats</a>
@@ -211,9 +154,9 @@ const Login: React.FC = () => {
                                 <div className="text-xs text-gray-500 uppercase tracking-widest mt-1">Satisfaction</div>
                             </div>
                             <div className="flex -space-x-3">
-                                {[1,2,3,4].map((i) => (
+                                {[1, 2, 3, 4].map((i) => (
                                     <div key={i} className="w-10 h-10 rounded-full border-2 border-black bg-gray-800 flex items-center justify-center text-xs">
-                                        {'User'[i-1]}
+                                        {'User'[i - 1]}
                                     </div>
                                 ))}
                             </div>
@@ -224,7 +167,7 @@ const Login: React.FC = () => {
                     <div className="relative hidden lg:block perspective-1000">
                         <div className="absolute -inset-4 bg-gradient-to-r from-[#ff3355] to-[#3b82f6] rounded-[2rem] opacity-30 blur-2xl animate-pulse" />
                         <div className="relative glass-card rounded-[2rem] p-8 transform rotate-y-6 hover:rotate-y-0 transition-transform duration-700">
-                             {/* Fake Header */}
+                            {/* Fake Header */}
                             <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -238,23 +181,23 @@ const Login: React.FC = () => {
                             <div className="h-64 flex items-end justify-between gap-2 mb-8 px-4">
                                 {[30, 50, 45, 60, 80, 70, 90, 85, 100, 95, 80, 85].map((h, i) => (
                                     <div key={i} style={{ height: `${h}%` }} className="w-full bg-gradient-to-t from-[#ff3355]/50 to-[#ff8042]/50 rounded-t-sm relative group">
-                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-black px-2 py-1 rounded text-[#ff8042] font-bold">
+                                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs bg-black px-2 py-1 rounded text-[#ff8042] font-bold">
                                             {h}%
-                                         </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-white/5">
-                                    <div className="p-2 rounded-lg bg-green-500/20 text-green-400"><TrendingUp size={20}/></div>
+                                    <div className="p-2 rounded-lg bg-green-500/20 text-green-400"><TrendingUp size={20} /></div>
                                     <div>
                                         <div className="text-xs text-gray-400">Profit Adjustment</div>
                                         <div className="font-bold text-green-400">+$245.50</div>
                                     </div>
                                 </div>
                                 <div className="glass-card p-4 rounded-xl flex items-center gap-3 bg-white/5">
-                                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400"><Activity size={20}/></div>
+                                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-400"><Activity size={20} /></div>
                                     <div>
                                         <div className="text-xs text-gray-400">Win Rate</div>
                                         <div className="font-bold text-white">68.5%</div>
@@ -288,16 +231,16 @@ const Login: React.FC = () => {
                 </div>
             </section>
 
-             {/* Footer */}
-             <footer className="relative z-10 pt-20 pb-10 px-6 border-t border-white/5 bg-black/40">
+            {/* Footer */}
+            <footer className="relative z-10 pt-20 pb-10 px-6 border-t border-white/5 bg-black/40">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center font-bold text-white">T</div>
-                         <span className="font-bold text-gray-300">TraderMind</span>
+                        <div className="w-8 h-8 rounded bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center font-bold text-white">T</div>
+                        <span className="font-bold text-gray-300">TraderMind</span>
                     </div>
                     <div className="text-gray-500 text-sm">© 2025 TraderMind. All rights reserved.</div>
                 </div>
-             </footer>
+            </footer>
         </div>
     );
 };

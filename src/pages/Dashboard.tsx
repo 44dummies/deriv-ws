@@ -59,25 +59,16 @@ const getAvatarEmoji = (profilePhoto) => {
 const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
 const Card = ({ children, className = '' }) => (
-  <div className={`rounded-xl sm:rounded-2xl border backdrop-blur-xl p-3 sm:p-4 md:p-6 
-    border-white/10 dark-mode:bg-white/5 
-    light-card ${className}`}
-    style={{
-      backgroundColor: 'var(--card-bg)',
-      borderColor: 'var(--card-border)'
-    }}>
+  <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 
+      glass-card transition-all duration-300 ${className}`}>
     {children}
   </div>
 );
 
 const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-500' }) => (
-  <div className="rounded-lg sm:rounded-xl border p-2.5 sm:p-4 stat-card overflow-hidden"
-    style={{
-      backgroundColor: 'var(--card-bg)',
-      borderColor: 'var(--card-border)'
-    }}>
+  <div className="rounded-lg sm:rounded-xl p-2.5 sm:p-4 glass-card overflow-hidden transition-all duration-300 hover:bg-white/5">
     <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shrink-0`}>
+      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shrink-0 shadow-lg shadow-black/20`}>
         {icon}
       </div>
       {trend && trend !== '' && (
@@ -86,32 +77,30 @@ const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-
         </div>
       )}
     </div>
-    <p className="text-sm sm:text-xl font-bold truncate leading-tight">{value}</p>
-    <p className="text-[10px] sm:text-xs mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>{label}</p>
+    <p className="text-sm sm:text-xl font-bold truncate leading-tight text-white">{value}</p>
+    <p className="text-[10px] sm:text-xs mt-0.5 truncate text-gray-400">{label}</p>
   </div>
 );
 
 const EmptyState = ({ icon, title, description }) => (
   <div className="flex flex-col items-center justify-center py-16 text-center">
-    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-      style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-secondary)' }}>
+    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 glass-card text-gray-400">
       {icon}
     </div>
-    <h3 className="text-lg font-medium mb-2">{title}</h3>
-    <p className="text-sm max-w-sm" style={{ color: 'var(--text-secondary)' }}>{description}</p>
+    <h3 className="text-lg font-medium mb-2 text-white">{title}</h3>
+    <p className="text-sm max-w-sm text-gray-400">{description}</p>
   </div>
 );
 
 const SettingRow = ({ icon, label, value, action }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 border-b last:border-0 gap-2 sm:gap-0" style={{ borderColor: 'var(--card-border)' }}>
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 border-b border-white/5 last:border-0 gap-2 sm:gap-0">
     <div className="flex items-center gap-2 sm:gap-3">
-      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0"
-        style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-secondary)' }}>
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 glass-card text-gray-400">
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="font-medium text-sm sm:text-base">{label}</p>
-        {value && <p className="text-xs sm:text-sm truncate" style={{ color: 'var(--text-secondary)' }}>{value}</p>}
+        <p className="font-medium text-sm sm:text-base text-gray-200">{label}</p>
+        {value && <p className="text-xs sm:text-sm truncate text-gray-400">{value}</p>}
       </div>
     </div>
     {action && <div className="ml-10 sm:ml-0">{action}</div>}
@@ -132,6 +121,15 @@ const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('sync');
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   // Sync tab with URL search params
   useEffect(() => {
