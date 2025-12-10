@@ -285,6 +285,10 @@ export async function getStats(params = {}) {
   return apiRequest(`/api/admin/stats${query ? '?' + query : ''}`);
 }
 
+export async function getBalances() {
+  return apiRequest('/api/admin/stats/balances');
+}
+
 // ==================== Recovery APIs ====================
 
 export async function getRecoveryState(sessionId) {
@@ -349,6 +353,7 @@ export const tradingApi = {
   // Analytics
   getLiveStats,
   getStats,
+  getBalances,
 
   // Recovery
   getRecoveryState,

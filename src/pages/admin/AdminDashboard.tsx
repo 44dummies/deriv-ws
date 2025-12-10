@@ -48,21 +48,22 @@ const AdminDashboard: React.FC = () => {
 
     const loadDashboard = useCallback(async () => {
         try {
-            const [sessionsRes, botRes, statsRes, accountsRes] = await Promise.all([
+            const [sessionsRes, botRes, statsRes, balancesRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
                 tradingApi.getStats(),
-                tradingApi.getAccounts()
+                tradingApi.getBalances()
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
 
-            if (accountsRes?.data) {
-                const real = accountsRes.data.find((a: any) => a.account_type === 'real' || a.account_type === 'standard')?.balance || 0;
-                const demo = accountsRes.data.find((a: any) => a.account_type === 'demo')?.balance || 0;
-                setBalances({ real, demo });
+            if (balancesRes?.success && balancesRes?.data) {
+                setBalances({
+                    real: balancesRes.data.real || 0,
+                    demo: balancesRes.data.demo || 0
+                });
             }
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);

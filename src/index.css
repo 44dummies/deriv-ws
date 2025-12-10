@@ -20,6 +20,15 @@
 @layer base {
   html {
     color-scheme: dark;
+    /* Increase base font size for better mobile readability */
+    font-size: 16px;
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 17px;
+      /* Slightly larger on mobile for better readability */
+    }
   }
 
   body {
