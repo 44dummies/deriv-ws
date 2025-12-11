@@ -2,9 +2,9 @@
 
 ## System Overview
 
-TraderMind's trading bot is a sophisticated **multi-account automated trading engine** that executes trades across multiple Deriv accounts simultaneously using predefined strategies and risk management rules.
+TraderMind's trading bot is a **multi-account automated trading engine** that executes trades across multiple Deriv accounts simultaneously using signal-based strategies and individual TP/SL management.
 
-## Core Components
+## Core Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -12,414 +12,222 @@ TraderMind's trading bot is a sophisticated **multi-account automated trading en
 │     (Create Sessions, Start/Stop Bot, Monitor Trades)      │
 └───────────────────────┬─────────────────────────────────────┘
                         │
-         ───────────────▼──────────────
+         ───────────────▼───────────────
         │     Bot Manager (botManager.js)     │
-        │   - Orchestrates all bot operations   │
-        │   - Manages session lifecycle         │
-         ────────────────┬───────────────
+        │   - Orchestrates all bot operations │
+        │   - Manages session lifecycle       │
+         ────────────────┬──────────────
                         │
-         ───────────────▼──────────────
-        │  Session Manager (sessionManager.js) │
-        │  - Manages active trading sessions    │
-        │  - Tracks participant accounts        │
-         ────────────────┬───────────────
+         ───────────────▼───────────────
+        │  Trade Executor (tradeExecutor.js)  │
+        │  - Executes trades via Deriv API    │
+        │  - Individual TP/SL per participant │
+        │  - Trade analysis notifications     │
+         ────────────────┬──────────────
                         │
-         ───────────────▼──────────────
-        │  Trade Executor (tradeExecutor.js)   │
-        │  - Executes trades via Deriv API     │
-        │  - Applies strategies and risk mgmt   │
-         ────────────────┬───────────────
-                        │
-         ───────────────▼──────────────
-        │  Signal Worker (signalWorker.js)     │
-        │  - Analyzes market data               │
-        │  - Generates trading signals          │
+         ───────────────▼───────────────
+        │  Signal Worker (signalWorker.js)    │
+        │  - Analyzes market data             │
+        │  - Generates trading signals        │
          ─────────────────────────────────
 ```
 
-## How the Trading Bot Works
-
-### 1. Session Creation
-
-An admin creates a trading session with parameters:
-
-```javascript
-{
-  name: "Morning Scalp Session",
-  session_type: "day",           // day | one_time | recovery
-  mode: "real",                  // real | demo
-  strategy: "DFPM",              // Strategy to use
-  volatility_index: "R_100",     // Market to trade
-  contract_type: "DIGITEVEN",    // Contract type
-  initial_stake: 1.0,            // Starting stake
-  martingale_multiplier: 2.0,    // Stake multiplier after loss
-  profit_threshold: 10.0,        // Take Profit ($)
-  loss_threshold: 5.0            // Stop Loss ($)
-}
-```
-
-### 2. User Invitation
-
-- Admin invites user accounts to the session
-- Users receive invitation notifications
-- Users accept invitations with their TP/SL preferences
-- Participants are added to `session_participants` table
-
-### 3. Bot Startup
-
-When admin clicks "Start Bot":
-
-```javascript
-// 1. Find active or pending session
-const session = await getSession();
-
-// 2. Initialize bot manager
-await botManager.startBot(sessionId);
-
-// 3. Connect to Deriv WebSocket for each account
-for (account of accounts) {
-  connectDerivWebSocket(account.derivToken);
-}
-
-// 4. Start signal worker
-signalWorker.start(strategy, market);
-
-// 5. Begin trade loop
-executeTradeLoop();
-```
-
-### 4. Trade Execution Loop
-
-The bot continuously runs this cycle:
+## Data Flow
 
 ```
-1. Get Signal from Strategy
-   ↓
-2. Check if Trade Allowed
-   ↓
-3. Execute Trade Across All Accounts
-   ↓
-4. Monitor Contract Settlement
-   ↓
-5. Update Account Balances
-   ↓
-6. Check TP/SL Conditions
-   ↓
-7. Apply Martingale (if loss)
-   ↓
-8. Log Trade Results
-   ↓
-9. Broadcast to Clients
-   ↓
-10. Wait for Next Signal
+User Login (OAuth)
+       │
+       ▼
+┌──────────────────┐
+│ Callback.tsx     │ Stores derivDemoToken & derivRealToken in sessionStorage
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Dashboard.tsx    │ User sees available sessions
+└────────┬─────────┘
+         │ Accept Session (passes deriv_token)
+         ▼
+┌──────────────────────────────────┐
+│ POST /user/sessions/:id/accept   │ Stores token in session_participants.deriv_token
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│ Admin starts bot                 │ POST /admin/sessions/:id/start
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│ TradeExecutor                    │
+│ 1. Gets active participants      │
+│ 2. Uses participant.deriv_token  │
+│ 3. Connects to Deriv WebSocket   │
+│ 4. Executes trades per signal    │
+│ 5. Monitors TP/SL individually   │
+│ 6. Sends trade notifications     │
+└──────────────────────────────────┘
 ```
 
-## Trading Strategies
+## Database Schema
 
-### DFPM (Digit Frequency Pattern Matching)
-**Concept**: Analyzes historical digit patterns to predict next digit.
+### trading_sessions_v2 (Admin creates)
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| admin_id | UUID | Creator |
+| name | String | Session name |
+| type | String | day/one_time/recovery |
+| mode | String | real/demo |
+| min_balance | Number | Minimum balance to join |
+| default_tp | Number | Default take profit |
+| default_sl | Number | Default stop loss |
+| status | String | pending/running/completed/stopped |
 
-```javascript
-// Looks at last N digits
-const lastDigits = [7, 3, 9, 2, 4];
-
-// Finds most/least frequent
-const digitFreq = {
-  0: 5, 1: 12, 2: 8, 3: 15, 4: 6,
-  5: 7, 6: 9, 7: 14, 8: 11, 9: 10
-};
-
-// Prediction: Digit 3 (most frequent) or 4 (least frequent)
-const signal = {
-  contract: "DIGITMATCH",
-  prediction: 3,
-  confidence: 0.75
-};
-```
-
-### VCS (Volatility Compression Strategy)
-**Concept**: Detects periods of low volatility followed by breakouts.
-
-```javascript
-// Calculate recent volatility
-const volatility = calculateVolatility(ticks);
-
-if (volatility < threshold) {
-  // Compression detected
-  const signal = {
-    contract: "CALL",  // Expect upward breakout
-    confidence: 0.68
-  };
-}
-```
-
-### DER (Digit Even/Odd Ratio)
-**Concept**: Balances even/odd digit distribution.
-
-```javascript
-const last100 = getLastDigits(100);
-const evenCount = countEven(last100);  // 58
-const oddCount = countOdd(last100);    // 42
-
-// Imbalance detected
-if (evenCount > oddCount + 10) {
-  return { contract: "DIGITODD", confidence: 0.72 };
-}
-```
-
-### TPC (Tick Pattern Correlation)
-**Concept**: Identifies repeating tick sequences.
-
-```javascript
-const pattern = [+1, +2, -1, +3]; // Recent tick movements
-const historicalMatches = findSimilarPatterns(pattern);
-
-// If pattern repeats, predict next move
-const nextMove = averageNextMove(historicalMatches);
-```
-
-### Recovery Mode Strategies (DTP, DPB, MTD, RDS)
-Used when session enters recovery mode after hitting stop loss:
-
-- **DTP** (Digit Trend Pattern): Follows digit momentum
-- **DPB** (Digit Pattern Break): Detects pattern reversals
-- **MTD** (Multi-Timeframe Digit): Analyzes digits across timeframes
-- **RDS** (Recovery Digit Sequence): Specialized recovery sequences
+### session_participants (Users join)
+| Field | Type | Description |
+|-------|------|-------------|
+| id | UUID | Primary key |
+| session_id | UUID | FK to trading_sessions_v2 |
+| user_id | UUID | FK to user_profiles |
+| **deriv_token** | String | User's Deriv API token (stored at accept) |
+| tp | Number | User's take profit |
+| sl | Number | User's stop loss |
+| current_pnl | Number | Running P&L |
+| status | String | active/completed/stopped |
 
 ## Trade Execution Flow
 
-### 1. Signal Generation
+### 1. Signal Generated
 ```javascript
-const signal = signalWorker.getLatestSignal();
-// { contract: "DIGITEVEN", prediction: 4, confidence: 0.75 }
-```
-
-### 2. Risk Check
-```javascript
-// Check if account has sufficient balance
-if (account.balance < stake) return;
-
-// Check if TP/SL reached
-if (account.pnl >= takeProfit) return "TP_REACHED";
-if (account.pnl <= -stopLoss) return "SL_REACHED";
-```
-
-### 3. Execute Trade
-```javascript
-// Send buy request to Deriv
-ws.send({
-  buy: 1,
-  price: stake,
-  parameters: {
-    contract_type: "DIGITEVEN",
-    symbol: "R_100",
-    duration: 5,
-    duration_unit: "t",
-    barrier: "4"
-  }
-});
-```
-
-### 4. Monitor Contract
-```javascript
-// Wait for contract settlement
-ws.on('proposal_open_contract', (contract) => {
-  if (contract.is_sold) {
-    const profit = contract.profit;
-    updateAccountBalance(accountId, profit);
-    recordTrade(contract);
-  }
-});
-```
-
-### 5. Martingale Logic
-```javascript
-if (profit < 0) {
-  // Loss - increase stake
-  nextStake = currentStake * martingaleMultiplier;
-} else {
-  // Win - reset to base stake
-  nextStake = baseSt ake;
+signal = {
+  side: 'EVEN',      // Trade direction
+  digit: 4,          // Digit prediction
+  confidence: 0.75   // Signal strength (0-1)
 }
 ```
 
-## Session Types
-
-### Day Session
-- Runs for 24 hours
-- Resets daily
-- Suitable for consistent profit targets
-
-### One-Time Session
-- Runs until TP or SL is hit
-- No time limit
-- Ideal for specific profit goals
-
-### Recovery Session
-- Activates when SL is hit in main session
-- Uses aggressive strategies (DTP, DPB, MTD, RDS)
-- Attempts to recover losses
-- Higher risk, higher reward
-
-## Recovery Mechanism
-
-When a session hits Stop Loss:
-
+### 2. Get Active Participants
 ```javascript
-// 1. Stop main session
-await sessionManager.stopSession(sessionId);
-
-// 2. Calculate recovery target
-const lostAmount = Math.abs(session.net_pnl);
-const recoveryTarget = lostAmount * 1.2; // 120% of loss
-
-// 3. Create recovery session
-const recoverySession = await createSession({
-  session_type: "recovery",
-  strategy: "DTP",
-  profit_threshold: recoveryTarget,
-  initial_stake: lostAmount * 0.1, // 10% of loss
-  martingale_multiplier: 2.5 // More aggressive
-});
-
-// 4. Auto-start recovery
-await botManager.startBot(recoverySession.id);
+const { data: participants } = await supabase
+  .from('session_participants')
+  .select('*')
+  .eq('session_id', sessionId)
+  .eq('status', 'active');
 ```
 
-## Real-Time Communication
-
-### WebSocket Events
-
-**To Clients:**
+### 3. Execute Trade Per Participant
 ```javascript
-// Trade executed
-socket.emit('trade_executed', {
-  sessionId,
-  accountId,
-  contractId,
-  stake,
-  prediction
-});
-
-// Trade result
-socket.emit('trade_result', {
-  contractId,
-  result: 'won' | 'lost',
-  profit,
-  newBalance
-});
-
-// Session status
-socket.emit('session_update', {
-  sessionId,
-  status: 'running' | 'paused' | 'completed',
-  totalPnL,
-  tradeCount
-});
-```
-
-## Risk Management
-
-### Per-Account Limits
-```javascript
-const limits = {
-  maxStake: account.balance * 0.1,        // 10% of balance
-  maxDailyLoss: account.balance * 0.2,    // 20% of balance
-  maxConsecutiveLosses: 5,                // Stop after 5 losses
-  minBalance: 10                          // Minimum balance required
-};
-```
-
-### Session Limits
-```javascript
-const sessionLimits = {
-  maxParticipants: 100,
-  maxTradesPerAccount: 1000,
-  maxSessionDuration: 24 * 60 * 60 * 1000  // 24 hours
-};
-```
-
-## Database Schema (Simplified)
-
-```sql
--- Trading sessions
-trading_sessions
-  id, admin_id, session_name, session_type, status,
-  strategy_name, volatility_index, contract_type,
-  initial_stake, profit_threshold, loss_threshold,
-  net_pnl, total_trades, winning_trades
-
--- Participant accounts
-session_participants
-  session_id, account_id, user_id, status,
-  take_profit, stop_loss, current_pnl
-
--- Trade logs
-trades
-  id, session_id, account_id, contract_id,
-  strategy, stake, prediction, result, profit
-
--- Recovery sessions
-recovery_sessions
-  id, original_session_id, recovery_target,
-  current_progress, status
-```
-
-## Error Handling
-
-```javascript
-try {
-  await executeTrade(account, signal);
-} catch (error) {
-  if (error.code === 'InsufficientBalance') {
-    // Skip this account
-    logger.warn(`Insufficient balance for ${account.id}`);
-  } else if (error.code === 'RateLimit') {
-    // Wait and retry
-    await sleep(5000);
-    retry();
-  } else if (error.code === 'InvalidToken') {
-    // Disconnect account
-    await disconnectAccount(account.id);
-  } else {
-    // Critical error - stop session
-    await emergencyStop(sessionId);
-  }
+for (const participant of participants) {
+  // Use stored deriv_token directly
+  const apiToken = participant.deriv_token;
+  
+  // Connect to Deriv WebSocket
+  const ws = await getConnection(participant.user_id, apiToken);
+  
+  // Execute trade
+  const result = await executeSingleTrade(participant, apiToken, signal, session);
+  
+  // Start TP/SL monitor
+  startTPSLMonitor(result, participant, session);
+  
+  // Send notification to user
+  sendNotification(participant.user_id, {
+    type: 'trade_executed',
+    message: `Trade executed: ${signal.side} ${signal.digit}`,
+    data: { contractId, stake, confidence: signal.confidence }
+  });
 }
 ```
 
-## Performance Optimizations
+### 4. TP/SL Monitoring
+```javascript
+// Monitor each trade individually
+if (currentPnL >= participant.tp) {
+  closeTrade(trade, 'TP_REACHED', currentPnL);
+}
+if (currentPnL <= -participant.sl) {
+  closeTrade(trade, 'SL_REACHED', currentPnL);
+}
+```
 
-1. **Parallel Trade Execution**: All accounts trade simultaneously
-2. **Connection Pooling**: Reuse WebSocket connections
-3. **Signal Caching**: Cache strategy signals for 200ms
-4. **Database Batching**: Batch insert trades every 10 seconds
-5. **Memory Management**: Clear old tick data every minute
+## API Endpoints
 
-## Monitoring & Analytics
+### Admin Routes (/api/admin)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /sessions | List all sessions |
+| POST | /sessions | Create new session |
+| POST | /sessions/:id/start | Start bot for session |
+| POST | /sessions/:id/stop | Stop bot |
+| POST | /sessions/:id/pause | Pause trading |
+| POST | /sessions/:id/resume | Resume trading |
 
-Admin dashboard provides real-time metrics:
+### User Routes (/api/user)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /dashboard | Get user dashboard data |
+| POST | /sessions/:id/accept | Join session (sends deriv_token) |
+| POST | /sessions/:id/leave | Leave session |
+| GET | /notifications | Get trade notifications |
+| PUT | /tpsl | Update TP/SL settings |
 
-- Active sessions count
-- Total trades executed
-- Overall win rate
-- Net P&L across all accounts
-- Bot uptime
-- Strategy performance comparison
-- Per-account performance
+## Security Architecture
 
-## Security Considerations
+### Token Security (Production-Grade)
+```
+┌────────────────────────────────────────────────────────┐
+│                      BROWSER                           │
+├─────────────────────┬──────────────────────────────────┤
+│  React Memory       │  HttpOnly Cookie                 │
+│  ┌─────────────┐    │  ┌─────────────────────────────┐ │
+│  │ accessToken │    │  │      refreshToken           │ │
+│  │  (15 min)   │    │  │   (7 days, JS can't read)   │ │
+│  └─────────────┘    │  └─────────────────────────────┘ │
+└─────────────────────┴──────────────────────────────────┘
+```
 
-1. **Token Encryption**: Deriv tokens encrypted at rest
-2. **Rate Limiting**: Max 5 requests/second per account
-3. **Admin Auth**: JWT-based admin authentication
-4. **Balance Verification**: Cross-check balances with Deriv API
-5. **Audit Logs**: All bot actions logged
+### Deriv Token Storage
+- **Frontend**: Stored in sessionStorage during OAuth
+- **Backend**: Stored in session_participants.deriv_token when user joins session
+- **Bot**: Reads directly from session_participants
 
-## Future Enhancements
+## Key Files
 
-- Machine learning strategy optimization
-- Multi-strategy portfolio trading
-- Social trading (copy trading)
-- Advanced chart analysis
-- Custom strategy builder
+| File | Purpose |
+|------|---------|
+| `server/src/services/botManager.js` | Orchestrates bot lifecycle |
+| `server/src/services/tradeExecutor.js` | Executes trades, monitors TP/SL |
+| `server/src/services/signalWorker.js` | Generates trading signals |
+| `server/src/routes/admin/bot.js` | Admin bot control endpoints |
+| `server/src/routes/user/sessions.js` | User session endpoints |
+| `src/pages/admin/AdminDashboard.tsx` | Admin UI |
+| `src/pages/Dashboard.tsx` | User dashboard |
+
+## Notification Flow
+
+```
+Trade Executed
+      │
+      ▼
+┌──────────────────────────────────┐
+│ tradeExecutor.sendNotification() │
+│ → Insert into trading_notifications│
+└────────┬─────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────┐
+│ NotificationBell.tsx             │
+│ → Fetches /user/notifications    │
+│ → Displays trade analysis        │
+└──────────────────────────────────┘
+```
+
+## Bot Status Indicators
+
+| Status | Meaning |
+|--------|---------|
+| 🟢 Live | Bot is actively trading |
+| 🔴 Stopped | Bot is not running |
+| ⏸️ Paused | Bot is paused (can resume) |
+| ⚠️ No Participants | Session has no active users |
