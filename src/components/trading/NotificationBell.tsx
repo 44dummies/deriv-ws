@@ -15,14 +15,14 @@ const NOTIFICATION_ICONS = {
   session_started: Play,
   session_ended: Pause,
   session_paused: Pause,
-  session_completed: CheckCheck,
+  session_report: DollarSign,
   trade_executed: Activity,
   trade_won: TrendingUp,
   trade_lost: TrendingDown,
   profit_target_reached: DollarSign,
   loss_threshold_reached: AlertTriangle,
-  tp_hit: DollarSign,
-  sl_hit: AlertTriangle,
+  tp_hit: TrendingUp,
+  sl_hit: TrendingDown,
   account_connected: Check,
   account_disconnected: X,
   recovery_started: Activity,
@@ -197,13 +197,13 @@ const NotificationBell = ({ socket = null }: { socket?: any }) => {
 
   // Get notification color class
   const getColorClass = (type) => {
-    if (type.includes('won') || type.includes('profit') || type.includes('completed')) {
+    if (type.includes('won') || type.includes('profit') || type.includes('completed') || type === 'tp_hit') {
       return 'success';
     }
-    if (type.includes('lost') || type.includes('loss') || type.includes('alert')) {
+    if (type.includes('lost') || type.includes('loss') || type.includes('alert') || type === 'sl_hit') {
       return 'danger';
     }
-    if (type.includes('invite') || type.includes('started')) {
+    if (type.includes('invite') || type.includes('started') || type === 'session_report') {
       return 'primary';
     }
     return 'default';
