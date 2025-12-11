@@ -85,8 +85,8 @@ export type StakingModeValue = typeof STAKING_MODE[keyof typeof STAKING_MODE];
 
 // Volatility Indices
 export const VOLATILITY_INDEX: readonly string[] = [
-    'R_10', 'R_25', 'R_50', 'R_75', 'R_100',
-    '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V'
+    '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V',
+    'JD10', 'JD25', 'JD50', 'JD75', 'JD100'
 ] as const;
 
 // Notification Types
@@ -136,14 +136,14 @@ export const DEFAULT_SETTINGS: DefaultSettings = {
 export const CONTRACT_TYPES = CONTRACT_TYPE;
 
 export const VOLATILITY_INDICES: Record<string, string> = {
-    R_10: 'R_10',
-    R_25: 'R_25',
-    R_50: 'R_50',
-    R_75: 'R_75',
-    R_100: 'R_100',
     '1HZ10V': '1HZ10V',
     '1HZ25V': '1HZ25V',
     '1HZ50V': '1HZ50V',
     '1HZ75V': '1HZ75V',
-    '1HZ100V': '1HZ100V'
+    '1HZ100V': '1HZ100V',
+    'JD10': 'JD10',
+    'JD25': 'JD25',
+    'JD50': 'JD50',
+    'JD75': 'JD75',
+    'JD100': 'JD100'
 };

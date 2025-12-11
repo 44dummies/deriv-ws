@@ -477,7 +477,7 @@ export function isPendingValidation(): boolean { return pendingValidation; }
 
 export function analyzeForSignal(
   ticks: Tick[],
-  market: string = 'R_100',
+  market: string = '1HZ100V',
   threshold: number = BASE_THRESHOLD,
   learningState?: LearningState
 ): FinalSignal {

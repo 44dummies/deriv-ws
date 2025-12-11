@@ -29,7 +29,7 @@ export default function SessionsPage() {
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const [activeMarket, setActiveMarket] = useState<string>('R_100');
+  const [activeMarket, setActiveMarket] = useState<string>('1HZ100V');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -37,7 +37,7 @@ export default function SessionsPage() {
   const [newSession, setNewSession] = useState({
     name: '',
     type: 'day',
-    markets: ['R_100'],
+    markets: ['1HZ100V'],
     default_stake: 0.35,
     default_tp: 10,
     default_sl: 5,
@@ -155,7 +155,10 @@ export default function SessionsPage() {
   };
 
   const selectedSession = sessions.find(s => s.id === selectedSessionId);
-  const availableMarkets = ['R_100', 'R_75', 'R_50', 'R_25', 'R_10'];
+  const availableMarkets = [
+    '1HZ10V', '1HZ25V', '1HZ50V', '1HZ75V', '1HZ100V',
+    'JD10', 'JD25', 'JD50', 'JD75', 'JD100'
+  ];
 
   return (
     <div className="space-y-6">

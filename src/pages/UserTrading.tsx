@@ -9,6 +9,8 @@ import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, Alert
 import { tradingApi } from '../trading/tradingApi';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useWebSocketEvents } from '../hooks/useWebSocketEvents';
+import { useAuth } from '../contexts/AuthContext';
+import { GlassToggle } from '../components/ui/glass/GlassToggle';
 
 // Glass UI
 import { DashboardLayout } from '../components/layout/DashboardLayout';
@@ -22,10 +24,13 @@ import { GlassTable } from '../components/ui/glass/GlassTable';
 const UserTrading = () => {
 
 
+  const { user } = useAuth();
   const { sessions } = useSessionManagement();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [allAccounts, setAllAccounts] = useState<any[]>([]);
+  const [tradingMode, setTradingMode] = useState<'real' | 'demo'>('real');
   const [availableSessions, setAvailableSessions] = useState<any[]>([]);
   const [activeSession, setActiveSession] = useState<any>(null);
   const [takeProfit, setTakeProfit] = useState('');
@@ -77,30 +82,48 @@ const UserTrading = () => {
 
   const loadUserData = async () => {
     try {
-      const derivId = sessionStorage.getItem('derivId');
-      const balance = sessionStorage.getItem('balance');
-      const currency = sessionStorage.getItem('currency');
-
-      let currentInfo = {
-        derivId,
-        id: null,
-        balance: parseFloat(balance || '0') || 0,
-        currency: currency || 'USD'
-      };
-
       const response = await tradingApi.getAccounts();
-      if (response && response.data && response.data.length > 0) {
-        const activeAccount = response.data.find((acc: any) => acc.is_active) || response.data[0];
-        if (activeAccount) {
-          currentInfo.id = activeAccount.id;
-          currentInfo.derivId = activeAccount.deriv_account_id;
-          currentInfo.balance = activeAccount.balance;
-          currentInfo.currency = activeAccount.currency;
+      if (response && response.data) {
+        setAllAccounts(response.data);
+
+        let initialAccount;
+        const persistedId = sessionStorage.getItem('activeAccountId');
+        if (persistedId) {
+          initialAccount = response.data.find((acc: any) => acc.id === persistedId);
+        }
+
+        if (!initialAccount) {
+          // Default to Real account or first available
+          const realAccount = response.data.find((acc: any) => acc.account_type === 'real');
+          const demoAccount = response.data.find((acc: any) => acc.account_type === 'demo');
+          initialAccount = realAccount || demoAccount || response.data[0];
+        }
+
+        if (initialAccount) {
+          updateUserInfo(initialAccount);
+          setTradingMode(initialAccount.account_type === 'demo' ? 'demo' : 'real');
         }
       }
-      setUserInfo(currentInfo);
     } catch (error) {
       console.error('Failed to load user data:', error);
+    }
+  };
+
+  const updateUserInfo = (account: any) => {
+    setUserInfo({
+      id: account.id,
+      derivId: account.deriv_account_id,
+      balance: parseFloat(account.balance),
+      currency: account.currency
+    });
+  };
+
+  const toggleTradingMode = (mode: 'real' | 'demo') => {
+    setTradingMode(mode);
+    const targetAccount = allAccounts.find(acc => acc.account_type === mode);
+    if (targetAccount) {
+      updateUserInfo(targetAccount);
+      sessionStorage.setItem('activeAccountId', targetAccount.id); // Persist for reloading
     }
   };
 
@@ -182,6 +205,23 @@ const UserTrading = () => {
             value={`${userInfo?.currency} ${userInfo?.balance?.toFixed(2)}`}
             icon={<DollarSign size={20} />}
           />
+
+          {/* Admin Trading Mode Toggle */}
+          {user?.is_admin && (
+            <GlassCard className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm mb-1">Trading Mode</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-bold ${tradingMode === 'real' ? 'text-emerald-400' : 'text-slate-500'}`}>REAL</span>
+                  <GlassToggle
+                    checked={tradingMode === 'demo'}
+                    onChange={() => toggleTradingMode(tradingMode === 'real' ? 'demo' : 'real')}
+                  />
+                  <span className={`text-sm font-bold ${tradingMode === 'demo' ? 'text-blue-400' : 'text-slate-500'}`}>DEMO</span>
+                </div>
+              </div>
+            </GlassCard>
+          )}
 
           <GlassCard className="flex items-center justify-between">
             <div>

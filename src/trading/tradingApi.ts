@@ -296,10 +296,16 @@ function getDefaultConstants() {
       { id: 'VCS', name: 'Volatility Correlation Strategy' }
     ],
     markets: [
-      { id: 'R_100', name: 'Volatility 100 Index' },
-      { id: 'R_50', name: 'Volatility 50 Index' },
-      { id: 'R_25', name: 'Volatility 25 Index' },
-      { id: 'R_10', name: 'Volatility 10 Index' }
+      { id: '1HZ100V', name: 'Volatility 100 (1s) Index' },
+      { id: '1HZ75V', name: 'Volatility 75 (1s) Index' },
+      { id: '1HZ50V', name: 'Volatility 50 (1s) Index' },
+      { id: '1HZ25V', name: 'Volatility 25 (1s) Index' },
+      { id: '1HZ10V', name: 'Volatility 10 (1s) Index' },
+      { id: 'JD100', name: 'Jump 100 Index' },
+      { id: 'JD75', name: 'Jump 75 Index' },
+      { id: 'JD50', name: 'Jump 50 Index' },
+      { id: 'JD25', name: 'Jump 25 Index' },
+      { id: 'JD10', name: 'Jump 10 Index' }
     ],
     stakingModes: [
       { id: 'fixed', name: 'Fixed Stake' },
