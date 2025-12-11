@@ -14,6 +14,7 @@ import {
   useTradingAccounts,
   useTradingBot
 } from '../../trading/hooks';
+import { useAdminEventStream } from '../../hooks/useEventStream';
 import { tradingApi } from '../../trading/tradingApi';
 import {
   STRATEGY_NAMES,
@@ -85,25 +86,32 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
     status: botStatus
   } = useTradingBot();
 
+  // SSE for real-time updates
+  const { isConnected: sseConnected } = useAdminEventStream({
+    onEvent: (event) => {
+      if (event.type.startsWith('session.') || event.type.startsWith('trade.')) {
+        refreshSessions();
+        refreshAccounts();
+      }
+    }
+  });
+
   // Session control methods (using tradingApi directly)
   const startSession = async (sessionId: string) => {
     await tradingApi.startSession(sessionId);
-    refreshSessions();
+    // SSE will trigger refresh
   };
 
   const stopSession = async (sessionId: string) => {
     await tradingApi.stopSession(sessionId);
-    refreshSessions();
   };
 
   const pauseSession = async (sessionId: string) => {
     await tradingApi.pauseSession(sessionId);
-    refreshSessions();
   };
 
   const resumeSession = async (sessionId: string) => {
     await tradingApi.resumeSession(sessionId);
-    refreshSessions();
   };
 
   // Handlers
@@ -323,6 +331,13 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
       <div className="panel-header">
         <h1>Trading Control Panel</h1>
         <div className="header-actions">
+          <div className="connection-status" style={{ display: 'flex', alignItems: 'center', gap: '5px', marginRight: '15px' }}>
+            {sseConnected ? (
+              <span style={{ color: '#22c55e', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Zap size={14} fill="currentColor" /> Live</span>
+            ) : (
+              <span style={{ color: '#fbbf24', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={14} /> Connecting</span>
+            )}
+          </div>
           <button onClick={() => { refreshSessions(); refreshAccounts(); }} className="btn-refresh">
             <RefreshCw size={18} />
             Refresh

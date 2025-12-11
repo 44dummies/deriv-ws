@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useAdminEventStream } from './useEventStream';
 import {
     ManagedSession,
     SessionFilters,
@@ -58,122 +58,118 @@ export function useSessionManagement(): UseSessionManagementReturn {
         sortOrder: 'desc'
     });
 
-    const socketRef = useRef<Socket | null>(null);
-    const reconnectAttemptsRef = useRef(0);
-    const maxReconnectAttempts = 5;
+    // Use Server-Sent Events for real-time updates
 
-    // Initialize WebSocket connection
-    useEffect(() => {
-        const token = sessionStorage.getItem('accessToken');
-        if (!token) return;
-
-        const socket = io(API_URL, {
-            auth: { token },
-            transports: ['websocket'],
-            reconnection: true,
-            reconnectionAttempts: maxReconnectAttempts,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000
-        });
-
-        socket.on('connect', () => {
+    const { isConnected } = useAdminEventStream({
+        onConnected: () => {
             setConnected(true);
             setError(null);
-            reconnectAttemptsRef.current = 0;
-            console.log('[SessionManager] WebSocket connected');
-
-            // Subscribe to session updates
-            socket.emit('subscribe_sessions');
-        });
-
-        socket.on('disconnect', () => {
+            console.log('[SessionManager] SSE Connected');
+        },
+        onDisconnected: () => {
             setConnected(false);
-            console.log('[SessionManager] WebSocket disconnected');
-        });
+            console.log('[SessionManager] SSE Disconnected');
+        },
+        onEvent: (event) => {
+            // Handle Session Updates
+            if (event.type === 'session.update' || event.type === 'session.started' || event.type === 'session.stopped') {
+                const updates = event.payload as Partial<ManagedSession>;
+                const sessionId = event.sessionId || (event.payload as any).id;
 
-        socket.on('connect_error', (err) => {
-            reconnectAttemptsRef.current++;
-            if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-                setError('Failed to connect to server. Please refresh the page.');
-            }
-        });
+                if (sessionId) {
+                    SessionStatusManager.getInstance().processEvent({
+                        type: 'session_update',
+                        sessionId: sessionId,
+                        data: updates
+                    });
 
-        // Session update events
-        socket.on('session_update', (data: { sessionId: string; updates: Partial<ManagedSession> }) => {
-            SessionStatusManager.getInstance().processEvent({
-                type: 'session_update',
-                sessionId: data.sessionId,
-                data: data.updates
-            });
-
-            setSessions(prev => prev.map(s =>
-                s.id === data.sessionId ? { ...s, ...data.updates, lastUpdate: new Date().toISOString() } : s
-            ));
-        });
-
-        // Trade update events
-        socket.on('trade_update', (data: { sessionId: string; trade: TradeInfo; action: 'open' | 'close' | 'update' }) => {
-            SessionStatusManager.getInstance().processEvent({
-                type: 'trade_update',
-                sessionId: data.sessionId,
-                trade: data.trade,
-                action: data.action
-            });
-
-            setSessions(prev => prev.map(s => {
-                if (s.id !== data.sessionId) return s;
-
-                let updatedTrades = [...s.trades];
-                let updatedOpenTrades = [...s.openTrades];
-
-                if (data.action === 'open') {
-                    updatedTrades.push(data.trade);
-                    updatedOpenTrades.push(data.trade);
-                } else if (data.action === 'close') {
-                    updatedOpenTrades = updatedOpenTrades.filter(t => t.id !== data.trade.id);
-                    updatedTrades = updatedTrades.map(t => t.id === data.trade.id ? data.trade : t);
+                    setSessions(prev => prev.map(s =>
+                        s.id === sessionId ? { ...s, ...updates, lastUpdate: new Date().toISOString() } : s
+                    ));
                 }
+            }
 
-                // Recalculate PnL
-                const pnl = updatedTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+            if (event.type === 'trade.executed' || event.type === 'trade.closed') {
+                const trade = event.payload as unknown as TradeInfo;
+                const action = event.type === 'trade.executed' ? 'open' : 'close';
+                const sessionId = event.sessionId;
 
-                return {
-                    ...s,
-                    trades: updatedTrades,
-                    openTrades: updatedOpenTrades,
-                    pnl,
-                    lastUpdate: new Date().toISOString()
-                };
-            }));
+                if (sessionId && trade) {
+                    SessionStatusManager.getInstance().processEvent({
+                        type: 'trade_update',
+                        sessionId: sessionId,
+                        trade: trade,
+                        action: action
+                    });
 
-            // Add alert for trade result
-            if (data.action === 'close' && data.trade.profit !== undefined) {
+                    setSessions(prev => prev.map(s => {
+                        if (s.id !== sessionId) return s;
+
+                        let updatedTrades = [...s.trades];
+                        let updatedOpenTrades = [...s.openTrades];
+
+                        if (action === 'open') {
+                            // Check if trade already exists to avoid duplicates
+                            if (!updatedTrades.find(t => t.id === trade.id)) {
+                                updatedTrades.push(trade);
+                                updatedOpenTrades.push(trade);
+                            }
+                        } else if (action === 'close') {
+                            updatedOpenTrades = updatedOpenTrades.filter(t => t.id !== trade.id);
+                            updatedTrades = updatedTrades.map(t => t.id === trade.id ? trade : t);
+
+                            // If trade wasn't in list (e.g. loaded after open), add it
+                            if (!updatedTrades.find(t => t.id === trade.id)) {
+                                updatedTrades.push(trade);
+                            }
+                        }
+
+                        // Recalculate PnL
+                        const pnl = updatedTrades.reduce((sum, t) => sum + (t.profit || 0), 0);
+
+                        return {
+                            ...s,
+                            trades: updatedTrades,
+                            openTrades: updatedOpenTrades,
+                            pnl,
+                            lastUpdate: new Date().toISOString()
+                        };
+                    }));
+
+                    // Add alert for trade result
+                    if (action === 'close' && trade.profit !== undefined) {
+                        const alert: SessionAlert = {
+                            id: `alert-${Date.now()}-${Math.random()}`,
+                            sessionId: sessionId,
+                            type: trade.profit >= 0 ? 'profit' : 'loss',
+                            title: trade.profit >= 0 ? 'Trade Won!' : 'Trade Lost',
+                            message: `${trade.type} ${trade.symbol}: ${trade.profit >= 0 ? '+' : ''}$${trade.profit.toFixed(2)}`,
+                            timestamp: new Date().toISOString(),
+                            acknowledged: false,
+                            soundPlayed: false
+                        };
+                        setAlerts(prev => [alert, ...prev].slice(0, 100));
+                    }
+                }
+            }
+
+            // Handle Notifications/Alerts
+            if (event.type === 'notification' || event.type.startsWith('notification.')) {
+                const alertData = event.payload as any;
                 const alert: SessionAlert = {
-                    id: `alert-${Date.now()}`,
-                    sessionId: data.sessionId,
-                    type: data.trade.profit >= 0 ? 'profit' : 'loss',
-                    title: data.trade.profit >= 0 ? 'Trade Won!' : 'Trade Lost',
-                    message: `${data.trade.type} ${data.trade.symbol}: ${data.trade.profit >= 0 ? '+' : ''}$${data.trade.profit.toFixed(2)}`,
-                    timestamp: new Date().toISOString(),
+                    id: event.id,
+                    sessionId: event.sessionId || 'global',
+                    type: alertData.type || 'info',
+                    title: alertData.title || 'Notification',
+                    message: alertData.message || '',
+                    timestamp: new Date(event.timestamp).toISOString(),
                     acknowledged: false,
                     soundPlayed: false
                 };
                 setAlerts(prev => [alert, ...prev].slice(0, 100));
             }
-        });
-
-        // Alert events
-        socket.on('session_alert', (alert: SessionAlert) => {
-            setAlerts(prev => [alert, ...prev].slice(0, 100));
-        });
-
-        socketRef.current = socket;
-
-        return () => {
-            socket.disconnect();
-            socketRef.current = null;
-        };
-    }, []);
+        }
+    });
 
     // Fetch sessions
     const refreshSessions = useCallback(async () => {
