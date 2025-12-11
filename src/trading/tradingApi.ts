@@ -57,6 +57,8 @@ async function apiRequest(endpoint: string, options: RequestOptions = {}) {
     }
   };
 
+  // console.log(`[API] ${options.method || 'GET'} ${endpoint}`, token ? '(Auth Token Present)' : '(No Auth Token)');
+
   const response = await fetch(`${API_BASE}${endpoint}`, config);
   const data = await response.json();
 

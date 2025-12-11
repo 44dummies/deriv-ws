@@ -12,12 +12,14 @@ import {
     CreditCard, Wallet
 } from 'lucide-react';
 import * as tradingApi from '../../trading/tradingApi';
+import { realtimeSocket } from '../../services/realtimeSocket';
 
 interface BotStatus {
     isRunning: boolean;
     uptime?: number;
     tradesExecuted?: number;
     lastTrade?: string;
+    signalStats?: Record<string, any>;
 }
 
 interface Stats {
@@ -83,11 +85,58 @@ const AdminDashboard: React.FC = () => {
         }
     }, [navigate]);
 
+
+    // ... (existing helper function)
+
     useEffect(() => {
         loadDashboard();
+
+        // Connect to socket if not connected
+        const token = sessionStorage.getItem('accessToken');
+        if (token && !realtimeSocket.isConnected()) {
+            realtimeSocket.connect(token);
+        }
+
+        // Subscribe to all active markets
+        // For now, we subscribe to defaults, but ideally this should be based on active sessions
+        realtimeSocket.emit('subscribe_market', 'R_100');
+        // realtimeSocket.emit('subscribe_market', '1HZ100V');
+
+        // Listen for live updates
+        const removeSignalListener = realtimeSocket.on('signal_update', (data) => {
+            if (botStatus?.isRunning) {
+                setBotStatus(prev => {
+                    if (!prev) return prev;
+                    return {
+                        ...prev,
+                        signalStats: {
+                            ...prev.signalStats,
+                            [data.market]: data
+                        }
+                    };
+                });
+            }
+        });
+
+        const removeTradeListener = realtimeSocket.on('trade_update', (data) => {
+            if (data.type === 'open') {
+                toast('📊 Trade Opened: ' + data.signal + ' ' + data.market, { icon: '🚀' });
+                loadDashboard(); // Refresh stats
+            } else if (data.type === 'close') {
+                const icon = data.result === 'win' ? '💰' : '📉';
+                toast(`Trade Closed: ${data.result.toUpperCase()} ($${data.profit.toFixed(2)})`, { icon });
+                loadDashboard();
+            }
+        });
+
         const interval = setInterval(loadDashboard, 30000);
-        return () => clearInterval(interval);
-    }, [loadDashboard]);
+
+        return () => {
+            clearInterval(interval);
+            removeSignalListener();
+            removeTradeListener();
+        };
+    }, [loadDashboard, botStatus?.isRunning]);
 
     const handleBotStart = async () => {
         const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending');
@@ -230,6 +279,56 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Live Execution Analysis */}
+            {botStatus?.isRunning && botStatus.signalStats && Object.keys(botStatus.signalStats).length > 0 && (
+                <div className="admin-card card-responsive mb-6" style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(30, 64, 175, 0.05) 100%)', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2 text-blue-400">
+                            <Activity size={18} />
+                            Live Execution Analysis
+                        </h3>
+                        <span className="animate-pulse flex h-3 w-3 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {Object.entries(botStatus.signalStats).map(([market, stat]: [string, any]) => (
+                            <div key={market} className="bg-black/20 rounded-lg p-3 border border-white/5">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-bold text-white">{market}</span>
+                                    <span className="text-xs text-gray-400">{new Date(stat.timestamp).toLocaleTimeString()}</span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Signal</p>
+                                        <p className={`font-semibold ${stat.side === 'call' ? 'text-green-400' : 'text-red-400'}`}>
+                                            {stat.side ? stat.side.toUpperCase() : 'ANALYZING'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Confidence</p>
+                                        <p className="font-semibold text-white">{(stat.confidence * 100).toFixed(1)}%</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Digit</p>
+                                        <p className="font-semibold text-white">{stat.digit !== undefined ? stat.digit : '-'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-gray-500 text-xs">Pattern</p>
+                                        <p className="font-semibold text-white truncate text-xs" title={JSON.stringify(stat.parts)}>
+                                            {stat.parts ? stat.parts.length : 0} Matches
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="stats-grid">
