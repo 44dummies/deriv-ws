@@ -25,7 +25,7 @@ interface DerivLoginData {
 
 interface AuthResult {
     accessToken: string;
-    refreshToken: string;
+    // refreshToken is now in HttpOnly cookie, not returned to client
     user?: UserProfile;
 }
 
@@ -57,40 +57,33 @@ class ApiClient {
     }
 
     /**
-     * Set tokens - uses sessionStorage so session ends when tab is closed
+     * Set access token - stored in memory only (not sessionStorage)
+     * Refresh token is now in HttpOnly cookie, handled by browser
      */
-    setTokens(accessToken: string, refreshToken: string): void {
+    setTokens(accessToken: string): void {
         this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
-        sessionStorage.setItem('accessToken', accessToken);
-        sessionStorage.setItem('refreshToken', refreshToken);
+        // Note: No longer storing in sessionStorage for security
+        // Tokens are stored in memory only - will be lost on page refresh
+        // Page refresh will trigger cookie-based token refresh
     }
 
     /**
-     * Load tokens from storage
+     * Load tokens - now only returns in-memory access token
+     * Refresh happens via HttpOnly cookie automatically
      */
-    loadTokens(): { accessToken: string | null; refreshToken: string | null } {
-        this.accessToken = sessionStorage.getItem('accessToken');
-        this.refreshToken = sessionStorage.getItem('refreshToken');
-        return { accessToken: this.accessToken, refreshToken: this.refreshToken };
+    loadTokens(): { accessToken: string | null } {
+        return { accessToken: this.accessToken };
     }
 
     /**
-     * Clear tokens
+     * Clear access token from memory
      */
     clearTokens(): void {
         this.accessToken = null;
-        this.refreshToken = null;
-        sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('refreshToken');
+        // Note: Cookie will be cleared by logout endpoint
     }
 
-    /**
-     * Set callback for token refresh
-     */
-    onTokenRefreshed(callback: TokenRefreshCallback): void {
-        this.onTokenRefresh = callback;
-    }
+    // Token refresh callback removed - now using HttpOnly cookies
 
     /**
      * Set callback for auth errors
@@ -116,14 +109,20 @@ class ApiClient {
         try {
             const response = await fetch(url, {
                 ...options,
-                headers
+                headers,
+                credentials: 'include' // Include HttpOnly cookies
             });
 
-            if (response.status === 401 && this.refreshToken) {
+            if (response.status === 401) {
+                // Try to refresh using HttpOnly cookie
                 const refreshed = await this.refreshAccessToken();
                 if (refreshed) {
                     headers['Authorization'] = `Bearer ${this.accessToken}`;
-                    const retryResponse = await fetch(url, { ...options, headers });
+                    const retryResponse = await fetch(url, {
+                        ...options,
+                        headers,
+                        credentials: 'include'
+                    });
                     return this.handleResponse<T>(retryResponse);
                 } else {
                     this.clearTokens();
@@ -155,22 +154,19 @@ class ApiClient {
     }
 
     /**
-     * Refresh access token
+     * Refresh access token using HttpOnly cookie
      */
     async refreshAccessToken(): Promise<boolean> {
         try {
             const response = await fetch(`${API_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken: this.refreshToken })
+                credentials: 'include' // Browser sends HttpOnly cookie
             });
 
             if (response.ok) {
                 const data = await response.json();
-                this.setTokens(data.accessToken, data.refreshToken);
-                if (this.onTokenRefresh) {
-                    this.onTokenRefresh(data.accessToken, data.refreshToken);
-                }
+                this.accessToken = data.accessToken;
                 return true;
             }
             return false;
@@ -263,37 +259,45 @@ class ApiClient {
 
     // Auth Methods
     async register(data: unknown): Promise<AuthResult> {
-        const result = await this.request<AuthResult>('/auth/register', {
+        const result = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
-            body: JSON.stringify(data)
-        });
-        this.setTokens(result.accessToken, result.refreshToken);
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            credentials: 'include'
+        }).then(r => this.handleResponse<AuthResult>(r));
+        this.accessToken = result.accessToken;
         return result;
     }
 
     async login(email: string, password: string): Promise<AuthResult> {
-        const result = await this.request<AuthResult>('/auth/login', {
+        const result = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
-            body: JSON.stringify({ email, password })
-        });
-        this.setTokens(result.accessToken, result.refreshToken);
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+            credentials: 'include'
+        }).then(r => this.handleResponse<AuthResult>(r));
+        this.accessToken = result.accessToken;
         return result;
     }
 
     async loginWithDeriv(derivData: DerivLoginData): Promise<AuthResult> {
-        console.log('apiClient.loginWithDeriv called with:', derivData);
-        const result = await this.request<AuthResult>('/auth/deriv', {
+        const result = await fetch(`${API_URL}/auth/deriv`, {
             method: 'POST',
-            body: JSON.stringify(derivData)
-        });
-        console.log('apiClient.loginWithDeriv result:', result);
-        this.setTokens(result.accessToken, result.refreshToken);
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(derivData),
+            credentials: 'include' // Receive HttpOnly cookie
+        }).then(r => this.handleResponse<AuthResult>(r));
+        this.accessToken = result.accessToken;
         return result;
     }
 
     async logout(): Promise<void> {
         try {
-            await this.request('/auth/logout', { method: 'POST' });
+            await fetch(`${API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: this.accessToken ? { 'Authorization': `Bearer ${this.accessToken}` } : {},
+                credentials: 'include' // Server clears HttpOnly cookie
+            });
         } finally {
             this.clearTokens();
         }

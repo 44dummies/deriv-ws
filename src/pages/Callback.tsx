@@ -136,7 +136,7 @@ const Callback = () => {
             is_admin: isAdminUser
           }));
 
-          // Also authenticate with backend so REST calls have JWT
+          // Authenticate with backend - refresh token is set as HttpOnly cookie
           try {
             const loginResult = await apiClient.loginWithDeriv({
               derivUserId: derivId,
@@ -145,7 +145,8 @@ const Callback = () => {
               currency: authResponse.authorize.currency,
               fullname: authResponse.authorize.fullname
             });
-            TokenService.setBackendTokens(loginResult.accessToken, loginResult.refreshToken);
+            // Only access token is returned - refresh token is in HttpOnly cookie
+            TokenService.setBackendTokens(loginResult.accessToken, '');
           } catch (apiErr) {
             console.error('[Callback] Backend auth failed:', apiErr);
           }
