@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModernSidebar } from './ModernSidebar';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 import { NotificationDrawer } from '../notifications/NotificationDrawer';
 
 interface DashboardLayoutProps {
@@ -10,9 +10,34 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isAdmin = false }) => {
-    // Mock user for now if hook doesn't exist yet
-    const user = { email: 'admin@deriv.com', role: isAdmin ? 'admin' : 'user' };
+    // Get user from session storage
+    const getUserInfo = () => {
+        try {
+            const userInfoStr = sessionStorage.getItem('userInfo');
+            if (userInfoStr) {
+                const userInfo = JSON.parse(userInfoStr);
+                return { email: userInfo.email || 'user@deriv.com', role: userInfo.role || (isAdmin ? 'admin' : 'user') };
+            }
+        } catch (e) { }
+        return { email: 'user@deriv.com', role: isAdmin ? 'admin' : 'user' };
+    };
+
+    const user = getUserInfo();
     const [notificationOpen, setNotificationOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    // Detect screen size for layout adjustments
+    useEffect(() => {
+        const checkScreenSize = () => {
+            setIsMobile(window.innerWidth < 1024);
+        };
+        checkScreenSize();
+        window.addEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
+
+    // Margin left changes based on screen size (sidebar is fixed)
+    const mainMargin = isMobile ? 'ml-0 pt-16' : 'ml-20 lg:ml-64';
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-emerald-500/30">
@@ -27,33 +52,33 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isAd
             <ModernSidebar isAdmin={isAdmin} userEmail={user.email} />
 
             {/* Main Content Area */}
-            <main className="relative z-10 transition-all duration-300 ml-20 lg:ml-64 p-8">
+            <main className={`relative z-10 transition-all duration-300 ${mainMargin} p-4 sm:p-6 lg:p-8`}>
                 {/* Top Metrics / utility Bar */}
-                <div className="mb-8 flex justify-between items-center bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-lg">
+                <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-lg">
                     <div className="flex items-center gap-4 text-slate-400">
-                        <span className="text-sm font-mono">{new Date().toLocaleDateString()}</span>
-                        <div className="h-4 w-px bg-white/10" />
+                        <span className="text-sm font-mono hidden sm:block">{new Date().toLocaleDateString()}</span>
+                        <div className="h-4 w-px bg-white/10 hidden sm:block" />
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-xs text-emerald-400 font-medium">SYSTEM OPERATIONAL</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
                         {/* Search (Visual Only) */}
-                        <div className="relative hidden md:block">
+                        <div className="relative flex-1 sm:flex-none">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
                             <input
                                 type="text"
-                                placeholder="Search sessions..."
-                                className="bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 w-64 transition-all"
+                                placeholder="Search..."
+                                className="w-full sm:w-48 lg:w-64 bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all"
                             />
                         </div>
 
                         {/* Notifications */}
                         <button
                             onClick={() => setNotificationOpen(true)}
-                            className="relative p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors border border-white/5"
+                            className="relative p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors border border-white/5 flex-shrink-0"
                         >
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]" />

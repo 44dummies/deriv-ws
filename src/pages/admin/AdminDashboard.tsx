@@ -8,10 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
     Play, Square, AlertTriangle, Activity, Users, DollarSign,
-    TrendingUp, Server, Clock, Zap, Wallet, CreditCard, ChevronRight
+    TrendingUp, Server, Clock, Zap, Wallet, CreditCard, ChevronRight, Wifi, WifiOff
 } from 'lucide-react';
 import * as tradingApi from '../../trading/tradingApi';
 import { realtimeSocket } from '../../services/realtimeSocket';
+import { useAdminEventStream } from '../../hooks/useEventStream';
 
 // Glass UI Components
 import { GlassCard } from '../../components/ui/glass/GlassCard';
@@ -52,6 +53,24 @@ const AdminDashboard: React.FC = () => {
     const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
     const [stats, setStats] = useState<Stats | null>(null);
     const [balances, setBalances] = useState({ real: 0, demo: 0 });
+
+    // SSE for real-time updates (replaces polling)
+    const { events: sseEvents, isConnected: sseConnected } = useAdminEventStream({
+        onEvent: (event) => {
+            // Handle real-time trade events
+            if (event.type === 'trade.executed') {
+                toast(`Trade Opened: ${event.payload.direction} ${event.payload.symbol}`, { icon: '🚀' });
+                loadDashboard(); // Refresh data
+            } else if (event.type === 'trade.closed') {
+                const isWin = (event.payload.profitLoss as number) > 0;
+                toast(`Trade ${isWin ? 'Won' : 'Lost'}: $${(event.payload.profitLoss as number).toFixed(2)}`,
+                    { icon: isWin ? '🎉' : '📉' });
+                loadDashboard();
+            } else if (event.type.startsWith('session.')) {
+                loadDashboard(); // Refresh on session events
+            }
+        }
+    });
 
     const loadDashboard = useCallback(async () => {
         try {
@@ -104,18 +123,22 @@ const AdminDashboard: React.FC = () => {
 
         const removeTradeListener = realtimeSocket.on('trade_update', (data) => {
             if (data.type === 'open') {
-                toast(`Trade Opened: ${data.signal} ${data.market}`, { icon: '🚀' });
-                loadDashboard();
+                // SSE handles this now, but keep as fallback
+                if (!sseConnected) {
+                    toast(`Trade Opened: ${data.signal} ${data.market}`, { icon: '🚀' });
+                    loadDashboard();
+                }
             }
         });
 
-        const interval = setInterval(loadDashboard, 30000);
+        // Reduce polling interval since SSE provides real-time updates
+        const interval = setInterval(loadDashboard, sseConnected ? 60000 : 30000);
         return () => {
             clearInterval(interval);
             removeSignalListener();
             removeTradeListener();
         };
-    }, [loadDashboard, botStatus?.isRunning]);
+    }, [loadDashboard, botStatus?.isRunning, sseConnected]);
 
     const handleBotStart = async () => {
         const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending');
@@ -215,10 +238,15 @@ const AdminDashboard: React.FC = () => {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold text-white">Trading Engine</h3>
-                                <p className="text-xs text-slate-400">
+                                <p className="text-xs text-slate-400 flex items-center gap-2">
                                     Status: <span className={botStatus?.isRunning ? 'text-emerald-400' : 'text-slate-500'}>
                                         {botStatus?.isRunning ? 'RUNNING' : 'STOPPED'}
                                     </span>
+                                    {sseConnected ? (
+                                        <span className="flex items-center gap-1 text-emerald-400"><Wifi size={12} /> Live</span>
+                                    ) : (
+                                        <span className="flex items-center gap-1 text-amber-400"><WifiOff size={12} /> Polling</span>
+                                    )}
                                 </p>
                             </div>
                         </div>

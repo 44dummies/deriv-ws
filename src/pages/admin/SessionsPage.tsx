@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { useSessionTicks } from '../../hooks/useSessionTicks';
 import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
 import { useSessionStats } from '../../hooks/useSessionStats';
-import { Play, Pause, Activity, TrendingUp, DollarSign, Plus, X, Zap, Users, Monitor, Shield } from 'lucide-react';
+import { useEventStream } from '../../hooks/useEventStream';
+import { Play, Pause, Activity, TrendingUp, DollarSign, Plus, X, Zap, Users, Monitor, Shield, Wifi, WifiOff } from 'lucide-react';
 import { tradingApi } from '../../trading/tradingApi';
 import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
@@ -44,6 +45,32 @@ export default function SessionsPage() {
   // Hooks
   const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(selectedSessionId, [activeMarket]);
   const { stats } = useSessionStats(selectedSessionId);
+
+  // SSE for real-time updates
+  const { events: sseEvents, isConnected: sseConnected } = useEventStream(
+    selectedSessionId ? ['trade:executed', 'trade:closed', 'session:events'] : [],
+    {
+      onEvent: (event) => {
+        // Add to activity log
+        if (event.type === 'trade.executed' || event.type === 'trade.closed') {
+          setActivityLog(prev => [{
+            id: event.id,
+            type: event.type === 'trade.executed' ? 'open' : 'close',
+            side: event.payload.direction,
+            market: event.payload.symbol,
+            price: event.payload.entry || event.payload.exit,
+            profit: event.payload.profitLoss,
+            result: event.payload.profitLoss > 0 ? 'won' : event.payload.profitLoss < 0 ? 'lost' : undefined,
+            timestamp: event.timestamp
+          }, ...prev].slice(0, 100));
+        }
+        // Refresh stats on session events
+        if (event.type.startsWith('session.')) {
+          fetchSessions();
+        }
+      }
+    }
+  );
 
   // Local State for Buffers
   const [activityLog, setActivityLog] = useState<any[]>([]);
@@ -137,7 +164,14 @@ export default function SessionsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Session Control</h1>
-            <p className="text-sm text-slate-400">Manage live trading environments</p>
+            <p className="text-sm text-slate-400 flex items-center gap-2">
+              Manage live trading environments
+              {sseConnected ? (
+                <span className="flex items-center gap-1 text-emerald-400 text-xs"><Wifi size={12} /> Live</span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-400 text-xs"><WifiOff size={12} /> Polling</span>
+              )}
+            </p>
           </div>
         </div>
 
@@ -296,16 +330,16 @@ export default function SessionsPage() {
             ) : (
               activityLog.map((a) => (
                 <div key={a.id} className={`p-3 rounded-lg border flex items-center justify-between transition-all ${a.type === 'signal' ? 'bg-blue-500/10 border-blue-500/20' :
-                    a.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/20' :
-                      a.result === 'lost' ? 'bg-red-500/10 border-red-500/20' :
-                        'bg-white/5 border-white/10'
+                  a.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/20' :
+                    a.result === 'lost' ? 'bg-red-500/10 border-red-500/20' :
+                      'bg-white/5 border-white/10'
                   }`}>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${a.type === 'signal' ? 'bg-blue-500/20 text-blue-400' :
-                          a.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
-                            a.result === 'lost' ? 'bg-red-500/20 text-red-400' :
-                              'bg-slate-500/20 text-slate-300'
+                        a.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
+                          a.result === 'lost' ? 'bg-red-500/20 text-red-400' :
+                            'bg-slate-500/20 text-slate-300'
                         }`}>
                         {a.type === 'signal' ? 'SIGNAL' : 'TRADE'}
                       </span>
@@ -420,8 +454,8 @@ export default function SessionsPage() {
                     setNewSession({ ...newSession, markets });
                   }}
                   className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border ${newSession.markets.includes(m)
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
-                      : 'bg-transparent text-slate-400 border-white/10 hover:border-white/20'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                    : 'bg-transparent text-slate-400 border-white/10 hover:border-white/20'
                     }`}
                 >
                   {m.replace('_', ' ')}
