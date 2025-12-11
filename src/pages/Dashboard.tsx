@@ -543,6 +543,7 @@ const Dashboard = () => {
 
         if (authResponse.authorize) {
 
+          console.log('Full Deriv authorize response:', JSON.stringify(authResponse.authorize, null, 2));
 
 
           let loginid = authResponse.authorize.loginid;
@@ -557,6 +558,7 @@ const Dashboard = () => {
             loginid = authResponse.authorize.user_id;
           }
 
+          console.log('Extracted loginid:', loginid);
 
           // Current account balance - set demo or real based on account type
           const currentBalance = authResponse.authorize.balance || 0;
@@ -574,6 +576,7 @@ const Dashboard = () => {
             real_balance: isDemo ? 0 : currentBalance,
           };
 
+          console.log('Auth response data:', {
             loginid: loginid,
             email: authResponse.authorize.email,
             fullname: authResponse.authorize.fullname,
@@ -591,6 +594,7 @@ const Dashboard = () => {
           // Try to fetch all account balances from Deriv API to get BOTH demo and real
           try {
             const allBalancesRes = await websocketService.getAllBalances();
+            console.log('All balances response:', JSON.stringify(allBalancesRes, null, 2));
 
             if (allBalancesRes.balance?.accounts) {
               const accounts = allBalancesRes.balance.accounts;
@@ -598,6 +602,7 @@ const Dashboard = () => {
               let realBalance = 0;
 
               Object.entries(accounts).forEach(([loginid, accountData]: [string, any]) => {
+                console.log('Initial account:', loginid, accountData);
                 if (accountData.demo_account === 1 || loginid.startsWith('VRTC')) {
                   demoBalance = accountData.balance || 0;
                 } else {
@@ -618,6 +623,7 @@ const Dashboard = () => {
                 return updated;
               });
 
+              console.log('Initial balances set - Demo:', demoBalance, 'Real:', realBalance);
             }
           } catch (balErr) {
             console.error('Failed to fetch initial all balances:', balErr);
@@ -634,6 +640,7 @@ const Dashboard = () => {
 
 
           try {
+            console.log('Attempting backend auth with data:', {
               loginid: loginid,
               email: userData.email,
               fullname: userData.fullname
@@ -649,12 +656,15 @@ const Dashboard = () => {
                 currency: userData.currency || undefined,
                 fullname: userData.fullname || undefined
               };
+              console.log('Sending auth payload:', authPayload);
 
               const backendAuthResponse = await apiClient.loginWithDeriv(authPayload);
+              console.log('Backend authentication successful');
 
 
               if (backendAuthResponse.accessToken) {
                 setBackendToken(backendAuthResponse.accessToken);
+                console.log('Backend token saved');
               }
             }
           } catch (backendErr) {
@@ -687,6 +697,7 @@ const Dashboard = () => {
 
         const token = sessionStorage.getItem('accessToken');
         if (!token) {
+          console.log('No token available for profile load');
           return;
         }
 
@@ -705,6 +716,7 @@ const Dashboard = () => {
           // Dashboard is accessible to admins if they manually navigate here
         }
       } catch (error) {
+        console.log('Could not load user profile:', error);
       }
     };
 
@@ -775,6 +787,7 @@ const Dashboard = () => {
         // Fetch all account balances from Deriv API
         try {
           const allBalancesRes = await websocketService.getAllBalances();
+          console.log('All balances response:', allBalancesRes);
 
           if (allBalancesRes.balance?.accounts) {
             // accounts is an object with loginid as keys
@@ -783,6 +796,7 @@ const Dashboard = () => {
             let realBalance = 0;
 
             Object.entries(accounts).forEach(([loginid, accountData]: [string, any]) => {
+              console.log('Account:', loginid, accountData);
               if (accountData.demo_account === 1 || loginid.startsWith('VRTC')) {
                 demoBalance = accountData.balance || 0;
               } else {
@@ -796,6 +810,7 @@ const Dashboard = () => {
               real_balance: realBalance
             } : null);
 
+            console.log('Set balances - Demo:', demoBalance, 'Real:', realBalance);
           }
         } catch (allBalErr) {
           console.error('Failed to get all balances:', allBalErr);
@@ -1456,6 +1471,9 @@ const Dashboard = () => {
     const demoToken = sessionStorage.getItem('derivDemoToken');
     const realToken = sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
 
+    console.log('Session mode:', sessionMode, 'isDemo:', isDemo);
+    console.log('Available tokens - Demo:', !!demoToken, 'Real:', !!realToken);
+    console.log('User balance - Demo:', userInfo?.demo_balance, 'Real:', userInfo?.real_balance);
 
     let derivToken;
     if (isDemo) {
@@ -1926,6 +1944,7 @@ const Dashboard = () => {
                             const sessionDetails = session.trading_sessions || session;
 
                             // Debug log session structure
+                            console.log('Session data:', { sessionId, sessionDetails, raw: session });
 
                             return (
                               <div
