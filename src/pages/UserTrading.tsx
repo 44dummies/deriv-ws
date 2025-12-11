@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, BarChart2 } from 'lucide-react';
 import { tradingApi } from '../trading/tradingApi';
 import { useSessionManagement } from '../hooks/useSessionManagement';
+import { useWebSocketEvents } from '../hooks/useWebSocketEvents';
 
 // Glass UI
 import { DashboardLayout } from '../components/layout/DashboardLayout';
@@ -17,7 +18,10 @@ import { GlassStatusBadge } from '../components/ui/glass/GlassStatusBadge';
 import { GlassMetricTile } from '../components/ui/glass/GlassMetricTile';
 import { GlassTable } from '../components/ui/glass/GlassTable';
 
+
 const UserTrading = () => {
+
+
   const { sessions } = useSessionManagement();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -29,13 +33,38 @@ const UserTrading = () => {
   const [sessionStatus, setSessionStatus] = useState('waiting');
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
 
+  // Real-time hooks
+  const { latestTrade } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
+
   useEffect(() => {
     loadUserData();
     loadAvailableSessions();
     loadActiveSession();
   }, []);
 
-  // Sync with real-time updates
+  // Update trade history from real-time events
+  useEffect(() => {
+    if (activeSession && latestTrade) {
+      // Determine display values based on trade event
+      const isWin = latestTrade.result === 'won';
+      const isLoss = latestTrade.result === 'lost';
+      const side = latestTrade.side || latestTrade.signal || 'CALL';
+
+      const newTrade = {
+        id: Date.now(),
+        type: side.toUpperCase(),
+        symbol: latestTrade.market,
+        price: latestTrade.price,
+        profit: latestTrade.profit,
+        status: isWin ? 'WIN' : isLoss ? 'LOSS' : 'OPEN',
+        time: new Date().toISOString()
+      };
+
+      setTradeHistory(prev => [newTrade, ...prev].slice(0, 50));
+    }
+  }, [latestTrade, activeSession]);
+
+  // Sync with real-time session updates
   useEffect(() => {
     if (activeSession && sessions.length > 0) {
       const updated = sessions.find(s => s.id === activeSession.id);
@@ -93,14 +122,7 @@ const UserTrading = () => {
         setTakeProfit(session.user_tp || '');
         setStopLoss(session.user_sl || '');
         setSessionStatus(session.status);
-
-        // Load mock trade history if session is active
-        // In real app, fetch from API
-        setTradeHistory([
-          { id: 1, type: 'CALL', symbol: 'R_100', price: 10.50, profit: 9.98, status: 'WIN', time: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
-          { id: 2, type: 'PUT', symbol: 'R_100', price: 10.50, profit: -10.50, status: 'LOSS', time: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-          { id: 3, type: 'CALL', symbol: 'R_100', price: 10.50, profit: 9.98, status: 'WIN', time: new Date(Date.now() - 1000 * 60 * 8).toISOString() },
-        ]);
+        // Trade history will populate via websocket events
       }
     } catch (error) {
       console.error('Failed to load active session:', error);
