@@ -139,7 +139,7 @@ const AdminLayout: React.FC = () => {
             </main>
 
             {/* Sidebar - Right Side - Desktop Only */}
-            <aside className={`admin-sidebar sidebar-right ${sidebarOpen ? 'lg:open' : ''} !hidden lg:!flex`}>
+            <aside className={`admin-sidebar sidebar-right hidden lg:flex ${sidebarOpen ? 'lg:open' : ''}`}>
                 {/* Header */}
                 <div className="sidebar-header">
                     <div className="user-avatar-large">{userInitials}</div>
