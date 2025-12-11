@@ -89,8 +89,11 @@ export default function SessionsPage() {
       } else {
         setSessions([]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load sessions', err);
+      if (err.message && (err.message.includes('No token') || err.message.includes('Unauthorized'))) {
+        navigate('/login');
+      }
     }
   };
 

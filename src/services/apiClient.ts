@@ -57,30 +57,30 @@ class ApiClient {
     }
 
     /**
-     * Set access token - stored in memory only (not sessionStorage)
-     * Refresh token is now in HttpOnly cookie, handled by browser
+     * Set access token - and sync to sessionStorage for tradingApi compatibility
      */
     setTokens(accessToken: string): void {
         this.accessToken = accessToken;
-        // Note: No longer storing in sessionStorage for security
-        // Tokens are stored in memory only - will be lost on page refresh
-        // Page refresh will trigger cookie-based token refresh
+        // Sync to sessionStorage so tradingApi.ts works
+        sessionStorage.setItem('accessToken', accessToken);
     }
 
     /**
-     * Load tokens - now only returns in-memory access token
-     * Refresh happens via HttpOnly cookie automatically
+     * Load tokens - check memory then sessionStorage
      */
     loadTokens(): { accessToken: string | null } {
+        if (!this.accessToken) {
+            this.accessToken = sessionStorage.getItem('accessToken');
+        }
         return { accessToken: this.accessToken };
     }
 
     /**
-     * Clear access token from memory
+     * Clear access token from memory and storage
      */
     clearTokens(): void {
         this.accessToken = null;
-        // Note: Cookie will be cleared by logout endpoint
+        sessionStorage.removeItem('accessToken');
     }
 
     // Token refresh callback removed - now using HttpOnly cookies
