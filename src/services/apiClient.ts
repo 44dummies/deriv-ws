@@ -96,7 +96,10 @@ class ApiClient {
      * Make API request
      */
     async request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const url = `${API_URL}${endpoint}`;
+        // Normalize endpoint to prevent double /api prefix
+        // calling code might pass /api/foo but API_URL already includes /api
+        const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) : endpoint;
+        const url = `${API_URL}${cleanEndpoint}`;
         const headers: Record<string, string> = {
             'Content-Type': 'application/json',
             ...(options.headers as Record<string, string>)
