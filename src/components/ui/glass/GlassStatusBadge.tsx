@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface GlassStatusBadgeProps {
-    status: 'active' | 'inactive' | 'success' | 'warning' | 'error' | 'info';
+    status: 'active' | 'inactive' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
     children: React.ReactNode;
     pulse?: boolean;
 }
@@ -19,6 +19,7 @@ export const GlassStatusBadge: React.FC<GlassStatusBadgeProps> = ({
         warning: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
         error: 'bg-red-500/10 text-red-400 border-red-500/20',
         info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+        neutral: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
     };
 
     const dots = {
@@ -28,6 +29,7 @@ export const GlassStatusBadge: React.FC<GlassStatusBadgeProps> = ({
         warning: 'bg-orange-400',
         error: 'bg-red-400',
         info: 'bg-blue-400',
+        neutral: 'bg-gray-400',
     };
 
     return (

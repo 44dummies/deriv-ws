@@ -13,17 +13,11 @@ import {
 import { ChartPanel } from '../../../components/chart/ChartPanel';
 import { CreateSessionModal } from '../../../components/admin/SessionManagement/CreateSessionModal';
 import { SessionHealthPanel } from '../../../components/admin/SessionManagement/SessionHealthPanel';
-import { ThemeContext } from '../../../context/ThemeContext';
+
 import { useSessionManagement } from '../../../hooks/useSessionManagement';
 import { useSessionTicks } from '../../../hooks/useSessionTicks';
 import { useAudioAlerts } from '../../../hooks/useAudioAlerts';
 import { ManagedSession, SessionFilters, SessionStatus, StrategyType } from '../../../types/session';
-
-// Theme Context
-const ThemeContext = React.createContext<{ theme: 'dark' | 'light'; toggle: () => void }>({
-    theme: 'dark',
-    toggle: () => { }
-});
 
 export default function SessionManagement() {
     // Theme
@@ -144,7 +138,7 @@ export default function SessionManagement() {
     const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
 
     return (
-        <ThemeContext.Provider value={{ theme, toggle: toggleTheme }}>
+        <>
             <div className={`min-h-screen ${bgMain} ${text} transition-colors duration-300`}>
                 {/* Header */}
                 <header className={`sticky top-0 z-50 ${bgCard} border-b ${border} px-4 py-3`}>
@@ -597,7 +591,7 @@ export default function SessionManagement() {
                     </div>
                 </div>
             </div>
-        </ThemeContext.Provider>
+        </>
     );
 }
 
