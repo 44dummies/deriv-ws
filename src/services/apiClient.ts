@@ -167,6 +167,10 @@ class ApiClient {
             if (response.ok) {
                 const data = await response.json();
                 this.accessToken = data.accessToken;
+                // Sync to sessionStorage so tradingApi.ts can use it
+                if (data.accessToken) {
+                    sessionStorage.setItem('accessToken', data.accessToken);
+                }
                 return true;
             }
             return false;

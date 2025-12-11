@@ -64,8 +64,9 @@ const UserTrading = () => {
 
   const loadAvailableSessions = async () => {
     try {
-      const sessions = await tradingApi.getSessions();
-      setAvailableSessions(sessions || []);
+      const response = await tradingApi.getSessions();
+      const sessions = Array.isArray(response) ? response : (response.data || response.sessions || []);
+      setAvailableSessions(Array.isArray(sessions) ? sessions : []);
     } catch (error) {
       console.error('Failed to load sessions:', error);
     }

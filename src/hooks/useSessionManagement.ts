@@ -164,8 +164,11 @@ export function useSessionManagement(): UseSessionManagementReturn {
     const refreshSessions = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await tradingApi.getSessions();
-            if (data) {
+            const response = await tradingApi.getSessions();
+            // Handle potential response formats (array or object wrapper)
+            const data = Array.isArray(response) ? response : (response.data || response.sessions || []);
+
+            if (Array.isArray(data)) {
                 // Transform to ManagedSession format
                 const managedSessions: ManagedSession[] = data.map((s: any) => ({
                     id: s.id,

@@ -54,13 +54,20 @@ export default function SessionsPage() {
 
   const fetchSessions = async () => {
     try {
-      const data = await tradingApi.getSessions();
-      if (data) {
+      const response = await tradingApi.getSessions();
+      // Handle potential response formats (array or object wrapper)
+      const data = Array.isArray(response) ? response : (response.data || response.sessions || []);
+
+      if (Array.isArray(data)) {
         setSessions(data);
         if (data.length > 0 && !selectedSessionId) setSelectedSessionId(data[0].id);
+      } else {
+        console.error('Unexpected sessions format:', response);
+        setSessions([]);
       }
     } catch (err) {
       console.error('Failed to load sessions', err);
+      // Optional: Handle 401 specifically if needed, e.g. redirect to login
     }
   };
 
@@ -289,14 +296,14 @@ export default function SessionsPage() {
             <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
               {activityLog.map((a) => (
                 <div key={a.id} className={`p-3 rounded-lg border ${a.type === 'signal' ? 'bg-blue-900/20 border-blue-500/30' :
-                    a.type === 'open' ? 'bg-purple-900/20 border-purple-500/30' :
-                      a.result === 'won' ? 'bg-emerald-900/20 border-emerald-500/30' :
-                        'bg-rose-900/20 border-rose-500/30'
+                  a.type === 'open' ? 'bg-purple-900/20 border-purple-500/30' :
+                    a.result === 'won' ? 'bg-emerald-900/20 border-emerald-500/30' :
+                      'bg-rose-900/20 border-rose-500/30'
                   }`}>
                   <div className="flex justify-between items-center mb-1">
                     <span className={`text-xs font-bold uppercase ${a.type === 'signal' ? 'text-blue-400' :
-                        a.type === 'open' ? 'text-purple-400' :
-                          a.result === 'won' ? 'text-emerald-400' : 'text-rose-400'
+                      a.type === 'open' ? 'text-purple-400' :
+                        a.result === 'won' ? 'text-emerald-400' : 'text-rose-400'
                       }`}>
                       {a.type === 'signal' ? `📡 Signal: ${a.side}` :
                         a.type === 'open' ? `🚀 Trade: ${a.side}` :
@@ -423,8 +430,8 @@ export default function SessionsPage() {
                         setNewSession({ ...newSession, markets });
                       }}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${newSession.markets.includes(m)
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
-                          : 'bg-slate-900 text-slate-400 border border-slate-700 hover:border-slate-600'
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                        : 'bg-slate-900 text-slate-400 border border-slate-700 hover:border-slate-600'
                         }`}
                     >
                       {m.replace('_', ' ')}
