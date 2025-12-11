@@ -58,7 +58,10 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
         }
 
         const topicsParam = topics.join(',');
-        const url = `${CONFIG.SERVER_URL}/api/events/stream?topics=${topicsParam}`;
+        // Include token in URL since EventSource can't send headers
+        const token = sessionStorage.getItem('accessToken') || '';
+        const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+        const url = `${CONFIG.SERVER_URL}/api/events/stream?topics=${topicsParam}${tokenParam}`;
 
         const eventSource = new EventSource(url, {
             withCredentials: true
@@ -194,7 +197,10 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
             eventSourceRef.current.close();
         }
 
-        const url = `${CONFIG.SERVER_URL}/api/events/admin-stream`;
+        // Include token in URL since EventSource can't send headers
+        const token = sessionStorage.getItem('accessToken') || '';
+        const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+        const url = `${CONFIG.SERVER_URL}/api/events/admin-stream${tokenParam}`;
         const eventSource = new EventSource(url, { withCredentials: true });
         eventSourceRef.current = eventSource;
 
