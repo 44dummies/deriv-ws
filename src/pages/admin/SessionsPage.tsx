@@ -47,30 +47,28 @@ export default function SessionsPage() {
   const { stats } = useSessionStats(selectedSessionId);
 
   // SSE for real-time updates
-  const { events: sseEvents, isConnected: sseConnected } = useEventStream(
-    selectedSessionId ? ['trade:executed', 'trade:closed', 'session:events'] : [],
-    {
-      onEvent: (event) => {
-        // Add to activity log
-        if (event.type === 'trade.executed' || event.type === 'trade.closed') {
-          setActivityLog(prev => [{
-            id: event.id,
-            type: event.type === 'trade.executed' ? 'open' : 'close',
-            side: event.payload.direction,
-            market: event.payload.symbol,
-            price: event.payload.entry || event.payload.exit,
-            profit: event.payload.profitLoss,
-            result: event.payload.profitLoss > 0 ? 'won' : event.payload.profitLoss < 0 ? 'lost' : undefined,
-            timestamp: event.timestamp
-          }, ...prev].slice(0, 100));
-        }
-        // Refresh stats on session events
-        if (event.type.startsWith('session.')) {
-          fetchSessions();
-        }
+  const { events: sseEvents, isConnected: sseConnected } = useEventStream({
+    topics: selectedSessionId ? ['trade:executed', 'trade:closed', 'session:events'] : [],
+    onEvent: (event) => {
+      // Add to activity log
+      if (event.type === 'trade.executed' || event.type === 'trade.closed') {
+        setActivityLog(prev => [{
+          id: event.id,
+          type: event.type === 'trade.executed' ? 'open' : 'close',
+          side: event.payload.direction,
+          market: event.payload.symbol,
+          price: event.payload.entry || event.payload.exit,
+          profit: event.payload.profitLoss,
+          result: (event.payload.profitLoss as number) > 0 ? 'won' : (event.payload.profitLoss as number) < 0 ? 'lost' : undefined,
+          timestamp: event.timestamp
+        }, ...prev].slice(0, 100));
+      }
+      // Refresh stats on session events
+      if (event.type.startsWith('session.')) {
+        fetchSessions();
       }
     }
-  );
+  });
 
   // Local State for Buffers
   const [activityLog, setActivityLog] = useState<any[]>([]);
