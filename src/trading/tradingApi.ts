@@ -118,21 +118,21 @@ export async function getSession(sessionId) {
   return apiRequest(`/api/trading/sessions/${sessionId}`);
 }
 
-// Stub for getting user's active session
+// Get user's active session
 export async function getMyActiveSession() {
   const sessions = await getSessions({ status: 'active' });
   return sessions && sessions.length > 0 ? sessions[0] : null;
 }
 
-// Stub for accepting a session with TP/SL
+// Accept a session with TP/SL
 export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number }) {
   return apiRequest(`/api/trading/sessions/${data.sessionId}/join`, {
     method: 'POST',
-    body: JSON.stringify({ accountId: data.accountId }) // TP/SL currently ignored by backend but passed for future use
+    body: JSON.stringify({ accountId: data.accountId, takeProfit: data.takeProfit, stopLoss: data.stopLoss })
   });
 }
 
-// Stub for updating user's TP/SL
+// Update user's TP/SL for a session
 export async function updateUserTPSL(data: { sessionId: string; takeProfit: number; stopLoss: number }) {
   return apiRequest(`/api/trading/sessions/${data.sessionId}/tpsl`, {
     method: 'PUT',
@@ -279,11 +279,32 @@ export async function getActivityLogs(params = {}) {
 // ==================== Constants ====================
 
 export async function getTradingConstants() {
-  // Return hardcoded constants or fetch from backend if endpoint exists
+  try {
+    const result = await apiRequest('/api/trading/constants');
+    return result?.data || getDefaultConstants();
+  } catch (error) {
+    console.warn('Failed to fetch trading constants, using defaults:', error);
+    return getDefaultConstants();
+  }
+}
+
+function getDefaultConstants() {
   return {
-    strategies: ['DFPM', 'VCS'],
-    markets: ['R_100', 'R_50', 'R_25', 'R_10'],
-    staking_modes: ['fixed', 'martingale', 'compounding']
+    strategies: [
+      { id: 'DFPM', name: 'Digit Frequency Pattern Matching' },
+      { id: 'VCS', name: 'Volatility Correlation Strategy' }
+    ],
+    markets: [
+      { id: 'R_100', name: 'Volatility 100 Index' },
+      { id: 'R_50', name: 'Volatility 50 Index' },
+      { id: 'R_25', name: 'Volatility 25 Index' },
+      { id: 'R_10', name: 'Volatility 10 Index' }
+    ],
+    stakingModes: [
+      { id: 'fixed', name: 'Fixed Stake' },
+      { id: 'martingale', name: 'Martingale' },
+      { id: 'compounding', name: 'Compounding' }
+    ]
   };
 }
 

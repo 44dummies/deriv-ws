@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChartPanel } from '../../components/chart/ChartPanel';
 import { useSessionTicks } from '../../hooks/useSessionTicks';
 import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
+import { useSessionStats } from '../../hooks/useSessionStats';
 import { Play, Pause, Activity, TrendingUp, DollarSign } from 'lucide-react';
 
 interface Session {
@@ -19,6 +20,7 @@ export default function SessionsPage() {
   // Hooks
   const { ticks, loading: ticksLoading } = useSessionTicks(selectedSessionId);
   const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(selectedSessionId, [activeMarket]);
+  const { stats } = useSessionStats(selectedSessionId);
 
   // Local State for Buffers
   const [tradeMarkers, setTradeMarkers] = useState<any[]>([]);
@@ -156,15 +158,25 @@ export default function SessionsPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
                 <span className="text-sm text-slate-400">P/L</span>
-                <span className="font-mono font-bold text-emerald-400">+$0.00</span>
+                <span className={`font-mono font-bold ${parseFloat(stats?.totalProfit || '0') >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {parseFloat(stats?.totalProfit || '0') >= 0 ? '+' : ''}${stats?.totalProfit || '0.00'}
+                </span>
               </div>
               <div className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
                 <span className="text-sm text-slate-400">Trades</span>
-                <span className="font-mono font-bold text-white">{tradeMarkers.length}</span>
+                <span className="font-mono font-bold text-white">{stats?.totalTrades || 0}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
                 <span className="text-sm text-slate-400">Win Rate</span>
-                <span className="font-mono font-bold text-blue-400">--%</span>
+                <span className="font-mono font-bold text-blue-400">{stats?.winRate || '0'}%</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-slate-700/50 rounded-lg">
+                <span className="text-sm text-slate-400">Wins/Losses</span>
+                <span className="font-mono font-bold">
+                  <span className="text-emerald-400">{stats?.wins || 0}</span>
+                  <span className="text-slate-500">/</span>
+                  <span className="text-rose-400">{stats?.losses || 0}</span>
+                </span>
               </div>
             </div>
 

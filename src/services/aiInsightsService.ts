@@ -18,14 +18,77 @@ class AIInsightsService {
   }
 
   /**
-   * Generate room insights (stub for TypeScript compatibility)
+   * Generate room insights based on message content and activity
    */
   generateRoomInsights(roomId: string, messages: any[], roomType: string) {
+    if (!messages || messages.length === 0) {
+      return {
+        sentiment: 'neutral',
+        activity: 'quiet',
+        topics: [],
+        summary: 'No recent activity'
+      };
+    }
+
+    // Analyze sentiment from recent messages
+    const recentMessages = messages.slice(-20);
+    let positiveCount = 0;
+    let negativeCount = 0;
+    const topics: string[] = [];
+
+    const positiveWords = ['profit', 'win', 'won', 'green', 'up', 'great', 'nice', 'good', 'awesome'];
+    const negativeWords = ['loss', 'lost', 'red', 'down', 'bad', 'stop', 'sl', 'fail'];
+    const topicKeywords = {
+      'strategy': ['strategy', 'signal', 'entry', 'exit', 'pattern'],
+      'risk': ['risk', 'sl', 'tp', 'stop loss', 'take profit'],
+      'markets': ['r_100', 'r_50', 'volatility', 'market'],
+      'education': ['learn', 'tutorial', 'help', 'question', 'how']
+    };
+
+    recentMessages.forEach(msg => {
+      const content = (msg.content || msg.message || '').toLowerCase();
+
+      positiveWords.forEach(word => {
+        if (content.includes(word)) positiveCount++;
+      });
+      negativeWords.forEach(word => {
+        if (content.includes(word)) negativeCount++;
+      });
+
+      Object.entries(topicKeywords).forEach(([topic, keywords]) => {
+        if (keywords.some(kw => content.includes(kw)) && !topics.includes(topic)) {
+          topics.push(topic);
+        }
+      });
+    });
+
+    // Determine sentiment
+    let sentiment = 'neutral';
+    if (positiveCount > negativeCount * 1.5) sentiment = 'bullish';
+    else if (negativeCount > positiveCount * 1.5) sentiment = 'bearish';
+    else if (positiveCount > 0 || negativeCount > 0) sentiment = 'mixed';
+
+    // Determine activity level
+    const messagesPerHour = recentMessages.length; // Simplified
+    let activity = 'normal';
+    if (messagesPerHour > 15) activity = 'high';
+    else if (messagesPerHour < 5) activity = 'quiet';
+
+    // Generate summary
+    const summaries = {
+      bullish: 'Traders are feeling optimistic with recent wins.',
+      bearish: 'Sentiment is cautious after some losses.',
+      mixed: 'Mixed reactions with both wins and losses.',
+      neutral: 'Standard trading discussions.'
+    };
+
     return {
-      sentiment: 'neutral',
-      activity: 'normal',
-      topics: [],
-      summary: 'Room activity analysis'
+      sentiment,
+      activity,
+      topics: topics.slice(0, 3),
+      summary: summaries[sentiment] || summaries.neutral,
+      messageCount: messages.length,
+      recentActivity: recentMessages.length
     };
   }
 

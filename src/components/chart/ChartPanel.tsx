@@ -104,11 +104,13 @@ export const ChartPanel: React.FC<ChartProps> = ({
 
         // Add Trade Markers
         tradeMarkers.forEach(m => {
+            const typeLower = m.type.toLowerCase();
+            const isCallSide = typeLower === 'buy' || typeLower === 'call' || typeLower === 'over';
             markers.push({
                 time: m.time as UTCTimestamp,
-                position: m.type === 'buy' || m.type === 'call' ? 'belowBar' : 'aboveBar',
-                color: m.type === 'buy' || m.type === 'call' ? '#4caf50' : '#e91e63',
-                shape: m.type === 'buy' || m.type === 'call' ? 'arrowUp' : 'arrowDown',
+                position: isCallSide ? 'belowBar' : 'aboveBar',
+                color: isCallSide ? '#4caf50' : '#e91e63',
+                shape: isCallSide ? 'arrowUp' : 'arrowDown',
                 text: m.type.toUpperCase(),
             });
         });
@@ -117,8 +119,8 @@ export const ChartPanel: React.FC<ChartProps> = ({
         signalMarkers.forEach(s => {
             markers.push({
                 time: s.time as UTCTimestamp,
-                position: 'inBar',
-                color: s.type === 'CALL' ? '#2196f3' : '#ff9800', // Blue/Orange
+                position: 'aboveBar',
+                color: s.type === 'CALL' || s.type === 'OVER' ? '#2196f3' : '#ff9800', // Blue/Orange
                 shape: 'circle',
                 text: 'S',
             });
