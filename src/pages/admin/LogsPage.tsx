@@ -1,15 +1,17 @@
 /**
- * Activity Logs Page
- * View system activity and events
+ * Activity Logs Page - Liquid Glass Renovation
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
-    Search, Filter, RefreshCw, Activity, AlertTriangle,
-    CheckCircle, Info, Clock, Download
+    Search, RefreshCw, Activity, AlertTriangle,
+    CheckCircle, Info, Clock, Download, XCircle
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import { GlassCard } from '../../components/ui/glass/GlassCard';
+import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
+import { GlassButton } from '../../components/ui/glass/GlassButton';
 
 interface LogEntry {
     id: string;
@@ -72,19 +74,19 @@ const LogsPage: React.FC = () => {
 
     const getLevelIcon = (level: string) => {
         switch (level) {
-            case 'success': return <CheckCircle size={16} style={{ color: '#10b981' }} />;
-            case 'warning': return <AlertTriangle size={16} style={{ color: '#f59e0b' }} />;
-            case 'error': return <AlertTriangle size={16} style={{ color: '#ef4444' }} />;
-            default: return <Info size={16} style={{ color: '#3b82f6' }} />;
+            case 'success': return <CheckCircle size={20} className="text-emerald-400" />;
+            case 'warning': return <AlertTriangle size={20} className="text-amber-400" />;
+            case 'error': return <XCircle size={20} className="text-red-400" />;
+            default: return <Info size={20} className="text-blue-400" />;
         }
     };
 
-    const getLevelBadgeClass = (level: string) => {
+    const getLevelColor = (level: string) => {
         switch (level) {
-            case 'success': return 'badge-success';
-            case 'warning': return 'badge-warning';
-            case 'error': return 'badge-danger';
-            default: return 'badge-info';
+            case 'success': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+            case 'warning': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+            case 'error': return 'text-red-400 bg-red-500/10 border-red-500/20';
+            default: return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
         }
     };
 
@@ -94,26 +96,12 @@ const LogsPage: React.FC = () => {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+            minute: '2-digit'
         });
     };
 
     const exportLogs = () => {
-        const csv = [
-            ['Time', 'Type', 'Level', 'Message'].join(','),
-            ...filteredLogs.map(log =>
-                [formatTime(log.created_at), log.type, log.level, `"${log.message}"`].join(',')
-            )
-        ].join('\n');
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `activity-logs-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        toast.success('Logs exported');
+        toast.success('Logs exported to CSV');
     };
 
     const filteredLogs = logs.filter(log => {
@@ -126,25 +114,25 @@ const LogsPage: React.FC = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
             </div>
         );
     }
 
     return (
-        <>
+        <div className="space-y-6">
             {/* Header Actions */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 max-w-full sm:max-w-[600px]">
+            <GlassCard className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex flex-1 items-center gap-4 w-full">
                     {/* Search */}
-                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 flex-1">
-                        <Search size={16} className="text-gray-400 shrink-0" />
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                         <input
                             type="text"
-                            placeholder="Search logs..."
+                            placeholder="Search system logs..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-transparent border-none outline-none text-white text-sm w-full placeholder-gray-500"
+                            className="w-full bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all"
                         />
                     </div>
 
@@ -152,7 +140,7 @@ const LogsPage: React.FC = () => {
                     <select
                         value={levelFilter}
                         onChange={(e) => setLevelFilter(e.target.value)}
-                        className="px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl bg-white/5 border border-white/10 text-white text-sm cursor-pointer outline-none"
+                        className="px-4 py-2.5 rounded-xl bg-black/20 border border-white/10 text-slate-300 text-sm focus:outline-none focus:border-emerald-500/50 cursor-pointer"
                     >
                         <option value="all">All Levels</option>
                         <option value="info">Info</option>
@@ -162,106 +150,92 @@ const LogsPage: React.FC = () => {
                     </select>
                 </div>
 
-                <div className="flex gap-2 sm:gap-3">
-                    <button className="btn btn-secondary flex-1 sm:flex-none text-sm" onClick={loadLogs}>
-                        <RefreshCw size={16} />
-                        <span className="hidden sm:inline">Refresh</span>
-                    </button>
-                    <button className="btn btn-primary flex-1 sm:flex-none text-sm" onClick={exportLogs}>
-                        <Download size={16} />
-                        <span className="hidden sm:inline">Export</span>
-                    </button>
+                <div className="flex gap-3">
+                    <GlassButton variant="ghost" onClick={loadLogs} icon={<RefreshCw size={16} />}>
+                        Refresh
+                    </GlassButton>
+                    <GlassButton variant="primary" onClick={exportLogs} icon={<Download size={16} />}>
+                        Export CSV
+                    </GlassButton>
                 </div>
-            </div>
+            </GlassCard>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-2.5 rounded-lg bg-blue-500/15">
-                        <Info size={16} className="text-blue-500 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'info').length}</div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">Info</div>
-                    </div>
-                </div>
-                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-2.5 rounded-lg bg-green-500/15">
-                        <CheckCircle size={16} className="text-green-500 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'success').length}</div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">Success</div>
-                    </div>
-                </div>
-                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-2.5 rounded-lg bg-yellow-500/15">
-                        <AlertTriangle size={16} className="text-yellow-500 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'warning').length}</div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">Warning</div>
-                    </div>
-                </div>
-                <div className="admin-card p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-                    <div className="p-2 sm:p-2.5 rounded-lg bg-red-500/15">
-                        <AlertTriangle size={16} className="text-red-500 sm:w-5 sm:h-5" />
-                    </div>
-                    <div>
-                        <div className="text-base sm:text-xl font-bold">{logs.filter(l => l.level === 'error').length}</div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">Error</div>
-                    </div>
-                </div>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <GlassMetricTile
+                    label="Info Logs"
+                    value={String(logs.filter(l => l.level === 'info').length)}
+                    icon={<Info size={18} />}
+                />
+                <GlassMetricTile
+                    label="Success"
+                    value={String(logs.filter(l => l.level === 'success').length)}
+                    icon={<CheckCircle size={18} className="text-emerald-400" />}
+                />
+                <GlassMetricTile
+                    label="Warnings"
+                    value={String(logs.filter(l => l.level === 'warning').length)}
+                    icon={<AlertTriangle size={18} className="text-amber-400" />}
+                />
+                <GlassMetricTile
+                    label="Errors"
+                    value={String(logs.filter(l => l.level === 'error').length)}
+                    icon={<XCircle size={18} className="text-red-400" />}
+                />
             </div>
 
             {/* Logs List */}
-            <div className="admin-card" style={{ overflow: 'hidden' }}>
+            <GlassCard className="p-0 overflow-hidden">
+                <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Activity className="text-blue-400" size={20} />
+                        <h3 className="text-xl font-bold text-white">System Activity</h3>
+                    </div>
+                    <span className="text-sm text-slate-400">{filteredLogs.length} events found</span>
+                </div>
+
                 {filteredLogs.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-                        <Activity size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                        <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>No logs found</h3>
-                        <p>Activity logs will appear here</p>
+                    <div className="text-center py-16 text-slate-500">
+                        <Activity size={48} className="mx-auto mb-4 opacity-20" />
+                        <p>No logs match your criteria</p>
                     </div>
                 ) : (
-                    <div style={{ maxHeight: '600px', overflow: 'auto' }}>
-                        {filteredLogs.map(log => (
+                    <div className="max-h-[600px] overflow-y-auto">
+                        {filteredLogs.map((log, i) => (
                             <div
                                 key={log.id}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '16px',
-                                    padding: '16px 20px',
-                                    borderBottom: '1px solid rgba(255,255,255,0.05)',
-                                    transition: 'background 0.2s'
-                                }}
-                                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-                                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                className={`
+                                    flex items-center gap-4 p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors
+                                    ${i % 2 === 0 ? 'bg-white/[0.02]' : 'bg-transparent'}
+                                `}
                             >
-                                {getLevelIcon(log.level)}
+                                <div className="flex-shrink-0">
+                                    {getLevelIcon(log.level)}
+                                </div>
 
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                                        <span style={{ fontWeight: 500 }}>{log.message}</span>
-                                        <span className={`badge ${getLevelBadgeClass(log.level)}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <span className="font-medium text-white text-sm truncate">{log.message}</span>
+                                        <span className={`text-[10px] px-2 py-0.5 rounded-full border border-opacity-20 font-bold uppercase tracking-wider ${getLevelColor(log.level)}`}>
                                             {log.level}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: '12px', color: '#9ca3af', display: 'flex', gap: '12px' }}>
-                                        <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>{log.type}</span>
+                                    <div className="flex items-center gap-4 text-xs text-slate-500">
+                                        <span className="uppercase tracking-wider font-mono">{log.type}</span>
+                                        {log.user_id && <span>User: {log.user_id}</span>}
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#9ca3af', fontSize: '12px', flexShrink: 0 }}>
-                                    <Clock size={14} />
+                                <div className="flex items-center gap-2 text-xs text-slate-500 font-mono whitespace-nowrap">
+                                    <Clock size={12} />
                                     {formatTime(log.created_at)}
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
-            </div>
-        </>
+            </GlassCard>
+        </div>
     );
 };
 

@@ -11,9 +11,11 @@ import {
     SessionAlert,
     TradeInfo,
     SessionAnalytics,
-    BulkOperation
+    BulkOperation,
+    WSEvent
 } from '../types/session';
 import { tradingApi } from '../trading/tradingApi';
+import { SessionStatusManager } from '../services/SessionStatusManager';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
@@ -98,13 +100,26 @@ export function useSessionManagement(): UseSessionManagementReturn {
 
         // Session update events
         socket.on('session_update', (data: { sessionId: string; updates: Partial<ManagedSession> }) => {
+            SessionStatusManager.getInstance().processEvent({
+                type: 'session_update',
+                sessionId: data.sessionId,
+                data: data.updates
+            });
+
             setSessions(prev => prev.map(s =>
                 s.id === data.sessionId ? { ...s, ...data.updates, lastUpdate: new Date().toISOString() } : s
             ));
         });
 
         // Trade update events
-        socket.on('trade_update', (data: { sessionId: string; trade: TradeInfo; action: string }) => {
+        socket.on('trade_update', (data: { sessionId: string; trade: TradeInfo; action: 'open' | 'close' | 'update' }) => {
+            SessionStatusManager.getInstance().processEvent({
+                type: 'trade_update',
+                sessionId: data.sessionId,
+                trade: data.trade,
+                action: data.action
+            });
+
             setSessions(prev => prev.map(s => {
                 if (s.id !== data.sessionId) return s;
 
@@ -208,6 +223,11 @@ export function useSessionManagement(): UseSessionManagementReturn {
                     lastUpdate: new Date().toISOString()
                 }));
                 setSessions(managedSessions);
+
+                // Register sessions for health monitoring
+                managedSessions.forEach(s => {
+                    SessionStatusManager.getInstance().registerSession(s.id, s.symbols);
+                });
             }
         } catch (err) {
             setError('Failed to load sessions');
@@ -215,6 +235,21 @@ export function useSessionManagement(): UseSessionManagementReturn {
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    // Subscribe to Health Updates
+    useEffect(() => {
+        const unsubscribe = SessionStatusManager.getInstance().subscribe((healthMap) => {
+            setSessions(prev => prev.map(s => {
+                const health = healthMap.get(s.id);
+                // Only update if health changed to avoid loops, though React state diffing helps
+                if (health && s.health !== health) {
+                    return { ...s, health };
+                }
+                return s;
+            }));
+        });
+        return unsubscribe;
     }, []);
 
     // Initial load

@@ -1,13 +1,16 @@
 /**
- * Admin Settings Page
+ * Admin Settings Page - Liquid Glass Renovation
  * Configure system settings and bot parameters
  */
 
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-    Save, Shield, Target, Zap, Bell, Server, Database
+    Save, Shield, Zap, Bell, Server
 } from 'lucide-react';
+import { GlassCard } from '../../components/ui/glass/GlassCard';
+import { GlassButton } from '../../components/ui/glass/GlassButton';
+import { GlassToggle } from '../../components/ui/glass/GlassToggle';
 
 interface BotConfig {
     default_stake: number;
@@ -55,254 +58,182 @@ const SettingsPage: React.FC = () => {
     ];
 
     return (
-        <div className="flex flex-col lg:grid lg:grid-cols-[220px_1fr] gap-4 lg:gap-6">
-            {/* Settings Navigation - Horizontal scroll on mobile, sidebar on desktop */}
-            <div className="admin-card p-3 lg:p-4 lg:h-fit">
-                <div className="hidden lg:block mb-4 px-3">
-                    <h3 className="text-xs text-gray-400 uppercase tracking-wider">
+        <div className="flex flex-col lg:grid lg:grid-cols-[240px_1fr] gap-6">
+            {/* Settings Navigation */}
+            <GlassCard className="p-2 lg:h-fit sticky top-6">
+                <div className="hidden lg:block mb-4 px-4 pt-4">
+                    <h3 className="text-xs text-slate-400 uppercase tracking-wider font-bold">
                         Settings
                     </h3>
                 </div>
-                <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-1 lg:pb-0">
+                <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 hide-scrollbar">
                     {sections.map(section => (
                         <button
                             key={section.id}
                             onClick={() => setActiveSection(section.id)}
-                            className={`flex items-center gap-2 lg:gap-3 px-3 py-2 lg:py-3 rounded-lg lg:rounded-xl whitespace-nowrap text-sm transition-all ${activeSection === section.id
-                                ? 'bg-blue-500/15 text-white'
-                                : 'text-gray-400 hover:bg-white/5'
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl whitespace-nowrap text-sm font-medium transition-all w-full text-left ${activeSection === section.id
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'
                                 }`}
                         >
-                            <span className={activeSection === section.id ? 'text-blue-400' : ''}>
+                            <span className={activeSection === section.id ? 'text-emerald-400 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]' : ''}>
                                 {section.icon}
                             </span>
-                            <span className="lg:inline">{section.label}</span>
+                            <span>{section.label}</span>
                         </button>
                     ))}
                 </div>
-            </div>
+            </GlassCard>
 
             {/* Settings Content */}
-            <div className="admin-card p-4 sm:p-6 lg:p-8">
+            <GlassCard>
                 {activeSection === 'bot' && (
-                    <>
-                        <div style={{ marginBottom: '32px' }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Zap size={24} style={{ color: '#3b82f6' }} />
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="border-b border-white/5 pb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-3 text-white mb-2">
+                                <Zap className="text-blue-400" size={28} />
                                 Bot Configuration
                             </h2>
-                            <p style={{ color: '#9ca3af' }}>Configure the trading bot parameters and defaults.</p>
+                            <p className="text-slate-400">Configure global trading bot parameters and safeguards.</p>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '24px', maxWidth: '600px' }}>
+                        <div className="grid gap-8 max-w-2xl">
                             <SettingRow
                                 label="Default Stake"
-                                description="Initial stake amount for new sessions"
+                                description="Initial stake amount for new sessions (USD)"
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#9ca3af' }}>$</span>
-                                    <input
-                                        type="number"
-                                        value={botConfig.default_stake}
-                                        onChange={(e) => setBotConfig({ ...botConfig, default_stake: Number(e.target.value) })}
-                                        step="0.01"
-                                        min="0.35"
-                                        style={{
-                                            width: '120px',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                                <GlassInput
+                                    type="number"
+                                    value={botConfig.default_stake}
+                                    onChange={(e) => setBotConfig({ ...botConfig, default_stake: Number(e.target.value) })}
+                                    step="0.01"
+                                    min="0.35"
+                                />
                             </SettingRow>
 
                             <SettingRow
                                 label="Maximum Stake"
-                                description="Maximum stake limit per trade"
+                                description="Hard limit for single trade stake amount"
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#9ca3af' }}>$</span>
-                                    <input
-                                        type="number"
-                                        value={botConfig.max_stake}
-                                        onChange={(e) => setBotConfig({ ...botConfig, max_stake: Number(e.target.value) })}
-                                        min="1"
-                                        style={{
-                                            width: '120px',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                                <GlassInput
+                                    type="number"
+                                    value={botConfig.max_stake}
+                                    onChange={(e) => setBotConfig({ ...botConfig, max_stake: Number(e.target.value) })}
+                                    min="1"
+                                />
                             </SettingRow>
 
                             <SettingRow
                                 label="Martingale Multiplier"
-                                description="Stake multiplier after a loss"
+                                description="Stake multiplier applied after a loss event"
                             >
-                                <input
+                                <GlassInput
                                     type="number"
                                     value={botConfig.martingale_multiplier}
                                     onChange={(e) => setBotConfig({ ...botConfig, martingale_multiplier: Number(e.target.value) })}
                                     step="0.1"
                                     min="1"
-                                    style={{
-                                        width: '120px',
-                                        padding: '10px 14px',
-                                        borderRadius: '10px',
-                                        background: 'rgba(0,0,0,0.3)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#fff',
-                                        fontSize: '14px',
-                                        outline: 'none'
-                                    }}
                                 />
                             </SettingRow>
 
                             <SettingRow
                                 label="Max Consecutive Losses"
-                                description="Stop trading after this many losses in a row"
+                                description="Safety stop trigger after N consecutive losses"
                             >
-                                <input
+                                <GlassInput
                                     type="number"
                                     value={botConfig.max_consecutive_losses}
                                     onChange={(e) => setBotConfig({ ...botConfig, max_consecutive_losses: Number(e.target.value) })}
                                     min="1"
                                     max="10"
-                                    style={{
-                                        width: '120px',
-                                        padding: '10px 14px',
-                                        borderRadius: '10px',
-                                        background: 'rgba(0,0,0,0.3)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        color: '#fff',
-                                        fontSize: '14px',
-                                        outline: 'none'
-                                    }}
                                 />
                             </SettingRow>
 
                             <SettingRow
                                 label="Auto Restart"
-                                description="Automatically restart bot after connection issues"
+                                description="Automatically attempt to reconnect and resume after errors"
                             >
-                                <Toggle
-                                    value={botConfig.auto_restart}
+                                <GlassToggle
+                                    checked={botConfig.auto_restart}
                                     onChange={(val) => setBotConfig({ ...botConfig, auto_restart: val })}
                                 />
                             </SettingRow>
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {activeSection === 'risk' && (
-                    <>
-                        <div style={{ marginBottom: '32px' }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Shield size={24} style={{ color: '#10b981' }} />
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="border-b border-white/5 pb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-3 text-white mb-2">
+                                <Shield className="text-emerald-400" size={28} />
                                 Risk Management
                             </h2>
-                            <p style={{ color: '#9ca3af' }}>Configure default risk parameters for trading sessions.</p>
+                            <p className="text-slate-400">Set default risk boundaries for all new sessions.</p>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '24px', maxWidth: '600px' }}>
+                        <div className="grid gap-8 max-w-2xl">
                             <SettingRow
                                 label="Default Take Profit"
-                                description="Target profit to close session"
+                                description="Target profit amount to auto-close session (USD)"
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#9ca3af' }}>$</span>
-                                    <input
-                                        type="number"
-                                        value={botConfig.default_take_profit}
-                                        onChange={(e) => setBotConfig({ ...botConfig, default_take_profit: Number(e.target.value) })}
-                                        style={{
-                                            width: '120px',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                                <GlassInput
+                                    type="number"
+                                    value={botConfig.default_take_profit}
+                                    onChange={(e) => setBotConfig({ ...botConfig, default_take_profit: Number(e.target.value) })}
+                                />
                             </SettingRow>
 
                             <SettingRow
                                 label="Default Stop Loss"
-                                description="Maximum loss before closing session"
+                                description="Maximum allowable loss amount per session (USD)"
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ color: '#9ca3af' }}>$</span>
-                                    <input
-                                        type="number"
-                                        value={botConfig.default_stop_loss}
-                                        onChange={(e) => setBotConfig({ ...botConfig, default_stop_loss: Number(e.target.value) })}
-                                        style={{
-                                            width: '120px',
-                                            padding: '10px 14px',
-                                            borderRadius: '10px',
-                                            background: 'rgba(0,0,0,0.3)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            color: '#fff',
-                                            fontSize: '14px',
-                                            outline: 'none'
-                                        }}
-                                    />
-                                </div>
+                                <GlassInput
+                                    type="number"
+                                    value={botConfig.default_stop_loss}
+                                    onChange={(e) => setBotConfig({ ...botConfig, default_stop_loss: Number(e.target.value) })}
+                                />
                             </SettingRow>
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {activeSection === 'notifications' && (
-                    <>
-                        <div style={{ marginBottom: '32px' }}>
-                            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Bell size={24} style={{ color: '#8b5cf6' }} />
-                                Notifications
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="border-b border-white/5 pb-6">
+                            <h2 className="text-2xl font-bold flex items-center gap-3 text-white mb-2">
+                                <Bell className="text-purple-400" size={28} />
+                                Notification Preferences
                             </h2>
-                            <p style={{ color: '#9ca3af' }}>Configure how you receive system notifications.</p>
+                            <p className="text-slate-400">Manage global system alerts and notifications.</p>
                         </div>
 
-                        <div style={{ display: 'grid', gap: '24px', maxWidth: '600px' }}>
+                        <div className="grid gap-8 max-w-2xl">
                             <SettingRow
                                 label="Enable Notifications"
-                                description="Receive alerts for important events"
+                                description="Toggle all system-wide notification delivery"
                             >
-                                <Toggle
-                                    value={botConfig.notifications_enabled}
+                                <GlassToggle
+                                    checked={botConfig.notifications_enabled}
                                     onChange={(val) => setBotConfig({ ...botConfig, notifications_enabled: val })}
                                 />
                             </SettingRow>
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {/* Save Button */}
-                <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                    <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                        {saving ? (
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                        ) : (
-                            <Save size={20} />
-                        )}
-                        Save Changes
-                    </button>
+                <div className="mt-12 pt-8 border-t border-white/5 flex justify-end">
+                    <GlassButton
+                        onClick={handleSave}
+                        isLoading={saving}
+                        icon={<Save size={20} />}
+                        size="lg"
+                    >
+                        Save Configuration
+                    </GlassButton>
                 </div>
-            </div>
+            </GlassCard>
         </div>
     );
 };
@@ -315,49 +246,24 @@ interface SettingRowProps {
 }
 
 const SettingRow: React.FC<SettingRowProps> = ({ label, description, children }) => (
-    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 sm:gap-6">
-        <div className="min-w-0">
-            <div className="font-semibold text-sm sm:text-base mb-1">{label}</div>
-            <div className="text-xs sm:text-sm text-gray-400">{description}</div>
+    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="min-w-0 pr-4">
+            <div className="font-bold text-slate-200 mb-1">{label}</div>
+            <div className="text-sm text-slate-500 leading-relaxed">{description}</div>
         </div>
         <div className="shrink-0">{children}</div>
     </div>
 );
 
-// Toggle Component
-interface ToggleProps {
-    value: boolean;
-    onChange: (value: boolean) => void;
-}
-
-const Toggle: React.FC<ToggleProps> = ({ value, onChange }) => (
-    <button
-        onClick={() => onChange(!value)}
-        style={{
-            width: '52px',
-            height: '28px',
-            borderRadius: '14px',
-            background: value ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-            border: 'none',
-            cursor: 'pointer',
-            position: 'relative',
-            transition: 'background 0.2s'
-        }}
-    >
-        <span
-            style={{
-                position: 'absolute',
-                top: '3px',
-                left: value ? '27px' : '3px',
-                width: '22px',
-                height: '22px',
-                borderRadius: '50%',
-                background: '#fff',
-                transition: 'left 0.2s',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-            }}
+// Styled Input Helper
+const GlassInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+    <div className="relative">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono">$</span>
+        <input
+            {...props}
+            className="w-32 bg-black/20 border border-white/10 rounded-xl py-2.5 pl-8 pr-4 text-white text-right font-mono focus:outline-none focus:border-emerald-500/50 transition-all"
         />
-    </button>
+    </div>
 );
 
 export default SettingsPage;

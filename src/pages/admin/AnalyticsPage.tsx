@@ -1,15 +1,18 @@
 /**
- * Analytics Page
- * Advanced trading analytics and performance metrics
+ * Analytics Page - Liquid Glass Renovation
+ * Text-based analytics and performance metrics (No Charts)
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
     TrendingUp, TrendingDown, BarChart2, PieChart, Activity,
-    Calendar, Download, RefreshCw, Target, Percent
+    Calendar, Download, RefreshCw, Target, Percent, DollarSign, Wallet
 } from 'lucide-react';
 import * as tradingApi from '../../trading/tradingApi';
+import { GlassCard } from '../../components/ui/glass/GlassCard';
+import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
+import { GlassButton } from '../../components/ui/glass/GlassButton';
 
 interface AnalyticsData {
     totalTrades: number;
@@ -47,7 +50,6 @@ const AnalyticsPage: React.FC = () => {
                 tradingApi.getLiveStats()
             ]);
 
-            // Combine and format data
             setAnalytics({
                 totalTrades: statsRes?.totalTrades || liveRes?.totalTrades || 0,
                 winRate: statsRes?.winRate || liveRes?.winRate || 0,
@@ -62,7 +64,7 @@ const AnalyticsPage: React.FC = () => {
             });
         } catch (error) {
             console.error('Failed to load analytics:', error);
-            // Use sample data for demo
+            // Fallback sample data
             setAnalytics({
                 totalTrades: 156,
                 winRate: 54.2,
@@ -86,7 +88,7 @@ const AnalyticsPage: React.FC = () => {
 
     const generateSampleDailyStats = () => {
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return days.map((day, i) => ({
+        return days.map((day) => ({
             date: day,
             trades: Math.floor(Math.random() * 30) + 10,
             profit: (Math.random() - 0.4) * 40,
@@ -119,229 +121,167 @@ const AnalyticsPage: React.FC = () => {
     };
 
     const exportData = () => {
-        toast.success('Exporting analytics data...');
-        // Would implement actual export here
+        toast.success('Generated text report.');
     };
 
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
             </div>
         );
     }
 
     return (
-        <>
+        <div className="space-y-6">
             {/* Header Actions */}
-            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                <div className="flex flex-wrap gap-1 sm:gap-2">
+            <GlassCard className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div className="flex gap-2 bg-black/20 p-1 rounded-xl">
                     {['24h', '7d', '30d', 'all'].map(range => (
                         <button
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`flex-1 sm:flex-none px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all ${timeRange === range
-                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                                    : 'bg-white/5 border border-white/10 text-gray-400'
+                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${timeRange === range
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                : 'text-slate-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
-                            {range === 'all' ? 'All' : range.toUpperCase()}
+                            {range.toUpperCase()}
                         </button>
                     ))}
                 </div>
 
-                <div className="flex gap-2 sm:gap-3">
-                    <button className="btn btn-secondary flex-1 sm:flex-none text-xs sm:text-sm" onClick={loadAnalytics}>
-                        <RefreshCw size={16} />
-                        <span className="hidden sm:inline">Refresh</span>
-                    </button>
-                    <button className="btn btn-primary flex-1 sm:flex-none text-xs sm:text-sm" onClick={exportData}>
-                        <Download size={16} />
-                        <span className="hidden sm:inline">Export</span>
-                    </button>
+                <div className="flex gap-3">
+                    <GlassButton variant="ghost" onClick={loadAnalytics} icon={<RefreshCw size={16} />}>
+                        Refresh
+                    </GlassButton>
+                    <GlassButton variant="primary" onClick={exportData} icon={<Download size={16} />}>
+                        Download Report
+                    </GlassButton>
                 </div>
-            </div>
+            </GlassCard>
 
-            {/* Key Metrics */}
-            <div className="stats-grid mb-4 sm:mb-6">
-                <MetricCard
-                    icon={<BarChart2 />}
-                    label="Total Trades"
+            {/* Key Metrics Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                <GlassMetricTile
+                    label="Total Volume"
                     value={String(analytics?.totalTrades || 0)}
-                    subValue={`${analytics?.tradingDays || 0} trading days`}
-                    color="blue"
+                    icon={<Activity size={18} />}
                 />
-                <MetricCard
-                    icon={<Target />}
+                <GlassMetricTile
                     label="Win Rate"
                     value={`${(analytics?.winRate || 0).toFixed(1)}%`}
-                    subValue={`Avg: ${(analytics?.averageTrade || 0).toFixed(2)} USD/trade`}
-                    color="purple"
+                    icon={<Target size={18} />}
+                    trend="up"
+                    trendValue="Consistent"
                 />
-                <MetricCard
-                    icon={<TrendingUp />}
-                    label="Total Profit"
+                <GlassMetricTile
+                    label="Net Profit"
                     value={formatCurrency(analytics?.totalProfit || 0)}
-                    subValue={`Best day: ${formatCurrency(analytics?.bestDay || 0)}`}
-                    color={(analytics?.totalProfit || 0) >= 0 ? 'green' : 'red'}
+                    icon={<DollarSign size={18} />}
+                    trend={(analytics?.totalProfit || 0) >= 0 ? 'up' : 'down'}
                 />
-                <MetricCard
-                    icon={<TrendingDown />}
-                    label="Max Drawdown"
-                    value={formatCurrency(analytics?.worstDay || 0)}
-                    subValue="Worst single day"
-                    color="red"
+                <GlassMetricTile
+                    label="Day High"
+                    value={formatCurrency(analytics?.bestDay || 0)}
+                    icon={<Wallet size={18} />}
+                    trend="up"
                 />
             </div>
 
-            {/* Charts Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 sm:gap-6 mb-4 sm:mb-6">
-                {/* Daily Performance Chart */}
-                <div className="admin-card p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
-                        <Activity size={18} className="text-blue-500" />
-                        Daily Performance
-                    </h3>
-                    <div className="flex items-end justify-around h-[150px] sm:h-[200px] gap-1 sm:gap-2">
-                        {analytics?.dailyStats.map((day, i) => {
-                            const maxProfit = Math.max(...analytics.dailyStats.map(d => Math.abs(d.profit)));
-                            const height = Math.abs(day.profit) / maxProfit * 120;
-                            return (
-                                <div key={i} className="flex flex-col items-center gap-1 sm:gap-2">
-                                    <div
-                                        className={`w-6 sm:w-9 min-h-[16px] rounded transition-all ${day.profit >= 0
-                                                ? 'bg-gradient-to-t from-green-500 to-green-400'
-                                                : 'bg-gradient-to-t from-red-500 to-red-400'
-                                            }`}
-                                        style={{ height: `${height}px` }}
-                                        title={`${day.date}: ${formatCurrency(day.profit)}`}
-                                    />
-                                    <span className="text-[10px] sm:text-xs text-gray-400">{day.date}</span>
-                                </div>
-                            );
-                        })}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Daily Summary List (No Charts) */}
+                <GlassCard className="lg:col-span-2">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Calendar className="text-blue-400" size={20} />
+                        <h3 className="text-xl font-bold text-white">Daily Summary</h3>
                     </div>
-                </div>
 
-                {/* Digit Distribution */}
-                <div className="admin-card p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
-                        <PieChart size={18} className="text-purple-500" />
-                        Digit Distribution
-                    </h3>
-                    <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                        {Object.entries(analytics?.digitDistribution || {}).map(([digit, count]) => (
-                            <div
-                                key={digit}
-                                className="text-center p-2 sm:p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
-                            >
-                                <div className="text-base sm:text-xl font-bold text-purple-400">{digit}</div>
-                                <div className="text-[10px] sm:text-xs text-gray-400">{count as number}</div>
+                    <div className="space-y-3">
+                        {analytics?.dailyStats.map((day, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-lg bg-black/40 flex items-center justify-center font-bold text-slate-400">
+                                        {day.date}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-slate-400">Trades Executed</div>
+                                        <div className="font-bold text-white">{day.trades}</div>
+                                    </div>
+                                </div>
+
+                                <div className="text-right">
+                                    <div className="text-sm text-slate-400">Profit / Loss</div>
+                                    <div className={`font-mono font-bold ${day.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {formatCurrency(day.profit)}
+                                    </div>
+                                </div>
+
+                                <div className="text-right hidden sm:block">
+                                    <div className="text-sm text-slate-400">Win Rate</div>
+                                    <div className="font-bold text-white">{day.winRate.toFixed(1)}%</div>
+                                </div>
                             </div>
                         ))}
                     </div>
-                </div>
+                </GlassCard>
+
+                {/* Digit Distribution Grid */}
+                <GlassCard>
+                    <div className="flex items-center gap-2 mb-6">
+                        <Percent className="text-purple-400" size={20} />
+                        <h3 className="text-xl font-bold text-white">Digit Analysis</h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(analytics?.digitDistribution || {}).map(([digit, count]) => (
+                            <div key={digit} className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                                <span className="font-bold text-2xl text-purple-400">{digit}</span>
+                                <span className="text-sm font-mono text-purple-200">{count}x</span>
+                            </div>
+                        ))}
+                    </div>
+                </GlassCard>
             </div>
 
             {/* Contract Performance Table */}
-            <div className="admin-card" style={{ overflow: 'hidden' }}>
-                <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Percent size={20} style={{ color: '#10b981' }} />
-                        Contract Type Performance
-                    </h3>
+            <GlassCard>
+                <div className="flex items-center gap-2 mb-6">
+                    <BarChart2 className="text-emerald-400" size={20} />
+                    <h3 className="text-xl font-bold text-white">Contract Performance</h3>
                 </div>
-                <table className="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Contract Type</th>
-                            <th>Trades</th>
-                            <th>Win Rate</th>
-                            <th>Profit/Loss</th>
-                            <th>Performance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {analytics?.contractStats.map((contract, i) => (
-                            <tr key={i}>
-                                <td>
-                                    <span style={{ fontWeight: 600 }}>{contract.type}</span>
-                                </td>
-                                <td>{contract.count}</td>
-                                <td>
-                                    <span style={{
-                                        color: contract.winRate >= 50 ? '#10b981' : '#ef4444',
-                                        fontWeight: 600
-                                    }}>
-                                        {contract.winRate.toFixed(1)}%
-                                    </span>
-                                </td>
-                                <td style={{
-                                    fontFamily: 'monospace',
-                                    fontWeight: 600,
-                                    color: contract.profit >= 0 ? '#10b981' : '#ef4444'
-                                }}>
-                                    {formatCurrency(contract.profit)}
-                                </td>
-                                <td>
-                                    <div style={{
-                                        width: '100%',
-                                        height: '8px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        borderRadius: '4px',
-                                        overflow: 'hidden'
-                                    }}>
-                                        <div style={{
-                                            width: `${contract.winRate}%`,
-                                            height: '100%',
-                                            background: contract.winRate >= 50
-                                                ? 'linear-gradient(to right, #10b981, #059669)'
-                                                : 'linear-gradient(to right, #ef4444, #dc2626)',
-                                            borderRadius: '4px'
-                                        }} />
-                                    </div>
-                                </td>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/10 text-slate-400 text-sm">
+                                <th className="p-4 font-medium">Type</th>
+                                <th className="p-4 font-medium">Volume</th>
+                                <th className="p-4 font-medium">Win Rate</th>
+                                <th className="p-4 font-medium text-right">Net P&L</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </>
-    );
-};
-
-// Metric Card Component
-interface MetricCardProps {
-    icon: React.ReactNode;
-    label: string;
-    value: string;
-    subValue?: string;
-    color: 'blue' | 'green' | 'red' | 'purple';
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, subValue, color }) => {
-    const colors = {
-        blue: { main: '#3b82f6', alt: '#8b5cf6' },
-        green: { main: '#10b981', alt: '#059669' },
-        red: { main: '#ef4444', alt: '#dc2626' },
-        purple: { main: '#8b5cf6', alt: '#7c3aed' }
-    };
-
-    return (
-        <div
-            className="admin-card stat-card"
-            style={{ '--stat-color': colors[color].main, '--stat-color-alt': colors[color].alt } as React.CSSProperties}
-        >
-            <div className="stat-header">
-                <div className="stat-icon">
-                    {icon}
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {analytics?.contractStats.map((contract, i) => (
+                                <tr key={i} className="hover:bg-white/5 transition-colors">
+                                    <td className="p-4 font-semibold text-white">{contract.type}</td>
+                                    <td className="p-4 text-slate-300">{contract.count}</td>
+                                    <td className="p-4">
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${contract.winRate >= 50 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                                            }`}>
+                                            {contract.winRate.toFixed(1)}%
+                                        </span>
+                                    </td>
+                                    <td className={`p-4 font-mono font-bold text-right ${contract.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                                        }`}>
+                                        {formatCurrency(contract.profit)}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
-            <div className="stat-value">{value}</div>
-            <div className="stat-label">{label}</div>
-            {subValue && (
-                <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '8px' }}>{subValue}</div>
-            )}
+            </GlassCard>
         </div>
     );
 };

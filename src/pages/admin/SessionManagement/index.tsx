@@ -11,6 +11,9 @@ import {
     CheckCircle, XCircle, Volume2, VolumeX, Maximize2, Minimize2, Download
 } from 'lucide-react';
 import { ChartPanel } from '../../../components/chart/ChartPanel';
+import { CreateSessionModal } from '../../../components/admin/SessionManagement/CreateSessionModal';
+import { SessionHealthPanel } from '../../../components/admin/SessionManagement/SessionHealthPanel';
+import { ThemeContext } from '../../../context/ThemeContext';
 import { useSessionManagement } from '../../../hooks/useSessionManagement';
 import { useSessionTicks } from '../../../hooks/useSessionTicks';
 import { useAudioAlerts } from '../../../hooks/useAudioAlerts';
@@ -495,8 +498,13 @@ export default function SessionManagement() {
 
                                     {/* Session Stats */}
                                     <div className={`${bgCard} rounded-xl border ${border} p-4`}>
-                                        <h3 className="font-semibold mb-4 flex items-center gap-2">
-                                            <BarChart2 className="w-4 h-4 text-blue-400" />
+                                        {/* System Health Module */}
+                                        <div className="mb-6">
+                                            <SessionHealthPanel session={selectedSession} isDark={isDark} />
+                                        </div>
+
+                                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                                            <Activity className="w-5 h-5 text-purple-400" />
                                             Session Analytics
                                         </h3>
 

@@ -4,12 +4,18 @@ import toast, { Toaster } from 'react-hot-toast';
 import {
   User, Shield, Bell, Eye, Trash2, Check, X, ArrowLeft,
   LogOut, Globe, AlertTriangle, Loader2, Save, Settings as SettingsIcon,
-  MessageSquare, Users, BarChart3, Smartphone, Monitor, Wifi, Sparkles, Palette
+  MessageSquare, Users, BarChart3, Smartphone, Monitor, Wifi, Sparkles, Palette, Play
 } from 'lucide-react';
 import { TokenService } from '../services/tokenService';
 import apiClient from '../services/apiClient';
 import realtimeSocket from '../services/realtimeSocket';
-import { useTheme } from '../context/ThemeContext';
+
+// Glass UI
+import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { GlassCard } from '../components/ui/glass/GlassCard';
+import { GlassButton } from '../components/ui/glass/GlassButton';
+import { GlassToggle } from '../components/ui/glass/GlassToggle';
+import { GlassModal } from '../components/ui/glass/GlassModal';
 
 const AVATARS = [
   { id: 1, emoji: '🧑‍💼', label: 'Business Pro' },
@@ -46,7 +52,6 @@ const AVATARS = [
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'account', label: 'Account', icon: Shield },
   { id: 'privacy', label: 'Privacy', icon: Eye },
   { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -55,7 +60,6 @@ const SECTIONS = [
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { themeId, setTheme, themes } = useTheme();
   const [activeSection, setActiveSection] = useState('profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,23 +89,17 @@ const Settings = () => {
     pushNotifications: true
   });
 
-  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
 
-  const usernameTimeoutRef = useRef(null);
+  const usernameTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     loadAllData();
   }, []);
-
-  const handleThemeChange = (newThemeId) => {
-    setTheme(newThemeId);
-    const themeName = themes.find(t => t.id === newThemeId)?.name;
-    toast.success(`Theme changed to ${themeName}`);
-  };
 
   const loadAllData = async () => {
     setLoading(true);
@@ -156,7 +154,7 @@ const Settings = () => {
     }
   };
 
-  const checkUsernameAvailability = useCallback(async (username) => {
+  const checkUsernameAvailability = useCallback(async (username: string) => {
     if (!username || username.length < 3) {
       setUsernameAvailable(null);
       return;
@@ -178,7 +176,7 @@ const Settings = () => {
     }
   }, []);
 
-  const handleUsernameChange = (e) => {
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newUsername = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
     setProfile(prev => ({ ...prev, username: newUsername }));
     setUsernameAvailable(null);
@@ -189,12 +187,12 @@ const Settings = () => {
     }, 500);
   };
 
-  const handleAvatarSelect = (avatarId) => {
+  const handleAvatarSelect = (avatarId: number) => {
     setProfile(prev => ({ ...prev, avatarId }));
     setShowAvatarPicker(false);
   };
 
-  const getAvatarEmoji = (id) => {
+  const getAvatarEmoji = (id: number) => {
     const avatar = AVATARS.find(a => a.id === id);
     return avatar ? avatar.emoji : '👤';
   };
@@ -215,7 +213,7 @@ const Settings = () => {
       });
 
       toast.success('Profile saved!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error);
       toast.error(error.message || 'Failed to save');
     } finally {
@@ -291,64 +289,51 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--theme-bg)' }}>
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4" style={{ color: 'var(--theme-primary)' }} />
-          <p style={{ color: 'var(--theme-text-secondary)' }}>Loading settings...</p>
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-emerald-500" />
+            <p className="text-slate-400">Loading settings...</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
-  const Toggle = ({ checked, onChange }) => (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative w-12 h-7 rounded-full transition-all duration-300 ${checked
-        ? 'bg-gradient-to-r from-purple-500 to-pink-500'
-        : 'bg-gray-700'
-        }`}
-    >
-      <span
-        className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full shadow-lg transition-transform duration-300 ${checked ? 'translate-x-5' : ''
-          }`}
-      />
-    </button>
-  );
-
   const renderProfileSection = () => (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+    <div className="space-y-6">
+      <GlassCard className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/20">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
           <button
             onClick={() => setShowAvatarPicker(true)}
             className="group relative"
           >
-            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/50 flex items-center justify-center text-3xl sm:text-5xl transition-all group-hover:scale-105 group-hover:border-purple-400">
+            <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/50 flex items-center justify-center text-5xl transition-all group-hover:scale-105 group-hover:border-purple-400">
               {getAvatarEmoji(profile.avatarId)}
             </div>
-            <div className="absolute inset-0 rounded-xl sm:rounded-2xl bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <div className="absolute inset-0 rounded-2xl bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
           </button>
           <div className="text-center sm:text-left">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-1">Your Avatar</h3>
-            <p className="text-gray-400 text-xs sm:text-sm mb-2 sm:mb-3">Tap to choose from 30 unique avatars</p>
-            <span className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs font-medium">
-              <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> {AVATARS.find(a => a.id === profile.avatarId)?.label}
+            <h3 className="text-xl font-bold text-white mb-1">Your Avatar</h3>
+            <p className="text-gray-400 text-sm mb-3">Tap to choose from 30 unique avatars</p>
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs font-medium border border-purple-500/30">
+              <Sparkles className="w-3 h-3" /> {AVATARS.find(a => a.id === profile.avatarId)?.label}
             </span>
           </div>
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-[#12121a] rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10">
-        <h3 className="text-base sm:text-lg font-semibold text-white mb-4 sm:mb-6 flex items-center gap-2">
-          <User className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
+      <GlassCard>
+        <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+          <User className="w-5 h-5 text-purple-400" />
           Profile Information
         </h3>
 
-        { }
-        <div className="mb-4 sm:mb-5">
-          <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-300 mb-2">
+        {/* Username */}
+        <div className="mb-5">
+          <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
             Username
             {checkingUsername && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
             {!checkingUsername && usernameAvailable === true && (
@@ -363,61 +348,60 @@ const Settings = () => {
             )}
           </label>
           <div className="relative">
-            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-500 text-base sm:text-lg">@</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg">@</span>
             <input
               type="text"
               value={profile.username}
               onChange={handleUsernameChange}
               placeholder="your_username"
               maxLength={20}
-              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-black/40 border border-white/10 rounded-lg sm:rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all text-sm sm:text-base"
+              className="w-full pl-10 pr-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
             />
           </div>
-          <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5 sm:mt-2">3-20 characters, letters, numbers, underscores only</p>
+          <p className="text-xs text-gray-500 mt-2">3-20 characters, letters, numbers, underscores only</p>
         </div>
 
-        { }
-        <div className="mb-4 sm:mb-5">
-          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">Display Name</label>
+        {/* Display Name */}
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
           <input
             type="text"
             value={profile.fullname}
             onChange={(e) => setProfile(prev => ({ ...prev, fullname: e.target.value }))}
             placeholder="Your display name"
             maxLength={50}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black/40 border border-white/10 rounded-lg sm:rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all text-sm sm:text-base"
+            className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
           />
         </div>
 
-        { }
-        <div className="mb-4 sm:mb-6">
-          <label className="block text-xs sm:text-sm font-medium text-gray-300 mb-2">Bio</label>
+        {/* Bio */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
           <textarea
             value={profile.bio}
             onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
             placeholder="Tell others about yourself..."
             maxLength={500}
             rows={3}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-black/40 border border-white/10 rounded-lg sm:rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all resize-none text-sm sm:text-base"
+            className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all resize-none"
           />
-          <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5 sm:mt-2 text-right">{profile.bio?.length || 0}/500</p>
+          <p className="text-xs text-gray-500 mt-2 text-right">{profile.bio?.length || 0}/500</p>
         </div>
 
-        <button
+        <GlassButton
           onClick={saveProfile}
-          disabled={saving}
-          className="w-full py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 transition-all text-sm sm:text-base"
+          isLoading={saving}
+          className="w-full"
         >
-          {saving ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <Save className="w-4 h-4 sm:w-5 sm:h-5" />}
           Save Profile
-        </button>
-      </div>
+        </GlassButton>
+      </GlassCard>
     </div>
   );
 
   const renderAccountSection = () => (
     <div className="space-y-6">
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Shield className="w-5 h-5 text-purple-400" />
           Deriv Account
@@ -426,7 +410,7 @@ const Settings = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center py-3 border-b border-white/5">
             <span className="text-gray-400">Account ID</span>
-            <span className="font-mono text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg">{profile.derivId || 'Not connected'}</span>
+            <span className="font-mono text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/20">{profile.derivId || 'Not connected'}</span>
           </div>
           <div className="flex justify-between items-center py-3 border-b border-white/5">
             <span className="text-gray-400">Email</span>
@@ -444,37 +428,37 @@ const Settings = () => {
             Authentication is handled securely by Deriv
           </p>
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Monitor className="w-5 h-5 text-purple-400" />
           Active Sessions
         </h3>
 
         <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-green-500/10 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
             <Wifi className="w-8 h-8 text-green-400" />
           </div>
           <p className="text-white font-medium">Current Session</p>
           <p className="text-gray-500 text-sm">This is your only active session</p>
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <button
           onClick={handleLogout}
-          className="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all"
+          className="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-all shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]"
         >
           <LogOut className="w-5 h-5" /> Sign Out
         </button>
-      </div>
+      </GlassCard>
     </div>
   );
 
   const renderPrivacySection = () => (
     <div className="space-y-6">
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Eye className="w-5 h-5 text-purple-400" />
           Visibility Settings
@@ -486,10 +470,10 @@ const Settings = () => {
             { key: 'showTradingStats', icon: BarChart3, label: 'Trading Stats', desc: 'Display your performance' },
             { key: 'showOnLeaderboard', icon: Users, label: 'Leaderboard', desc: 'Appear on rankings' },
             { key: 'searchable', icon: Users, label: 'Searchable', desc: 'Allow others to find you' }
-          ].map(item => (
+          ].map((item: any) => (
             <div key={item.key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
                   <item.icon className="w-5 h-5 text-purple-400" />
                 </div>
                 <div>
@@ -497,16 +481,16 @@ const Settings = () => {
                   <p className="text-gray-500 text-sm">{item.desc}</p>
                 </div>
               </div>
-              <Toggle
-                checked={privacySettings[item.key]}
+              <GlassToggle
+                checked={(privacySettings as any)[item.key]}
                 onChange={(v) => setPrivacySettings(p => ({ ...p, [item.key]: v }))}
               />
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-4">Profile Visibility</h3>
         <select
           value={privacySettings.profileVisibility}
@@ -518,21 +502,20 @@ const Settings = () => {
           <option value="private">Private - Only you</option>
         </select>
 
-        <button
+        <GlassButton
           onClick={savePrivacySettings}
-          disabled={saving}
-          className="w-full mt-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 transition-all"
+          isLoading={saving}
+          className="w-full mt-6"
         >
-          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
           Save Privacy Settings
-        </button>
-      </div>
+        </GlassButton>
+      </GlassCard>
     </div>
   );
 
   const renderNotificationsSection = () => (
     <div className="space-y-6">
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-purple-400" />
           Community
@@ -543,22 +526,22 @@ const Settings = () => {
             { key: 'communityMentions', label: 'Mentions', desc: 'When tagged in posts' },
             { key: 'postReplies', label: 'Replies', desc: 'Responses to your posts' },
             { key: 'newFollowers', label: 'New Followers', desc: 'When someone follows you' }
-          ].map(item => (
+          ].map((item: any) => (
             <div key={item.key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
               <div>
                 <p className="text-white font-medium">{item.label}</p>
                 <p className="text-gray-500 text-sm">{item.desc}</p>
               </div>
-              <Toggle
-                checked={notificationSettings[item.key]}
+              <GlassToggle
+                checked={(notificationSettings as any)[item.key]}
                 onChange={(v) => setNotificationSettings(p => ({ ...p, [item.key]: v }))}
               />
             </div>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-[#12121a] rounded-2xl p-6 border border-white/10">
+      <GlassCard>
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
           <Bell className="w-5 h-5 text-purple-400" />
           System
@@ -568,110 +551,34 @@ const Settings = () => {
           {[
             { key: 'adminAnnouncements', label: 'Announcements', desc: 'Platform updates' },
             { key: 'pushNotifications', label: 'Push Notifications', desc: 'Browser/app alerts' }
-          ].map(item => (
+          ].map((item: any) => (
             <div key={item.key} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
               <div>
                 <p className="text-white font-medium">{item.label}</p>
                 <p className="text-gray-500 text-sm">{item.desc}</p>
               </div>
-              <Toggle
-                checked={notificationSettings[item.key]}
+              <GlassToggle
+                checked={(notificationSettings as any)[item.key]}
                 onChange={(v) => setNotificationSettings(p => ({ ...p, [item.key]: v }))}
               />
             </div>
           ))}
         </div>
 
-        <button
+        <GlassButton
           onClick={saveNotificationSettings}
-          disabled={saving}
-          className="w-full mt-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 disabled:opacity-50 transition-all"
+          isLoading={saving}
+          className="w-full mt-6"
         >
-          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
           Save Notification Settings
-        </button>
-      </div>
+        </GlassButton>
+      </GlassCard>
     </div>
   );
 
-  const renderAppearanceSection = () => {
-    const currentTheme = themes.find(t => t.id === themeId) || themes[0];
-
-    return (
-      <div className="space-y-6">
-        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-          <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-            <Palette className="w-5 h-5 text-purple-400" />
-            Theme Customization
-          </h3>
-
-          <p className="text-gray-400 text-sm mb-6">
-            Choose a color theme that suits your style. Your preference will be saved automatically.
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {themes.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => handleThemeChange(theme.id)}
-                className={`relative p-4 rounded-xl border-2 transition-all duration-300 ${themeId === theme.id
-                  ? 'border-white/40 ring-2 ring-offset-2 ring-offset-[#0a0a0f]'
-                  : 'border-white/10 hover:border-white/20'
-                  }`}
-                style={{
-                  background: theme.bg
-                }}
-              >
-                <div className="flex flex-col items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full"
-                    style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.accent})` }}
-                  />
-                  <span className="text-sm font-medium">{theme.name}</span>
-                </div>
-                {themeId === theme.id && (
-                  <div
-                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ background: theme.primary }}
-                  >
-                    <Check className="w-3 h-3 text-white" />
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10">
-            <h4 className="font-medium mb-3">Preview</h4>
-            <div className="flex gap-3">
-              <div
-                className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm"
-                style={{ background: currentTheme.primary }}
-              >
-                Primary Color
-              </div>
-              <div
-                className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm border border-white/20"
-                style={{ background: currentTheme.bg }}
-              >
-                Background
-              </div>
-              <div
-                className="flex-1 h-20 rounded-lg flex items-center justify-center text-sm"
-                style={{ background: currentTheme.accent }}
-              >
-                Accent
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const renderDangerSection = () => (
     <div className="space-y-6">
-      <div className="bg-red-500/5 rounded-2xl p-6 border border-red-500/20">
+      <GlassCard className="bg-red-500/5 border-red-500/20">
         <h3 className="text-lg font-semibold text-red-400 mb-6 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5" />
           Danger Zone
@@ -691,9 +598,9 @@ const Settings = () => {
             <Trash2 className="w-4 h-4" /> Clear Chat History
           </button>
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="bg-red-500/5 rounded-2xl p-6 border border-red-500/20">
+      <GlassCard className="bg-red-500/5 border-red-500/20">
         <h3 className="text-lg font-semibold text-red-400 mb-4">Delete Account</h3>
         <p className="text-gray-400 text-sm mb-6">
           Once you delete your account, there is no going back. All your data will be permanently removed.
@@ -701,18 +608,17 @@ const Settings = () => {
 
         <button
           onClick={() => setShowDeleteModal(true)}
-          className="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-red-600 text-white hover:bg-red-700 transition-all"
+          className="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 bg-red-600 text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
         >
           <Trash2 className="w-5 h-5" /> Delete Account Permanently
         </button>
-      </div>
+      </GlassCard>
     </div>
   );
 
   const renderActiveSection = () => {
     switch (activeSection) {
       case 'profile': return renderProfileSection();
-      case 'appearance': return renderAppearanceSection();
       case 'account': return renderAccountSection();
       case 'privacy': return renderPrivacySection();
       case 'notifications': return renderNotificationsSection();
@@ -722,123 +628,102 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--theme-bg)', color: 'var(--theme-text)' }}>
+    <DashboardLayout>
       <Toaster position="top-right" toastOptions={{
-        style: { background: 'var(--theme-bg-secondary)', color: 'var(--theme-text)', border: '1px solid var(--theme-border)' }
+        style: { background: '#1c1c28', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
       }} />
 
-      <header className="sticky top-0 z-50 backdrop-blur-xl border-b" style={{ backgroundColor: 'rgba(var(--theme-bg), 0.8)', borderColor: 'var(--theme-border)' }}>
-        <div className="max-w-5xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 sm:gap-2 text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </button>
-          <h1 className="text-base sm:text-xl font-bold flex items-center gap-1.5 sm:gap-2">
-            <SettingsIcon className="w-4 h-4 sm:w-6 sm:h-6 text-purple-400" />
-            Settings
-          </h1>
-          <div className="w-16 sm:w-20" />
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+              <SettingsIcon className="w-8 h-8 text-emerald-400" />
+              Settings
+            </h1>
+            <p className="text-slate-400 mt-2">Manage your account preferences and personalized settings.</p>
+          </div>
         </div>
-      </header>
 
-      <div className="max-w-5xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-4 sm:gap-8">
-
-          { }
-          <nav className="lg:w-56 shrink-0">
-            <div className="bg-[#12121a] rounded-xl sm:rounded-2xl p-2 sm:p-3 border border-white/10 lg:sticky lg:top-24">
-              <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-2 px-2 lg:mx-0 lg:px-0">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar Navigation */}
+          <nav className="lg:w-64 shrink-0">
+            <GlassCard className="p-2 lg:sticky lg:top-8">
+              <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
                 {SECTIONS.map((section) => (
                   <button
                     key={section.id}
                     onClick={() => setActiveSection(section.id)}
-                    className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-left transition-all whitespace-nowrap lg:whitespace-normal lg:w-full ${activeSection === section.id
-                      ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-white border border-purple-500/30'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      } ${section.id === 'danger' ? 'text-red-400 hover:text-red-300' : ''}`}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all whitespace-nowrap lg:whitespace-normal w-full ${activeSection === section.id
+                      ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-white border border-emerald-500/30'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      } ${section.id === 'danger' && activeSection !== 'danger' ? 'text-red-400 hover:text-red-300' : ''}`}
                   >
-                    <section.icon className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${activeSection === section.id ? 'text-purple-400' : ''}`} />
-                    <span className="font-medium text-xs sm:text-base">{section.label}</span>
+                    <section.icon className={`w-5 h-5 shrink-0 ${activeSection === section.id ? 'text-emerald-400' : ''}`} />
+                    <span className="font-medium">{section.label}</span>
                   </button>
                 ))}
               </div>
-            </div>
+            </GlassCard>
           </nav>
 
-          { }
+          {/* Main Content */}
           <main className="flex-1 min-w-0">
-            {renderActiveSection()}
+            <div className="animate-fade-in slide-in-from-bottom-4 duration-500">
+              {renderActiveSection()}
+            </div>
           </main>
         </div>
       </div>
 
-      {showAvatarPicker && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowAvatarPicker(false)}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-[#12121a] rounded-3xl p-8 border border-white/10"
-          >
-            <h3 className="text-2xl font-bold text-center mb-2">Choose Your Avatar</h3>
-            <p className="text-gray-400 text-center mb-8">Select an avatar that represents you</p>
-
-            <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
-              {AVATARS.map((avatar) => (
-                <button
-                  key={avatar.id}
-                  onClick={() => handleAvatarSelect(avatar.id)}
-                  className={`group relative flex flex-col items-center gap-2 p-4 rounded-2xl transition-all hover:scale-105 ${profile.avatarId === avatar.id
-                    ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 ring-2 ring-purple-500'
-                    : 'bg-white/5 hover:bg-white/10'
-                    }`}
-                  title={avatar.label}
-                >
-                  <span className="text-3xl sm:text-4xl">{avatar.emoji}</span>
-                  <span className="text-[10px] text-gray-400 truncate w-full text-center group-hover:text-white transition-colors">
-                    {avatar.label}
-                  </span>
-                  {profile.avatarId === avatar.id && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowAvatarPicker(false)}
-              className="w-full mt-8 py-4 rounded-xl flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-medium transition-all"
-            >
-              <X className="w-5 h-5" /> Close
-            </button>
+      {/* Avatar Picker Modal */}
+      <GlassModal
+        isOpen={showAvatarPicker}
+        onClose={() => setShowAvatarPicker(false)}
+        title="Choose Your Avatar"
+      >
+        <div className="p-6">
+          <p className="text-gray-400 mb-6 text-center">Select an avatar that represents you</p>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar p-1">
+            {AVATARS.map((avatar) => (
+              <button
+                key={avatar.id}
+                onClick={() => handleAvatarSelect(avatar.id)}
+                className={`group relative flex flex-col items-center gap-2 p-3 rounded-2xl transition-all hover:scale-105 ${profile.avatarId === avatar.id
+                  ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30 ring-2 ring-purple-500'
+                  : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                title={avatar.label}
+              >
+                <span className="text-3xl">{avatar.emoji}</span>
+              </button>
+            ))}
           </div>
+          <GlassButton onClick={() => setShowAvatarPicker(false)} className="w-full mt-6">
+            Close
+          </GlassButton>
         </div>
-      )}
+      </GlassModal>
 
+      {/* Delete Account Modal */}
       {showDeleteModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
           onClick={() => setShowDeleteModal(false)}
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-md bg-[#12121a] rounded-3xl p-8 border border-red-500/20"
+            className="w-full max-w-md bg-[#12121a] rounded-3xl p-8 border border-red-500/20 shadow-[0_0_50px_rgba(239,68,68,0.2)]"
           >
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/10 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
               <h2 className="text-2xl font-bold text-white">Delete Account</h2>
               <p className="text-gray-400 mt-2">This action cannot be undone</p>
             </div>
 
-            <ul className="text-sm text-gray-400 mb-6 space-y-2 bg-red-500/5 p-4 rounded-xl">
+            <ul className="text-sm text-gray-400 mb-6 space-y-2 bg-red-500/5 p-4 rounded-xl border border-red-500/10">
               <li>• Profile & settings will be deleted</li>
               <li>• Community posts & comments removed</li>
               <li>• Chat messages erased</li>
@@ -851,7 +736,7 @@ const Settings = () => {
                 value={deleteConfirmText}
                 onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
                 placeholder="DELETE"
-                className="w-full px-4 py-3 bg-black/40 border border-red-500/30 rounded-xl text-white placeholder-gray-500 focus:border-red-500 outline-none"
+                className="w-full px-4 py-3 bg-black/40 border border-red-500/30 rounded-xl text-white placeholder-gray-500 focus:border-red-500 outline-none transition-all"
               />
             </div>
 
@@ -865,7 +750,7 @@ const Settings = () => {
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleteConfirmText !== 'DELETE'}
-                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex-1 py-3 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-red-600/20"
               >
                 Delete
               </button>
@@ -873,7 +758,7 @@ const Settings = () => {
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 

@@ -91,6 +91,23 @@ export interface ManagedSession {
     analytics: SessionAnalytics;
     lastUpdate: string;
     error?: string;
+    // Health & Status Tracking
+    health?: SessionHealth;
+}
+
+// Session Health Status
+export interface SessionHealth {
+    status: 'active' | 'idle' | 'stalled' | 'error' | 'disconnected';
+    lastHeartbeat: number;
+    lastTradeTime: number;
+    lastContractUpdate: number;
+    lastBalanceUpdate: number;
+    currentContractId?: string | null;
+    isWebsocketAlive: boolean;
+    isBalanceStreamAlive: boolean;
+    isContractStreamAlive: boolean;
+    errorCount: number;
+    warnings: string[];
 }
 
 // Session Filter Options

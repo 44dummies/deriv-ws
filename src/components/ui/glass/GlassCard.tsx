@@ -1,0 +1,41 @@
+
+import React from 'react';
+
+interface GlassCardProps {
+    children: React.ReactNode;
+    className?: string;
+    hoverEffect?: boolean;
+    onClick?: () => void;
+}
+
+export const GlassCard: React.FC<GlassCardProps> = ({
+    children,
+    className = '',
+    hoverEffect = false,
+    onClick
+}) => {
+    return (
+        <div
+            onClick={onClick}
+            className={`
+                bg-white/5 backdrop-blur-xl 
+                border border-white/10 
+                rounded-3xl 
+                shadow-xl 
+                p-6 
+                transition-all duration-300
+                relative overflow-hidden
+                ${hoverEffect ? 'hover:bg-white/10 hover:border-white/20 hover:shadow-2xl hover:-translate-y-1 cursor-pointer' : ''}
+                ${className}
+            `}
+        >
+            {/* Liquid Shine Effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+            {/* Content */}
+            <div className="relative z-10">
+                {children}
+            </div>
+        </div>
+    );
+};

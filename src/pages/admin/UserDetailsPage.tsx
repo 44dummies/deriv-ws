@@ -1,5 +1,5 @@
 /**
- * User Details Page
+ * User Details Page - Liquid Glass Renovation
  * View detailed user profile, stats, and activity
  */
 
@@ -8,9 +8,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
     ArrowLeft, User, Shield, ShieldOff, Activity, DollarSign,
-    TrendingUp, Calendar, Clock, BarChart2, Mail, AlertTriangle
+    TrendingUp, Calendar, Clock, BarChart2, Mail, AlertTriangle, Monitor, Star
 } from 'lucide-react';
 import apiClient from '../../services/apiClient';
+import { GlassCard } from '../../components/ui/glass/GlassCard';
+import { GlassButton } from '../../components/ui/glass/GlassButton';
+import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
+import { GlassStatusBadge } from '../../components/ui/glass/GlassStatusBadge';
 
 interface UserProfile {
     id: string;
@@ -118,140 +122,150 @@ const UserDetailsPage: React.FC = () => {
         return formatDate(date);
     };
 
-    const formatCurrency = (value: number): string => {
-        const sign = value >= 0 ? '+' : '';
-        return sign + new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(value);
-    };
-
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
             </div>
         );
     }
 
     if (!user) {
         return (
-            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9ca3af' }}>
-                <User size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#fff' }}>User not found</h3>
-                <button className="btn btn-secondary" onClick={() => navigate('/admin/users')} style={{ marginTop: '16px' }}>
-                    <ArrowLeft size={18} />
+            <div className="text-center py-16 text-slate-500">
+                <User size={48} className="mx-auto mb-4 opacity-20" />
+                <h3 className="text-xl font-bold text-white mb-2">User not found</h3>
+                <GlassButton onClick={() => navigate('/admin/users')} icon={<ArrowLeft size={18} />}>
                     Back to Users
-                </button>
+                </GlassButton>
             </div>
         );
     }
 
     return (
-        <>
+        <div className="space-y-6">
             {/* Back Button */}
             <button
                 onClick={() => navigate('/admin/users')}
-                className="flex items-center gap-2 text-gray-400 bg-transparent border-none cursor-pointer mb-4 sm:mb-6 text-sm hover:text-white transition-colors"
+                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
             >
                 <ArrowLeft size={18} />
-                Back to Users
+                <span>Back to Users</span>
             </button>
 
             {/* User Header Card */}
-            <div className="admin-card p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6">
-                <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
-                    <div className="flex items-center gap-3 sm:gap-5">
-                        <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-3xl font-bold text-white ${user.is_admin
-                            ? 'bg-gradient-to-br from-purple-500 to-purple-600'
-                            : 'bg-gradient-to-br from-blue-500 to-blue-600'
+            <GlassCard className="relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                    <User size={120} />
+                </div>
+
+                <div className="flex flex-col md:flex-row items-start justify-between gap-6 relative z-10">
+                    <div className="flex items-center gap-6">
+                        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-lg ${user.is_admin
+                            ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                            : 'bg-gradient-to-br from-emerald-500 to-teal-600'
                             }`}>
                             {(user.fullname || user.username || 'U').slice(0, 2).toUpperCase()}
                         </div>
+
                         <div>
-                            <h2 className="text-lg sm:text-2xl font-bold mb-1">
+                            <h2 className="text-2xl font-bold text-white mb-2">
                                 {user.fullname || user.username || 'Unknown User'}
                             </h2>
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-gray-400">
-                                <code className="px-2 py-1 rounded bg-white/5 text-[10px] sm:text-xs">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <code className="px-2 py-1 rounded bg-black/30 border border-white/10 text-xs font-mono text-emerald-400">
                                     {user.deriv_id}
                                 </code>
-                                <span className={`badge ${user.is_online ? 'badge-success' : 'badge-neutral'}`}>
-                                    {user.is_online ? 'Online' : 'Offline'}
-                                </span>
-                                <span className={`badge ${user.is_admin ? 'badge-info' : 'badge-neutral'}`}>
-                                    {user.is_admin ? 'Admin' : 'User'}
-                                </span>
+                                <GlassStatusBadge status={user.is_online ? 'active' : 'inactive'}>
+                                    {user.is_online ? 'ONLINE' : 'OFFLINE'}
+                                </GlassStatusBadge>
+                                <GlassStatusBadge status={user.is_admin ? 'warning' : 'neutral'}>
+                                    {user.is_admin ? 'ADMIN' : 'USER'}
+                                </GlassStatusBadge>
                             </div>
                         </div>
                     </div>
 
-                    <button
-                        className={`btn w-full sm:w-auto text-sm ${user.is_admin ? 'btn-danger' : 'btn-primary'}`}
+                    <GlassButton
+                        variant={user.is_admin ? 'danger' : 'primary'}
                         onClick={toggleAdminRole}
+                        icon={user.is_admin ? <ShieldOff size={16} /> : <Shield size={16} />}
                     >
-                        {user.is_admin ? <ShieldOff size={16} /> : <Shield size={16} />}
-                        {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                    </button>
+                        {user.is_admin ? 'Revoke Admin' : 'Grant Admin'}
+                    </GlassButton>
                 </div>
 
                 {/* User Info Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-white/10">
-                    <InfoItem icon={<Mail size={16} />} label="Email" value={user.email || '-'} />
-                    <InfoItem icon={<Calendar size={16} />} label="Joined" value={formatDate(user.created_at)} />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8 pt-6 border-t border-white/10">
+                    <InfoItem icon={<Mail size={16} />} label="Email Address" value={user.email || '-'} />
+                    <InfoItem icon={<Calendar size={16} />} label="Joined Date" value={formatDate(user.created_at)} />
                     <InfoItem icon={<Clock size={16} />} label="Last Seen" value={formatTime(user.last_seen || '')} />
                     <InfoItem
-                        icon={<TrendingUp size={16} />}
-                        label="Performance Tier"
-                        value={<span className="capitalize">{user.performance_tier || 'Beginner'}</span>}
+                        icon={<Star size={16} />}
+                        label="Status Tier"
+                        value={<span className="capitalize text-emerald-400 font-bold">{user.performance_tier || 'Standard'}</span>}
                     />
                 </div>
-            </div>
+            </GlassCard>
 
             {/* Stats & Activity Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Stats */}
-                <div className="admin-card p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
-                        <BarChart2 size={18} className="text-blue-500" />
-                        Trading Stats
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                        <StatBox label="Total Trades" value={String(user.stats?.totalTrades || 0)} />
-                        <StatBox label="Win Rate" value={`${(user.stats?.winRate || 0).toFixed(1)}%`} color={(user.stats?.winRate || 0) >= 50 ? '#10b981' : '#ef4444'} />
-                        <StatBox label="Total Profit" value={formatCurrency(user.stats?.totalProfit || 0)} color={(user.stats?.totalProfit || 0) >= 0 ? '#10b981' : '#ef4444'} />
-                        <StatBox label="Sessions Joined" value={String(user.stats?.sessionsJoined || 0)} />
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <GlassMetricTile
+                        label="Total Trades"
+                        value={String(user.stats?.totalTrades || 0)}
+                        icon={<BarChart2 size={18} />}
+                    />
+                    <GlassMetricTile
+                        label="Win Rate"
+                        value={`${(user.stats?.winRate || 0).toFixed(1)}%`}
+                        icon={<TrendingUp size={18} />}
+                        trend={((user.stats?.winRate || 0) >= 50) ? 'up' : 'down'}
+                    />
+                    <GlassMetricTile
+                        label="Total Profit"
+                        value={`$${(user.stats?.totalProfit || 0).toFixed(2)}`}
+                        icon={<DollarSign size={18} />}
+                        trend={((user.stats?.totalProfit || 0) >= 0) ? 'up' : 'down'}
+                    />
+                    <GlassMetricTile
+                        label="Sessions Joined"
+                        value={String(user.stats?.sessionsJoined || 0)}
+                        icon={<Monitor size={18} />}
+                    />
                 </div>
 
                 {/* Recent Activity */}
-                <div className="admin-card p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-base font-semibold mb-4 sm:mb-5 flex items-center gap-2">
-                        <Activity size={18} className="text-purple-500" />
-                        Recent Activity
-                    </h3>
-                    <div className="flex flex-col gap-2 sm:gap-3">
+                <GlassCard className="flex flex-col h-full">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Activity className="text-purple-400" size={20} />
+                        <h3 className="text-lg font-bold text-white">Recent Activity</h3>
+                    </div>
+
+                    <div className="flex-1 space-y-3">
                         {user.recentActivity?.length === 0 ? (
-                            <p className="text-gray-400 text-center py-5">No recent activity</p>
+                            <div className="h-full flex items-center justify-center text-slate-500 italic">
+                                No recent activity recorded
+                            </div>
                         ) : (
                             user.recentActivity?.slice(0, 5).map((activity, i) => (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03]"
-                                >
-                                    <div className={`w-2 h-2 rounded-full shrink-0 ${activity.type === 'trade' ? 'bg-blue-500' :
-                                        activity.type === 'session' ? 'bg-purple-500' :
-                                            'bg-green-500'
+                                <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                                    <div className={`w-2 h-2 rounded-full shrink-0 shadow-[0_0_10px_currentColor] ${activity.type === 'trade' ? 'bg-blue-500 text-blue-500' :
+                                            activity.type === 'session' ? 'bg-purple-500 text-purple-500' :
+                                                'bg-emerald-500 text-emerald-500'
                                         }`} />
-                                    <span className="flex-1 text-xs sm:text-sm truncate">{activity.description}</span>
-                                    <span className="text-[10px] sm:text-xs text-gray-400 shrink-0">{formatTime(activity.timestamp)}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-slate-200 truncate">{activity.description}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">{formatTime(activity.timestamp)}</p>
+                                    </div>
                                 </div>
                             ))
                         )}
                     </div>
-                </div>
+                </GlassCard>
             </div>
-        </>
+        </div>
     );
 };
 
@@ -263,26 +277,12 @@ interface InfoItemProps {
 }
 
 const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value }) => (
-    <div className="flex items-center gap-2 sm:gap-3">
-        <div className="text-gray-400 shrink-0">{icon}</div>
+    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
+        <div className="text-slate-400 p-2 bg-white/5 rounded-lg">{icon}</div>
         <div className="min-w-0">
-            <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5">{label}</div>
-            <div className="font-medium text-xs sm:text-sm truncate">{value}</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">{label}</div>
+            <div className="font-medium text-slate-200 truncate">{value}</div>
         </div>
-    </div>
-);
-
-// Stat Box Component
-interface StatBoxProps {
-    label: string;
-    value: string;
-    color?: string;
-}
-
-const StatBox: React.FC<StatBoxProps> = ({ label, value, color }) => (
-    <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/[0.03] border border-white/5">
-        <div className="text-[10px] sm:text-xs text-gray-400 mb-1 sm:mb-2">{label}</div>
-        <div className="text-base sm:text-2xl font-bold" style={{ color: color || 'inherit' }}>{value}</div>
     </div>
 );
 
