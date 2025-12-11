@@ -303,7 +303,7 @@ export default function SessionsPage() {
               <div className="flex justify-between py-2 border-b border-white/5">
                 <span className="text-slate-400 text-sm">Active Markets</span>
                 <div className="flex gap-1">
-                  {selectedSession?.markets.map(m => (
+                  {selectedSession?.markets?.map(m => (
                     <span key={m} className="text-xs bg-white/10 px-2 py-0.5 rounded text-white">{m.replace('_', ' ')}</span>
                   )) || <span className="text-slate-500">-</span>}
                 </div>
