@@ -162,137 +162,144 @@ const UserTrading = () => {
   }
 
   return (
-    <div className="user-trading-page">
-      {/* Header */}
-      <div className="user-header">
-        <div className="header-content">
-          <div className="header-left">
-            <button className="back-button" onClick={() => navigate('/dashboard')}>
-              ← Back
-            </button>
-            <h1>My Trading</h1>
-          </div>
-          <div className="header-right">
-            <NotificationBell />
-            <div className="balance-display">
-              <DollarSign size={20} />
-              <span>{userInfo?.currency} {userInfo?.balance?.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
+    <div className="user-trading-page relative overflow-hidden bg-[#0a0a0f] min-h-screen text-white">
+      {/* Liquid Background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#3b82f6]/15 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
+        <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-[#8b5cf6]/15 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Main Content */}
-      <div className="user-content">
-        {/* Status Card */}
-        <div className="status-card">
-          <h2>Your Status</h2>
-          {getStatusBadge()}
-          {activeSession && (
-            <div className="session-info">
-              <p><strong>Session:</strong> {activeSession.session_name}</p>
-              <p><strong>Strategy:</strong> {activeSession.strategy_name}</p>
+      <div className="relative z-10">
+        {/* Header */}
+        <div className="user-header">
+          <div className="header-content">
+            <div className="header-left">
+              <button className="back-button" onClick={() => navigate('/dashboard')}>
+                ← Back
+              </button>
+              <h1>My Trading</h1>
             </div>
-          )}
-        </div>
-
-        {/* TP/SL Inputs */}
-        <div className="tpsl-card">
-          <h2>Set Your Limits</h2>
-          <div className="input-group">
-            <label>
-              <TrendingUp size={18} className="text-green-500" />
-              Take Profit (TP)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={takeProfit}
-              onChange={(e) => setTakeProfit(e.target.value)}
-              placeholder="Enter TP amount"
-              disabled={!activeSession && availableSessions.length === 0}
-            />
-          </div>
-          <div className="input-group">
-            <label>
-              <TrendingDown size={18} className="text-red-500" />
-              Stop Loss (SL)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={stopLoss}
-              onChange={(e) => setStopLoss(e.target.value)}
-              placeholder="Enter SL amount"
-              disabled={!activeSession && availableSessions.length === 0}
-            />
-          </div>
-          {activeSession && (
-            <button onClick={handleUpdateTPSL} className="btn-primary">
-              Update TP/SL
-            </button>
-          )}
-        </div>
-
-        {/* Available Sessions or Active Session */}
-        {!activeSession ? (
-          <div className="sessions-card">
-            <h2>Available Sessions</h2>
-            {availableSessions.length === 0 ? (
-              <div className="empty-state">
-                <AlertCircle size={48} />
-                <p>No trading sessions available</p>
-                <small>Wait for admin to create a session</small>
+            <div className="header-right">
+              <NotificationBell />
+              <div className="balance-display">
+                <DollarSign size={20} />
+                <span>{userInfo?.currency} {userInfo?.balance?.toFixed(2)}</span>
               </div>
-            ) : (
-              <div className="sessions-list">
-                {availableSessions.map(session => (
-                  <div key={session.id} className="session-item">
-                    <div className="session-details">
-                      <h3>{session.session_name}</h3>
-                      <p>Strategy: {session.strategy_name}</p>
-                      <p>Type: {session.session_type}</p>
-                    </div>
-                    <button
-                      onClick={() => handleAcceptSession(session.id)}
-                      className="btn-accept"
-                      disabled={!takeProfit || !stopLoss}
-                    >
-                      Accept Session
-                    </button>
-                  </div>
-                ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="user-content">
+          {/* Status Card */}
+          <div className="status-card">
+            <h2>Your Status</h2>
+            {getStatusBadge()}
+            {activeSession && (
+              <div className="session-info">
+                <p><strong>Session:</strong> {activeSession.session_name}</p>
+                <p><strong>Strategy:</strong> {activeSession.strategy_name}</p>
               </div>
             )}
           </div>
-        ) : (
-          <div className="active-session-card">
-            <h2>Your Active Session</h2>
-            <div className="session-stats">
-              <div className="stat-item">
-                <span className="stat-label">Total Trades</span>
-                <span className="stat-value">{activeSession.total_trades || 0}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Wins</span>
-                <span className="stat-value text-green">{activeSession.winning_trades || 0}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Losses</span>
-                <span className="stat-value text-red">{activeSession.losing_trades || 0}</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">P&L</span>
-                <span className={`stat-value ${activeSession.net_pnl >= 0 ? 'text-green' : 'text-red'}`}>
-                  {userInfo?.currency} {activeSession.net_pnl?.toFixed(2) || '0.00'}
-                </span>
+
+          {/* TP/SL Inputs */}
+          <div className="tpsl-card">
+            <h2>Set Your Limits</h2>
+            <div className="input-group">
+              <label>
+                <TrendingUp size={18} className="text-green-500" />
+                Take Profit (TP)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={takeProfit}
+                onChange={(e) => setTakeProfit(e.target.value)}
+                placeholder="Enter TP amount"
+                disabled={!activeSession && availableSessions.length === 0}
+              />
+            </div>
+            <div className="input-group">
+              <label>
+                <TrendingDown size={18} className="text-red-500" />
+                Stop Loss (SL)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={stopLoss}
+                onChange={(e) => setStopLoss(e.target.value)}
+                placeholder="Enter SL amount"
+                disabled={!activeSession && availableSessions.length === 0}
+              />
+            </div>
+            {activeSession && (
+              <button onClick={handleUpdateTPSL} className="btn-primary">
+                Update TP/SL
+              </button>
+            )}
+          </div>
+
+          {/* Available Sessions or Active Session */}
+          {!activeSession ? (
+            <div className="sessions-card">
+              <h2>Available Sessions</h2>
+              {availableSessions.length === 0 ? (
+                <div className="empty-state">
+                  <AlertCircle size={48} />
+                  <p>No trading sessions available</p>
+                  <small>Wait for admin to create a session</small>
+                </div>
+              ) : (
+                <div className="sessions-list">
+                  {availableSessions.map(session => (
+                    <div key={session.id} className="session-item">
+                      <div className="session-details">
+                        <h3>{session.session_name}</h3>
+                        <p>Strategy: {session.strategy_name}</p>
+                        <p>Type: {session.session_type}</p>
+                      </div>
+                      <button
+                        onClick={() => handleAcceptSession(session.id)}
+                        className="btn-accept"
+                        disabled={!takeProfit || !stopLoss}
+                      >
+                        Accept Session
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="active-session-card">
+              <h2>Your Active Session</h2>
+              <div className="session-stats">
+                <div className="stat-item">
+                  <span className="stat-label">Total Trades</span>
+                  <span className="stat-value">{activeSession.total_trades || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Wins</span>
+                  <span className="stat-value text-green">{activeSession.winning_trades || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Losses</span>
+                  <span className="stat-value text-red">{activeSession.losing_trades || 0}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">P&L</span>
+                  <span className={`stat-value ${activeSession.net_pnl >= 0 ? 'text-green' : 'text-red'}`}>
+                    {userInfo?.currency} {activeSession.net_pnl?.toFixed(2) || '0.00'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
-  );
+      );
 };
 
-export default UserTrading;
+      export default UserTrading;

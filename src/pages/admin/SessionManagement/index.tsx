@@ -133,10 +133,10 @@ export default function SessionManagement() {
 
     // Theme classes
     const isDark = theme === 'dark';
-    const bgMain = isDark ? 'bg-slate-900' : 'bg-gray-100';
-    const bgCard = isDark ? 'bg-slate-800' : 'bg-white';
-    const bgHover = isDark ? 'hover:bg-slate-700' : 'hover:bg-gray-50';
-    const border = isDark ? 'border-slate-700' : 'border-gray-200';
+    const bgMain = isDark ? 'bg-transparent' : 'bg-gray-100';
+    const bgCard = isDark ? 'bg-slate-800/50 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md';
+    const bgHover = isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-50/80';
+    const border = isDark ? 'border-slate-700/50' : 'border-gray-200/50';
     const text = isDark ? 'text-slate-100' : 'text-gray-900';
     const textMuted = isDark ? 'text-slate-400' : 'text-gray-500';
 
