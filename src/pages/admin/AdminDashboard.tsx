@@ -48,23 +48,30 @@ const AdminDashboard: React.FC = () => {
 
     const loadDashboard = useCallback(async () => {
         try {
-            const [sessionsRes, botRes, statsRes, balancesRes] = await Promise.all([
+            // Get user info from sessionStorage (has demo_balance and real_balance)
+            const userInfoStr = sessionStorage.getItem('userInfo');
+            if (userInfoStr) {
+                try {
+                    const userInfo = JSON.parse(userInfoStr);
+                    setBalances({
+                        real: userInfo.real_balance || userInfo.balance || 0,
+                        demo: userInfo.demo_balance || 0
+                    });
+                } catch (e) {
+                    console.error('Failed to parse userInfo:', e);
+                }
+            }
+
+            const [sessionsRes, botRes, statsRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
-                tradingApi.getStats(),
-                tradingApi.getBalances()
+                tradingApi.getStats()
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
 
-            if (balancesRes?.success && balancesRes?.data) {
-                setBalances({
-                    real: balancesRes.data.real || 0,
-                    demo: balancesRes.data.demo || 0
-                });
-            }
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
             if (error.status === 403) {
