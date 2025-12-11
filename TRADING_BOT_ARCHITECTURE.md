@@ -231,3 +231,163 @@ Trade Executed
 | 🔴 Stopped | Bot is not running |
 | ⏸️ Paused | Bot is paused (can resume) |
 | ⚠️ No Participants | Session has no active users |
+
+---
+
+## Antigravity AI Integration
+
+Antigravity is the **AI logic translator** that interprets user intent and configures bot behavior.
+
+```
+User writes something → Antigravity interprets → Bot executes
+```
+
+### Architecture with Antigravity
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      User (Human)                           │
+│          "Run volatility 75 with martingale x2..."          │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ Natural Language
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Antigravity (AI)                          │
+│     Interprets → Validates → Structures → Executes          │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ Structured Config
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Backend API                              │
+│           Trading logic, risk management                    │
+└───────────────────────┬─────────────────────────────────────┘
+                        │ WebSocket Commands
+                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Deriv API                                 │
+│              Buy, Sell, Balance, Transactions               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### User Context Requirements
+
+Antigravity must have access to these context variables for safe operation:
+
+#### A. Required Account Information
+| Field | Description |
+|-------|-------------|
+| `user_id` | Unique user identifier |
+| `deriv_demo_token` | Demo account API token |
+| `deriv_real_token` | Real account API token |
+| `active_account` | Current mode: `demo` or `real` |
+| `demo_balance` | Current demo account balance |
+| `real_balance` | Current real account balance |
+
+#### B. Required Trading Configuration
+| Field | Description |
+|-------|-------------|
+| `trade_type` | rise/fall, even/odd, touch/no-touch |
+| `market` | volatility_75, volatility_100, forex, etc |
+| `stake` | Amount per trade |
+| `duration` | Ticks, minutes, or hours |
+| `stop_loss` | Auto-stop at total loss |
+| `take_profit` | Auto-stop at profit ceiling |
+| `martingale` | Enabled/disabled + multiplier |
+| `max_trades` | Total trades allowed |
+
+#### C. Strategy Settings
+| Field | Description |
+|-------|-------------|
+| `strategy_name` | Even/odd, breakout, EMA cross, etc |
+| `strategy_params` | Strategy-specific parameters |
+| `risk_level` | low / medium / high |
+
+#### D. Safety Limits
+| Field | Description |
+|-------|-------------|
+| `max_stake` | Maximum stake allowed |
+| `max_daily_loss` | Stop if daily loss exceeds |
+| `max_daily_profit` | Stop if daily profit reaches |
+| `martingale_allowed` | User approved martingale? |
+| `pause_on_volatility` | Stop on volatility spikes? |
+| `min_balance` | Stop if balance drops below |
+
+### Antigravity Interaction Flow
+
+```
+Step 1: User gives instruction
+┌─────────────────────────────────────────────────────────┐
+│ "Run volatility 75 with martingale x2, stake $0.35,    │
+│  stop at $5 profit."                                    │
+└─────────────────────────────────────────────────────────┘
+
+Step 2: Antigravity interprets → structured data
+┌─────────────────────────────────────────────────────────┐
+│ {                                                       │
+│   "market": "volatility_75",                           │
+│   "trade_type": "rise_fall",                           │
+│   "stake": 0.35,                                       │
+│   "martingale": { "enabled": true, "multiplier": 2 },  │
+│   "take_profit": 5,                                    │
+│   "stop_loss": null                                    │
+│ }                                                       │
+└─────────────────────────────────────────────────────────┘
+
+Step 3: Antigravity validates user context
+┌─────────────────────────────────────────────────────────┐
+│ ✓ Check: Is user on Demo or Real?                      │
+│ ✓ Check: Is token valid?                               │
+│ ✓ Check: Is balance sufficient?                        │
+│ ✓ Check: Are safety limits respected?                  │
+└─────────────────────────────────────────────────────────┘
+
+Step 4: Send to backend → Deriv API executes
+
+Step 5: Antigravity interprets results
+┌─────────────────────────────────────────────────────────┐
+│ • Summarize trades                                      │
+│ • Detect patterns                                       │
+│ • Warn of risky behavior                               │
+│ • Adjust strategy (if allowed)                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Safety Rules (NEVER Without Permission)
+
+| Forbidden Action | Reason |
+|------------------|--------|
+| 🚫 Switch Real/Demo automatically | Could trade real money unexpectedly |
+| 🚫 Increase stake automatically | Could exceed user's risk tolerance |
+| 🚫 Apply martingale without approval | High risk strategy |
+| 🚫 Run more trades than user set | Could deplete balance |
+| 🚫 Continue after stop-loss/take-profit | User set limit must be respected |
+
+### Allowed Actions
+
+| Action | When Allowed |
+|--------|--------------|
+| ✅ Start/Stop bot | User explicitly requests |
+| ✅ Switch account | User explicitly requests |
+| ✅ Adjust strategy | User explicitly approves |
+| ✅ Read and summarize results | Always |
+| ✅ Provide recommendations | Always (but don't execute) |
+
+### Example Antigravity Commands
+
+```
+User: "Start trading on demo with $1 stake"
+→ Antigravity: Validates demo token exists, balance > $1
+→ Backend: Starts session with stake=1, mode=demo
+
+User: "What's my current P&L?"
+→ Antigravity: Reads from sessionStorage/API
+→ Reports: "Your demo account is at +$5.50 (3 wins, 1 loss)"
+
+User: "Stop the bot"
+→ Antigravity: Calls POST /admin/sessions/:id/stop
+→ Bot: Stops immediately
+
+User: "Switch to real account"
+→ Antigravity: Confirms intent, validates real token
+→ Switches active_account to "real"
+```
