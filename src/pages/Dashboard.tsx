@@ -1929,62 +1929,74 @@ const Dashboard = () => {
                         disabled={savingTpSl}
                         className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:opacity-90 transition disabled:opacity-50"
                       >
-                        {savingTpSl ? 'Saving...' : 'Save Settings'}
+                        {savingTpSl ? 'Saving...' : 'Update Settings'}
                       </button>
+                      {currentSession?.sessionStatus === 'pending' && (
+                        <p className="text-center mt-3 text-sm text-yellow-500 animate-pulse">
+                          ⏳ Waiting for admin to start session...
+                        </p>
+                      )}
                     </Card>
 
-                    {/* Available Sessions */}
-                    {!currentSession && availableSessions.length > 0 && (
+                    {/* Available Sessions - Always show, but filter out current */}
+                    {availableSessions.length > 0 && (
                       <Card>
                         <h3 className="text-lg font-medium mb-4">Available Sessions</h3>
                         <div className="space-y-3">
-                          {availableSessions.map(session => {
-                            // Support both formats: direct fields or nested trading_sessions
-                            const sessionId = session.id || session.session_id;
-                            const sessionDetails = session.trading_sessions || session;
+                          {availableSessions
+                            .filter(s => !currentSession || (s.id !== currentSession.sessionId && s.session_id !== currentSession.sessionId))
+                            .map(session => {
+                              // Support both formats: direct fields or nested trading_sessions
+                              const sessionId = session.id || session.session_id;
+                              const sessionDetails = session.trading_sessions || session;
 
-                            return (
-                              <div
-                                key={sessionId}
-                                className="p-4 rounded-xl border"
-                                style={{ backgroundColor: 'var(--accent-bg)', borderColor: 'var(--card-border)' }}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-medium">{sessionDetails.name}</h4>
-                                  <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 capitalize">
-                                    {sessionDetails.type}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
-                                  <div>
-                                    <span className="block text-xs">Min Balance</span>
-                                    <span style={{ color: 'var(--text-primary)' }}>${sessionDetails.min_balance}</span>
-                                  </div>
-                                  <div>
-                                    <span className="block text-xs">Default TP</span>
-                                    <span className="text-green-400">${sessionDetails.default_tp}</span>
-                                  </div>
-                                  <div>
-                                    <span className="block text-xs">Default SL</span>
-                                    <span className="text-red-400">${sessionDetails.default_sl}</span>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => handleAcceptSession(sessionId, sessionDetails.mode || sessionDetails.type, sessionDetails.min_balance)}
-                                  disabled={acceptingSession || session.hasJoined}
-                                  className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                              return (
+                                <div
+                                  key={sessionId}
+                                  className="p-4 rounded-xl border"
+                                  style={{ backgroundColor: 'var(--accent-bg)', borderColor: 'var(--card-border)' }}
                                 >
-                                  {session.hasJoined ? (
-                                    <>✓ Already Joined</>
-                                  ) : acceptingSession ? (
-                                    'Joining...'
-                                  ) : (
-                                    <>✓ Accept Trading Session</>
-                                  )}
-                                </button>
-                              </div>
-                            );
-                          })}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium">{sessionDetails.name}</h4>
+                                    <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 capitalize">
+                                      {sessionDetails.type}
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                                    <div>
+                                      <span className="block text-xs">Min Balance</span>
+                                      <span style={{ color: 'var(--text-primary)' }}>${sessionDetails.min_balance}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-xs">Default TP</span>
+                                      <span className="text-green-400">${sessionDetails.default_tp}</span>
+                                    </div>
+                                    <div>
+                                      <span className="block text-xs">Default SL</span>
+                                      <span className="text-red-400">${sessionDetails.default_sl}</span>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAcceptSession(sessionId, sessionDetails.mode || sessionDetails.type, sessionDetails.min_balance)}
+                                    disabled={acceptingSession || session.hasJoined}
+                                    className="w-full py-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                  >
+                                    {session.hasJoined ? (
+                                      <>✓ Already Joined</>
+                                    ) : acceptingSession ? (
+                                      'Joining...'
+                                    ) : (
+                                      <>✓ Accept Trading Session</>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          {availableSessions.filter(s => !currentSession || (s.id !== currentSession.sessionId && s.session_id !== currentSession.sessionId)).length === 0 && (
+                            <p className="text-center py-4" style={{ color: 'var(--text-secondary)' }}>
+                              No other sessions available
+                            </p>
+                          )}
                         </div>
                       </Card>
                     )}
