@@ -35,8 +35,7 @@ const Callback = () => {
           i++;
         }
 
-        console.log('Received accounts:', accounts.length);
-        console.log('All accounts:', accounts.map(a => ({ account: a.account, hasToken: !!a.token })));
+
 
         if (accounts.length === 0) {
           console.error('No accounts in callback. URL params:', window.location.search);
@@ -46,7 +45,7 @@ const Callback = () => {
         }
 
         const primaryAccount = accounts[0];
-        console.log('Using account:', primaryAccount.account, 'Has token:', !!primaryAccount.token);
+
 
         TokenService.setTokens({
           account: primaryAccount.account,
@@ -57,7 +56,7 @@ const Callback = () => {
         setStatus('Connecting to Deriv...');
 
         await websocketService.connect();
-        console.log('WebSocket connected, authorizing...');
+
 
         setStatus('Authorizing your account...');
         const authResponse = await websocketService.authorize(primaryAccount.token);
@@ -70,7 +69,7 @@ const Callback = () => {
           return;
         }
 
-        console.log('Authorization successful:', authResponse.authorize?.loginid);
+
 
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
@@ -86,7 +85,7 @@ const Callback = () => {
 
         // Check if user is admin - SINGLE SOURCE OF TRUTH: Supabase database
         const derivId = authResponse.authorize?.loginid;
-        console.log('[Callback] Checking admin status for:', derivId);
+
 
         if (derivId) {
           // Store derivId in sessionStorage for other pages to use
@@ -107,7 +106,7 @@ const Callback = () => {
           }
           // Also store the current account's token for general use
           sessionStorage.setItem('derivToken', primaryAccount.token);
-          console.log('[Callback] Saved tokens - Demo:', demoAccount?.account, 'Real:', realAccount?.account);
+
 
           // Check Supabase database for is_admin flag
           let isAdminUser = false;
@@ -120,15 +119,15 @@ const Callback = () => {
 
             if (profile && !profileError) {
               isAdminUser = profile.is_admin === true;
-              console.log('[Callback] DB check - is_admin:', profile.is_admin);
+
             } else if (profileError) {
-              console.log('[Callback] DB check skipped/failed:', profileError.message);
+
             }
           } catch (err) {
-            console.log('[Callback] DB query error (non-fatal):', err.message);
+
           }
 
-          console.log('[Callback] Final admin status:', isAdminUser);
+
 
           // Store user info in sessionStorage for AdminProtected to check
           sessionStorage.setItem('userInfo', JSON.stringify({
@@ -152,12 +151,12 @@ const Callback = () => {
           }
 
           if (isAdminUser) {
-            console.log('[Callback] ✅ Admin user detected! Redirecting to /admin/dashboard');
+
             setStatus('Admin access granted! Redirecting...');
             setTimeout(() => navigate('/admin/dashboard'), 500);
             return;
           } else {
-            console.log('[Callback] ℹ️ Regular user, redirecting to /user/dashboard');
+
             setStatus('Redirecting to your dashboard...');
             setTimeout(() => navigate('/user/dashboard'), 500);
             return;
