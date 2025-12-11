@@ -39,6 +39,7 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
   const [formData, setFormData] = useState<{
     sessionName: string;
     sessionType: string;
+    mode: string;
     strategyName: string;
     volatilityIndex: string;
     contractType: string;
@@ -53,6 +54,7 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
   }>({
     sessionName: '',
     sessionType: SESSION_TYPE.DAY,
+    mode: 'real',
     strategyName: 'DFPM',
     volatilityIndex: '1HZ100V',
     contractType: 'DIGITEVEN',
@@ -65,6 +67,7 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
     maxTrades: 100,
     durationMinutes: 60
   });
+
   const [inviteUserId, setInviteUserId] = useState('');
 
   // Hooks
@@ -118,9 +121,15 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
   const handleCreateSession = async (e) => {
     e.preventDefault();
     try {
+      console.log('Creating session with data:', {
+        ...formData,
+        session_type: formData.sessionType // Ensure explicit mapping
+      });
+
       await createSession({
         session_name: formData.sessionName,
         session_type: formData.sessionType,
+        mode: formData.mode,
         strategy_name: formData.strategyName,
         volatility_index: formData.volatilityIndex,
         contract_type: formData.contractType,
@@ -137,6 +146,7 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
       resetForm();
     } catch (error) {
       console.error('Failed to create session:', error);
+      alert('Failed to create session: ' + (error.message || error));
     }
   };
 
@@ -178,6 +188,7 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
     setFormData({
       sessionName: '',
       sessionType: SESSION_TYPE.DAY,
+      mode: 'real',
       strategyName: 'DFPM',
       volatilityIndex: '1HZ100V',
       contractType: 'DIGITEVEN',
@@ -475,6 +486,19 @@ const AdminControlPanel = ({ user = null }: { user?: any }) => {
                     ))}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Mode</label>
+                  <select
+                    value={formData.mode}
+                    onChange={e => setFormData({ ...formData, mode: e.target.value })}
+                  >
+                    <option value="real">Real</option>
+                    <option value="demo">Demo</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label>Strategy</label>
                   <select
