@@ -45,7 +45,7 @@ const NotificationBell = ({ socket = null }: { socket?: any }) => {
 
       // Fetch trading notifications from API
       try {
-        const notifRes = await apiClient.get('/user/notifications?limit=50');
+        const notifRes = await apiClient.get<{ success?: boolean; notifications?: any[] }>('/user/notifications?limit=50');
         if (notifRes?.success && notifRes?.notifications) {
           const tradingNotifs = notifRes.notifications.map((n: any) => ({
             id: n.id,
