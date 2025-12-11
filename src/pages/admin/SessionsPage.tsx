@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSessionTicks } from '../../hooks/useSessionTicks';
 import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
 import { useSessionStats } from '../../hooks/useSessionStats';
@@ -25,6 +26,7 @@ interface Session {
 }
 
 export default function SessionsPage() {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [activeMarket, setActiveMarket] = useState<string>('R_100');
