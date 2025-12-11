@@ -3,6 +3,8 @@
  * HTTP client for backend trading endpoints
  */
 
+import { apiClient } from '../services/apiClient';
+
 const API_BASE = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
 
 interface RequestOptions {
@@ -43,30 +45,29 @@ interface SessionData {
 }
 
 /**
- * Helper to make authenticated requests
+ * Helper to make authenticated requests using apiClient
+ * Delegates to apiClient which handles token management and 401 refreshes automatically
  */
 async function apiRequest(endpoint: string, options: RequestOptions = {}) {
-  const token = sessionStorage.getItem('accessToken');
+  const method = options.method || 'GET';
+  const headers = options.headers || {};
 
-  const config = {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers
-    }
-  };
+  // Parse body if it's a string (tradingApi sends JSON strings)
+  const body = options.body ? JSON.parse(options.body) : undefined;
 
-  // console.log(`[API] ${options.method || 'GET'} ${endpoint}`, token ? '(Auth Token Present)' : '(No Auth Token)');
-
-  const response = await fetch(`${API_BASE}${endpoint}`, config);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data.error || 'Request failed');
+  switch (method) {
+    case 'GET':
+      // Ensure endpoint starts with /api if not already (though tradingApi calls include it)
+      return apiClient.get(endpoint, { headers });
+    case 'POST':
+      return apiClient.post(endpoint, body, { headers });
+    case 'PUT':
+      return apiClient.put(endpoint, body, { headers });
+    case 'DELETE':
+      return apiClient.delete(endpoint, { headers });
+    default:
+      throw new Error(`Unsupported method: ${method}`);
   }
-
-  return data;
 }
 
 // ==================== Account APIs ====================

@@ -10,6 +10,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { apiClient } from '../services/apiClient';
 
 interface AuthState {
     accessToken: string | null;
@@ -43,8 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const isAuthenticated = !!accessToken;
 
-    // Login: store access token in memory
+    // Login: store access token in memory and sync via apiClient
     const login = useCallback((token: string, userData: AuthState['user']) => {
+        apiClient.setTokens(token);
         setAccessToken(token);
         setUser(userData);
 
@@ -56,18 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Logout: clear memory and call backend to clear cookie
     const logout = useCallback(async () => {
-        try {
-            await fetch(`${API_BASE}/auth/logout`, {
-                method: 'POST',
-                credentials: 'include', // Include cookies
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
-                }
-            });
-        } catch (e) {
-            // Ignore errors on logout
-        }
+        await apiClient.logout();
 
         setAccessToken(null);
         setUser(null);
@@ -76,24 +67,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('derivToken');
         sessionStorage.removeItem('derivDemoToken');
         sessionStorage.removeItem('derivRealToken');
-    }, [accessToken]);
+    }, []);
 
     // Refresh access token using HttpOnly cookie
     const refreshAccessToken = useCallback(async (): Promise<string | null> => {
         try {
-            const response = await fetch(`${API_BASE}/auth/refresh`, {
-                method: 'POST',
-                credentials: 'include', // Browser sends HttpOnly cookie automatically
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            // Use apiClient to refresh (this updates apiClient state and sessionStorage)
+            const success = await apiClient.refreshAccessToken();
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.accessToken) {
-                    setAccessToken(data.accessToken);
-                    return data.accessToken;
+            if (success) {
+                const { accessToken } = apiClient.loadTokens();
+                if (accessToken) {
+                    setAccessToken(accessToken);
+                    return accessToken;
                 }
             }
 

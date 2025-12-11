@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { tradingApi } from '../trading/tradingApi';
 
 interface SessionStats {
     totalTrades: number;
@@ -22,21 +23,12 @@ export const useSessionStats = (sessionId: string | null) => {
         setError(null);
 
         try {
-            const token = sessionStorage.getItem('accessToken');
-            const response = await fetch(
-                `${process.env.REACT_APP_API_URL || 'http://localhost:3001/api'}/trading/sessions/${sessionId}/stats`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }
-            );
+            const response = await tradingApi.getTradeStats(sessionId);
 
-            if (!response.ok) throw new Error('Failed to fetch session stats');
-
-            const data = await response.json();
-            if (data.success) {
-                setStats(data.data);
+            if (response.success) {
+                setStats(response.data);
             } else {
-                throw new Error(data.error || 'Unknown error');
+                throw new Error(response.error || 'Unknown error');
             }
         } catch (err: any) {
             setError(err.message);
