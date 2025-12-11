@@ -8,7 +8,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Activity, Settings, LogOut,
     Bell, RefreshCw, Shield, BarChart3,
-    FileText, Sun, Moon
+    FileText, Sun, Moon, Zap
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import MobileNavigation from '../../components/layout/MobileNavigation';
@@ -41,6 +41,7 @@ const AdminLayout: React.FC = () => {
         { icon: <Activity />, label: 'Sessions', path: '/admin/sessions' },
         { icon: <Users />, label: 'Users', path: '/admin/users' },
         { icon: <BarChart3 />, label: 'Analytics', path: '/admin/analytics' },
+        { icon: <Zap />, label: 'Session Manager', path: '/admin/manage' },
         { icon: <Bell />, label: 'Notifications', path: '/admin/notifications' },
         { icon: <FileText />, label: 'Activity Logs', path: '/admin/logs' },
     ];

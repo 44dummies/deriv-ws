@@ -19,6 +19,7 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import NotificationsPage from './pages/admin/NotificationsPage';
 import UserDetailsPage from './pages/admin/UserDetailsPage';
 import TradingDashboard from './pages/admin/TradingDashboard';
+import SessionManagement from './pages/admin/SessionManagement';
 
 // Legacy imports
 
@@ -64,6 +65,8 @@ function App(): React.ReactElement {
               <Route path="settings" element={<SettingsPage />} />
               {/* New Pro Trading Dashboard */}
               <Route path="trading" element={<TradingDashboard />} />
+              {/* Advanced Session Management */}
+              <Route path="manage" element={<SessionManagement />} />
             </Route>
           </Route>
 
