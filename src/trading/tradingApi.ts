@@ -48,7 +48,7 @@ interface SessionData {
  * Helper to make authenticated requests using apiClient
  * Delegates to apiClient which handles token management and 401 refreshes automatically
  */
-async function apiRequest(endpoint: string, options: RequestOptions = {}) {
+async function apiRequest(endpoint: string, options: RequestOptions = {}): Promise<any> {
   const method = options.method || 'GET';
   const headers = options.headers || {};
 
