@@ -44,10 +44,24 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
+    // Use refs for callbacks to avoid re-connecting when callbacks change
+    const onEventRef = useRef(onEvent);
+    onEventRef.current = onEvent;
+
+    const onErrorRef = useRef(onError);
+    onErrorRef.current = onError;
+
+    const onConnectedRef = useRef(onConnected);
+    onConnectedRef.current = onConnected;
+
+    const onDisconnectedRef = useRef(onDisconnected);
+    onDisconnectedRef.current = onDisconnected;
+
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const lastEventIdRef = useRef<string | null>(null);
 
+    // Stable connection function
     const connect = useCallback(() => {
         // Clean up existing connection
         if (eventSourceRef.current) {
@@ -72,7 +86,7 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
             console.log('[EventStream] Connected');
             setIsConnected(true);
             setError(null);
-            onConnected?.();
+            onConnectedRef.current?.();
         };
 
         eventSource.onerror = (e) => {
@@ -80,8 +94,8 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
             setIsConnected(false);
             const err = new Error('EventStream connection failed');
             setError(err);
-            onError?.(err);
-            onDisconnected?.();
+            onErrorRef.current?.(err);
+            onDisconnectedRef.current?.();
 
             // Auto-reconnect after 5 seconds
             reconnectTimeoutRef.current = setTimeout(() => {
@@ -95,53 +109,40 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
             console.log('[EventStream] Handshake complete:', e.data);
         });
 
+        const safeHandleEvent = (e: MessageEvent) => {
+            try {
+                const event: TradeEvent = JSON.parse(e.data);
+                lastEventIdRef.current = event.id;
+
+                setEvents(prev => {
+                    const updated = [...prev, event];
+                    return updated.slice(-100);
+                });
+
+                onEventRef.current?.(event);
+            } catch (err) {
+                console.error('[EventStream] Failed to parse event:', err);
+            }
+        };
+
         // Handle trade events
-        eventSource.addEventListener('trade.executed', (e: MessageEvent) => {
-            handleEvent(e);
-        });
-
-        eventSource.addEventListener('trade.closed', (e: MessageEvent) => {
-            handleEvent(e);
-        });
-
+        eventSource.addEventListener('trade.executed', safeHandleEvent);
+        eventSource.addEventListener('trade.closed', safeHandleEvent);
         // Handle session events
-        eventSource.addEventListener('session.started', (e: MessageEvent) => {
-            handleEvent(e);
-        });
-
-        eventSource.addEventListener('session.stopped', (e: MessageEvent) => {
-            handleEvent(e);
-        });
-
+        eventSource.addEventListener('session.started', safeHandleEvent);
+        eventSource.addEventListener('session.stopped', safeHandleEvent);
         // Handle notification events
-        eventSource.addEventListener('notification.trade', (e: MessageEvent) => {
-            handleEvent(e);
-        });
+        eventSource.addEventListener('notification.trade', safeHandleEvent);
 
         // Generic message handler for any event type
         eventSource.onmessage = (e: MessageEvent) => {
             if (e.data.startsWith(':')) return; // Ignore heartbeats
-            handleEvent(e);
+            safeHandleEvent(e);
         };
 
-    }, [topics, onConnected, onDisconnected, onError]);
-
-    const handleEvent = useCallback((e: MessageEvent) => {
-        try {
-            const event: TradeEvent = JSON.parse(e.data);
-            lastEventIdRef.current = event.id;
-
-            setEvents(prev => {
-                // Keep last 100 events
-                const updated = [...prev, event];
-                return updated.slice(-100);
-            });
-
-            onEvent?.(event);
-        } catch (err) {
-            console.error('[EventStream] Failed to parse event:', err);
-        }
-    }, [onEvent]);
+        // Use JSON.stringify(topics) or join(',') as dependency to ensure value equality checks
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [topics.join(',')]);
 
     const disconnect = useCallback(() => {
         if (eventSourceRef.current) {

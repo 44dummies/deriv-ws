@@ -166,11 +166,7 @@ class ApiClient {
 
             if (response.ok) {
                 const data = await response.json();
-                this.accessToken = data.accessToken;
-                // Sync to sessionStorage so tradingApi.ts can use it
-                if (data.accessToken) {
-                    sessionStorage.setItem('accessToken', data.accessToken);
-                }
+                this.setTokens(data.accessToken);
                 return true;
             }
             return false;
@@ -269,7 +265,7 @@ class ApiClient {
             body: JSON.stringify(data),
             credentials: 'include'
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.accessToken = result.accessToken;
+        this.setTokens(result.accessToken);
         return result;
     }
 
@@ -280,7 +276,7 @@ class ApiClient {
             body: JSON.stringify({ email, password }),
             credentials: 'include'
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.accessToken = result.accessToken;
+        this.setTokens(result.accessToken);
         return result;
     }
 
@@ -291,7 +287,7 @@ class ApiClient {
             body: JSON.stringify(derivData),
             credentials: 'include' // Receive HttpOnly cookie
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.accessToken = result.accessToken;
+        this.setTokens(result.accessToken);
         return result;
     }
 
