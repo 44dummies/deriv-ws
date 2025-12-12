@@ -264,23 +264,23 @@ const UserTrading = () => {
         {/* Live Trade Progress - Deriv Bot Style */}
         {activeTrade && (
           <GlassCard className={`relative overflow-hidden border-2 transition-all duration-500 ${activeTrade.status === 'won' ? 'border-emerald-500 bg-emerald-500/10' :
-              activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
-                activeTrade.status === 'open' ? 'border-blue-500 bg-blue-500/5' :
-                  'border-amber-500/50 bg-amber-500/5'
+            activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
+              activeTrade.status === 'open' ? 'border-blue-500 bg-blue-500/5' :
+                'border-amber-500/50 bg-amber-500/5'
             }`}>
             {/* Animated background */}
             <div className={`absolute inset-0 opacity-20 ${activeTrade.status === 'pending' ? 'animate-pulse bg-gradient-to-r from-amber-500/20 to-transparent' :
-                activeTrade.status === 'open' ? 'animate-pulse bg-gradient-to-r from-blue-500/20 to-transparent' :
-                  ''
+              activeTrade.status === 'open' ? 'animate-pulse bg-gradient-to-r from-blue-500/20 to-transparent' :
+                ''
               }`} />
 
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-full ${activeTrade.status === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
-                      activeTrade.status === 'lost' ? 'bg-red-500/20 text-red-400' :
-                        activeTrade.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
-                          'bg-amber-500/20 text-amber-400'
+                    activeTrade.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                      activeTrade.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-amber-500/20 text-amber-400'
                     }`}>
                     {activeTrade.status === 'pending' ? <Clock size={24} className="animate-spin" /> :
                       activeTrade.status === 'open' ? <Zap size={24} className="animate-pulse" /> :
@@ -322,8 +322,8 @@ const UserTrading = () => {
                 <div className="h-2 bg-black/30 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${activeTrade.status === 'won' ? 'bg-emerald-500' :
-                        activeTrade.status === 'lost' ? 'bg-red-500' :
-                          'bg-blue-500'
+                      activeTrade.status === 'lost' ? 'bg-red-500' :
+                        'bg-blue-500'
                       }`}
                     style={{ width: `${(activeTrade.ticksElapsed / activeTrade.totalTicks) * 100}%` }}
                   />
@@ -498,27 +498,134 @@ const UserTrading = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {availableSessions.map(session => (
-                      <div key={session.id} className="bg-white/5 border border-white/5 rounded-2xl p-5 hover:bg-white/10 transition-all group relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="flex justify-between items-start mb-4 relative z-10">
-                          <div>
-                            <h4 className="font-bold text-white text-lg tracking-wide">{session.session_name}</h4>
-                            <p className="text-sm text-slate-400 mt-1">{session.strategy_name}</p>
-                          </div>
-                          <span className="px-3 py-1 bg-blue-500/10 text-blue-300 text-xs font-bold uppercase tracking-wider rounded-lg border border-blue-500/20">
-                            {session.session_type}
-                          </span>
-                        </div>
-                        <GlassButton
-                          onClick={() => handleAcceptSession(session.id)}
-                          className="w-full relative z-10"
-                          disabled={!takeProfit || !stopLoss}
+                    {availableSessions.map(session => {
+                      const winRate = session.total_trades > 0
+                        ? ((session.winning_trades / session.total_trades) * 100).toFixed(0)
+                        : 0;
+                      const marketName = session.volatility_index || session.markets?.[0] || 'R_100';
+                      const sessionType = session.session_type || 'day';
+                      const isRecovery = sessionType === 'recovery';
+                      const isRunning = session.status === 'running';
+
+                      return (
+                        <div
+                          key={session.id}
+                          className={`bg-white/5 border rounded-2xl p-5 hover:bg-white/10 transition-all group relative overflow-hidden ${isRecovery
+                              ? 'border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]'
+                              : 'border-white/10'
+                            }`}
                         >
-                          Join Session
-                        </GlassButton>
-                      </div>
-                    ))}
+                          {/* Background gradient based on session type */}
+                          <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${isRecovery
+                              ? 'bg-gradient-to-r from-purple-500/10 to-transparent'
+                              : 'bg-gradient-to-r from-emerald-500/5 to-transparent'
+                            }`} />
+
+                          {/* Header: Session Name + Type Badge */}
+                          <div className="flex justify-between items-start mb-4 relative z-10">
+                            <div className="flex-1">
+                              <h4 className="font-bold text-white text-lg tracking-wide">
+                                {session.session_name || 'Trading Session'}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-slate-500">{marketName}</span>
+                                <span className="text-slate-600">•</span>
+                                <span className="text-xs text-slate-500">
+                                  {session.mode === 'real' ? '🟢 Real' : '🔵 Demo'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Session Type Badge */}
+                            <span className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border ${isRecovery
+                                ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                                : sessionType === 'one_time'
+                                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                                  : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                              }`}>
+                              {isRecovery ? '♻️ Recovery' : sessionType === 'one_time' ? '⚡ One-Time' : '📅 Day'}
+                            </span>
+                          </div>
+
+                          {/* Stats Grid */}
+                          {isRunning && (
+                            <div className="grid grid-cols-3 gap-3 mb-4 relative z-10">
+                              <div className="bg-black/20 rounded-lg p-2 text-center">
+                                <div className="text-lg font-bold text-white">{session.total_trades || 0}</div>
+                                <div className="text-[10px] text-slate-500 uppercase">Trades</div>
+                              </div>
+                              <div className="bg-black/20 rounded-lg p-2 text-center">
+                                <div className={`text-lg font-bold ${Number(winRate) >= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                  {winRate}%
+                                </div>
+                                <div className="text-[10px] text-slate-500 uppercase">Win Rate</div>
+                              </div>
+                              <div className="bg-black/20 rounded-lg p-2 text-center">
+                                <div className={`text-lg font-bold font-mono ${(session.net_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {(session.net_pnl || 0) >= 0 ? '+' : ''}${(session.net_pnl || 0).toFixed(2)}
+                                </div>
+                                <div className="text-[10px] text-slate-500 uppercase">P&L</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Requirements Row */}
+                          <div className="flex items-center justify-between text-xs mb-4 relative z-10 py-2 px-3 bg-black/20 rounded-lg">
+                            <div className="flex items-center gap-4">
+                              <div>
+                                <span className="text-slate-500">Min Balance: </span>
+                                <span className="text-white font-bold">${session.minimum_balance || session.min_balance || 5}</span>
+                              </div>
+                              <span className="text-slate-700">|</span>
+                              <div>
+                                <span className="text-slate-500">Default TP: </span>
+                                <span className="text-emerald-400 font-bold">${session.profit_threshold || session.default_tp || 10}</span>
+                              </div>
+                              <span className="text-slate-700">|</span>
+                              <div>
+                                <span className="text-slate-500">Default SL: </span>
+                                <span className="text-red-400 font-bold">${session.loss_threshold || session.default_sl || 5}</span>
+                              </div>
+                            </div>
+
+                            {/* Status indicator */}
+                            <div className="flex items-center gap-1">
+                              <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                              <span className={`font-bold ${isRunning ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                {session.status?.toUpperCase() || 'PENDING'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Recovery Session Notice */}
+                          {isRecovery && (
+                            <div className="mb-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg text-xs text-purple-300 relative z-10">
+                              <strong>Recovery Session:</strong> This session is designed to help recover losses from previous sessions with adjusted risk parameters.
+                            </div>
+                          )}
+
+                          {/* Join Button */}
+                          <GlassButton
+                            onClick={() => handleAcceptSession(session.id)}
+                            className="w-full relative z-10"
+                            disabled={!takeProfit || !stopLoss}
+                            variant={isRecovery ? 'secondary' : 'primary'}
+                          >
+                            {!takeProfit || !stopLoss
+                              ? 'Set TP/SL First'
+                              : isRunning
+                                ? 'Join Live Session'
+                                : 'Join Session'}
+                          </GlassButton>
+
+                          {(!takeProfit || !stopLoss) && (
+                            <p className="text-[10px] text-amber-400 text-center mt-2 relative z-10">
+                              ⚠️ Set your Take Profit and Stop Loss on the left before joining
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </GlassCard>
