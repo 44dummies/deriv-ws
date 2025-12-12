@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, BarChart2, Zap, Clock, Target } from 'lucide-react';
+import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, BarChart2, Zap, Clock, Target, Radio } from 'lucide-react';
 import { tradingApi } from '../trading/tradingApi';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useWebSocketEvents } from '../hooks/useWebSocketEvents';
@@ -50,6 +50,8 @@ const UserTrading = () => {
   const [sessionStatus, setSessionStatus] = useState('waiting');
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
+  const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [showLiveFeed, setShowLiveFeed] = useState(false);
 
   // Real-time hooks
   const { latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
@@ -129,8 +131,34 @@ const UserTrading = () => {
         };
         setTradeHistory(prev => [newTrade, ...prev].slice(0, 50));
       }
+
+      // Add to activity log
+      setActivityLog(prev => [{
+        id: Date.now(),
+        type: isOpen ? 'trade_open' : 'trade_close',
+        side: side,
+        market: latestTrade.market,
+        profit: latestTrade.profit,
+        result: latestTrade.result,
+        timestamp: latestTrade.timestamp || new Date().toISOString()
+      }, ...prev].slice(0, 50));
     }
   }, [latestTrade, activeSession]);
+
+  // Add signals to activity log
+  useEffect(() => {
+    if (activeSession && latestSignal) {
+      setActivityLog(prev => [{
+        id: Date.now(),
+        type: 'signal',
+        side: latestSignal.side,
+        digit: latestSignal.digit,
+        market: latestSignal.market,
+        confidence: latestSignal.confidence,
+        timestamp: new Date().toISOString()
+      }, ...prev].slice(0, 50));
+    }
+  }, [latestSignal, activeSession]);
 
   // Sync with real-time session updates
   useEffect(() => {
@@ -229,9 +257,16 @@ const UserTrading = () => {
         takeProfit: parseFloat(takeProfit),
         stopLoss: parseFloat(stopLoss)
       });
-      alert('Session accepted successfully!');
-      loadActiveSession();
-      loadAvailableSessions();
+      // Show live feed and reload
+      setShowLiveFeed(true);
+      setActivityLog(prev => [{
+        id: Date.now(),
+        type: 'session_joined',
+        message: 'Successfully joined trading session',
+        timestamp: new Date().toISOString()
+      }, ...prev]);
+      await loadActiveSession();
+      await loadAvailableSessions();
     } catch (error) {
       console.error('Failed to accept session:', error);
       alert('Failed to accept session.');
@@ -346,6 +381,106 @@ const UserTrading = () => {
                   <span className="text-slate-500">Potential Payout:</span>
                   <span className="text-emerald-400 font-mono">${activeTrade.potentialPayout.toFixed(2)}</span>
                 </div>
+              )}
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Live Session Feed - Shows after accepting session */}
+        {activeSession && (showLiveFeed || activityLog.length > 0) && (
+          <GlassCard className="border-l-4 border-l-emerald-500 max-h-[300px] flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-full">
+                  <Radio className="text-emerald-400 animate-pulse" size={18} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    Live Session Feed
+                    <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded animate-pulse">
+                      {sessionStatus.toUpperCase()}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">Real-time trade execution updates</p>
+                </div>
+              </div>
+              {activityLog.length > 0 && (
+                <button
+                  onClick={() => setActivityLog([])}
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pr-2">
+              {activityLog.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-slate-500 opacity-50">
+                  <Activity size={32} className="mb-2" />
+                  <p className="text-sm">Waiting for trading activity...</p>
+                  <p className="text-xs mt-1">Trades and signals will appear here</p>
+                </div>
+              ) : (
+                activityLog.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-lg border flex items-center justify-between transition-all ${item.type === 'signal'
+                        ? 'bg-blue-500/10 border-blue-500/20'
+                        : item.type === 'session_joined'
+                          ? 'bg-emerald-500/10 border-emerald-500/20'
+                          : item.result === 'won'
+                            ? 'bg-emerald-500/10 border-emerald-500/20'
+                            : item.result === 'lost'
+                              ? 'bg-red-500/10 border-red-500/20'
+                              : 'bg-white/5 border-white/10'
+                      }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'signal'
+                              ? 'bg-blue-500/20 text-blue-400'
+                              : item.type === 'session_joined'
+                                ? 'bg-emerald-500/20 text-emerald-400'
+                                : item.result === 'won'
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : item.result === 'lost'
+                                    ? 'bg-red-500/20 text-red-400'
+                                    : 'bg-slate-500/20 text-slate-300'
+                            }`}
+                        >
+                          {item.type === 'signal' ? 'SIGNAL' : item.type === 'session_joined' ? 'JOINED' : 'TRADE'}
+                        </span>
+                        {item.side && (
+                          <span className="text-sm font-medium text-white">
+                            {item.side} {item.digit !== undefined && item.digit}
+                          </span>
+                        )}
+                        {item.message && (
+                          <span className="text-sm text-emerald-400">{item.message}</span>
+                        )}
+                        {item.market && (
+                          <span className="text-xs text-slate-500">{item.market}</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 mt-1 block font-mono">
+                        {new Date(item.timestamp).toLocaleTimeString()}
+                      </span>
+                    </div>
+
+                    {item.profit !== undefined && (
+                      <span className={`font-mono font-bold ${item.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {item.profit >= 0 ? '+' : ''}{item.profit.toFixed(2)}
+                      </span>
+                    )}
+                    {item.confidence !== undefined && (
+                      <span className="text-xs font-mono text-blue-300">
+                        {(item.confidence * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </GlassCard>

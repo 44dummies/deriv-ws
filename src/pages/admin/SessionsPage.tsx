@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEventStream } from '../../hooks/useEventStream';
 import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
-import { Play, Pause, Plus, Monitor, Wifi, WifiOff, Trash2, StopCircle, Zap, Activity } from 'lucide-react';
+import { Play, Pause, Plus, Monitor, Wifi, WifiOff, Trash2, StopCircle, Zap, Activity, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { tradingApi } from '../../trading/tradingApi';
 import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
@@ -25,7 +25,7 @@ interface Session {
   default_sl: number;
   created_at: string;
   participants_count?: number;
-  participants?: { user_id: string; username?: string; email?: string }[];
+  participants?: { user_id: string; username?: string; email?: string; take_profit?: number; stop_loss?: number; net_pnl?: number; joined_at?: string }[];
 }
 
 interface ActivityItem {
@@ -62,6 +62,9 @@ export default function SessionsPage() {
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   // Create session form state - SIMPLIFIED
   const [newSession, setNewSession] = useState({
@@ -236,6 +239,27 @@ export default function SessionsPage() {
     setActionLoading(null);
   };
 
+  const toggleSessionExpand = async (sessionId: string) => {
+    if (expandedSession === sessionId) {
+      setExpandedSession(null);
+      setParticipants([]);
+      return;
+    }
+
+    setExpandedSession(sessionId);
+    setLoadingParticipants(true);
+    try {
+      const result = await tradingApi.getSessionParticipants(sessionId);
+      const participantList = Array.isArray(result) ? result : (result.data || result.participants || []);
+      setParticipants(participantList);
+    } catch (err: any) {
+      console.error('Failed to load participants:', err);
+      setParticipants([]);
+      toast.error('Failed to load participant details');
+    }
+    setLoadingParticipants(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -306,72 +330,155 @@ export default function SessionsPage() {
               </thead>
               <tbody>
                 {sessions.map((session) => (
-                  <tr key={session.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td className="py-4 px-4">
-                      <span className="text-white font-medium">{session.name}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`text-xs font-bold px-2 py-1 rounded ${session.mode === 'real'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-blue-500/20 text-blue-400'
-                        }`}>
-                        {session.mode?.toUpperCase() || 'DEMO'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-slate-300">
-                      {session.markets?.[0] || '-'}
-                    </td>
-                    <td className="py-4 px-4 text-slate-300">
-                      ${session.min_balance || 5}
-                    </td>
-                    <td className="py-4 px-4 text-slate-300">
-                      <span className="text-emerald-400">${session.default_tp || 10}</span>
-                      {' / '}
-                      <span className="text-red-400">${session.default_sl || 5}</span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`text-sm font-bold ${(session.participants_count || 0) > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
-                        {session.participants_count || 0} joined
-                      </span>
-                    </td>
-                    <td className="py-4 px-4">
-                      <GlassStatusBadge status={session.status === 'running' ? 'active' : 'inactive'}>
-                        {session.status?.toUpperCase() || 'PENDING'}
-                      </GlassStatusBadge>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center justify-end gap-2">
-                        {session.status === 'running' ? (
+                  <React.Fragment key={session.id}>
+                    <tr className={`border-b border-white/5 hover:bg-white/5 transition-colors ${expandedSession === session.id ? 'bg-white/5' : ''}`}>
+                      <td className="py-4 px-4">
+                        <span className="text-white font-medium">{session.name}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${session.mode === 'real'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-blue-500/20 text-blue-400'
+                          }`}>
+                          {session.mode?.toUpperCase() || 'DEMO'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-slate-300">
+                        {session.markets?.[0] || '-'}
+                      </td>
+                      <td className="py-4 px-4 text-slate-300">
+                        ${session.min_balance || 5}
+                      </td>
+                      <td className="py-4 px-4 text-slate-300">
+                        <span className="text-emerald-400">${session.default_tp || 10}</span>
+                        {' / '}
+                        <span className="text-red-400">${session.default_sl || 5}</span>
+                      </td>
+                      <td className="py-4 px-4">
+                        <button
+                          onClick={() => toggleSessionExpand(session.id)}
+                          className={`flex items-center gap-2 text-sm font-bold transition-colors ${(session.participants_count || 0) > 0
+                              ? 'text-emerald-400 hover:text-emerald-300 cursor-pointer'
+                              : 'text-slate-500'
+                            }`}
+                          disabled={(session.participants_count || 0) === 0}
+                        >
+                          {expandedSession === session.id ? (
+                            <ChevronDown size={14} />
+                          ) : (
+                            <ChevronRight size={14} />
+                          )}
+                          <Users size={14} />
+                          {session.participants_count || 0} joined
+                        </button>
+                      </td>
+                      <td className="py-4 px-4">
+                        <GlassStatusBadge status={session.status === 'running' || session.status === 'active' ? 'active' : 'inactive'}>
+                          {session.status?.toUpperCase() || 'PENDING'}
+                        </GlassStatusBadge>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {session.status === 'running' || session.status === 'active' ? (
+                            <GlassButton
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleStopSession(session.id)}
+                              disabled={actionLoading === session.id}
+                              icon={<StopCircle size={14} />}
+                            >
+                              Stop
+                            </GlassButton>
+                          ) : (
+                            <GlassButton
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleStartSession(session.id)}
+                              disabled={actionLoading === session.id}
+                              icon={<Play size={14} />}
+                            >
+                              Start
+                            </GlassButton>
+                          )}
                           <GlassButton
-                            variant="danger"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => handleStopSession(session.id)}
-                            disabled={actionLoading === session.id}
-                            icon={<StopCircle size={14} />}
-                          >
-                            Stop
-                          </GlassButton>
-                        ) : (
-                          <GlassButton
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleStartSession(session.id)}
-                            disabled={actionLoading === session.id}
-                            icon={<Play size={14} />}
-                          >
-                            Start
-                          </GlassButton>
-                        )}
-                        <GlassButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSession(session.id)}
-                          disabled={actionLoading === session.id || session.status === 'running'}
-                          icon={<Trash2 size={14} />}
-                        />
-                      </div>
-                    </td>
-                  </tr>
+                            onClick={() => handleDeleteSession(session.id)}
+                            disabled={actionLoading === session.id || session.status === 'running' || session.status === 'active'}
+                            icon={<Trash2 size={14} />}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Expanded Participants Row */}
+                    {expandedSession === session.id && (
+                      <tr className="bg-white/[0.02]">
+                        <td colSpan={8} className="p-4">
+                          <div className="border border-white/10 rounded-xl bg-black/20 p-4">
+                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+                              <Users className="text-emerald-400" size={18} />
+                              <h4 className="text-white font-bold">Participant Details</h4>
+                              <span className="text-xs text-slate-500">({participants.length} users)</span>
+                            </div>
+
+                            {loadingParticipants ? (
+                              <div className="flex items-center justify-center py-6">
+                                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                              </div>
+                            ) : participants.length === 0 ? (
+                              <div className="text-center py-6 text-slate-500">
+                                No participants yet
+                              </div>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="text-xs text-slate-500 uppercase border-b border-white/5">
+                                      <th className="text-left py-2 px-3">User</th>
+                                      <th className="text-left py-2 px-3">TP / SL</th>
+                                      <th className="text-left py-2 px-3">Net P&L</th>
+                                      <th className="text-left py-2 px-3">Joined</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {participants.map((p, idx) => (
+                                      <tr key={p.user_id || idx} className="border-b border-white/5 last:border-0">
+                                        <td className="py-3 px-3">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                                              {(p.username || p.email || 'U')[0].toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <div className="text-white font-medium">{p.username || 'Anonymous'}</div>
+                                              <div className="text-xs text-slate-500">{p.email || p.user_id?.slice(0, 8)}</div>
+                                            </div>
+                                          </div>
+                                        </td>
+                                        <td className="py-3 px-3">
+                                          <span className="text-emerald-400">${p.take_profit || '-'}</span>
+                                          {' / '}
+                                          <span className="text-red-400">${p.stop_loss || '-'}</span>
+                                        </td>
+                                        <td className="py-3 px-3">
+                                          <span className={`font-mono font-bold ${(p.net_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                            {(p.net_pnl || 0) >= 0 ? '+' : ''}${(p.net_pnl || 0).toFixed(2)}
+                                          </span>
+                                        </td>
+                                        <td className="py-3 px-3 text-slate-400">
+                                          {p.joined_at ? new Date(p.joined_at).toLocaleString() : '-'}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
