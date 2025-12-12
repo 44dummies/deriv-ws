@@ -250,8 +250,19 @@ export default function SessionsPage() {
     setLoadingParticipants(true);
     try {
       const result = await tradingApi.getSessionParticipants(sessionId);
-      const participantList = Array.isArray(result) ? result : (result.data || result.participants || []);
-      setParticipants(participantList);
+      const rawParticipants = Array.isArray(result) ? result : (result.data || result.participants || []);
+      // Map API fields to expected frontend fields
+      const mappedParticipants = rawParticipants.map((p: any) => ({
+        user_id: p.user_id,
+        username: p.user_profiles?.username || p.user_profiles?.deriv_id || p.username || 'Anonymous',
+        email: p.user_profiles?.email || p.email || '',
+        take_profit: p.tp || p.take_profit || 0,
+        stop_loss: p.sl || p.stop_loss || 0,
+        net_pnl: p.current_pnl || p.net_pnl || 0,
+        joined_at: p.accepted_at || p.joined_at || null,
+        status: p.status
+      }));
+      setParticipants(mappedParticipants);
     } catch (err: any) {
       console.error('Failed to load participants:', err);
       setParticipants([]);
@@ -358,8 +369,8 @@ export default function SessionsPage() {
                         <button
                           onClick={() => toggleSessionExpand(session.id)}
                           className={`flex items-center gap-2 text-sm font-bold transition-colors ${(session.participants_count || 0) > 0
-                              ? 'text-emerald-400 hover:text-emerald-300 cursor-pointer'
-                              : 'text-slate-500'
+                            ? 'text-emerald-400 hover:text-emerald-300 cursor-pointer'
+                            : 'text-slate-500'
                             }`}
                           disabled={(session.participants_count || 0) === 0}
                         >
