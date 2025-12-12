@@ -5,7 +5,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEventStream } from '../../hooks/useEventStream';
-import { Play, Pause, Plus, Monitor, Wifi, WifiOff, Trash2, StopCircle } from 'lucide-react';
+import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
+import { Play, Pause, Plus, Monitor, Wifi, WifiOff, Trash2, StopCircle, Zap, Activity } from 'lucide-react';
 import { tradingApi } from '../../trading/tradingApi';
 import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
@@ -23,6 +24,19 @@ interface Session {
   default_tp: number;
   default_sl: number;
   created_at: string;
+}
+
+interface ActivityItem {
+  id: number;
+  type: 'signal' | 'open' | 'close';
+  side?: string;
+  market?: string;
+  price?: number;
+  profit?: number;
+  result?: 'won' | 'lost';
+  confidence?: number;
+  digit?: number;
+  timestamp: string;
 }
 
 const AVAILABLE_MARKETS = [
@@ -45,6 +59,7 @@ export default function SessionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
 
   // Create session form state - SIMPLIFIED
   const [newSession, setNewSession] = useState({
@@ -54,6 +69,13 @@ export default function SessionsPage() {
     default_tp: 10,
     default_sl: 5
   });
+
+  // Get running session for WebSocket events
+  const runningSession = sessions.find(s => s.status === 'running');
+  const activeMarket = runningSession?.markets?.[0] || 'R_100';
+
+  // WebSocket events for real-time trade/signal monitoring
+  const { latestTrade, latestSignal } = useWebSocketEvents(runningSession?.id || null, [activeMarket]);
 
   // SSE for real-time updates
   const { isConnected: sseConnected } = useEventStream({
@@ -68,6 +90,39 @@ export default function SessionsPage() {
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  // Update activity log when trades arrive
+  useEffect(() => {
+    if (latestTrade) {
+      const item: ActivityItem = {
+        id: Date.now(),
+        type: (latestTrade.type === 'open' ? 'open' : 'close') as 'open' | 'close',
+        side: latestTrade.side || latestTrade.signal,
+        market: latestTrade.market,
+        price: latestTrade.price,
+        profit: latestTrade.profit,
+        result: latestTrade.result as 'won' | 'lost' | undefined,
+        timestamp: latestTrade.timestamp || new Date().toISOString()
+      };
+      setActivityLog(prev => [item, ...prev].slice(0, 50));
+    }
+  }, [latestTrade]);
+
+  // Update activity log when signals arrive
+  useEffect(() => {
+    if (latestSignal) {
+      const item: ActivityItem = {
+        id: Date.now(),
+        type: 'signal' as const,
+        side: latestSignal.side,
+        market: latestSignal.market,
+        confidence: latestSignal.confidence,
+        digit: latestSignal.digit,
+        timestamp: new Date().toISOString()
+      };
+      setActivityLog(prev => [item, ...prev].slice(0, 50));
+    }
+  }, [latestSignal]);
 
   const fetchSessions = async () => {
     try {
@@ -221,8 +276,8 @@ export default function SessionsPage() {
                     </td>
                     <td className="py-4 px-4">
                       <span className={`text-xs font-bold px-2 py-1 rounded ${session.mode === 'real'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-blue-500/20 text-blue-400'
                         }`}>
                         {session.mode?.toUpperCase() || 'DEMO'}
                       </span>
@@ -283,6 +338,96 @@ export default function SessionsPage() {
         )}
       </GlassCard>
 
+      {/* Live Feed - Bot Execution Monitor */}
+      <GlassCard className="max-h-[400px] flex flex-col">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Zap className="text-amber-400" size={20} />
+            <h3 className="text-lg font-bold text-white">Live Feed</h3>
+            {runningSession && (
+              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">
+                {runningSession.name}
+              </span>
+            )}
+          </div>
+          {activityLog.length > 0 && (
+            <button
+              onClick={() => setActivityLog([])}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
+          {activityLog.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 py-8">
+              <Activity size={36} className="mb-3" />
+              <p className="text-sm">Waiting for bot activity...</p>
+              {!runningSession && (
+                <p className="text-xs mt-1">Start a session to see live trades</p>
+              )}
+            </div>
+          ) : (
+            activityLog.map((a) => (
+              <div
+                key={a.id}
+                className={`p-3 rounded-lg border flex items-center justify-between transition-all ${a.type === 'signal'
+                    ? 'bg-blue-500/10 border-blue-500/20'
+                    : a.result === 'won'
+                      ? 'bg-emerald-500/10 border-emerald-500/20'
+                      : a.result === 'lost'
+                        ? 'bg-red-500/10 border-red-500/20'
+                        : 'bg-white/5 border-white/10'
+                  }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${a.type === 'signal'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : a.result === 'won'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : a.result === 'lost'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-slate-500/20 text-slate-300'
+                        }`}
+                    >
+                      {a.type === 'signal' ? 'SIGNAL' : 'TRADE'}
+                    </span>
+                    <span className="text-sm font-medium text-white">
+                      {a.side} {a.digit !== undefined && a.digit}
+                    </span>
+                    {a.market && (
+                      <span className="text-xs text-slate-500">{a.market}</span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block font-mono">
+                    {new Date(a.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+
+                {a.profit !== undefined && (
+                  <span
+                    className={`font-mono font-bold ${a.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+                      }`}
+                  >
+                    {a.profit >= 0 ? '+' : ''}
+                    {a.profit.toFixed(2)}
+                  </span>
+                )}
+                {a.confidence !== undefined && (
+                  <span className="text-xs font-mono text-blue-300">
+                    {(a.confidence * 100).toFixed(0)}%
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </GlassCard>
+
       {/* Create Session Modal - SIMPLIFIED */}
       <GlassModal
         isOpen={showCreateModal}
@@ -298,8 +443,8 @@ export default function SessionsPage() {
                 type="button"
                 onClick={() => setNewSession({ ...newSession, mode: 'demo' })}
                 className={`p-4 rounded-xl border-2 transition-all ${newSession.mode === 'demo'
-                    ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                    : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
+                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+                  : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
                   }`}
               >
                 <div className="text-lg font-bold">Demo</div>
@@ -309,8 +454,8 @@ export default function SessionsPage() {
                 type="button"
                 onClick={() => setNewSession({ ...newSession, mode: 'real' })}
                 className={`p-4 rounded-xl border-2 transition-all ${newSession.mode === 'real'
-                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                    : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                  : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
                   }`}
               >
                 <div className="text-lg font-bold">Real</div>
