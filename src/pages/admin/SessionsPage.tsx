@@ -201,7 +201,7 @@ export default function SessionsPage() {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('Are you sure you want to delete this session?')) return;
+    if (!window.confirm('Are you sure you want to delete this session?')) return;
     setActionLoading(sessionId);
     try {
       await tradingApi.deleteSession(sessionId);
@@ -374,24 +374,24 @@ export default function SessionsPage() {
               <div
                 key={a.id}
                 className={`p-3 rounded-lg border flex items-center justify-between transition-all ${a.type === 'signal'
-                    ? 'bg-blue-500/10 border-blue-500/20'
-                    : a.result === 'won'
-                      ? 'bg-emerald-500/10 border-emerald-500/20'
-                      : a.result === 'lost'
-                        ? 'bg-red-500/10 border-red-500/20'
-                        : 'bg-white/5 border-white/10'
+                  ? 'bg-blue-500/10 border-blue-500/20'
+                  : a.result === 'won'
+                    ? 'bg-emerald-500/10 border-emerald-500/20'
+                    : a.result === 'lost'
+                      ? 'bg-red-500/10 border-red-500/20'
+                      : 'bg-white/5 border-white/10'
                   }`}
               >
                 <div>
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${a.type === 'signal'
-                          ? 'bg-blue-500/20 text-blue-400'
-                          : a.result === 'won'
-                            ? 'bg-emerald-500/20 text-emerald-400'
-                            : a.result === 'lost'
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-slate-500/20 text-slate-300'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : a.result === 'won'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : a.result === 'lost'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-slate-500/20 text-slate-300'
                         }`}
                     >
                       {a.type === 'signal' ? 'SIGNAL' : 'TRADE'}
