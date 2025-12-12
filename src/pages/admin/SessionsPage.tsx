@@ -24,6 +24,8 @@ interface Session {
   default_tp: number;
   default_sl: number;
   created_at: string;
+  participants_count?: number;
+  participants?: { user_id: string; username?: string; email?: string }[];
 }
 
 interface ActivityItem {
@@ -213,6 +215,27 @@ export default function SessionsPage() {
     setActionLoading(null);
   };
 
+  const handleClearCompleted = async () => {
+    const completedSessions = sessions.filter(s => s.status === 'completed' || s.status === 'cancelled');
+    if (completedSessions.length === 0) {
+      toast.error('No completed sessions to clear');
+      return;
+    }
+    if (!window.confirm(`Delete ${completedSessions.length} completed session(s)?`)) return;
+
+    setActionLoading('clear');
+    try {
+      for (const session of completedSessions) {
+        await tradingApi.deleteSession(session.id);
+      }
+      toast.success(`Cleared ${completedSessions.length} completed sessions`);
+      await fetchSessions();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to clear sessions');
+    }
+    setActionLoading(null);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -234,13 +257,25 @@ export default function SessionsPage() {
           </div>
         </div>
 
-        <GlassButton
-          variant="primary"
-          onClick={() => setShowCreateModal(true)}
-          icon={<Plus size={18} />}
-        >
-          Create Session
-        </GlassButton>
+        <div className="flex gap-2">
+          {sessions.some(s => s.status === 'completed' || s.status === 'cancelled') && (
+            <GlassButton
+              variant="ghost"
+              onClick={handleClearCompleted}
+              disabled={actionLoading === 'clear'}
+              icon={<Trash2 size={18} />}
+            >
+              Clear Completed
+            </GlassButton>
+          )}
+          <GlassButton
+            variant="primary"
+            onClick={() => setShowCreateModal(true)}
+            icon={<Plus size={18} />}
+          >
+            Create Session
+          </GlassButton>
+        </div>
       </GlassCard>
 
       {/* Sessions List */}
@@ -264,6 +299,7 @@ export default function SessionsPage() {
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Market</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Min Bal</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">TP/SL</th>
+                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Participants</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Status</th>
                   <th className="text-right py-3 px-4 text-xs uppercase text-slate-500 font-medium">Actions</th>
                 </tr>
@@ -292,6 +328,11 @@ export default function SessionsPage() {
                       <span className="text-emerald-400">${session.default_tp || 10}</span>
                       {' / '}
                       <span className="text-red-400">${session.default_sl || 5}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`text-sm font-bold ${(session.participants_count || 0) > 0 ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {session.participants_count || 0} joined
+                      </span>
                     </td>
                     <td className="py-4 px-4">
                       <GlassStatusBadge status={session.status === 'running' ? 'active' : 'inactive'}>
