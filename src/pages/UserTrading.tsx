@@ -245,17 +245,36 @@ const UserTrading = () => {
     }
   };
 
-  const handleAcceptSession = async (sessionId) => {
+  const handleAcceptSession = async (sessionId: string, sessionDefaults?: { default_tp: number; default_sl: number }) => {
     if (!takeProfit || !stopLoss) {
       alert('Please set your Take Profit and Stop Loss first');
       return;
     }
+
+    const userTP = parseFloat(takeProfit);
+    const userSL = parseFloat(stopLoss);
+
+    // Validate TP/SL against session defaults
+    if (sessionDefaults) {
+      const maxTP = sessionDefaults.default_tp || 100;
+      const maxSL = sessionDefaults.default_sl || 50;
+
+      if (userTP > maxTP) {
+        alert(`Take Profit cannot exceed session limit of $${maxTP}`);
+        return;
+      }
+      if (userSL > maxSL) {
+        alert(`Stop Loss cannot exceed session limit of $${maxSL}`);
+        return;
+      }
+    }
+
     try {
       await tradingApi.acceptSession({
         sessionId,
         accountId: userInfo?.id,
-        takeProfit: parseFloat(takeProfit),
-        stopLoss: parseFloat(stopLoss)
+        takeProfit: userTP,
+        stopLoss: userSL
       });
       // Show live feed and reload
       setShowLiveFeed(true);
@@ -290,6 +309,183 @@ const UserTrading = () => {
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center bg-[#0a0a0f] text-white">Loading...</div>;
+  }
+
+  // FULL-SCREEN LIVE FEED VIEW - When user has active session
+  if (activeSession && showLiveFeed) {
+    return (
+      <DashboardLayout isAdmin={false}>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Session Header */}
+          <GlassCard className="border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-4 h-4 bg-emerald-500 rounded-full animate-pulse" />
+                  <div className="absolute inset-0 w-4 h-4 bg-emerald-500 rounded-full animate-ping opacity-75" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">{activeSession.session_name}</h2>
+                  <p className="text-sm text-emerald-400 font-mono">LIVE SESSION ACTIVE</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-xs text-slate-500">Your TP / SL</div>
+                  <div className="text-sm">
+                    <span className="text-emerald-400 font-bold">${activeSession.user_tp || takeProfit || '-'}</span>
+                    <span className="text-slate-500"> / </span>
+                    <span className="text-red-400 font-bold">${activeSession.user_sl || stopLoss || '-'}</span>
+                  </div>
+                </div>
+                <GlassButton
+                  variant="danger"
+                  size="sm"
+                  onClick={handleLeaveSession}
+                >
+                  Leave Session
+                </GlassButton>
+              </div>
+            </div>
+          </GlassCard>
+
+          {/* Session Stats */}
+          <div className="grid grid-cols-4 gap-4">
+            <GlassCard className="text-center">
+              <div className="text-3xl font-bold text-white font-mono">{activeSession.total_trades || 0}</div>
+              <div className="text-xs text-slate-500 uppercase">Total Trades</div>
+            </GlassCard>
+            <GlassCard className="text-center">
+              <div className="text-3xl font-bold text-emerald-400 font-mono">{activeSession.wins || 0}</div>
+              <div className="text-xs text-slate-500 uppercase">Wins</div>
+            </GlassCard>
+            <GlassCard className="text-center">
+              <div className="text-3xl font-bold text-red-400 font-mono">{activeSession.losses || 0}</div>
+              <div className="text-xs text-slate-500 uppercase">Losses</div>
+            </GlassCard>
+            <GlassCard className="text-center">
+              <div className={`text-3xl font-bold font-mono ${(activeSession.net_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {(activeSession.net_pnl || 0) >= 0 ? '+' : ''}${(activeSession.net_pnl || 0).toFixed(2)}
+              </div>
+              <div className="text-xs text-slate-500 uppercase">Net P&L</div>
+            </GlassCard>
+          </div>
+
+          {/* Active Trade Progress */}
+          {activeTrade && (
+            <GlassCard className={`border-2 ${activeTrade.status === 'won' ? 'border-emerald-500 bg-emerald-500/10' :
+                activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
+                  'border-blue-500 bg-blue-500/5 animate-pulse'
+              }`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Zap className={activeTrade.status === 'open' ? 'text-blue-400 animate-pulse' : 'text-slate-400'} size={24} />
+                  <div>
+                    <div className="text-lg font-bold text-white">{activeTrade.side} {activeTrade.digit}</div>
+                    <div className="text-xs text-slate-500">{activeTrade.market}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-2xl font-bold font-mono ${activeTrade.status === 'won' ? 'text-emerald-400' :
+                      activeTrade.status === 'lost' ? 'text-red-400' : 'text-blue-400'
+                    }`}>
+                    {activeTrade.status === 'won' ? '+' : activeTrade.status === 'lost' ? '-' : ''}
+                    ${activeTrade.profit?.toFixed(2) || activeTrade.stake?.toFixed(2) || '0.35'}
+                  </div>
+                  <div className="text-xs text-slate-500">{activeTrade.status.toUpperCase()}</div>
+                </div>
+              </div>
+              {activeTrade.status === 'open' && (
+                <div className="w-full bg-slate-700 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((activeTrade.ticksElapsed || 0) / (activeTrade.totalTicks || 5)) * 100}%` }}
+                  />
+                </div>
+              )}
+            </GlassCard>
+          )}
+
+          {/* Live Activity Feed - Main Focus */}
+          <GlassCard className="border-l-4 border-l-emerald-500 flex-1">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-full">
+                  <Radio className="text-emerald-400 animate-pulse" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Live Activity Feed</h3>
+                  <p className="text-sm text-slate-500">Real-time trade signals and execution</p>
+                </div>
+              </div>
+              {activityLog.length > 0 && (
+                <button
+                  onClick={() => setActivityLog([])}
+                  className="text-sm text-slate-500 hover:text-white transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="max-h-[400px] overflow-y-auto space-y-3 custom-scrollbar pr-2">
+              {activityLog.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-slate-500">
+                  <Activity size={48} className="mb-4 opacity-50" />
+                  <p className="text-lg">Waiting for trading activity...</p>
+                  <p className="text-sm mt-2">Trades and signals will appear here in real-time</p>
+                </div>
+              ) : (
+                activityLog.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-lg border flex items-center justify-between transition-all ${item.type === 'signal' ? 'bg-blue-500/10 border-blue-500/30' :
+                        item.type === 'session_joined' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                          item.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                            item.result === 'lost' ? 'bg-red-500/10 border-red-500/30' :
+                              'bg-white/5 border-white/10'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${item.type === 'signal' ? 'bg-blue-500/20 text-blue-400' :
+                          item.type === 'session_joined' ? 'bg-emerald-500/20 text-emerald-400' :
+                            item.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
+                              item.result === 'lost' ? 'bg-red-500/20 text-red-400' :
+                                'bg-slate-500/20 text-slate-300'
+                        }`}>
+                        {item.type === 'signal' ? 'SIGNAL' : item.type === 'session_joined' ? 'JOINED' : 'TRADE'}
+                      </span>
+                      <div>
+                        <div className="text-white font-medium">
+                          {item.side && `${item.side} ${item.digit !== undefined ? item.digit : ''}`}
+                          {item.message && item.message}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {item.market && `${item.market} • `}
+                          {new Date(item.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {item.profit !== undefined && (
+                        <span className={`text-lg font-mono font-bold ${item.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {item.profit >= 0 ? '+' : ''}${item.profit.toFixed(2)}
+                        </span>
+                      )}
+                      {item.confidence !== undefined && (
+                        <span className="text-sm font-mono text-blue-300">
+                          {(item.confidence * 100).toFixed(0)}% conf
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </GlassCard>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -426,28 +622,28 @@ const UserTrading = () => {
                   <div
                     key={item.id}
                     className={`p-3 rounded-lg border flex items-center justify-between transition-all ${item.type === 'signal'
-                        ? 'bg-blue-500/10 border-blue-500/20'
-                        : item.type === 'session_joined'
+                      ? 'bg-blue-500/10 border-blue-500/20'
+                      : item.type === 'session_joined'
+                        ? 'bg-emerald-500/10 border-emerald-500/20'
+                        : item.result === 'won'
                           ? 'bg-emerald-500/10 border-emerald-500/20'
-                          : item.result === 'won'
-                            ? 'bg-emerald-500/10 border-emerald-500/20'
-                            : item.result === 'lost'
-                              ? 'bg-red-500/10 border-red-500/20'
-                              : 'bg-white/5 border-white/10'
+                          : item.result === 'lost'
+                            ? 'bg-red-500/10 border-red-500/20'
+                            : 'bg-white/5 border-white/10'
                       }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${item.type === 'signal'
-                              ? 'bg-blue-500/20 text-blue-400'
-                              : item.type === 'session_joined'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : item.type === 'session_joined'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : item.result === 'won'
                                 ? 'bg-emerald-500/20 text-emerald-400'
-                                : item.result === 'won'
-                                  ? 'bg-emerald-500/20 text-emerald-400'
-                                  : item.result === 'lost'
-                                    ? 'bg-red-500/20 text-red-400'
-                                    : 'bg-slate-500/20 text-slate-300'
+                                : item.result === 'lost'
+                                  ? 'bg-red-500/20 text-red-400'
+                                  : 'bg-slate-500/20 text-slate-300'
                             }`}
                         >
                           {item.type === 'signal' ? 'SIGNAL' : item.type === 'session_joined' ? 'JOINED' : 'TRADE'}
@@ -756,7 +952,10 @@ const UserTrading = () => {
 
                           {/* Join Button */}
                           <GlassButton
-                            onClick={() => handleAcceptSession(session.id)}
+                            onClick={() => handleAcceptSession(session.id, {
+                              default_tp: session.profit_threshold || session.default_tp || 10,
+                              default_sl: session.loss_threshold || session.default_sl || 5
+                            })}
                             className="w-full relative z-10"
                             disabled={!takeProfit || !stopLoss}
                             variant={isRecovery ? 'secondary' : 'primary'}
