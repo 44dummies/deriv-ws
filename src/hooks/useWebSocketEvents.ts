@@ -16,6 +16,11 @@ interface TradeUpdate {
     price?: number;
     side?: string;
     signal?: string;
+    contractId?: string;
+    payout?: number;
+    stake?: number;
+    digit?: number;
+    exitPrice?: number;
 }
 
 interface SignalUpdate {

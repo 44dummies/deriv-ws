@@ -1,11 +1,6 @@
-/**
- * User Trading Dashboard - Liquid Glass Renovation
- * Simple, high-contrast, text-based interface for users.
- */
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, BarChart2 } from 'lucide-react';
+import { Bell, DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, BarChart2, Zap, Clock, Target } from 'lucide-react';
 import { tradingApi } from '../trading/tradingApi';
 import { useSessionManagement } from '../hooks/useSessionManagement';
 import { useWebSocketEvents } from '../hooks/useWebSocketEvents';
@@ -20,6 +15,23 @@ import { GlassStatusBadge } from '../components/ui/glass/GlassStatusBadge';
 import { GlassMetricTile } from '../components/ui/glass/GlassMetricTile';
 import { GlassTable } from '../components/ui/glass/GlassTable';
 
+// Active trade state for Deriv-style visualization
+interface ActiveTrade {
+  id: string;
+  contractId?: string;
+  side: string;
+  digit: number;
+  stake: number;
+  market: string;
+  status: 'pending' | 'open' | 'won' | 'lost';
+  entryPrice?: number;
+  currentPrice?: number;
+  potentialPayout?: number;
+  ticksElapsed: number;
+  totalTicks: number;
+  startTime: Date;
+  profit?: number;
+}
 
 const UserTrading = () => {
 
@@ -37,9 +49,10 @@ const UserTrading = () => {
   const [stopLoss, setStopLoss] = useState('');
   const [sessionStatus, setSessionStatus] = useState('waiting');
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
+  const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
 
   // Real-time hooks
-  const { latestTrade } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
+  const { latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
 
   useEffect(() => {
     loadUserData();
@@ -47,25 +60,75 @@ const UserTrading = () => {
     loadActiveSession();
   }, []);
 
-  // Update trade history from real-time events
+  // Track active trade from signals
+  useEffect(() => {
+    if (activeSession && latestSignal) {
+      // New signal received - show pending trade
+      setActiveTrade({
+        id: `signal-${Date.now()}`,
+        side: latestSignal.side || 'OVER',
+        digit: latestSignal.digit || 0,
+        stake: 0.35,
+        market: latestSignal.market || 'R_100',
+        status: 'pending',
+        ticksElapsed: 0,
+        totalTicks: 5,
+        startTime: new Date()
+      });
+    }
+  }, [latestSignal, activeSession]);
+
+  // Update trade history and active trade from real-time events
   useEffect(() => {
     if (activeSession && latestTrade) {
       // Determine display values based on trade event
       const isWin = latestTrade.result === 'won';
       const isLoss = latestTrade.result === 'lost';
+      const isOpen = latestTrade.type === 'open';
       const side = latestTrade.side || latestTrade.signal || 'CALL';
 
-      const newTrade = {
-        id: Date.now(),
-        type: side.toUpperCase(),
-        symbol: latestTrade.market,
-        price: latestTrade.price,
-        profit: latestTrade.profit,
-        status: isWin ? 'WIN' : isLoss ? 'LOSS' : 'OPEN',
-        time: new Date().toISOString()
-      };
+      // Update active trade visualization
+      if (isOpen) {
+        setActiveTrade(prev => ({
+          ...prev,
+          id: latestTrade.contractId || prev?.id || `trade-${Date.now()}`,
+          contractId: latestTrade.contractId,
+          status: 'open',
+          entryPrice: latestTrade.price,
+          potentialPayout: latestTrade.payout,
+          stake: latestTrade.stake || 0.35,
+          side,
+          market: latestTrade.market || prev?.market || 'R_100',
+          digit: latestTrade.digit || prev?.digit || 0,
+          ticksElapsed: 1,
+          totalTicks: 5,
+          startTime: prev?.startTime || new Date()
+        } as ActiveTrade));
+      } else if (isWin || isLoss) {
+        // Trade completed - update and animate
+        setActiveTrade(prev => prev ? {
+          ...prev,
+          status: isWin ? 'won' : 'lost',
+          profit: latestTrade.profit,
+          ticksElapsed: 5,
+          currentPrice: latestTrade.exitPrice
+        } : null);
 
-      setTradeHistory(prev => [newTrade, ...prev].slice(0, 50));
+        // Clear active trade after animation delay
+        setTimeout(() => setActiveTrade(null), 3000);
+
+        // Add to history
+        const newTrade = {
+          id: Date.now(),
+          type: side.toUpperCase(),
+          symbol: latestTrade.market,
+          price: latestTrade.price,
+          profit: latestTrade.profit,
+          status: isWin ? 'WIN' : 'LOSS',
+          time: new Date().toISOString()
+        };
+        setTradeHistory(prev => [newTrade, ...prev].slice(0, 50));
+      }
     }
   }, [latestTrade, activeSession]);
 
@@ -197,6 +260,96 @@ const UserTrading = () => {
   return (
     <DashboardLayout isAdmin={false}>
       <div className="max-w-7xl mx-auto space-y-8">
+
+        {/* Live Trade Progress - Deriv Bot Style */}
+        {activeTrade && (
+          <GlassCard className={`relative overflow-hidden border-2 transition-all duration-500 ${activeTrade.status === 'won' ? 'border-emerald-500 bg-emerald-500/10' :
+              activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
+                activeTrade.status === 'open' ? 'border-blue-500 bg-blue-500/5' :
+                  'border-amber-500/50 bg-amber-500/5'
+            }`}>
+            {/* Animated background */}
+            <div className={`absolute inset-0 opacity-20 ${activeTrade.status === 'pending' ? 'animate-pulse bg-gradient-to-r from-amber-500/20 to-transparent' :
+                activeTrade.status === 'open' ? 'animate-pulse bg-gradient-to-r from-blue-500/20 to-transparent' :
+                  ''
+              }`} />
+
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-full ${activeTrade.status === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
+                      activeTrade.status === 'lost' ? 'bg-red-500/20 text-red-400' :
+                        activeTrade.status === 'open' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-amber-500/20 text-amber-400'
+                    }`}>
+                    {activeTrade.status === 'pending' ? <Clock size={24} className="animate-spin" /> :
+                      activeTrade.status === 'open' ? <Zap size={24} className="animate-pulse" /> :
+                        activeTrade.status === 'won' ? <CheckCircle size={24} /> :
+                          <XCircle size={24} />}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-white font-bold text-lg">
+                        {activeTrade.status === 'pending' ? 'Processing Signal...' :
+                          activeTrade.status === 'open' ? 'Trade Active' :
+                            activeTrade.status === 'won' ? 'Trade Won!' : 'Trade Lost'}
+                      </span>
+                      {activeTrade.contractId && (
+                        <span className="text-xs font-mono text-slate-500">#{activeTrade.contractId.slice(-8)}</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-400 flex items-center gap-2">
+                      <Target size={14} />
+                      <span>{activeTrade.side} {activeTrade.digit}</span>
+                      <span className="text-slate-600">•</span>
+                      <span>{activeTrade.market}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <div className="text-xs text-slate-500 uppercase tracking-wider">Stake</div>
+                  <div className="text-lg font-mono text-white">${activeTrade.stake.toFixed(2)}</div>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-slate-500 mb-1">
+                  <span>Progress</span>
+                  <span>{activeTrade.ticksElapsed}/{activeTrade.totalTicks} ticks</span>
+                </div>
+                <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${activeTrade.status === 'won' ? 'bg-emerald-500' :
+                        activeTrade.status === 'lost' ? 'bg-red-500' :
+                          'bg-blue-500'
+                      }`}
+                    style={{ width: `${(activeTrade.ticksElapsed / activeTrade.totalTicks) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Result Display */}
+              {(activeTrade.status === 'won' || activeTrade.status === 'lost') && activeTrade.profit !== undefined && (
+                <div className={`text-center py-3 rounded-lg ${activeTrade.status === 'won' ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                  }`}>
+                  <span className={`text-2xl font-bold font-mono ${activeTrade.status === 'won' ? 'text-emerald-400' : 'text-red-400'
+                    }`}>
+                    {activeTrade.profit >= 0 ? '+' : ''}${activeTrade.profit.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {activeTrade.status === 'open' && activeTrade.potentialPayout && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Potential Payout:</span>
+                  <span className="text-emerald-400 font-mono">${activeTrade.potentialPayout.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        )}
 
         {/* Top Status Bar */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

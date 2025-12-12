@@ -20,6 +20,7 @@ import NotificationsPage from './pages/admin/NotificationsPage';
 import UserDetailsPage from './pages/admin/UserDetailsPage';
 import TradingDashboard from './pages/admin/TradingDashboard';
 import SessionManagement from './pages/admin/SessionManagement';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
 
 // Legacy imports
 
@@ -67,6 +68,8 @@ function App(): React.ReactElement {
               <Route path="trading" element={<TradingDashboard />} />
               {/* Advanced Session Management */}
               <Route path="manage" element={<SessionManagement />} />
+              {/* Reports */}
+              <Route path="reports" element={<AdminReportsPage />} />
             </Route>
           </Route>
 
