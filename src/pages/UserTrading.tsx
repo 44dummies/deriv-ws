@@ -578,21 +578,21 @@ const UserTrading = () => {
                             <div className="bg-black/30 rounded-lg p-3 text-center">
                               <div className="text-xs text-slate-500 mb-1">Min Balance</div>
                               <div className="text-white font-bold text-sm">
-                                ${session.minimum_balance ?? session.min_balance ?? 5}
+                                ${session.minimum_balance || session.min_balance || 5}
                               </div>
                             </div>
                             <div className="bg-black/30 rounded-lg p-3 text-center">
                               <div className="text-xs text-slate-500 mb-1">Default TP</div>
                               <div className="text-emerald-400 font-bold text-sm flex items-center justify-center gap-1">
                                 <TrendingUp size={12} />
-                                ${session.profit_threshold ?? session.default_tp ?? 10}
+                                ${session.profit_threshold || session.default_tp || 10}
                               </div>
                             </div>
                             <div className="bg-black/30 rounded-lg p-3 text-center">
                               <div className="text-xs text-slate-500 mb-1">Default SL</div>
                               <div className="text-red-400 font-bold text-sm flex items-center justify-center gap-1">
                                 <TrendingDown size={12} />
-                                ${session.loss_threshold ?? session.default_sl ?? 5}
+                                ${session.loss_threshold || session.default_sl || 5}
                               </div>
                             </div>
                           </div>

@@ -1973,23 +1973,23 @@ const Dashboard = () => {
                                     style={{ backgroundColor: 'var(--accent-bg)', borderColor: 'var(--card-border)' }}
                                   >
                                     <div className="flex items-center justify-between mb-2">
-                                      <h4 className="font-medium">{sessionDetails.name}</h4>
+                                      <h4 className="font-medium">{sessionDetails.name || sessionDetails.session_name || 'Trading Session'}</h4>
                                       <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 capitalize">
-                                        {sessionDetails.type}
+                                        {sessionDetails.type || sessionDetails.session_type || 'day'}
                                       </span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
                                       <div>
                                         <span className="block text-xs">Min Balance</span>
-                                        <span style={{ color: 'var(--text-primary)' }}>${sessionDetails.min_balance}</span>
+                                        <span style={{ color: 'var(--text-primary)' }}>${sessionDetails.min_balance || sessionDetails.minimum_balance || 5}</span>
                                       </div>
                                       <div>
                                         <span className="block text-xs">Default TP</span>
-                                        <span className="text-green-400">${sessionDetails.default_tp}</span>
+                                        <span className="text-green-400">${sessionDetails.default_tp || sessionDetails.profit_threshold || 10}</span>
                                       </div>
                                       <div>
                                         <span className="block text-xs">Default SL</span>
-                                        <span className="text-red-400">${sessionDetails.default_sl}</span>
+                                        <span className="text-red-400">${sessionDetails.default_sl || sessionDetails.loss_threshold || 5}</span>
                                       </div>
                                     </div>
                                     <button
