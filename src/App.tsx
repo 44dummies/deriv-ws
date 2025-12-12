@@ -18,7 +18,7 @@ import SettingsPage from './pages/admin/SettingsPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
 import NotificationsPage from './pages/admin/NotificationsPage';
 import UserDetailsPage from './pages/admin/UserDetailsPage';
-import TradingDashboard from './pages/admin/TradingDashboard';
+// TradingDashboard removed per user request
 import SessionManagement from './pages/admin/SessionManagement';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 
@@ -64,8 +64,7 @@ function App(): React.ReactElement {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="logs" element={<LogsPage />} />
               <Route path="settings" element={<SettingsPage />} />
-              {/* New Pro Trading Dashboard */}
-              <Route path="trading" element={<TradingDashboard />} />
+              {/* Trading dashboard removed */}
               {/* Advanced Session Management */}
               <Route path="manage" element={<SessionManagement />} />
               {/* Reports */}
