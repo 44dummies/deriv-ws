@@ -511,21 +511,21 @@ const UserTrading = () => {
                         <div
                           key={session.id}
                           className={`bg-white/5 border rounded-2xl p-5 hover:bg-white/10 transition-all group relative overflow-hidden ${isRecovery
-                              ? 'border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]'
-                              : 'border-white/10'
+                            ? 'border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]'
+                            : 'border-white/10'
                             }`}
                         >
                           {/* Background gradient based on session type */}
                           <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity ${isRecovery
-                              ? 'bg-gradient-to-r from-purple-500/10 to-transparent'
-                              : 'bg-gradient-to-r from-emerald-500/5 to-transparent'
+                            ? 'bg-gradient-to-r from-purple-500/10 to-transparent'
+                            : 'bg-gradient-to-r from-emerald-500/5 to-transparent'
                             }`} />
 
                           {/* Header: Session Name + Type Badge */}
                           <div className="flex justify-between items-start mb-4 relative z-10">
                             <div className="flex-1">
                               <h4 className="font-bold text-white text-lg tracking-wide">
-                                {session.session_name || 'Trading Session'}
+                                {session.session_name || session.name || 'Trading Session'}
                               </h4>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className="text-xs text-slate-500">{marketName}</span>
@@ -534,20 +534,24 @@ const UserTrading = () => {
                                   {session.mode === 'real' ? '🟢 Real' : '🔵 Demo'}
                                 </span>
                               </div>
+                              {/* Session Description */}
+                              {session.description && (
+                                <p className="text-xs text-slate-400 mt-2 line-clamp-2">{session.description}</p>
+                              )}
                             </div>
 
                             {/* Session Type Badge */}
                             <span className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg border ${isRecovery
-                                ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-                                : sessionType === 'one_time'
-                                  ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                                  : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                              ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                              : sessionType === 'one_time'
+                                ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                                : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
                               }`}>
                               {isRecovery ? '♻️ Recovery' : sessionType === 'one_time' ? '⚡ One-Time' : '📅 Day'}
                             </span>
                           </div>
 
-                          {/* Stats Grid */}
+                          {/* Stats Grid - Show for running sessions */}
                           {isRunning && (
                             <div className="grid grid-cols-3 gap-3 mb-4 relative z-10">
                               <div className="bg-black/20 rounded-lg p-2 text-center">
@@ -569,32 +573,43 @@ const UserTrading = () => {
                             </div>
                           )}
 
-                          {/* Requirements Row */}
-                          <div className="flex items-center justify-between text-xs mb-4 relative z-10 py-2 px-3 bg-black/20 rounded-lg">
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <span className="text-slate-500">Min Balance: </span>
-                                <span className="text-white font-bold">${session.minimum_balance || session.min_balance || 5}</span>
-                              </div>
-                              <span className="text-slate-700">|</span>
-                              <div>
-                                <span className="text-slate-500">Default TP: </span>
-                                <span className="text-emerald-400 font-bold">${session.profit_threshold || session.default_tp || 10}</span>
-                              </div>
-                              <span className="text-slate-700">|</span>
-                              <div>
-                                <span className="text-slate-500">Default SL: </span>
-                                <span className="text-red-400 font-bold">${session.loss_threshold || session.default_sl || 5}</span>
+                          {/* Requirements Row - Always visible */}
+                          <div className="grid grid-cols-3 gap-2 mb-4 relative z-10">
+                            <div className="bg-black/30 rounded-lg p-3 text-center">
+                              <div className="text-xs text-slate-500 mb-1">Min Balance</div>
+                              <div className="text-white font-bold text-sm">
+                                ${session.minimum_balance ?? session.min_balance ?? 5}
                               </div>
                             </div>
+                            <div className="bg-black/30 rounded-lg p-3 text-center">
+                              <div className="text-xs text-slate-500 mb-1">Default TP</div>
+                              <div className="text-emerald-400 font-bold text-sm flex items-center justify-center gap-1">
+                                <TrendingUp size={12} />
+                                ${session.profit_threshold ?? session.default_tp ?? 10}
+                              </div>
+                            </div>
+                            <div className="bg-black/30 rounded-lg p-3 text-center">
+                              <div className="text-xs text-slate-500 mb-1">Default SL</div>
+                              <div className="text-red-400 font-bold text-sm flex items-center justify-center gap-1">
+                                <TrendingDown size={12} />
+                                ${session.loss_threshold ?? session.default_sl ?? 5}
+                              </div>
+                            </div>
+                          </div>
 
-                            {/* Status indicator */}
+                          {/* Status indicator */}
+                          <div className="flex items-center justify-between text-xs mb-4 relative z-10">
                             <div className="flex items-center gap-1">
                               <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
                               <span className={`font-bold ${isRunning ? 'text-emerald-400' : 'text-amber-400'}`}>
                                 {session.status?.toUpperCase() || 'PENDING'}
                               </span>
                             </div>
+                            {session.participant_count !== undefined && (
+                              <span className="text-slate-500">
+                                👥 {session.participant_count || 0} participants
+                              </span>
+                            )}
                           </div>
 
                           {/* Recovery Session Notice */}
@@ -611,11 +626,12 @@ const UserTrading = () => {
                             disabled={!takeProfit || !stopLoss}
                             variant={isRecovery ? 'secondary' : 'primary'}
                           >
+                            <CheckCircle size={16} className="mr-2" />
                             {!takeProfit || !stopLoss
                               ? 'Set TP/SL First'
                               : isRunning
-                                ? 'Join Live Session'
-                                : 'Join Session'}
+                                ? '✓ Accept Trading Session'
+                                : '✓ Accept Trading Session'}
                           </GlassButton>
 
                           {(!takeProfit || !stopLoss) && (
