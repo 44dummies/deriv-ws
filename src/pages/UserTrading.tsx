@@ -236,6 +236,7 @@ const UserTrading = () => {
         setTakeProfit(session.user_tp || '');
         setStopLoss(session.user_sl || '');
         setSessionStatus(session.status);
+        setShowLiveFeed(true);  // Show live feed when user has active session
         // Trade history will populate via websocket events
       }
     } catch (error) {
@@ -307,6 +308,24 @@ const UserTrading = () => {
     }
   };
 
+  const handleLeaveSession = async () => {
+    if (!activeSession) return;
+    if (!confirm('Are you sure you want to leave this session?')) return;
+
+    try {
+      await tradingApi.leaveSession(activeSession.id);
+      setActiveSession(null);
+      setShowLiveFeed(false);
+      setActivityLog([]);
+      setTradeHistory([]);
+      await loadAvailableSessions();
+      alert('Successfully left the session');
+    } catch (error) {
+      console.error('Failed to leave session:', error);
+      alert('Failed to leave session');
+    }
+  };
+
   if (loading) {
     return <div className="flex h-screen items-center justify-center bg-[#0a0a0f] text-white">Loading...</div>;
   }
@@ -325,7 +344,7 @@ const UserTrading = () => {
                   <div className="absolute inset-0 w-4 h-4 bg-emerald-500 rounded-full animate-ping opacity-75" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{activeSession.session_name}</h2>
+                  <h2 className="text-2xl font-bold text-white">{activeSession.session_name || activeSession.name || 'Trading Session'}</h2>
                   <p className="text-sm text-emerald-400 font-mono">LIVE SESSION ACTIVE</p>
                 </div>
               </div>
@@ -374,8 +393,8 @@ const UserTrading = () => {
           {/* Active Trade Progress */}
           {activeTrade && (
             <GlassCard className={`border-2 ${activeTrade.status === 'won' ? 'border-emerald-500 bg-emerald-500/10' :
-                activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
-                  'border-blue-500 bg-blue-500/5 animate-pulse'
+              activeTrade.status === 'lost' ? 'border-red-500 bg-red-500/10' :
+                'border-blue-500 bg-blue-500/5 animate-pulse'
               }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -387,7 +406,7 @@ const UserTrading = () => {
                 </div>
                 <div className="text-right">
                   <div className={`text-2xl font-bold font-mono ${activeTrade.status === 'won' ? 'text-emerald-400' :
-                      activeTrade.status === 'lost' ? 'text-red-400' : 'text-blue-400'
+                    activeTrade.status === 'lost' ? 'text-red-400' : 'text-blue-400'
                     }`}>
                     {activeTrade.status === 'won' ? '+' : activeTrade.status === 'lost' ? '-' : ''}
                     ${activeTrade.profit?.toFixed(2) || activeTrade.stake?.toFixed(2) || '0.35'}
@@ -440,18 +459,18 @@ const UserTrading = () => {
                   <div
                     key={item.id}
                     className={`p-4 rounded-lg border flex items-center justify-between transition-all ${item.type === 'signal' ? 'bg-blue-500/10 border-blue-500/30' :
-                        item.type === 'session_joined' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                          item.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                            item.result === 'lost' ? 'bg-red-500/10 border-red-500/30' :
-                              'bg-white/5 border-white/10'
+                      item.type === 'session_joined' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                        item.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/30' :
+                          item.result === 'lost' ? 'bg-red-500/10 border-red-500/30' :
+                            'bg-white/5 border-white/10'
                       }`}
                   >
                     <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${item.type === 'signal' ? 'bg-blue-500/20 text-blue-400' :
-                          item.type === 'session_joined' ? 'bg-emerald-500/20 text-emerald-400' :
-                            item.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
-                              item.result === 'lost' ? 'bg-red-500/20 text-red-400' :
-                                'bg-slate-500/20 text-slate-300'
+                        item.type === 'session_joined' ? 'bg-emerald-500/20 text-emerald-400' :
+                          item.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
+                            item.result === 'lost' ? 'bg-red-500/20 text-red-400' :
+                              'bg-slate-500/20 text-slate-300'
                         }`}>
                         {item.type === 'signal' ? 'SIGNAL' : item.type === 'session_joined' ? 'JOINED' : 'TRADE'}
                       </span>
@@ -995,7 +1014,7 @@ const UserTrading = () => {
                     </div>
                   </div>
                   <span className="text-sm font-medium text-slate-300 bg-white/5 px-3 py-1 rounded-lg border border-white/10">
-                    {activeSession.session_name}
+                    {activeSession.session_name || activeSession.name || 'Trading Session'}
                   </span>
                 </div>
 

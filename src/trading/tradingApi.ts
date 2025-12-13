@@ -119,10 +119,30 @@ export async function getSession(sessionId) {
   return apiRequest(`/api/trading/sessions/${sessionId}`);
 }
 
-// Get user's active session
+// Get user's active session with their TP/SL
 export async function getMyActiveSession() {
-  const sessions = await getSessions({ status: 'active' });
-  return sessions && sessions.length > 0 ? sessions[0] : null;
+  try {
+    const result = await apiRequest('/api/user/sessions/status');
+    if (result && result.status !== 'none' && result.session) {
+      // Normalize field names for frontend compatibility
+      return {
+        id: result.session.id,
+        session_name: result.session.name,
+        name: result.session.name,
+        type: result.session.type,
+        status: result.session.sessionStatus || result.status,
+        user_tp: result.tp,
+        user_sl: result.sl,
+        current_pnl: result.currentPnl,
+        initial_balance: result.initialBalance,
+        accepted_at: result.acceptedAt
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching active session:', error);
+    return null;
+  }
 }
 
 // Accept a session with TP/SL
@@ -138,6 +158,14 @@ export async function updateUserTPSL(data: { sessionId: string; takeProfit: numb
   return apiRequest(`/api/trading/sessions/${data.sessionId}/tpsl`, {
     method: 'PUT',
     body: JSON.stringify({ takeProfit: data.takeProfit, stopLoss: data.stopLoss })
+  });
+}
+
+// Leave a session
+export async function leaveSession(sessionId: string) {
+  return apiRequest(`/api/user/sessions/leave`, {
+    method: 'POST',
+    body: JSON.stringify({ sessionId })
   });
 }
 
@@ -357,6 +385,7 @@ export const tradingApi = {
   getSession,
   getMyActiveSession,
   acceptSession,
+  leaveSession,
   updateUserTPSL,
   createSession,
   updateSession,

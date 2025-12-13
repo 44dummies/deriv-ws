@@ -52,6 +52,11 @@ const AVAILABLE_MARKETS = [
   { value: 'R_50', label: 'Volatility 50 Index' },
   { value: 'R_75', label: 'Volatility 75 Index' },
   { value: 'R_100', label: 'Volatility 100 Index' },
+  { value: 'JD10', label: 'Jump 10 Index' },
+  { value: 'JD25', label: 'Jump 25 Index' },
+  { value: 'JD50', label: 'Jump 50 Index' },
+  { value: 'JD75', label: 'Jump 75 Index' },
+  { value: 'JD100', label: 'Jump 100 Index' },
 ];
 
 export default function SessionsPage() {

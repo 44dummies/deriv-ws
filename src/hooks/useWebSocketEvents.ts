@@ -9,6 +9,7 @@ interface TickUpdate {
 
 interface TradeUpdate {
     type: string; // 'open' or 'close'
+    sessionId?: string;  // Session ID for filtering
     market: string;
     profit?: number;
     result?: string;
@@ -24,6 +25,7 @@ interface TradeUpdate {
 }
 
 interface SignalUpdate {
+    sessionId?: string;  // Session ID for filtering
     market: string;
     side: string;
     digit: number;
@@ -60,10 +62,14 @@ export const useWebSocketEvents = (sessionId: string | null, markets: string[] =
         };
 
         const handleTrade = (data: any) => {
+            // Filter by session ID to ignore events from other sessions
+            if (data.sessionId && data.sessionId !== sessionId) return;
             setLatestTrade(data);
         };
 
         const handleSignal = (data: any) => {
+            // Filter by session ID if present
+            if (data.sessionId && data.sessionId !== sessionId) return;
             setLatestSignal(data);
         };
 
