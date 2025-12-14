@@ -337,7 +337,7 @@ export default function SessionsPage() {
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Session</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Mode</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Market</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Min Bal</th>
+                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Stake</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">TP/SL</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Participants</th>
                   <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Status</th>
@@ -642,18 +642,18 @@ export default function SessionsPage() {
             </select>
           </div>
 
-          {/* Min Balance */}
+          {/* Stake (Min Balance) */}
           <div>
-            <label className="block text-sm text-slate-400 mb-2">Minimum Balance ($)</label>
+            <label className="block text-sm text-slate-400 mb-2">Trade Stake ($)</label>
             <input
               type="number"
               step="0.5"
-              min="1"
+              min="0.35"
               value={newSession.min_balance}
-              onChange={(e) => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) || 5 })}
+              onChange={(e) => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) || 0.35 })}
               className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
             />
-            <p className="text-xs text-slate-500 mt-1">Users below this balance will be asked to wait for a lower session</p>
+            <p className="text-xs text-slate-500 mt-1">Amount per trade. Also used as minimum balance requirement.</p>
           </div>
 
           {/* TP and SL */}
