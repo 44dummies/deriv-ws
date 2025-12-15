@@ -139,14 +139,29 @@ const UserTrading = () => {
 
   // Sync with real-time session updates
   useEffect(() => {
-    if (activeSession && sessions.length > 0) {
-      const updated = sessions.find(s => s.id === activeSession.id);
-      if (updated) {
-        setActiveSession(prev => ({ ...prev, ...updated }));
-        setSessionStatus(updated.status === 'running' ? 'active' : updated.status);
+    const handleSessionUpdate = (data: any) => {
+      const session = data.session || data;
+      // If we don't have an active session, take this one if it's running
+      // If we do have one, update it if IDs match
+      if (!activeSession && session.status === 'running') {
+        setActiveSession(session);
+        setSessionStatus('active');
+      } else if (activeSession && session.id === activeSession.id) {
+        setActiveSession((prev: any) => ({ ...prev, ...session }));
+        setSessionStatus(session.status === 'running' ? 'active' : session.status);
       }
-    }
-  }, [sessions, activeSession?.id]);
+    };
+
+    realtimeSocket.on('session_update', handleSessionUpdate);
+    realtimeSocket.on('session_status', handleSessionUpdate);
+    realtimeSocket.on('session_started', handleSessionUpdate);
+
+    return () => {
+      realtimeSocket.off('session_update', handleSessionUpdate);
+      realtimeSocket.off('session_status', handleSessionUpdate);
+      realtimeSocket.off('session_started', handleSessionUpdate);
+    };
+  }, [activeSession]);
 
   const loadUserData = async () => {
     try {
@@ -324,17 +339,17 @@ const UserTrading = () => {
         {/* 2. Live Signal / Active Trade - Hero Section */}
         {activeTrade ? (
           <GlassCard className={`relative overflow-hidden border-2 transition-all duration-300 ${activeTrade.status === 'pending' ? 'border-amber-500/50 bg-amber-500/5' :
-              activeTrade.status === 'open' ? 'border-blue-500/50 bg-blue-500/5 shadow-[0_0_50px_rgba(59,130,246,0.1)]' :
-                activeTrade.status === 'won' ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_50px_rgba(16,185,129,0.15)]' :
-                  'border-brand-red/50 bg-brand-red/10'
+            activeTrade.status === 'open' ? 'border-blue-500/50 bg-blue-500/5 shadow-[0_0_50px_rgba(59,130,246,0.1)]' :
+              activeTrade.status === 'won' ? 'border-emerald-500/50 bg-emerald-500/10 shadow-[0_0_50px_rgba(16,185,129,0.15)]' :
+                'border-brand-red/50 bg-brand-red/10'
             }`}>
             {/* Active Trade Visualization */}
             <div className="flex items-center justify-between relative z-10">
               <div className="flex items-center gap-6">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-3xl font-bold ${activeTrade.status === 'open' ? 'bg-blue-500 text-white animate-pulse' :
-                    activeTrade.status === 'won' ? 'bg-emerald-500 text-white' :
-                      activeTrade.status === 'lost' ? 'bg-brand-red text-white' :
-                        'bg-amber-500 text-black'
+                  activeTrade.status === 'won' ? 'bg-emerald-500 text-white' :
+                    activeTrade.status === 'lost' ? 'bg-brand-red text-white' :
+                      'bg-amber-500 text-black'
                   }`}>
                   {activeTrade.digit}
                 </div>
@@ -352,7 +367,7 @@ const UserTrading = () => {
               <div className="text-right">
                 <div className="text-sm text-gray-400 font-mono tracking-wider uppercase mb-1">STAKE: ${activeTrade.stake.toFixed(2)}</div>
                 <div className={`text-4xl font-mono font-bold ${activeTrade.status === 'won' ? 'text-emerald-400' :
-                    activeTrade.status === 'lost' ? 'text-brand-red' : 'text-white'
+                  activeTrade.status === 'lost' ? 'text-brand-red' : 'text-white'
                   }`}>
                   {activeTrade.status === 'won' ? '+' : activeTrade.status === 'lost' ? '-' : ''}
                   ${activeTrade.profit ? Math.abs(activeTrade.profit).toFixed(2) : activeTrade.potentialPayout?.toFixed(2) || '...'}

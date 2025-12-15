@@ -6,6 +6,7 @@ import websocketService from '../services/websocketService';
 import apiClient from '../services/apiClient';
 import supabaseService from '../services/supabaseService';
 import { tradingApi } from '../trading/tradingApi';
+import { realtimeSocket } from '../services/realtimeSocket';
 
 export const useDashboardData = () => {
     const navigate = useNavigate();
@@ -13,6 +14,36 @@ export const useDashboardData = () => {
     const [userInfo, setUserInfo] = useState<any>(null);
     const [derivWsConnected, setDerivWsConnected] = useState(false);
     const isInitialized = useRef(false);
+
+    // Listen for realtime session updates
+    useEffect(() => {
+        const handleSessionUpdate = (data: any) => {
+            console.log('Realtime session update:', data);
+
+            // Normalize data if needed
+            const session = data.session || data;
+
+            setDashboardState(prev => ({
+                ...prev,
+                activeSession: session
+            }));
+        };
+
+        realtimeSocket.on('session_update', handleSessionUpdate);
+        realtimeSocket.on('session_status', handleSessionUpdate);
+        realtimeSocket.on('trade_update', (data: any) => {
+            // Also update session stats on trade if provided
+            if (data.session) {
+                handleSessionUpdate(data.session);
+            }
+        });
+
+        return () => {
+            realtimeSocket.off('session_update', handleSessionUpdate);
+            realtimeSocket.off('session_status', handleSessionUpdate);
+            realtimeSocket.off('trade_update', handleSessionUpdate);
+        };
+    }, []);
 
     const initializeDashboard = useCallback(async () => {
         if (isInitialized.current) return;
