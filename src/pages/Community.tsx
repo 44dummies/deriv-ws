@@ -99,7 +99,10 @@ const Community = () => {
 
   const setupSocketListeners = () => {
     realtimeSocket.on('community:post:new', (post) => {
-      setPosts(prev => [transformPost(post), ...prev]);
+      setPosts(prev => {
+        if (prev.find(p => p.id === post.id)) return prev;
+        return [transformPost(post), ...prev];
+      });
     });
 
     realtimeSocket.on('community:post:like', ({ postId, likeCount, liked, userId }) => {

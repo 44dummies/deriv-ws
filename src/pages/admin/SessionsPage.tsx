@@ -57,11 +57,45 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-
   // Selection & Details
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const selectedSession = useMemo(() => sessions.find(s => s.id === selectedSessionId), [sessions, selectedSessionId]);
+
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Participants View
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [activeRightPanel, setActiveRightPanel] = useState<'logs' | 'participants'>('logs');
+
+  const fetchParticipants = async (sessionId: string) => {
+    setParticipantsLoading(true);
+    try {
+      const response = await tradingApi.getSessionParticipants(sessionId);
+      setParticipants(response.participants || []);
+    } catch (err) {
+      console.error('Failed to load participants', err);
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
+
+  const handleKickParticipant = async (userId: string) => {
+    if (!selectedSessionId || !confirm('Kick this user from the session?')) return;
+    try {
+      await tradingApi.kickParticipant(selectedSessionId, userId, 'Admin kicked');
+      toast.success('User kicked');
+      fetchParticipants(selectedSessionId);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to kick user');
+    }
+  };
+
+  useEffect(() => {
+    if (selectedSessionId && activeRightPanel === 'participants') {
+      fetchParticipants(selectedSessionId);
+    }
+  }, [selectedSessionId, activeRightPanel]);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState<'all' | 'running' | 'completed'>('all');
@@ -348,22 +382,83 @@ export default function SessionsPage() {
               </GlassCard>
 
               <GlassCard className="flex-1 flex flex-col p-0 overflow-hidden">
-                <div className="p-3 border-b border-white/5 bg-white/5">
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-                    <Terminal size={12} /> Session Logs
-                  </h3>
+                <div className="p-3 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setActiveRightPanel('logs')}
+                      className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 px-2 py-1 rounded transition-colors ${activeRightPanel === 'logs' ? 'text-white bg-white/10' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      <Terminal size={12} /> Logs
+                    </button>
+                    <button
+                      onClick={() => setActiveRightPanel('participants')}
+                      className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 px-2 py-1 rounded transition-colors ${activeRightPanel === 'participants' ? 'text-white bg-white/10' : 'text-gray-400 hover:text-white'}`}
+                    >
+                      <Users size={12} /> Users
+                    </button>
+                  </div>
+                  {activeRightPanel === 'participants' && (
+                    <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full font-mono">
+                      {participants.length}
+                    </span>
+                  )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-3 font-mono text-[10px] space-y-2 text-gray-400 bg-black/20">
-                  {latestTrade ? (
-                    <div className="flex gap-2 text-white">
-                      <span className="text-gray-600">[{new Date().toLocaleTimeString()}]</span>
-                      <span>
-                        <span className={latestTrade.type === 'CHECK' ? 'text-blue-400' : 'text-emerald-400'}>{latestTrade.type}</span>
-                        {' '}{latestTrade.market} @ {latestTrade.price}
-                      </span>
+
+                <div className="flex-1 overflow-y-auto font-mono text-[10px] bg-black/20 relative">
+                  {activeRightPanel === 'logs' ? (
+                    <div className="p-3 space-y-2 text-gray-400">
+                      {latestTrade ? (
+                        <div className="flex gap-2 text-white">
+                          <span className="text-gray-600">[{new Date().toLocaleTimeString()}]</span>
+                          <span>
+                            <span className={latestTrade.type === 'CHECK' ? 'text-blue-400' : 'text-emerald-400'}>{latestTrade.type}</span>
+                            {' '}{latestTrade.market} @ {latestTrade.price}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-gray-600 italic p-3">System initialized. Waiting for events...</div>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-gray-600 italic">System initialized. Waiting for events...</div>
+                    <div className="divide-y divide-white/5">
+                      {participantsLoading ? (
+                        <div className="p-4 text-center text-gray-500">Loading participants...</div>
+                      ) : participants.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">No active participants</div>
+                      ) : (
+                        participants.map((p) => (
+                          <div key={p.id} className="p-3 hover:bg-white/5 transition-colors group">
+                            <div className="flex justify-between items-start mb-1">
+                              <div>
+                                <div className="text-white font-bold">{p.user_profiles?.fullname || 'Unknown User'}</div>
+                                <div className="text-gray-500">{p.user_profiles?.deriv_id}</div>
+                              </div>
+                              <div className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${p.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                {p.status}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center mt-2">
+                              <div className={p.current_pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                                {p.current_pnl >= 0 ? '+' : ''}${p.current_pnl?.toFixed(2)}
+                              </div>
+                              {p.status === 'active' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleKickParticipant(p.user_id);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/10 text-red-400 p-1.5 rounded hover:bg-red-500/20"
+                                  title="Remove from session"
+                                >
+                                  <Trash2 size={10} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   )}
                 </div>
               </GlassCard>
