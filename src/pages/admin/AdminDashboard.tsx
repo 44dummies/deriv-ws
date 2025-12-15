@@ -499,7 +499,7 @@ const AdminDashboard: React.FC = () => {
                                 <span className="text-xs font-bold text-slate-300">{market}</span>
                                 <div className={`flex items-center gap-1 text-sm font-bold ${stat.side === 'call' ? 'text-emerald-400' : 'text-red-400'}`}>
                                     {stat.side === 'call' ? <TrendingUp size={14} /> : <TrendingUp className="rotate-180" size={14} />}
-                                    {stat.side.toUpperCase()}
+                                    {stat.side?.toUpperCase() || 'UNKNOWN'}
                                 </div>
                                 <span className="text-xs text-slate-400">{(stat.confidence * 100).toFixed(0)}%</span>
                             </div>

@@ -9,6 +9,7 @@ import { GlassButton } from '../ui/glass/GlassButton';
 import { Play, Zap, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { tradingApi } from '../../trading/tradingApi';
+import { CONFIG } from '../../config/constants';
 
 export const OverviewPanel: React.FC = () => {
     const { isLoading, userInfo, sessions, activeSession, refresh } = useDashboardData();
@@ -19,8 +20,8 @@ export const OverviewPanel: React.FC = () => {
             await tradingApi.acceptSession({
                 sessionId,
                 accountId: userInfo?.id,
-                takeProfit: 10,
-                stopLoss: 5
+                takeProfit: CONFIG.TRADING.DEFAULT_TP,
+                stopLoss: CONFIG.TRADING.DEFAULT_SL
             });
             toast.success('Joined session successfully!');
             navigate('/user/dashboard?tab=trading');
@@ -130,6 +131,7 @@ export const OverviewPanel: React.FC = () => {
                                 key={session.id}
                                 session={session}
                                 onJoin={handleJoinSession}
+                                isActive={activeSession && activeSession.id === session.id}
                             />
                         ))}
                     </div>

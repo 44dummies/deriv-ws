@@ -16,8 +16,7 @@ import {
 } from '../types/session';
 import { tradingApi } from '../trading/tradingApi';
 import { SessionStatusManager } from '../services/SessionStatusManager';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+// Removed unused API_URL, using tradingApi instead
 
 interface UseSessionManagementReturn {
     sessions: ManagedSession[];

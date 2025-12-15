@@ -17,6 +17,8 @@ export const CONFIG = {
         DEFAULT_ASSET_TYPE: 'digital',
         DEFAULT_DURATION: 5,
         DEFAULT_DURATION_UNIT: 't', // ticks
+        DEFAULT_TP: 10,
+        DEFAULT_SL: 5,
         MARKET_TIERS: ['R_100', 'R_75', 'R_50', 'R_25'] as const,
     },
 

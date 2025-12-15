@@ -1,4 +1,6 @@
+
 import { useState, useEffect } from 'react';
+import { CONFIG } from '../config/constants';
 
 interface Tick {
     epoch: number;
@@ -22,7 +24,7 @@ export const useSessionTicks = (sessionId: string | null) => {
             setError(null);
             try {
                 const token = sessionStorage.getItem('accessToken');
-                const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001/api'}/trading/sessions/${sessionId}/ticks`, {
+                const response = await fetch(`${CONFIG.API_URL}/trading/sessions/${sessionId}/ticks`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

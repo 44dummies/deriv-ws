@@ -4,7 +4,7 @@ import { Play, Pause, Square, TrendingUp, TrendingDown, Clock, Activity } from '
 import { ManagedSession } from '../../types/session';
 
 interface SessionCardProps {
-    session: any; // Using any temporarily for rapid protoptyping, ideally ManagedSession
+    session: Partial<ManagedSession>;
     onJoin?: (id: string) => void;
     onLeave?: (id: string) => void;
     isActive?: boolean;
