@@ -89,11 +89,10 @@ const Login: React.FC = () => {
 
             {/* Liquid Background - Optimized for Mobile */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-[#ff3355]/25 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
-                <div className="absolute top-0 right-1/4 w-[250px] h-[250px] md:w-[400px] md:h-[400px] bg-[#3b82f6]/25 rounded-full mix-blend-screen filter blur-[100px] animate-blob" style={{ animationDelay: '2s' }} />
-                <div className="absolute -bottom-32 left-1/3 w-[300px] h-[300px] md:w-[500px] md:h-[500px] bg-[#a855f7]/20 rounded-full mix-blend-screen filter blur-[120px] animate-blob" style={{ animationDelay: '4s' }} />
-                <div className="hidden md:block absolute top-1/2 right-0 w-[300px] h-[300px] bg-[#10b981]/15 rounded-full mix-blend-screen filter blur-[80px] animate-blob" style={{ animationDelay: '3s' }} />
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03]" />
+                <div className="absolute -top-[10%] -left-[10%] w-[80vw] h-[80vw] max-w-[500px] max-h-[500px] bg-[#ff3355]/30 liquid-bg-blob" />
+                <div className="absolute top-[20%] -right-[10%] w-[70vw] h-[70vw] max-w-[400px] max-h-[400px] bg-[#3b82f6]/30 liquid-bg-blob" style={{ animationDelay: '-5s', animationDuration: '12s' }} />
+                <div className="absolute -bottom-[10%] left-[10%] w-[90vw] h-[90vw] max-w-[600px] max-h-[600px] bg-[#a855f7]/25 liquid-bg-blob" style={{ animationDelay: '-2s', animationDuration: '15s' }} />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04]" />
             </div>
 
             {/* Particles - Desktop Only */}
@@ -215,19 +214,14 @@ const Login: React.FC = () => {
                         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-2 sm:pt-4">
                             <button
                                 onClick={handleLogin}
-                                className="group relative px-6 sm:px-8 py-4 rounded-2xl font-semibold text-white shadow-2xl shadow-[#ff3355]/30 transition-all hover:scale-[1.02] hover:shadow-[#ff3355]/40 active:scale-[0.98] min-h-[52px] sm:min-h-[56px]"
+                                className="group relative w-full sm:w-auto px-8 sm:px-10 py-5 sm:py-6 rounded-2xl font-bold text-white shadow-2xl shadow-[#ff3355]/40 transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[60px] liquid-button overflow-hidden"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355] to-[#ff8042] rounded-2xl" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl" />
-                                <span className="relative flex items-center justify-center gap-3 text-base sm:text-base">
-                                    <Shield size={20} className="sm:w-[22px] sm:h-[22px]" />
-                                    Connect Deriv Account
-                                    <ArrowRight size={18} className="sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355] to-[#ff8042] z-0" />
+                                <span className="relative z-10 flex items-center justify-center gap-3 text-lg">
+                                    <Shield size={22} className="text-white" />
+                                    <span>Connect Deriv Account</span>
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </span>
-                            </button>
-                            <button className="px-6 sm:px-8 py-4 rounded-2xl glass-card hover:bg-white/5 transition-all font-medium flex items-center justify-center gap-2 border border-white/10 hover:border-white/20 min-h-[52px] sm:min-h-[56px] text-base sm:text-base">
-                                <Zap size={20} className="text-[#ff3355]" />
-                                View Demo
                             </button>
                         </div>
 

@@ -14,6 +14,8 @@ import { GlassButton } from '../components/ui/glass/GlassButton';
 import { GlassStatusBadge } from '../components/ui/glass/GlassStatusBadge';
 import { GlassMetricTile } from '../components/ui/glass/GlassMetricTile';
 import { GlassTable } from '../components/ui/glass/GlassTable';
+import LiveSessionFeed from '../components/trading/LiveSessionFeed';
+import { realtimeSocket } from '../services/realtimeSocket';
 
 // Active trade state for Deriv-style visualization
 interface ActiveTrade {
@@ -54,7 +56,7 @@ const UserTrading = () => {
   const [showLiveFeed, setShowLiveFeed] = useState(false);
 
   // Real-time hooks
-  const { latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
+  const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
 
   useEffect(() => {
     loadUserData();
@@ -330,6 +332,9 @@ const UserTrading = () => {
     return <div className="flex h-screen items-center justify-center bg-[#0a0a0f] text-white">Loading...</div>;
   }
 
+  // Get the current market for the session
+  const sessionMarket = activeSession?.volatility_index || activeSession?.markets?.[0] || 'R_100';
+
   // FULL-SCREEN LIVE FEED VIEW - When user has active session
   if (activeSession && showLiveFeed) {
     return (
@@ -369,7 +374,7 @@ const UserTrading = () => {
           </GlassCard>
 
           {/* Session Stats */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <GlassCard className="text-center">
               <div className="text-3xl font-bold text-white font-mono">{activeSession.total_trades || 0}</div>
               <div className="text-xs text-slate-500 uppercase">Total Trades</div>
@@ -425,83 +430,18 @@ const UserTrading = () => {
             </GlassCard>
           )}
 
-          {/* Live Activity Feed - Main Focus */}
-          <GlassCard className="border-l-4 border-l-emerald-500 flex-1">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-full">
-                  <Radio className="text-emerald-400 animate-pulse" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">Live Activity Feed</h3>
-                  <p className="text-sm text-slate-500">Real-time trade signals and execution</p>
-                </div>
-              </div>
-              {activityLog.length > 0 && (
-                <button
-                  onClick={() => setActivityLog([])}
-                  className="text-sm text-slate-500 hover:text-white transition-colors"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            <div className="max-h-[400px] overflow-y-auto space-y-3 custom-scrollbar pr-2">
-              {activityLog.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-500">
-                  <Activity size={48} className="mb-4 opacity-50" />
-                  <p className="text-lg">Waiting for trading activity...</p>
-                  <p className="text-sm mt-2">Trades and signals will appear here in real-time</p>
-                </div>
-              ) : (
-                activityLog.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`p-4 rounded-lg border flex items-center justify-between transition-all ${item.type === 'signal' ? 'bg-blue-500/10 border-blue-500/30' :
-                      item.type === 'session_joined' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                        item.result === 'won' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                          item.result === 'lost' ? 'bg-red-500/10 border-red-500/30' :
-                            'bg-white/5 border-white/10'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${item.type === 'signal' ? 'bg-blue-500/20 text-blue-400' :
-                        item.type === 'session_joined' ? 'bg-emerald-500/20 text-emerald-400' :
-                          item.result === 'won' ? 'bg-emerald-500/20 text-emerald-400' :
-                            item.result === 'lost' ? 'bg-red-500/20 text-red-400' :
-                              'bg-slate-500/20 text-slate-300'
-                        }`}>
-                        {item.type === 'signal' ? 'SIGNAL' : item.type === 'session_joined' ? 'JOINED' : 'TRADE'}
-                      </span>
-                      <div>
-                        <div className="text-white font-medium">
-                          {item.side && `${item.side} ${item.digit !== undefined ? item.digit : ''}`}
-                          {item.message && item.message}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {item.market && `${item.market} • `}
-                          {new Date(item.timestamp).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {item.profit !== undefined && (
-                        <span className={`text-lg font-mono font-bold ${item.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {item.profit >= 0 ? '+' : ''}${item.profit.toFixed(2)}
-                        </span>
-                      )}
-                      {item.confidence !== undefined && (
-                        <span className="text-sm font-mono text-blue-300">
-                          {(item.confidence * 100).toFixed(0)}% conf
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </GlassCard>
+          {/* Enhanced Live Session Feed Component */}
+          <LiveSessionFeed
+            sessionId={activeSession.id}
+            sessionName={activeSession.session_name || activeSession.name || 'Trading Session'}
+            market={sessionMarket}
+            latestTick={latestTick}
+            latestSignal={latestSignal}
+            latestTrade={latestTrade}
+            isConnected={realtimeSocket.isConnected()}
+            activityLog={activityLog}
+            onClearLog={() => setActivityLog([])}
+          />
         </div>
       </DashboardLayout>
     );
