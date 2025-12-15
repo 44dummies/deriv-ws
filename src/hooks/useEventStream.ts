@@ -199,8 +199,17 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
         }
 
         // Include token in URL since EventSource can't send headers
-        const token = sessionStorage.getItem('accessToken') || '';
-        const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+        const token = sessionStorage.getItem('accessToken');
+
+        // ADMIN STREAM REQUIRES AUTH
+        if (!token) {
+            console.log('[AdminEventStream] No access token found, skipping connection');
+            setIsConnected(false);
+            setError(new Error('Authentication required'));
+            return;
+        }
+
+        const tokenParam = `?token=${encodeURIComponent(token)}`;
         const url = `${CONFIG.SERVER_URL}/api/events/admin-stream${tokenParam}`;
         const eventSource = new EventSource(url, { withCredentials: true });
         eventSourceRef.current = eventSource;
@@ -212,7 +221,19 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
         };
 
         eventSource.onerror = () => {
+            eventSource.close(); // Close immediately to stop browser internal retries
             setIsConnected(false);
+
+            // Check if we still have a token before retrying
+            const currentToken = sessionStorage.getItem('accessToken');
+            if (!currentToken) {
+                console.log('[AdminEventStream] Token lost, stopping retry loop');
+                setError(new Error('Session expired'));
+                options.onDisconnected?.();
+                return;
+            }
+
+            console.error('[AdminEventStream] Connection failed, retrying in 5s...');
             setError(new Error('Admin stream connection failed'));
             options.onDisconnected?.();
 
