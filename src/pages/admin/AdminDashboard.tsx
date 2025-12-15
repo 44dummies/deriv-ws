@@ -108,24 +108,27 @@ const AdminDashboard: React.FC = () => {
 
     const loadDashboard = useCallback(async () => {
         try {
-            const userInfoStr = sessionStorage.getItem('userInfo');
-            if (userInfoStr) {
-                const userInfo = JSON.parse(userInfoStr);
-                setBalances({
-                    real: userInfo.real_balance || userInfo.balance || 0,
-                    demo: userInfo.demo_balance || 0
-                });
-            }
-
-            const [sessionsRes, botRes, statsRes] = await Promise.all([
+            // Fetch accounts to get real balance
+            const [sessionsRes, botRes, statsRes, accountsRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
-                tradingApi.getStats()
+                tradingApi.getStats(),
+                tradingApi.getAccounts() // Fetch accounts
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
+
+            // Calculate balances from accounts
+            const accounts = accountsRes?.data || [];
+            const realAccount = accounts.find((a: any) => a.accountType === 'real' || !a.accountType); // Default to real if undefined
+            const demoAccount = accounts.find((a: any) => a.accountType === 'demo' || a.accountType === 'virtual');
+
+            setBalances({
+                real: realAccount?.balance || 0,
+                demo: demoAccount?.balance || 0
+            });
 
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
@@ -133,7 +136,7 @@ const AdminDashboard: React.FC = () => {
                 toast.error('Admin access required');
                 navigate('/user/dashboard');
             } else if (error.status === 401 || error.message === 'Session expired') {
-                navigate('/auth/login');
+                // navigate('/auth/login'); // Don't redirect immediately on minor API fails to prevent loops
             }
         } finally {
             setLoading(false);
@@ -165,16 +168,18 @@ const AdminDashboard: React.FC = () => {
     }, [loadDashboard, botStatus?.isRunning, sseConnected]);
 
     const handleBotStart = async () => {
-        const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending');
+        const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending' || s.status === 'active');
         if (!activeSession) {
             toast.error('No active session to start bot');
             return;
         }
+        console.log('[Dashboard] Starting bot for session:', activeSession);
         try {
             await tradingApi.startBot(activeSession.id);
             toast.success('Bot Started');
             loadDashboard();
         } catch (error: any) {
+            console.error('Bot start error:', error);
             toast.error(error.message);
         }
     };
