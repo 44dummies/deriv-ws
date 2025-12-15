@@ -58,7 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Logout: clear memory and call backend to clear cookie
     const logout = useCallback(async () => {
-        await apiClient.logout();
+        try {
+            await apiClient.logout();
+        } catch (e) {
+            console.error('Logout error:', e);
+        }
 
         setAccessToken(null);
         setUser(null);
@@ -68,6 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.removeItem('derivDemoToken');
         sessionStorage.removeItem('derivRealToken');
     }, []);
+
+    // Register auth error handler to trigger logout on 401s
+    useEffect(() => {
+        apiClient.onAuthenticationError(() => {
+            console.log('[AuthContext] Auth error detected, logging out...');
+            logout();
+        });
+    }, [logout]);
 
     // Refresh access token using HttpOnly cookie
     const refreshAccessToken = useCallback(async (): Promise<string | null> => {
