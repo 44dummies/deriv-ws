@@ -21,64 +21,79 @@ export const ChartPanel: React.FC<ChartProps> = ({
     const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
     const [lastTickTime, setLastTickTime] = useState<number>(0);
 
-    // Initialize Chart
+    // Initialize Chart with ResizeObserver
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
-        const chart = createChart(chartContainerRef.current, {
-            layout: {
-                background: { type: ColorType.Solid, color: '#10141e' }, // Dark bg matching Deriv/Admin
-                textColor: '#d1d4dc',
-            },
-            grid: {
-                vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-                horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
-            },
-            width: chartContainerRef.current.clientWidth,
-            height: height,
-            crosshair: {
-                mode: CrosshairMode.Normal,
-            },
-            timeScale: {
-                timeVisible: true,
-                secondsVisible: true,
-            },
-        });
+        const container = chartContainerRef.current;
+        let chart: IChartApi | null = null;
+        let series: ISeriesApi<"Area"> | null = null;
 
-        const series = chart.addAreaSeries({
-            topColor: 'rgba(76, 175, 80, 0.56)', // Deriv Green-ish
-            bottomColor: 'rgba(76, 175, 80, 0.04)',
-            lineColor: 'rgba(76, 175, 80, 1)',
-            lineWidth: 2,
-        });
+        const initChart = () => {
+            if (chart) return;
+            const width = container.clientWidth;
+            if (width === 0) return; // Wait for container to have dimensions
 
-        // Load initial data
-        if (initialTicks.length > 0) {
-            const data: LineData[] = initialTicks
-                .map(t => ({
-                    time: t.epoch as UTCTimestamp,
-                    value: t.quote
-                }))
-                .sort((a, b) => (a.time as number) - (b.time as number));
+            chart = createChart(container, {
+                layout: {
+                    background: { type: ColorType.Solid, color: '#10141e' },
+                    textColor: '#d1d4dc',
+                },
+                grid: {
+                    vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+                    horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+                },
+                width: width,
+                height: height,
+                crosshair: { mode: CrosshairMode.Normal },
+                timeScale: { timeVisible: true, secondsVisible: true },
+            });
 
-            series.setData(data);
-            setLastTickTime(initialTicks[initialTicks.length - 1].epoch);
-        }
+            series = chart.addAreaSeries({
+                topColor: 'rgba(76, 175, 80, 0.56)',
+                bottomColor: 'rgba(76, 175, 80, 0.04)',
+                lineColor: 'rgba(76, 175, 80, 1)',
+                lineWidth: 2,
+            });
 
-        chartRef.current = chart;
-        seriesRef.current = series;
+            if (initialTicks.length > 0) {
+                const data: LineData[] = initialTicks
+                    .map(t => ({
+                        time: t.epoch as UTCTimestamp,
+                        value: t.quote
+                    }))
+                    .sort((a, b) => (a.time as number) - (b.time as number));
 
-        const handleResize = () => {
-            if (chartContainerRef.current) {
-                chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+                series.setData(data);
+                setLastTickTime(initialTicks[initialTicks.length - 1].epoch);
             }
+
+            chartRef.current = chart;
+            seriesRef.current = series;
         };
 
-        window.addEventListener('resize', handleResize);
+        const resizeObserver = new ResizeObserver(entries => {
+            if (!entries || entries.length === 0) return;
+            const { width } = entries[0].contentRect;
+
+            if (width > 0) {
+                if (!chart) {
+                    initChart();
+                } else {
+                    chart.applyOptions({ width });
+                }
+            }
+        });
+
+        resizeObserver.observe(container);
 
         return () => {
-            window.removeEventListener('resize', handleResize);
-            chart.remove();
+            resizeObserver.disconnect();
+            if (chart) {
+                chart.remove();
+                chartRef.current = null;
+                seriesRef.current = null;
+            }
         };
     }, []);
 
