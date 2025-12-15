@@ -137,18 +137,23 @@ export const useDashboardData = () => {
                 // Fetch All Balances
                 try {
                     const allBalancesRes = await websocketService.getAllBalances();
+                    console.log('[Debug] All Balances Response:', allBalancesRes); // DEBUG LOG
+
                     if (allBalancesRes.balance?.accounts) {
                         const accounts = allBalancesRes.balance.accounts;
                         let demoBalance = 0;
                         let realBalance = 0;
 
                         Object.entries(accounts).forEach(([id, acc]: [string, any]) => {
-                            if (acc.demo_account === 1 || id.startsWith('VRTC')) {
-                                demoBalance = acc.balance || 0;
+                            // Enhanced check for demo accounts
+                            if (acc.demo_account === 1 || id.startsWith('VRTC') || (acc.type && acc.type === 'demo')) {
+                                demoBalance = Number(acc.balance || 0);
                             } else {
-                                realBalance = acc.balance || 0;
+                                realBalance = Number(acc.balance || 0);
                             }
                         });
+
+                        console.log('[Debug] Parsed Balances - Demo:', demoBalance, 'Real:', realBalance); // DEBUG LOG
 
                         setUserInfo((prev: any) => prev ? {
                             ...prev,
