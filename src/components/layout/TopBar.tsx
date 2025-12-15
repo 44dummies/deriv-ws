@@ -15,7 +15,7 @@ export const TopBar: React.FC = () => {
     // Use balance from userInfo
     const displayBalance = userInfo?.is_virtual ?
         `${userInfo.currency} ${userInfo.balance}` :
-        (userInfo?.demo_balance ? `USD ${userInfo.demo_balance}` : null);
+        (userInfo?.demo_balance !== undefined && userInfo?.demo_balance !== null ? `USD ${userInfo.demo_balance}` : null);
 
     // Simple ping for latency
     useEffect(() => {
