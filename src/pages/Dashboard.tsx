@@ -5,6 +5,7 @@ import { OverviewPanel } from '../components/dashboard/OverviewPanel';
 import UserTrading from './UserTrading';
 import Community from './Community';
 import Settings from './Settings';
+import { ReportsPlaceholder } from '../components/dashboard/ReportsPlaceholder';
 import { Toaster } from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
@@ -24,8 +25,7 @@ const Dashboard: React.FC = () => {
       case 'settings':
         return <Settings />;
       case 'reports':
-        // Placeholder - reusing settings or blank for now until ReportsPanel is built
-        return <div className="p-8 text-center text-gray-500">Reports Module Coming Soon</div>;
+        return <ReportsPlaceholder />;
       default:
         return <Navigate to="/user/dashboard?tab=overview" replace />;
     }
