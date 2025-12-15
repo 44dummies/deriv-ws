@@ -202,7 +202,7 @@ const AdminDashboard: React.FC = () => {
 
             {/* Header / Wallet Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <GlassCard className="relative overflow-hidden group">
+                <GlassCard className="relative group">
                     <div className="flex justify-between items-start z-10 relative">
                         <div>
                             <p className="text-slate-400 text-sm font-medium mb-1">Real Balance</p>
@@ -218,7 +218,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </GlassCard>
 
-                <GlassCard className="relative overflow-hidden group">
+                <GlassCard className="relative group">
                     <div className="flex justify-between items-start z-10 relative">
                         <div>
                             <p className="text-slate-400 text-sm font-medium mb-1">Demo Balance</p>
