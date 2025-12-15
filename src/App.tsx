@@ -42,6 +42,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 };
 
 function App(): React.ReactElement {
+  // Global Auth Error Handler - Prevents Auth Loops
+  useEffect(() => {
+    const handleAuthError = () => {
+      console.log('Global auth error caught - clearing session');
+      TokenService.clearTokens();
+      // Force reload to clear any in-memory state and reset router
+      window.location.href = '/';
+    };
+
+    // Register handler
+    import('./services/apiClient').then(({ apiClient }) => {
+      apiClient.onAuthenticationError(handleAuthError);
+    });
+
+    // Cleanup not strictly necessary for singleton but good practice if architected differently
+    return () => {
+      import('./services/apiClient').then(({ apiClient }) => {
+        apiClient.onAuthenticationError(() => { });
+      });
+    };
+  }, []);
+
   return (
     <ThemeProvider>
       <Router>

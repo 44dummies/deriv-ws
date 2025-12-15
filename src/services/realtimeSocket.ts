@@ -4,6 +4,7 @@
  */
 
 import { io } from 'socket.io-client';
+import { TokenService } from './tokenService';
 
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'wss://tradermind-server.up.railway.app';
 
@@ -41,7 +42,7 @@ class RealtimeSocketService {
     return new Promise<void>((resolve, reject) => {
       this.socket = io(SOCKET_URL, {
         auth: { token: accessToken },
-        transports: ['websocket', 'polling'],
+        transports: ['websocket'], // Force WebSocket only to match server config
         reconnection: true,
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
@@ -68,6 +69,10 @@ class RealtimeSocketService {
           console.log('[Socket] Auth failed, stopping reconnection');
           this.socket.disconnect();
           this.connected = false;
+          TokenService.clearTokens();
+          if (window.location.pathname !== '/') {
+            window.location.href = '/';
+          }
         }
       });
 
