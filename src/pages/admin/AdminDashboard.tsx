@@ -169,6 +169,7 @@ const AdminDashboard: React.FC = () => {
 
     // Socket listeners for real-time updates
     useEffect(() => {
+        const socket = realtimeSocket.socket;
         if (!socket || !sseConnected) return;
 
         console.log('[Dashboard] Listening for real-time updates...');
@@ -200,7 +201,7 @@ const AdminDashboard: React.FC = () => {
             socket.off('admin_balance_update', handleBalanceUpdate);
             socket.off('bot_status', handleBotStatus);
         };
-    }, [socket, sseConnected]);
+    }, [sseConnected]);
 
     const handleBotStart = async () => {
         const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending' || s.status === 'active');
