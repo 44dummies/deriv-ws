@@ -167,6 +167,41 @@ const AdminDashboard: React.FC = () => {
         };
     }, [loadDashboard, botStatus?.isRunning, sseConnected]);
 
+    // Socket listeners for real-time updates
+    useEffect(() => {
+        if (!socket || !sseConnected) return;
+
+        console.log('[Dashboard] Listening for real-time updates...');
+
+        const handleBalanceUpdate = (data: any) => {
+            console.log('[Dashboard] Balance Update:', data);
+            setBalances(prev => {
+                const isReal = data.accountType === 'real';
+                return {
+                    ...prev,
+                    [isReal ? 'real' : 'demo']: Number(data.balance)
+                };
+            });
+        };
+
+        const handleBotStatus = (data: any) => {
+            // console.log('[Dashboard] Bot Status Update:', data); // Too noisy
+            if (data && typeof data.isRunning === 'boolean') {
+                setBotStatus(prev => ({ ...prev, isRunning: data.isRunning }));
+            }
+        };
+
+        socket.on('balance_update', handleBalanceUpdate);
+        socket.on('admin_balance_update', handleBalanceUpdate); // Listen to both just in case
+        socket.on('bot_status', handleBotStatus);
+
+        return () => {
+            socket.off('balance_update', handleBalanceUpdate);
+            socket.off('admin_balance_update', handleBalanceUpdate);
+            socket.off('bot_status', handleBotStatus);
+        };
+    }, [socket, sseConnected]);
+
     const handleBotStart = async () => {
         const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending' || s.status === 'active');
         if (!activeSession) {
