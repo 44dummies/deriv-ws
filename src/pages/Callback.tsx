@@ -129,13 +129,6 @@ const Callback = () => {
 
 
 
-          // Store user info in sessionStorage for AdminProtected to check
-          sessionStorage.setItem('userInfo', JSON.stringify({
-            loginid: derivId,
-            deriv_id: derivId,
-            is_admin: isAdminUser
-          }));
-
           // Authenticate with backend - refresh token is set as HttpOnly cookie
           try {
             const loginResult = await apiClient.loginWithDeriv({
@@ -147,22 +140,36 @@ const Callback = () => {
             });
             // Only access token is returned - refresh token is in HttpOnly cookie
             TokenService.setBackendTokens(loginResult.accessToken, '');
+
+            // Use the authoritative role from the backend response if available
+            if (loginResult.user && loginResult.user.role === 'admin') {
+              isAdminUser = true;
+            } else if (loginResult.user && loginResult.user.is_admin === true) {
+              isAdminUser = true;
+            }
           } catch (apiErr) {
             console.error('[Callback] Backend auth failed:', apiErr);
           }
 
-          if (isAdminUser) {
+          // Store user info in sessionStorage for AdminProtected to check
+          sessionStorage.setItem('userInfo', JSON.stringify({
+            loginid: derivId,
+            deriv_id: derivId,
+            is_admin: isAdminUser
+          }));
 
+          if (isAdminUser) {
             setStatus('Admin access granted! Redirecting...');
             setTimeout(() => navigate('/admin/dashboard'), 500);
             return;
           } else {
-
             setStatus('Redirecting to your dashboard...');
             setTimeout(() => navigate('/user/dashboard'), 500);
             return;
           }
         }
+
+
 
         // Fallback to user dashboard for regular users
         setStatus('Success! Redirecting...');
