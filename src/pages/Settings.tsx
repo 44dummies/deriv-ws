@@ -498,7 +498,7 @@ const Settings = () => {
           className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white focus:border-purple-500 outline-none"
         >
           <option value="public">Public - Anyone can view</option>
-          <option value="friends">Friends Only</option>
+
           <option value="private">Private - Only you</option>
         </select>
 

@@ -58,52 +58,61 @@ const getAvatarEmoji = (profilePhoto) => {
 
 const USE_REALTIME_BACKEND = process.env.REACT_APP_USE_REALTIME_BACKEND === 'true';
 
-const Card = ({ children, className = '' }) => (
-  <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 
-      glass-card transition-all duration-300 ${className}`}>
+const Card = ({ children, className = '', noPadding = false }) => (
+  <div className={`rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-300 ${!noPadding ? 'p-6' : ''} ${className}`}>
     {children}
   </div>
 );
 
-const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-500' }) => (
-  <div className="rounded-lg sm:rounded-xl p-2.5 sm:p-4 glass-card overflow-hidden transition-all duration-300 hover:bg-white/5">
-    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center shrink-0 shadow-lg shadow-black/20`}>
-        {icon}
-      </div>
-      {trend && trend !== '' && (
-        <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs ${trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-gray-400'}`}>
-          {trend === 'up' ? <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : trend === 'down' ? <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> : <span className="text-[9px] sm:text-[10px]">{trend}</span>}
+const StatCard = ({ icon, label, value, trend, color = 'from-blue-500 to-purple-500', subtitle }) => (
+  <div className="group relative rounded-3xl p-5 border border-white/5 bg-white/5 backdrop-blur-md overflow-hidden transition-all duration-300 hover:bg-white/10 hover:border-white/10 hover:shadow-2xl hover:shadow-purple-500/10 hover:-translate-y-1">
+    <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
+    <div className="relative z-10 flex flex-col h-full justify-between">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${color} p-[1px]`}>
+          <div className="w-full h-full rounded-2xl bg-[#0a0a0f] flex items-center justify-center">
+            {React.cloneElement(icon, { size: 20, className: "text-white" })}
+          </div>
         </div>
-      )}
+        {trend && (
+          <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${trend === 'up' ? 'bg-green-500/20 text-green-400' : trend === 'down' ? 'bg-red-500/20 text-red-400' : 'bg-gray-500/20 text-gray-400'}`}>
+            {trend === 'up' ? <TrendingUp size={12} /> : trend === 'down' ? <TrendingDown size={12} /> : null}
+            <span>{typeof trend === 'string' && trend !== 'up' && trend !== 'down' ? trend : ''}</span>
+          </div>
+        )}
+      </div>
+      <div>
+        <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{value}</p>
+        <p className="text-sm font-medium text-gray-400 mt-1">{label}</p>
+        {subtitle && <p className="text-xs text-gray-500 mt-2">{subtitle}</p>}
+      </div>
     </div>
-    <p className="text-sm sm:text-xl font-bold truncate leading-tight text-white">{value}</p>
-    <p className="text-[10px] sm:text-xs mt-0.5 truncate text-gray-400">{label}</p>
   </div>
 );
 
 const EmptyState = ({ icon, title, description }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-center">
-    <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 glass-card text-gray-400">
-      {icon}
+  <div className="flex flex-col items-center justify-center py-20 text-center">
+    <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mb-6 border border-white/10">
+      {React.cloneElement(icon, { size: 32, className: "text-gray-400" })}
     </div>
-    <h3 className="text-lg font-medium mb-2 text-white">{title}</h3>
-    <p className="text-sm max-w-sm text-gray-400">{description}</p>
+    <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+    <p className="text-gray-400 max-w-sm leading-relaxed">{description}</p>
   </div>
 );
 
-const SettingRow = ({ icon, label, value, action }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 border-b border-white/5 last:border-0 gap-2 sm:gap-0">
-    <div className="flex items-center gap-2 sm:gap-3">
-      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0 glass-card text-gray-400">
-        {icon}
+const SettingRow = ({ icon, label, value, action, description }) => (
+  <div className="group flex flex-col sm:flex-row sm:items-center justify-between py-5 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors -mx-4 px-4 sm:mx-0 sm:px-0">
+    <div className="flex items-center gap-4">
+      <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-300">
+        {React.cloneElement(icon, { size: 20, className: "text-gray-300" })}
       </div>
       <div className="min-w-0">
-        <p className="font-medium text-sm sm:text-base text-gray-200">{label}</p>
-        {value && <p className="text-xs sm:text-sm truncate text-gray-400">{value}</p>}
+        <p className="font-semibold text-white text-base mb-0.5">{label}</p>
+        {description && <p className="text-xs text-gray-500">{description}</p>}
+        {value && <p className="text-sm text-gray-400">{value}</p>}
       </div>
     </div>
-    {action && <div className="ml-10 sm:ml-0">{action}</div>}
+    <div className="mt-4 sm:mt-0 pl-16 sm:pl-0 flex items-center">{action}</div>
   </div>
 );
 
@@ -1657,175 +1666,227 @@ const Dashboard = () => {
           {/* Desktop Sidebar completely removed - using horizontal tabs instead */}
 
           <main className="flex-1 overflow-auto min-h-screen transition-all duration-300 pb-[80px] lg:pb-0">
-            {/* Header with branding and user info */}
-            <div className="sticky top-0 z-20 border-b border-white/5 bg-black/20 backdrop-blur-xl">
-              <div className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 md:p-4">
-                {/* Logo */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-sm sm:text-lg font-bold text-white">
-                    T
+            {/* Premium Header */}
+            <div className="sticky top-0 z-40 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-2xl supports-[backdrop-filter]:bg-[#0a0a0f]/60">
+              <div className="max-w-[1920px] mx-auto">
+                <div className="flex items-center justify-between p-4 sm:px-6 lg:px-8 h-20">
+                  {/* Logo Brand */}
+                  <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/dashboard')}>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-purple-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                      <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffffff] to-[#999999] p-[1px]">
+                        <div className="w-full h-full rounded-xl bg-black flex items-center justify-center">
+                          <Bot className="text-white w-5 h-5" />
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h1 className="font-bold text-xl text-white tracking-tight leading-none">TraderMind</h1>
+                      <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase">Deriv AI Assistant</p>
+                    </div>
                   </div>
-                  <span className="font-semibold text-sm sm:text-lg hidden sm:inline">TraderMind</span>
-                </div>
 
-                <div className="flex-1 min-w-0" />
+                  {/* Navigation Tabs - Desktop - Centered */}
+                  <nav className="hidden xl:flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/5 absolute left-1/2 -translate-x-1/2">
+                    {tabs.map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          if (tab.navigateTo) {
+                            navigate(tab.navigateTo);
+                          } else {
+                            setActiveTab(tab.id);
+                          }
+                        }}
+                        className={`relative px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 ${activeTab === tab.id && !tab.navigateTo
+                          ? 'text-white bg-white/10 shadow-lg shadow-purple-500/10'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                      >
+                        {tab.icon}
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
 
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                  {/* Notification Bell */}
-                  <NotificationBell socket={realtimeSocket.socket} />
+                  {/* Right Actions */}
+                  <div className="flex items-center gap-4">
+                    {/* User Profile Pill */}
+                    {userInfo && (
+                      <div className="hidden sm:flex items-center gap-3 pl-1 pr-4 py-1 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 p-[1px]">
+                          <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-xs font-bold">
+                            {userInfo.loginid?.substring(0, 2).toUpperCase()}
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-white leading-none mb-0.5">{userInfo.currency} {userInfo.balance?.toFixed(2)}</p>
+                          <p className="text-[10px] text-gray-400 leading-none group-hover:text-purple-400 transition-colors uppercase font-bold">{userInfo.is_virtual ? 'DEMO' : 'REAL'}</p>
+                        </div>
+                      </div>
+                    )}
 
-                  {/* Supabase Status */}
-                  {supabaseStatus === 'connected' && (
-                    <div
-                      className="hidden xs:flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs bg-green-500/20 text-green-500"
-                      title="Data synced to cloud"
-                    >
-                      <Cloud className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <div className="w-px h-8 bg-white/10 hidden sm:block" />
+
+                    <div className="flex items-center gap-2">
+                      <NotificationBell socket={realtimeSocket.socket} />
+
+                      <button
+                        onClick={handleLogout}
+                        className="p-2.5 rounded-full hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all"
+                        title="Logout"
+                      >
+                        <LogOut size={20} />
+                      </button>
                     </div>
-                  )}
-
-                  {/* User Info */}
-                  {userInfo && (
-                    <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5">
-                      <span className={`text-[9px] sm:text-[10px] px-1 py-0.5 rounded ${userInfo.is_virtual ? 'bg-yellow-500/20 text-yellow-500' : 'bg-green-500/20 text-green-500'}`}>
-                        {userInfo.is_virtual ? 'Demo' : 'Real'}
-                      </span>
-                      <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">{userInfo.currency} {userInfo.balance?.toFixed(2)}</span>
-                    </div>
-                  )}
-
-                  {/* Logout button - desktop only */}
-                  <button
-                    onClick={handleLogout}
-                    className="hidden lg:flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors text-xs sm:text-sm"
-                  >
-                    <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    <span className="hidden xl:inline">Logout</span>
-                  </button>
+                  </div>
                 </div>
               </div>
-
-              {/* Horizontal Tab Bar - Desktop Only */}
-              <nav className="hidden lg:flex items-center gap-1 px-4 pb-2 overflow-x-auto">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      if (tab.navigateTo) {
-                        navigate(tab.navigateTo);
-                      } else {
-                        setActiveTab(tab.id);
-                      }
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap text-sm font-medium ${activeTab === tab.id && !tab.navigateTo
-                      ? 'bg-gradient-to-r from-[#ff3355]/20 to-[#ff8042]/10 text-[#ff5f6d] border border-[#ff3355]/30'
-                      : 'hover:bg-white/5 text-gray-400 hover:text-white'
-                      }`}
-                  >
-                    {tab.icon}
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </nav>
             </div>
 
             <div className="p-2 sm:p-3 md:p-6">
               { }
               {activeTab === 'sync' && (
-                <div className="space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="flex flex-col gap-2 sm:gap-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h1 className="text-base sm:text-xl md:text-2xl font-bold">Live Sync</h1>
-                        <p className="text-[10px] sm:text-xs md:text-sm" style={{ color: 'var(--text-secondary)' }}>Auto syncs every minute</p>
+                <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+
+                  {/* Digital Wallet Section */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Balance Card - Credit Card Style */}
+                    <div className="lg:col-span-2">
+                      <div className="relative h-64 sm:h-72 rounded-[2rem] overflow-hidden p-8 flex flex-col justify-between group transition-all duration-500 hover:scale-[1.01] hover:shadow-2xl hover:shadow-purple-500/20">
+                        {/* Background Gradients */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e] to-[#0f0f13] z-0" />
+                        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-purple-500/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+                        <div className="absolute bottom-0 left-0 w-[200px] h-[200px] bg-blue-500/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/2" />
+                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0" />
+
+                        {/* Content */}
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="text-gray-400 font-medium mb-1">Total Balance</p>
+                              <h1 className="text-4xl sm:text-5xl font-bold text-white tracking-tight">
+                                {userInfo?.currency || 'USD'} <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                                  {(userInfo?.real_balance !== undefined ? userInfo.real_balance : (userInfo?.is_virtual ? 0 : userInfo?.balance || 0)).toFixed(2)}
+                                </span>
+                              </h1>
+                            </div>
+                            <div className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                              <Wallet className="text-white" size={24} />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative z-10 flex items-end justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm text-gray-400 font-mono tracking-wider">ACCOUNT HOLDER</p>
+                            <p className="text-lg text-white font-medium">{userInfo?.fullname || 'Trader'}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${userInfo?.is_virtual ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'}`}>
+                              {userInfo?.is_virtual ? 'Demo Account' : 'Real Account'}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <button onClick={handleSync} disabled={syncing} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#ff3355] to-[#ff8042] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 text-white text-xs sm:text-sm">
-                        <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${syncing ? 'animate-spin' : ''}`} />
-                        <span>{syncing ? 'Sync' : 'Sync'}</span>
-                      </button>
                     </div>
 
-                    {/* Auto-sync toggle - compact */}
-                    <div className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-white/5">
-                      <div className="flex items-center gap-2">
-                        {autoSyncEnabled && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
-                        <span className="text-[10px] sm:text-xs" style={{ color: 'var(--text-secondary)' }}>
-                          Auto-sync {autoSyncEnabled ? 'on' : 'off'}
-                          {lastSyncTime && autoSyncEnabled && <span className="hidden sm:inline"> • Last: {lastSyncTime.toLocaleTimeString()}</span>}
-                        </span>
-                      </div>
+                    {/* Quick Actions & Status */}
+                    <div className="space-y-4">
+                      {/* Quick Actions Panel */}
+                      <Card noPadding className="h-full flex flex-col justify-center p-6 bg-gradient-to-br from-[#15151e] to-[#0a0a0f!important] border-white/5">
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                          <Zap className="text-yellow-500" size={18} /> Quick Actions
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button onClick={() => setActiveTab('trading')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-purple-500/20 border border-white/5 hover:border-purple-500/30 transition-all group">
+                            <TrendingUp className="text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-medium text-gray-300 group-hover:text-white">Trade</span>
+                          </button>
+                          <button onClick={() => setActiveTab('analytics')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-blue-500/20 border border-white/5 hover:border-blue-500/30 transition-all group">
+                            <BarChart3 className="text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+                            <span className="text-sm font-medium text-gray-300 group-hover:text-white">Analytics</span>
+                          </button>
+                          <button onClick={handleSync} disabled={syncing} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-green-500/20 border border-white/5 hover:border-green-500/30 transition-all group disabled:opacity-50">
+                            <RefreshCw className={`text-green-400 mb-2 ${syncing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform'}`} />
+                            <span className="text-sm font-medium text-gray-300 group-hover:text-white">Sync</span>
+                          </button>
+                          <button onClick={() => navigate('/settings')} className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-orange-500/20 border border-white/5 hover:border-orange-500/30 transition-all group">
+                            <Settings className="text-orange-400 mb-2 group-hover:rotate-90 transition-transform" />
+                            <span className="text-sm font-medium text-gray-300 group-hover:text-white">Settings</span>
+                          </button>
+                        </div>
+                      </Card>
+                    </div>
+                  </div>
+
+                  {/* Highlights Grid */}
+                  <div>
+                    <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                      <Activity className="text-purple-500" /> Performance Highlights
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <StatCard
+                        icon={<DollarSign />}
+                        label="Total Profit"
+                        value={`$${(analytics.totalProfit ?? 0).toFixed(2)}`}
+                        trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'}
+                        color="from-emerald-500 via-teal-500 to-cyan-500"
+                        subtitle="All time earnings"
+                      />
+                      <StatCard
+                        icon={<Target />}
+                        label="Win Rate"
+                        value={`${(analytics.winRate ?? 0).toFixed(1)}%`}
+                        trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'}
+                        color="from-blue-500 via-indigo-500 to-purple-500"
+                        subtitle={`${analytics.totalTrades} total trades`}
+                      />
+                      <StatCard
+                        icon={<Flame />}
+                        label="Best Streak"
+                        value={analytics.winStreak}
+                        trend="up"
+                        color="from-orange-500 via-red-500 to-pink-500"
+                        subtitle="Consecutive wins"
+                      />
+                      <StatCard
+                        icon={<Wallet />}
+                        label="Demo Balance"
+                        value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance !== undefined ? userInfo.demo_balance : (userInfo?.is_virtual ? userInfo?.balance || 0 : 0)).toFixed(2)}`}
+                        color="from-gray-700 to-gray-900"
+                        subtitle="Practice funds"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Connection Status Bar */}
+                  <div className="flex flex-wrap items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-md">
+                    <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-black/20">
+                      <div className={`w-2.5 h-2.5 rounded-full ${derivWsConnected ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                      <span className="text-sm font-medium text-gray-300">Deriv API</span>
+                    </div>
+
+                    <div className="h-8 w-[1px] bg-white/10 hidden sm:block" />
+
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Users size={16} />
+                      <span>Trade History: <span className="text-white font-medium">{tradeHistory.length} items</span></span>
+                    </div>
+
+                    <div className="flex-1" />
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-gray-500 font-mono uppercase tracking-widest">Auto-Sync</span>
                       <button
                         onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
-                        className={`w-8 h-4 sm:w-10 sm:h-5 rounded-full transition-colors relative ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-600'}`}
+                        className={`relative w-11 h-6 rounded-full transition-colors duration-300 ${autoSyncEnabled ? 'bg-purple-600' : 'bg-gray-700'}`}
                       >
-                        <div className={`absolute top-0.5 w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-white transition-transform ${autoSyncEnabled ? 'translate-x-4 sm:translate-x-5' : 'translate-x-0.5'}`} />
+                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-300 ${autoSyncEnabled ? 'translate-x-5' : ''}`} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Stats Grid - 2x2 on mobile, 4 cols on desktop */}
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                    <StatCard
-                      icon={<Wallet className="w-3 h-3 sm:w-4 sm:h-4 text-white" />}
-                      label="Real Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.real_balance !== undefined ? userInfo.real_balance : (userInfo?.is_virtual ? 0 : userInfo?.balance || 0)).toFixed(2)}`}
-                      trend=""
-                      color="from-green-500 to-emerald-500"
-                    />
-                    <StatCard
-                      icon={<Activity className="w-3 h-3 sm:w-4 sm:h-4 text-white" />}
-                      label="Demo Balance"
-                      value={`${userInfo?.currency || 'USD'} ${(userInfo?.demo_balance !== undefined ? userInfo.demo_balance : (userInfo?.is_virtual ? userInfo?.balance || 0 : 0)).toFixed(2)}`}
-                      trend=""
-                      color="from-blue-500 to-indigo-500"
-                    />
-                    <StatCard icon={<Target className="w-3 h-3 sm:w-4 sm:h-4 text-white" />} label="Win Rate" value={`${(analytics.winRate ?? 0).toFixed(1)}%`} trend={(analytics.winRate ?? 0) >= 50 ? 'up' : 'down'} color="from-purple-500 to-pink-500" />
-                    <StatCard icon={<DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-white" />} label="Total Profit" value={`$${(analytics.totalProfit ?? 0).toFixed(0)}`} trend={(analytics.totalProfit ?? 0) >= 0 ? 'up' : 'down'} color="from-orange-500 to-red-500" />
-                  </div>
-                  <Card>
-                    <h3 className="text-base sm:text-lg font-medium mb-4">Connection Status</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${derivWsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                          <span className="text-sm sm:text-base">Deriv WebSocket</span>
-                        </div>
-                        <span className={`text-sm ${derivWsConnected ? 'text-green-500' : 'text-red-500'}`}>
-                          {derivWsConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
-                          <span className="text-sm sm:text-base">Trade History</span>
-                        </div>
-                        <span className="text-green-500 text-sm">{tradeHistory.length} trades</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${useSupabase ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse`} />
-                          <span className="text-sm sm:text-base">Cloud Storage</span>
-                        </div>
-                        <span className={`text-sm ${useSupabase ? 'text-green-500' : 'text-yellow-500'}`}>{useSupabase ? 'Enabled' : 'Local only'}</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${realtimeConnected ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                          <span className="text-sm sm:text-base">Chat Server</span>
-                        </div>
-                        <span className={`text-sm ${realtimeConnected ? 'text-green-500' : 'text-gray-500'}`}>
-                          {realtimeConnected ? 'Connected' : 'Offline'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl" style={{ backgroundColor: 'var(--accent-bg)' }}>
-                        <div className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-green-400 animate-pulse" />
-                          <span className="text-sm sm:text-base">Account</span>
-                        </div>
-                        <span className="text-green-500 text-sm truncate max-w-[120px] sm:max-w-none">{userInfo?.loginid}</span>
-                      </div>
-                    </div>
-                  </Card>
                 </div>
               )}
 
