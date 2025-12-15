@@ -193,6 +193,16 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
     const eventSourceRef = useRef<EventSource | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Refs for stable callbacks
+    const onEventRef = useRef(options.onEvent);
+    onEventRef.current = options.onEvent;
+
+    const onConnectedRef = useRef(options.onConnected);
+    onConnectedRef.current = options.onConnected;
+
+    const onDisconnectedRef = useRef(options.onDisconnected);
+    onDisconnectedRef.current = options.onDisconnected;
+
     const connect = useCallback(() => {
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
@@ -203,6 +213,7 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
 
         // ADMIN STREAM REQUIRES AUTH
         if (!token) {
+            // Only log once per session to avoid spam if feasible, but here we break the loop by stable callback
             console.log('[AdminEventStream] No access token found, skipping connection');
             setIsConnected(false);
             setError(new Error('Authentication required'));
@@ -217,7 +228,7 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
         eventSource.onopen = () => {
             setIsConnected(true);
             setError(null);
-            options.onConnected?.();
+            onConnectedRef.current?.();
         };
 
         eventSource.onerror = () => {
@@ -229,13 +240,13 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
             if (!currentToken) {
                 console.log('[AdminEventStream] Token lost, stopping retry loop');
                 setError(new Error('Session expired'));
-                options.onDisconnected?.();
+                onDisconnectedRef.current?.();
                 return;
             }
 
             console.error('[AdminEventStream] Connection failed, retrying in 5s...');
             setError(new Error('Admin stream connection failed'));
-            options.onDisconnected?.();
+            onDisconnectedRef.current?.();
 
             reconnectTimeoutRef.current = setTimeout(connect, 5000);
         };
@@ -245,12 +256,12 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
             try {
                 const event = JSON.parse(e.data);
                 setEvents(prev => [...prev.slice(-99), event]);
-                options.onEvent?.(event);
+                onEventRef.current?.(event);
             } catch (err) {
                 console.error('[AdminEventStream] Parse error:', err);
             }
         };
-    }, [options]);
+    }, []); // Dependency array empty - strictly stable
 
     useEffect(() => {
         connect();
