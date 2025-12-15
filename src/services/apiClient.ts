@@ -51,6 +51,7 @@ class ApiClient {
     private refreshToken: string | null = null;
     private onTokenRefresh: TokenRefreshCallback | null = null;
     private onAuthError: AuthErrorCallback | null = null;
+    private isSessionExpired = false;
 
     constructor() {
         this.loadTokens();
@@ -61,6 +62,7 @@ class ApiClient {
      */
     setTokens(accessToken: string): void {
         this.accessToken = accessToken;
+        this.isSessionExpired = false; // Reset on new valid token
         // Sync to sessionStorage so tradingApi.ts works
         sessionStorage.setItem('accessToken', accessToken);
     }
@@ -80,6 +82,7 @@ class ApiClient {
      */
     clearTokens(): void {
         this.accessToken = null;
+        this.isSessionExpired = true; // prevent further requests until login
         sessionStorage.removeItem('accessToken');
     }
 
@@ -96,6 +99,10 @@ class ApiClient {
      * Make API request
      */
     async request<T = unknown>(endpoint: string, options: RequestInit = {}): Promise<T> {
+        if (this.isSessionExpired && this.accessToken) {
+            throw new Error('Session expired');
+        }
+
         // Normalize endpoint to prevent double /api prefix
         // calling code might pass /api/foo but API_URL already includes /api
         const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) : endpoint;
@@ -128,10 +135,7 @@ class ApiClient {
                     });
                     return this.handleResponse<T>(retryResponse);
                 } else {
-                    // Do NOT unconditionally clear tokens to prevent UI flicker/crash
-                    // Let the caller handle the 401 if refresh failed
-                    // this.clearTokens(); 
-                    // if (this.onAuthError) this.onAuthError();
+                    this.isSessionExpired = true; // Mark session as dead
                     throw new Error('Session expired');
                 }
             }
