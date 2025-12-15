@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { MainLayout } from './components/layout/MainLayout';
 import Login from './pages/Login';
 import Callback from './pages/Callback';
 import Dashboard from './pages/Dashboard';
@@ -95,22 +96,35 @@ function App(): React.ReactElement {
           </Route>
 
           {/* User routes - Use full Dashboard with community tab */}
-          <Route
-            path="/user/dashboard"
-            element={
-              <UserRoute>
-                <Dashboard />
-              </UserRoute>
-            }
-          />
-          <Route
-            path="/user/*"
-            element={
-              <UserRoute>
-                <Dashboard />
-              </UserRoute>
-            }
-          />
+          {/* User routes - Use MainLayout */}
+          <Route element={<MainLayout />}>
+            <Route
+              path="/user/dashboard"
+              element={
+                <UserRoute>
+                  <Dashboard />
+                </UserRoute>
+              }
+            />
+            <Route
+              path="/user/trading"
+              element={
+                <UserRoute>
+                  <UserTrading />
+                </UserRoute>
+              }
+            />
+            <Route
+              path="/user/community"
+              element={
+                <UserRoute>
+                  <Community />
+                </UserRoute>
+              }
+            />
+            {/* Fallback for /user/* */}
+            <Route path="/user/*" element={<Navigate to="/user/dashboard" replace />} />
+          </Route>
 
           {/* Legacy routes - Keep for backwards compatibility */}
           <Route
@@ -131,11 +145,11 @@ function App(): React.ReactElement {
           />
           <Route
             path="/community"
-            element={<Navigate to="/user/dashboard?tab=community" replace />}
+            element={<Navigate to="/user/community" replace />}
           />
           <Route
             path="/trading"
-            element={<Navigate to="/user/dashboard?tab=trading" replace />}
+            element={<Navigate to="/user/trading" replace />}
           />
 
           {/* Catch-all redirect */}

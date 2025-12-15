@@ -1,12 +1,8 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { AdminGlassLayout } from '../../components/layout/AdminGlassLayout';
 
 const AdminLayout: React.FC = () => {
     return (
-        <DashboardLayout isAdmin={true}>
-            <Outlet />
-        </DashboardLayout>
+        <AdminGlassLayout />
     );
 };
 

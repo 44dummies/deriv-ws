@@ -1,12 +1,11 @@
-
 import React from 'react';
-import { Loader2 } from 'lucide-react';
 
 interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'brand';
-    size?: 'sm' | 'md' | 'lg';
-    icon?: React.ReactNode;
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+    size?: 'sm' | 'md' | 'lg' | 'icon';
     isLoading?: boolean;
+    leftIcon?: React.ReactNode;
+    rightIcon?: React.ReactNode;
 }
 
 export const GlassButton: React.FC<GlassButtonProps> = ({
@@ -14,55 +13,50 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
     className = '',
     variant = 'primary',
     size = 'md',
-    icon,
     isLoading = false,
+    leftIcon,
+    rightIcon,
     disabled,
     ...props
 }) => {
+    const baseStyles = "relative inline-flex items-center justify-center font-medium rounded-xl transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden";
+
     const variants = {
-        primary: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]',
-        secondary: 'bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/40 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]',
-        danger: 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/40 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]',
-        ghost: 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10 hover:border-white/20 hover:text-white',
-        brand: 'bg-gradient-to-r from-[#ff3355]/80 to-[#ff8042]/80 border-transparent text-white hover:opacity-90 hover:shadow-[0_0_25px_rgba(255,51,85,0.4)] shadow-[0_0_15px_rgba(255,51,85,0.2)]'
+        primary: "bg-gradient-to-r from-liquid-accent to-blue-600 text-white shadow-lg shadow-liquid-accent/20 hover:shadow-liquid-accent/40 hover:scale-[1.02]",
+        secondary: "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20",
+        ghost: "text-liquid-text-muted hover:text-white hover:bg-white/5",
+        danger: "bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/40",
+        success: "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
     };
 
     const sizes = {
-        sm: 'px-3 py-1.5 text-xs',
-        md: 'px-5 py-2.5 text-sm',
-        lg: 'px-8 py-4 text-base'
+        sm: "px-3 py-1.5 text-xs gap-1.5",
+        md: "px-5 py-2.5 text-sm gap-2",
+        lg: "px-7 py-3.5 text-base gap-2.5",
+        icon: "p-2.5"
     };
 
     return (
         <button
-            className={`
-                relative
-                backdrop-blur-md 
-                border 
-                rounded-xl 
-                font-medium
-                tracking-wide
-                transition-all duration-300 
-                flex items-center justify-center gap-2
-                disabled:opacity-50 disabled:cursor-not-allowed
-                active:scale-[0.98]
-                ${variants[variant]}
-                ${sizes[size]}
-                ${className}
-            `}
+            className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
             disabled={disabled || isLoading}
             {...props}
         >
+            {/* Shine effect on hover for primary/danger/success */}
+            {['primary', 'danger', 'success'].includes(variant) && (
+                <div className="absolute inset-0 -translate-x-full group-hover:animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent z-0" />
+            )}
+
             {isLoading ? (
-                <>
-                    <Loader2 className="animate-spin" size={size === 'sm' ? 14 : 18} />
-                    <span>Processing...</span>
-                </>
-            ) : (
-                <>
-                    {icon && <span className="opacity-90">{icon}</span>}
-                    {children}
-                </>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+            ) : leftIcon ? (
+                <span className="relative z-10">{leftIcon}</span>
+            ) : null}
+
+            <span className="relative z-10">{isLoading ? 'Loading...' : children}</span>
+
+            {!isLoading && rightIcon && (
+                <span className="relative z-10 group-hover:translate-x-0.5 transition-transform">{rightIcon}</span>
             )}
         </button>
     );
