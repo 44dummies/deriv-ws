@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Layers, Users, FileText, Settings,
-    LogOut, Menu, ChevronLeft, Bell, Search
+    LogOut, Menu, ChevronLeft, Bell, Search, Shield
 } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 
@@ -18,6 +18,7 @@ export const AdminGlassLayout: React.FC = () => {
     const menuItems = [
         { icon: <LayoutDashboard size={20} />, label: 'Dashboard', to: '/admin/dashboard' },
         { icon: <Layers size={20} />, label: 'Sessions', to: '/admin/sessions' },
+        { icon: <Shield size={20} />, label: 'Risk & Signals', to: '/admin/risk' },
         { icon: <Users size={20} />, label: 'Users', to: '/admin/users' },
         { icon: <FileText size={20} />, label: 'Reports', to: '/admin/reports' },
         { icon: <Settings size={20} />, label: 'Settings', to: '/admin/settings' },

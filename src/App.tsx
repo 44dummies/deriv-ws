@@ -20,8 +20,8 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 import NotificationsPage from './pages/admin/NotificationsPage';
 import UserDetailsPage from './pages/admin/UserDetailsPage';
 // TradingDashboard removed per user request
-import SessionManagement from './pages/admin/SessionManagement';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
+import RiskManagement from './pages/admin/RiskManagement';
 
 // Legacy imports
 
@@ -81,6 +81,7 @@ function App(): React.ReactElement {
               <Route path="sessions" element={<SessionsPage />} />
               <Route path="sessions/new" element={<SessionsPage />} />
               <Route path="sessions/live" element={<SessionsPage />} />
+              <Route path="risk" element={<RiskManagement />} />
               <Route path="users" element={<UsersPage />} />
               <Route path="users/:userId" element={<UserDetailsPage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
@@ -88,8 +89,6 @@ function App(): React.ReactElement {
               <Route path="logs" element={<LogsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               {/* Trading dashboard removed */}
-              {/* Advanced Session Management */}
-              <Route path="manage" element={<SessionManagement />} />
               {/* Reports */}
               <Route path="reports" element={<AdminReportsPage />} />
             </Route>

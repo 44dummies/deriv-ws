@@ -5,12 +5,14 @@ interface GlassStatusBadgeProps {
     status: 'active' | 'inactive' | 'success' | 'warning' | 'error' | 'info' | 'neutral';
     children: React.ReactNode;
     pulse?: boolean;
+    size?: 'sm' | 'md' | 'lg';
 }
 
 export const GlassStatusBadge: React.FC<GlassStatusBadgeProps> = ({
     status,
     children,
-    pulse = false
+    pulse = false,
+    size = 'md'
 }) => {
     const styles = {
         active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
@@ -32,14 +34,20 @@ export const GlassStatusBadge: React.FC<GlassStatusBadgeProps> = ({
         neutral: 'bg-gray-400',
     };
 
+    const sizes = {
+        sm: "px-2 py-0.5 text-[10px]",
+        md: "px-3 py-1 text-xs",
+        lg: "px-4 py-1.5 text-sm"
+    };
+
     return (
         <span className={`
             inline-flex items-center gap-2 
-            px-3 py-1 
             rounded-full 
-            text-xs font-medium 
+            font-medium 
             border backdrop-blur-md
             ${styles[status]}
+            ${sizes[size]}
         `}>
             <span className={`w-1.5 h-1.5 rounded-full ${dots[status]} ${pulse ? 'animate-pulse' : ''}`} />
             {children}

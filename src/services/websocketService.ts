@@ -228,7 +228,7 @@ class DerivWebSocket {
       try {
         if (this.ws?.readyState === WebSocket.OPEN) {
           await this.ping();
-          console.log('Keep-alive ping sent');
+          // console.log('Keep-alive ping sent');
         }
       } catch (error) {
         console.error('Ping failed:', error);

@@ -3,12 +3,14 @@ import React from 'react';
 interface GlassBadgeProps {
     children: React.ReactNode;
     variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
+    size?: 'sm' | 'md';
     className?: string;
 }
 
 export const GlassBadge: React.FC<GlassBadgeProps> = ({
     children,
     variant = 'neutral',
+    size = 'md',
     className = ''
 }) => {
     const variants = {
@@ -19,10 +21,16 @@ export const GlassBadge: React.FC<GlassBadgeProps> = ({
         neutral: "bg-white/5 text-gray-400 border-white/10"
     };
 
+    const sizes = {
+        sm: "px-2 py-0.5 text-[10px]",
+        md: "px-2.5 py-0.5 text-xs"
+    };
+
     return (
         <span className={`
-      inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+      inline-flex items-center rounded-full font-medium border
       ${variants[variant]}
+      ${sizes[size]}
       ${className}
     `}>
             {children}

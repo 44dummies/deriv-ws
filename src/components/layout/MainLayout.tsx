@@ -4,7 +4,11 @@ import { Logo } from '../ui/Logo';
 import { GlassButton } from '../ui/glass/GlassButton';
 import { Home, LineChart, Users, Settings, LogOut, Menu } from 'lucide-react';
 
-export const MainLayout: React.FC = () => {
+interface MainLayoutProps {
+    children?: React.ReactNode;
+}
+
+export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     return (
@@ -70,7 +74,7 @@ export const MainLayout: React.FC = () => {
 
             {/* Main Content */}
             <main className="relative z-10 pt-20 pb-20 px-4 max-w-7xl mx-auto min-h-screen">
-                <Outlet />
+                {children || <Outlet />}
             </main>
         </div>
     );

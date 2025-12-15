@@ -8,7 +8,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { GlassToggle } from '../components/ui/glass/GlassToggle';
 
 // Glass UI
-// import { DashboardLayout } from '../components/layout/DashboardLayout';
 import { GlassCard } from '../components/ui/glass/GlassCard';
 import { GlassButton } from '../components/ui/glass/GlassButton';
 import { GlassStatusBadge } from '../components/ui/glass/GlassStatusBadge';

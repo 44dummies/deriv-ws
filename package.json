@@ -42,8 +42,8 @@
   "devDependencies": {
     "@railway/cli": "^4.12.0",
     "@types/node": "^24.10.4",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/recharts": "^1.8.29",
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react": "^5.1.2",

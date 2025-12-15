@@ -11,7 +11,7 @@ import apiClient from '../services/apiClient';
 import realtimeSocket from '../services/realtimeSocket';
 
 // Glass UI
-import { DashboardLayout } from '../components/layout/DashboardLayout';
+import { MainLayout } from '../components/layout/MainLayout';
 import { GlassCard } from '../components/ui/glass/GlassCard';
 import { GlassButton } from '../components/ui/glass/GlassButton';
 import { GlassToggle } from '../components/ui/glass/GlassToggle';
@@ -289,14 +289,14 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <MainLayout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-emerald-500" />
             <p className="text-slate-400">Loading settings...</p>
           </div>
         </div>
-      </DashboardLayout>
+      </MainLayout>
     );
   }
 
@@ -628,7 +628,7 @@ const Settings = () => {
   };
 
   return (
-    <DashboardLayout>
+    <div className="animate-fade-in">
       <Toaster position="top-right" toastOptions={{
         style: { background: '#1c1c28', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
       }} />
@@ -758,7 +758,7 @@ const Settings = () => {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 };
 

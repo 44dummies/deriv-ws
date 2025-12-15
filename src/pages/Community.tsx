@@ -10,7 +10,10 @@ import {
 import apiClient from '../services/apiClient';
 import realtimeSocket from '../services/realtimeSocket';
 import profileService from '../services/profileService';
-import './Community.css';
+
+// Glass UI Components
+import { GlassCard } from '../components/ui/glass/GlassCard';
+import { GlassButton } from '../components/ui/glass/GlassButton';
 
 const POST_CATEGORIES = [
   { id: 'all', label: 'All', emoji: '💬' },
@@ -496,130 +499,162 @@ const Community = () => {
     setShowEmojiPicker(false);
   };
 
-  const getAvatarContent = (user) => {
+  const getAvatarContent = (user, className = "w-10 h-10") => {
     if (user?.avatarUrl) {
       if (user.avatarUrl.startsWith('avatar:')) {
         const avatarId = parseInt(user.avatarUrl.split(':')[1]) || 1;
         const avatars = ['🧑‍💼', '👨‍💻', '👩‍💻', '🦊', '🦁', '🐺', '🦅', '🐉', '🦈', '🐂', '🎭', '🎩', '🕶️', '🤖', '👽', '🥷', '🧙‍♂️', '🦸', '🧑‍🚀', '👑', '💎', '🚀', '⚡', '🔥', '💰', '📈', '🎯', '🏆', '🌟', '🎲'];
-        return <span className="avatar-emoji">{avatars[avatarId - 1] || '👤'}</span>;
+        return (
+          <div className={`${className} bg-white/10 rounded-full flex items-center justify-center text-lg`}>
+            {avatars[avatarId - 1] || '👤'}
+          </div>
+        );
       }
-      return <img src={user.avatarUrl} alt="" />;
+      return (
+        <img
+          src={user.avatarUrl}
+          alt=""
+          className={`${className} rounded-full object-cover border-2 border-white/10`}
+        />
+      );
     }
-    return <span className="avatar-initial">{user?.username?.[0]?.toUpperCase() || '?'}</span>;
+    return (
+      <div className={`${className} bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold`}>
+        {user?.username?.[0]?.toUpperCase() || '?'}
+      </div>
+    );
   };
 
   if (loading) {
     return (
-      <div className="tg-community">
-        <div className="tg-loading">
-          <div className="tg-loading-spinner"></div>
-          <p>Loading community...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full">
+        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <p className="mt-4 text-slate-400">Loading community...</p>
       </div>
     );
   }
 
   return (
-    <div className="tg-community">
+    <div className="h-full flex flex-col bg-[#0e0e12] overflow-hidden">
       <Toaster position="top-center" />
 
       {/* Header */}
-      <header className="tg-header">
-        <button onClick={() => navigate('/dashboard')} className="tg-header-btn">
-          <ArrowLeft size={22} />
-        </button>
+      <div className="flex-none p-4 border-b border-white/5 flex items-center justify-between bg-[#1c1c28]/95 backdrop-blur-md z-10">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
 
-        <div className="tg-header-info" onClick={() => setShowSidebar(true)}>
-          <div className="tg-header-avatar">
-            <span>💬</span>
-          </div>
-          <div className="tg-header-text">
-            <h1>TraderMind Community</h1>
-            <span className="tg-header-subtitle">
-              {onlineUsers.length} online • {posts.length} messages
-            </span>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowSidebar(true)}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <MessageCircle size={20} className="text-white" />
+            </div>
+            <div>
+              <h1 className="font-bold text-white text-lg leading-tight">Community</h1>
+              <span className="text-xs text-green-400 font-medium flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                {onlineUsers.length} online
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="tg-header-actions">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="tg-header-btn"
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
           >
             <Search size={20} />
           </button>
           <button
             onClick={() => setShowMediaGallery(true)}
-            className="tg-header-btn"
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
           >
             <ImageIcon size={20} />
           </button>
           <button
             onClick={() => setShowSidebar(!showSidebar)}
-            className="tg-header-btn"
+            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
           >
             <MoreVertical size={20} />
           </button>
         </div>
-      </header>
+      </div>
 
       {/* Search Bar */}
       {showSearch && (
-        <div className="tg-search-bar">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search messages..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-          <button onClick={() => { setShowSearch(false); setSearchQuery(''); }}>
-            <X size={18} />
-          </button>
+        <div className="flex-none p-3 border-b border-white/5 bg-[#1c1c28]">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search messages..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#0e0e12] border border-white/10 rounded-xl py-2 pl-10 pr-10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+              autoFocus
+            />
+            <button
+              onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
       )}
 
       {/* Category Tabs */}
-      <div className="tg-categories">
+      <div className="flex-none px-4 py-3 border-b border-white/5 overflow-x-auto hide-scrollbar flex gap-2">
         {POST_CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`tg-category ${activeCategory === cat.id ? 'active' : ''}`}
+            className={`flex-none px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${activeCategory === cat.id
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+              }`}
           >
-            <span className="tg-category-emoji">{cat.emoji}</span>
-            <span className="tg-category-label">{cat.label}</span>
+            <span>{cat.emoji}</span>
+            <span>{cat.label}</span>
           </button>
         ))}
       </div>
 
       {/* Main Chat Area */}
       <div
-        className="tg-chat-container"
+        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {feedLoading && page === 1 && (
-          <div className="tg-loading-messages">
-            <div className="tg-loading-spinner small"></div>
+          <div className="flex justify-center py-4">
+            <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
           </div>
         )}
 
         {hasMore && page > 1 && (
-          <div className="tg-load-more">
-            <button onClick={() => loadFeed(page + 1)}>
-              {feedLoading ? <Loader2 size={16} className="spin" /> : 'Load older messages'}
+          <div className="flex justify-center py-2">
+            <button
+              onClick={() => loadFeed(page + 1)}
+              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+            >
+              {feedLoading ? <Loader2 size={12} className="animate-spin" /> : 'Load older messages'}
             </button>
           </div>
         )}
 
-        <div className="tg-messages">
+        <div className="space-y-6">
           {posts.length === 0 && !feedLoading && (
-            <div className="tg-empty">
-              <div className="tg-empty-icon">💬</div>
-              <h3>No messages yet</h3>
-              <p>Be the first to start the conversation!</p>
+            <div className="py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-white/5 mx-auto mb-4 flex items-center justify-center text-4xl">
+                💬
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">No messages yet</h3>
+              <p className="text-slate-400">Be the first to start the conversation!</p>
             </div>
           )}
 
@@ -634,137 +669,139 @@ const Community = () => {
             return (
               <div
                 key={post.id}
-                className={`tg-message ${isOwn ? 'own' : ''} ${showAvatar ? 'with-avatar' : ''}`}
+                className={`flex gap-3 max-w-[85%] ${isOwn ? 'ml-auto flex-row-reverse' : ''} ${showAvatar ? 'mt-4' : 'mt-1'}`}
               >
-                {!isOwn && showAvatar && (
-                  <div className="tg-message-avatar">
-                    {getAvatarContent(post.author)}
+                {!isOwn && (
+                  <div className="flex-none w-10">
+                    {showAvatar && getAvatarContent(post.author)}
                   </div>
                 )}
 
-                <div className="tg-message-bubble">
+                <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                   {showName && (
-                    <div className="tg-message-name" style={{ color: stringToColor(post.author.username) }}>
+                    <span className="text-xs font-bold mb-1 ml-1" style={{ color: stringToColor(post.author.username) }}>
                       @{post.author.username}
-                    </div>
+                    </span>
                   )}
 
-                  {/* Reply indicator */}
-                  {post.replyTo && (
-                    <div className="tg-message-reply">
-                      <span>↩ Reply to {post.replyTo.author}</span>
-                    </div>
-                  )}
-
-                  {/* Image */}
-                  {post.imageUrl && (
-                    <div
-                      className="tg-message-media"
-                      onClick={() => setSelectedMedia({ type: 'image', url: post.imageUrl })}
-                    >
-                      <img src={post.imageUrl} alt="" loading="lazy" />
-                    </div>
-                  )}
-
-                  {/* File */}
-                  {post.fileUrl && !post.imageUrl && (
-                    <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="tg-message-file">
-                      <div className="tg-file-icon">
-                        {React.createElement(getFileIcon(post.fileType), { size: 24 })}
+                  <div className={`group relative p-3 rounded-2xl ${isOwn
+                      ? 'bg-blue-600 text-white rounded-tr-sm shadow-lg shadow-blue-600/10'
+                      : 'bg-[#2a2a35] text-white rounded-tl-sm border border-white/5'
+                    }`}>
+                    {/* Reply indicator */}
+                    {post.replyTo && (
+                      <div className="text-xs mb-2 pl-2 border-l-2 border-white/30 opacity-70">
+                        <span>↩ Reply to {post.replyTo.author}</span>
                       </div>
-                      <div className="tg-file-info">
-                        <span className="tg-file-name">{post.fileName || 'File'}</span>
-                        <span className="tg-file-size">{formatFileSize(post.fileSize)}</span>
-                      </div>
-                      <Download size={18} className="tg-file-download" />
-                    </a>
-                  )}
-
-                  {/* Text content */}
-                  {post.content && (
-                    <div className="tg-message-text">{post.content}</div>
-                  )}
-
-                  {/* Message footer */}
-                  <div className="tg-message-footer">
-                    <span className="tg-message-time">{formatTime(post.createdAt)}</span>
-                    {isOwn && (
-                      <span className="tg-message-status">
-                        <CheckCheck size={14} />
-                      </span>
                     )}
+
+                    {/* Image */}
+                    {post.imageUrl && (
+                      <div
+                        className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setSelectedMedia({ type: 'image', url: post.imageUrl })}
+                      >
+                        <img src={post.imageUrl} alt="" className="max-w-full max-h-[300px] object-cover" loading="lazy" />
+                      </div>
+                    )}
+
+                    {/* File */}
+                    {post.fileUrl && !post.imageUrl && (
+                      <a href={post.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-2 rounded bg-black/20 mb-2 hover:bg-black/30 transition-colors">
+                        <div className="p-2 rounded bg-white/10 text-white">
+                          {React.createElement(getFileIcon(post.fileType), { size: 20 })}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{post.fileName || 'File'}</div>
+                          <div className="text-xs opacity-70">{formatFileSize(post.fileSize)}</div>
+                        </div>
+                        <Download size={16} />
+                      </a>
+                    )}
+
+                    {/* Text content */}
+                    {post.content && (
+                      <div className="text-sm md:text-base whitespace-pre-wrap break-words">{post.content}</div>
+                    )}
+
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
+                      <span className="text-[10px] opacity-60">
+                        {formatTime(post.createdAt)}
+                      </span>
+                      {isOwn && <CheckCheck size={12} className="opacity-60" />}
+                    </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="tg-message-actions">
+                  <div className={`flex items-center gap-2 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity ${isOwn ? 'flex-row-reverse' : ''}`}>
                     <button
                       onClick={() => likePost(post.id)}
-                      className={`tg-action ${post.liked ? 'active' : ''}`}
+                      className={`flex items-center gap-1 text-xs hover:text-red-400 transition-colors ${post.liked ? 'text-red-500 font-bold' : 'text-slate-500'}`}
                     >
-                      <Heart size={16} fill={post.liked ? 'currentColor' : 'none'} />
+                      <Heart size={14} fill={post.liked ? 'currentColor' : 'none'} />
                       {post.likeCount > 0 && <span>{post.likeCount}</span>}
                     </button>
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className={`tg-action ${expandedPost === post.id ? 'active' : ''}`}
+                      className={`flex items-center gap-1 text-xs hover:text-blue-400 transition-colors ${expandedPost === post.id ? 'text-blue-500 font-bold' : 'text-slate-500'}`}
                     >
-                      <MessageCircle size={16} />
+                      <MessageCircle size={14} />
                       {post.commentCount > 0 && <span>{post.commentCount}</span>}
                     </button>
                     <button
                       onClick={() => setReplyingTo(post)}
-                      className="tg-action"
+                      className="text-slate-500 hover:text-white"
                     >
-                      <Share2 size={16} />
+                      <Share2 size={14} />
                     </button>
                     {isOwn && (
-                      <button onClick={() => deletePost(post.id)} className="tg-action delete">
-                        <Trash2 size={16} />
+                      <button onClick={() => deletePost(post.id)} className="text-slate-500 hover:text-red-500">
+                        <Trash2 size={14} />
                       </button>
                     )}
                   </div>
-                </div>
 
-                {/* Comments/Replies */}
-                {expandedPost === post.id && (
-                  <div className="tg-replies">
-                    {loadingComments[post.id] ? (
-                      <div className="tg-replies-loading">
-                        <Loader2 size={16} className="spin" />
-                      </div>
-                    ) : (
-                      <>
-                        {(comments[post.id] || []).map(comment => (
-                          <div key={comment.id} className="tg-reply">
-                            <div className="tg-reply-avatar">
-                              {getAvatarContent(comment.author)}
-                            </div>
-                            <div className="tg-reply-content">
-                              <span className="tg-reply-author">@{comment.author.username}</span>
-                              <p>{comment.content}</p>
-                              <span className="tg-reply-time">{formatTime(comment.createdAt)}</span>
-                            </div>
-                          </div>
-                        ))}
-                        <div className="tg-reply-input">
-                          <input
-                            type="text"
-                            placeholder="Write a reply..."
-                            value={commentInputs[post.id] || ''}
-                            onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)}
-                          />
-                          <button
-                            onClick={() => addComment(post.id)}
-                            disabled={!commentInputs[post.id]?.trim()}
-                          >
-                            <Send size={16} />
-                          </button>
+                  {/* Comments/Replies */}
+                  {expandedPost === post.id && (
+                    <div className="w-full mt-2 pl-4 border-l-2 border-white/10 space-y-3">
+                      {loadingComments[post.id] ? (
+                        <div className="flex justify-center py-2">
+                          <Loader2 size={16} className="text-blue-500 animate-spin" />
                         </div>
-                      </>
-                    )}
-                  </div>
-                )}
+                      ) : (
+                        <>
+                          {(comments[post.id] || []).map(comment => (
+                            <div key={comment.id} className="text-sm bg-[#1c1c28] p-2 rounded-lg">
+                              <div className="flex items-center gap-2 mb-1">
+                                {getAvatarContent(comment.author, "w-5 h-5")}
+                                <span className="text-xs font-bold text-slate-300">@{comment.author.username}</span>
+                                <span className="text-[10px] text-slate-500">{formatTime(comment.createdAt)}</span>
+                              </div>
+                              <p className="text-slate-300 pl-7 text-xs">{comment.content}</p>
+                            </div>
+                          ))}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Write a reply..."
+                              value={commentInputs[post.id] || ''}
+                              onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)}
+                              className="flex-1 bg-[#1c1c28] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                            />
+                            <button
+                              onClick={() => addComment(post.id)}
+                              disabled={!commentInputs[post.id]?.trim()}
+                              className="p-1.5 bg-blue-600 rounded-lg text-white disabled:opacity-50 hover:bg-blue-700"
+                            >
+                              <Send size={14} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -773,43 +810,41 @@ const Community = () => {
 
         {/* Typing indicator */}
         {typingUsers.length > 0 && (
-          <div className="tg-typing">
-            <div className="tg-typing-dots">
-              <span></span><span></span><span></span>
-            </div>
-            <span>{typingUsers.map(u => u.username).join(', ')} typing...</span>
+          <div className="flex items-center gap-2 text-slate-500 text-xs px-2 animate-pulse">
+            <span className="font-medium">{typingUsers.map(u => u.username).join(', ')}</span>
+            <span>is typing...</span>
           </div>
         )}
       </div>
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="tg-reply-preview">
-          <div className="tg-reply-preview-content">
-            <span className="tg-reply-preview-name">@{replyingTo.author.username}</span>
-            <span className="tg-reply-preview-text">{replyingTo.content?.slice(0, 50)}...</span>
+        <div className="flex-none p-2 bg-[#1c1c28] border-t border-white/5 flex items-center justify-between">
+          <div className="flex flex-col text-sm border-l-2 border-blue-500 pl-2">
+            <span className="text-blue-400 font-bold text-xs">Reply to @{replyingTo.author.username}</span>
+            <span className="text-slate-400 text-xs truncate max-w-[300px]">{replyingTo.content}</span>
           </div>
-          <button onClick={() => setReplyingTo(null)}>
-            <X size={18} />
+          <button onClick={() => setReplyingTo(null)} className="p-1 hover:bg-white/10 rounded-full text-slate-400">
+            <X size={16} />
           </button>
         </div>
       )}
 
       {/* File previews */}
       {filePreviews.length > 0 && (
-        <div className="tg-file-previews">
+        <div className="flex-none p-2 bg-[#1c1c28] border-t border-white/5 flex gap-2 overflow-x-auto">
           {filePreviews.map((item, index) => (
-            <div key={index} className="tg-file-preview">
+            <div key={index} className="relative group w-16 h-16 rounded-lg bg-black/20 flex-none border border-white/5 overflow-hidden">
               {item.type === 'image' ? (
-                <img src={item.preview} alt="" />
+                <img src={item.preview} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="tg-file-preview-icon">
-                  {React.createElement(getFileIcon(item.file.type), { size: 24 })}
-                  <span>{item.file.name}</span>
+                <div className="w-full h-full flex flex-col items-center justify-center text-xs text-slate-400 p-1">
+                  {React.createElement(getFileIcon(item.file.type), { size: 20 })}
+                  <span className="truncate w-full text-center mt-1">{item.file.name.slice(0, 5)}...</span>
                 </div>
               )}
-              <button onClick={() => removeFile(index)} className="tg-file-preview-remove">
-                <X size={14} />
+              <button onClick={() => removeFile(index)} className="absolute top-0.5 right-0.5 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <X size={12} />
               </button>
             </div>
           ))}
@@ -817,163 +852,176 @@ const Community = () => {
       )}
 
       {/* Input area */}
-      <div className="tg-input-area">
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="tg-input-btn"
-        >
-          <Smile size={22} />
-        </button>
+      <div className="flex-none p-4 bg-[#1c1c28] border-t border-white/5">
+        <div className="flex items-end gap-2 bg-[#0e0e12] rounded-2xl p-2 border border-white/10 focus-within:border-blue-500/50 transition-colors">
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
+          >
+            <Smile size={22} />
+          </button>
 
-        {showEmojiPicker && (
-          <div className="tg-emoji-picker">
-            {EMOJI_LIST.map(emoji => (
-              <button key={emoji} onClick={() => insertEmoji(emoji)}>
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
+          {showEmojiPicker && (
+            <div className="absolute bottom-20 left-4 bg-[#1c1c28] border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-2 shadow-xl z-50">
+              {EMOJI_LIST.map(emoji => (
+                <button key={emoji} onClick={() => insertEmoji(emoji)} className="p-2 hover:bg-white/5 rounded-lg text-xl">
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
 
-        <button onClick={() => fileInputRef.current?.click()} className="tg-input-btn">
-          <Paperclip size={22} />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-          onChange={handleFileSelect}
-          multiple
-          hidden
-        />
+          <button onClick={() => fileInputRef.current?.click()} className="p-2 text-slate-400 hover:text-blue-400 transition-colors">
+            <Paperclip size={22} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+            onChange={handleFileSelect}
+            multiple
+            hidden
+          />
 
-        <div className="tg-input-wrapper">
           <textarea
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder="Message..."
+            placeholder="Type a message..."
+            className="flex-1 bg-transparent text-white placeholder-slate-500 resize-none py-2 max-h-[100px] focus:outline-none"
             rows={1}
           />
-        </div>
 
-        <button
-          onClick={createPost}
-          disabled={posting || (!messageInput.trim() && selectedFiles.length === 0)}
-          className="tg-send-btn"
-        >
-          {posting ? (
-            <Loader2 size={20} className="spin" />
-          ) : (
-            <Send size={20} />
-          )}
-        </button>
+          <button
+            onClick={createPost}
+            disabled={posting || (!messageInput.trim() && selectedFiles.length === 0)}
+            className={`p-2 rounded-xl transition-all ${(!messageInput.trim() && selectedFiles.length === 0)
+                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700'
+              }`}
+          >
+            {posting ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Send size={20} />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Media Gallery Modal */}
       {showMediaGallery && (
-        <div className="tg-modal-overlay" onClick={() => setShowMediaGallery(false)}>
-          <div className="tg-media-gallery" onClick={e => e.stopPropagation()}>
-            <div className="tg-gallery-header">
-              <h2>Shared Media</h2>
-              <button onClick={() => setShowMediaGallery(false)}>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMediaGallery(false)}>
+          <GlassCard className="w-full max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#1c1c28]">
+              <h2 className="text-xl font-bold text-white">Shared Media</h2>
+              <button onClick={() => setShowMediaGallery(false)} className="text-slate-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
-            <div className="tg-gallery-tabs">
-              <button className="active">
+            <div className="flex gap-4 p-4 border-b border-white/5 bg-[#1c1c28]/50">
+              <button className="text-blue-400 font-medium flex items-center gap-2 pb-2 border-b-2 border-blue-400">
                 <ImageIcon size={16} /> Photos
               </button>
-              <button>
+              <button className="text-slate-400 hover:text-white font-medium flex items-center gap-2 pb-2 transition-colors">
                 <File size={16} /> Files
               </button>
             </div>
-            <div className="tg-gallery-grid">
-              {mediaGalleryItems
-                .filter(m => m.type === 'image')
-                .map(media => (
-                  <div
-                    key={media.id}
-                    className="tg-gallery-item"
-                    onClick={() => setSelectedMedia({ type: 'image', url: media.url })}
-                  >
-                    <img src={media.url} alt="" loading="lazy" />
-                  </div>
-                ))}
+            <div className="flex-1 overflow-y-auto p-4 bg-[#0e0e12]">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {mediaGalleryItems
+                  .filter(m => m.type === 'image')
+                  .map(media => (
+                    <div
+                      key={media.id}
+                      className="aspect-square rounded-xl overflow-hidden cursor-pointer border border-white/10 hover:border-blue-500/50 transition-colors relative group"
+                      onClick={() => setSelectedMedia({ type: 'image', url: media.url })}
+                    >
+                      <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ImageIcon className="text-white" />
+                      </div>
+                    </div>
+                  ))}
+              </div>
               {mediaGalleryItems.filter(m => m.type === 'image').length === 0 && (
-                <div className="tg-gallery-empty">
-                  <ImageIcon size={48} />
+                <div className="flex flex-col items-center justify-center h-40 text-slate-500">
+                  <ImageIcon size={48} className="mb-2 opacity-50" />
                   <p>No shared photos yet</p>
                 </div>
               )}
             </div>
-          </div>
+          </GlassCard>
         </div>
       )}
 
       {/* Image viewer */}
       {selectedMedia && (
-        <div className="tg-image-viewer" onClick={() => setSelectedMedia(null)}>
-          <button className="tg-viewer-close">
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center" onClick={() => setSelectedMedia(null)}>
+          <button className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/50 rounded-full p-2">
             <X size={28} />
           </button>
-          <img src={selectedMedia.url} alt="" />
+          <img src={selectedMedia.url} alt="" className="max-w-full max-h-[90vh] object-contain" />
         </div>
       )}
 
       {/* Sidebar */}
       {showSidebar && (
-        <div className="tg-sidebar-overlay" onClick={() => setShowSidebar(false)}>
-          <div className="tg-sidebar" onClick={e => e.stopPropagation()}>
-            <div className="tg-sidebar-header">
-              <div className="tg-sidebar-avatar">💬</div>
-              <h2>TraderMind Community</h2>
-              <p>{onlineUsers.length} members online</p>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setShowSidebar(false)}>
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#1c1c28] border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-white/5 flex flex-col items-center">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl mb-3 shadow-lg shadow-purple-500/20">
+                💬
+              </div>
+              <h2 className="text-xl font-bold text-white">Community info</h2>
+              <p className="text-green-400 text-sm mt-1">{onlineUsers.length} members online</p>
             </div>
 
-            <div className="tg-sidebar-section">
-              <h3>
-                <Users size={16} /> Online Now
-              </h3>
-              <div className="tg-online-list">
-                {onlineUsers.slice(0, 15).map(user => (
-                  <div key={user.id || user.derivId} className="tg-online-user">
-                    <div className="tg-online-avatar">
-                      {getAvatarContent(user)}
-                      <span className="tg-online-dot"></span>
+            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Users size={14} /> Online Now
+                </h3>
+                <div className="space-y-3">
+                  {onlineUsers.slice(0, 15).map(user => (
+                    <div key={user.id || user.derivId} className="flex items-center gap-3">
+                      <div className="relative">
+                        {getAvatarContent(user, "w-8 h-8")}
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#1c1c28] rounded-full"></span>
+                      </div>
+                      <span className="text-sm text-slate-200">@{user.username}</span>
                     </div>
-                    <span>@{user.username}</span>
-                  </div>
-                ))}
-                {onlineUsers.length > 15 && (
-                  <div className="tg-online-more">
-                    +{onlineUsers.length - 15} more online
-                  </div>
-                )}
+                  ))}
+                  {onlineUsers.length > 15 && (
+                    <div className="text-xs text-slate-500 pl-1">
+                      +{onlineUsers.length - 15} more online
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="tg-sidebar-section">
-              <h3>
-                <ImageIcon size={16} /> Shared Media
-              </h3>
-              <div className="tg-sidebar-media-preview">
-                {mediaGalleryItems.slice(0, 6).map(media => (
-                  <div
-                    key={media.id}
-                    className="tg-sidebar-media-item"
-                    onClick={() => { setSelectedMedia({ type: 'image', url: media.url }); setShowSidebar(false); }}
-                  >
-                    {media.type === 'image' && <img src={media.url} alt="" />}
-                  </div>
-                ))}
+              <div>
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <ImageIcon size={14} /> Shared Media
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {mediaGalleryItems.slice(0, 6).map(media => (
+                    <div
+                      key={media.id}
+                      className="aspect-square rounded-lg overflow-hidden bg-black/20 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => { setSelectedMedia({ type: 'image', url: media.url }); setShowSidebar(false); }}
+                    >
+                      {media.type === 'image' && <img src={media.url} alt="" className="w-full h-full object-cover" />}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="w-full mt-3 py-2 text-xs font-medium text-blue-400 bg-blue-500/10 rounded-lg hover:bg-blue-500/20 transition-colors"
+                  onClick={() => { setShowMediaGallery(true); setShowSidebar(false); }}
+                >
+                  View All Media
+                </button>
               </div>
-              <button
-                className="tg-sidebar-view-all"
-                onClick={() => { setShowMediaGallery(true); setShowSidebar(false); }}
-              >
-                View All Media
-              </button>
             </div>
           </div>
         </div>

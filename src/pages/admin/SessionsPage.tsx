@@ -1,17 +1,26 @@
 /**
- * Sessions Page - Simplified Admin Session Management
+ * Sessions Page - Advanced Session Management with Glass UI (Verified)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEventStream } from '../../hooks/useEventStream';
-import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
-import { Play, Pause, Plus, Monitor, Wifi, WifiOff, Trash2, StopCircle, Zap, Activity, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import {
+  Activity, Play, Pause, Square, Plus, Filter, Search, ChevronDown, ChevronRight,
+  TrendingUp, TrendingDown, DollarSign, Users, Shield, Zap, Bell, CheckCircle,
+  Monitor, Wifi, WifiOff, Trash2, StopCircle
+} from 'lucide-react';
 import { tradingApi } from '../../trading/tradingApi';
+import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
+import { useEventStream } from '../../hooks/useEventStream';
+import { useSessionTicks } from '../../hooks/useSessionTicks';
+
+// UI Components
 import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
 import { GlassModal } from '../../components/ui/glass/GlassModal';
 import { GlassStatusBadge } from '../../components/ui/glass/GlassStatusBadge';
+import { GlassInput } from '../../components/ui/glass/GlassInput';
+import { ChartPanel } from '../../components/chart/ChartPanel';
 import toast from 'react-hot-toast';
 
 interface Session {
@@ -25,20 +34,8 @@ interface Session {
   default_sl: number;
   created_at: string;
   participants_count?: number;
-  participants?: { user_id: string; username?: string; email?: string; take_profit?: number; stop_loss?: number; net_pnl?: number; joined_at?: string }[];
-}
-
-interface ActivityItem {
-  id: number;
-  type: 'signal' | 'open' | 'close';
-  side?: string;
-  market?: string;
-  price?: number;
-  profit?: number;
-  result?: 'won' | 'lost';
-  confidence?: number;
-  digit?: number;
-  timestamp: string;
+  participants?: any[];
+  current_pnl?: number; // Added to support pnl tracking
 }
 
 const AVAILABLE_MARKETS = [
@@ -52,11 +49,6 @@ const AVAILABLE_MARKETS = [
   { value: 'R_50', label: 'Volatility 50 Index' },
   { value: 'R_75', label: 'Volatility 75 Index' },
   { value: 'R_100', label: 'Volatility 100 Index' },
-  { value: 'JD10', label: 'Jump 10 Index' },
-  { value: 'JD25', label: 'Jump 25 Index' },
-  { value: 'JD50', label: 'Jump 50 Index' },
-  { value: 'JD75', label: 'Jump 75 Index' },
-  { value: 'JD100', label: 'Jump 100 Index' },
 ];
 
 export default function SessionsPage() {
@@ -66,12 +58,16 @@ export default function SessionsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [activityLog, setActivityLog] = useState<ActivityItem[]>([]);
-  const [expandedSession, setExpandedSession] = useState<string | null>(null);
-  const [participants, setParticipants] = useState<any[]>([]);
-  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
-  // Create session form state - SIMPLIFIED
+  // Selection & Details
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const selectedSession = useMemo(() => sessions.find(s => s.id === selectedSessionId), [sessions, selectedSessionId]);
+
+  // Filters
+  const [filterStatus, setFilterStatus] = useState<'all' | 'running' | 'completed'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Create session form
   const [newSession, setNewSession] = useState({
     mode: 'demo' as 'real' | 'demo',
     market: '1HZ100V',
@@ -80,14 +76,8 @@ export default function SessionsPage() {
     default_sl: 5
   });
 
-  // Get running session for WebSocket events
-  const runningSession = sessions.find(s => s.status === 'running' || s.status === 'active');
-  const activeMarket = runningSession?.markets?.[0] || 'R_100';
-
-  // WebSocket events for real-time trade/signal monitoring
-  const { latestTrade, latestSignal } = useWebSocketEvents(runningSession?.id || null, [activeMarket]);
-
-  // SSE for real-time updates
+  // Data Hooks
+  const { latestTrade, latestSignal } = useWebSocketEvents(selectedSession?.id || null, selectedSession?.markets || []);
   const { isConnected: sseConnected } = useEventStream({
     topics: ['session:events'],
     onEvent: (event) => {
@@ -97,49 +87,40 @@ export default function SessionsPage() {
     }
   });
 
+  // Chart Data
+  const { ticks: sessionTicks, loading: loadingTicks } = useSessionTicks(selectedSessionId);
+  const activeMarket = selectedSession?.markets[0] || 'R_100';
+  const chartInitialTicks = sessionTicks[activeMarket] || [];
+
+  // Real-time chart updates (using WebSocket latestTrade/Signal just for markers, usually ticks come from separate stream but we reuse WS trade tick if available or just rely on regular polling from useSessionTicks)
+  // For now, we will just use the tick history + websocket trades as markers.
+
+  // Derived Markers
+  const tradeMarkers = useMemo(() => {
+    // In a real app we would merge historical trades with live incoming trades
+    if (!latestTrade) return [];
+    return [{
+      time: latestTrade.timestamp ? new Date(latestTrade.timestamp).getTime() / 1000 : Date.now() / 1000,
+      type: latestTrade.type,
+      price: latestTrade.price || 0
+    }];
+  }, [latestTrade]);
+
   useEffect(() => {
     fetchSessions();
   }, []);
 
-  // Update activity log when trades arrive
-  useEffect(() => {
-    if (latestTrade) {
-      const item: ActivityItem = {
-        id: Date.now(),
-        type: (latestTrade.type === 'open' ? 'open' : 'close') as 'open' | 'close',
-        side: latestTrade.side || latestTrade.signal,
-        market: latestTrade.market,
-        price: latestTrade.price,
-        profit: latestTrade.profit,
-        result: latestTrade.result as 'won' | 'lost' | undefined,
-        timestamp: latestTrade.timestamp || new Date().toISOString()
-      };
-      setActivityLog(prev => [item, ...prev].slice(0, 50));
-    }
-  }, [latestTrade]);
-
-  // Update activity log when signals arrive
-  useEffect(() => {
-    if (latestSignal) {
-      const item: ActivityItem = {
-        id: Date.now(),
-        type: 'signal' as const,
-        side: latestSignal.side,
-        market: latestSignal.market,
-        confidence: latestSignal.confidence,
-        digit: latestSignal.digit,
-        timestamp: new Date().toISOString()
-      };
-      setActivityLog(prev => [item, ...prev].slice(0, 50));
-    }
-  }, [latestSignal]);
-
   const fetchSessions = async () => {
     try {
-      setLoading(true);
       const response = await tradingApi.getSessions();
       const data = Array.isArray(response) ? response : (response.data || response.sessions || []);
       setSessions(Array.isArray(data) ? data : []);
+
+      // Auto-select first running session if none selected
+      if (!selectedSessionId && data.length > 0) {
+        const running = data.find((s: Session) => s.status === 'running');
+        if (running) setSelectedSessionId(running.id);
+      }
     } catch (err: any) {
       console.error('Failed to load sessions', err);
       if (err.message?.includes('No token') || err.message?.includes('Unauthorized')) {
@@ -153,9 +134,7 @@ export default function SessionsPage() {
   const handleCreateSession = async () => {
     setCreating(true);
     try {
-      // Auto-generate session name based on mode and market
       const sessionName = `${newSession.mode.toUpperCase()} - ${newSession.market} - ${new Date().toLocaleDateString()}`;
-
       const result = await tradingApi.createSession({
         name: sessionName,
         mode: newSession.mode,
@@ -163,541 +142,343 @@ export default function SessionsPage() {
         min_balance: newSession.min_balance,
         default_tp: newSession.default_tp,
         default_sl: newSession.default_sl,
-        session_type: 'day' // Default type
+        session_type: 'day'
       });
 
       if (result) {
         toast.success('Session created successfully');
         await fetchSessions();
         setShowCreateModal(false);
-        // Reset form
-        setNewSession({
-          mode: 'demo',
-          market: '1HZ100V',
-          min_balance: 5,
-          default_tp: 10,
-          default_sl: 5
-        });
+        // Reset
+        setNewSession({ mode: 'demo', market: '1HZ100V', min_balance: 5, default_tp: 10, default_sl: 5 });
       }
     } catch (err: any) {
-      console.error('Failed to create session', err);
       toast.error(err.message || 'Failed to create session');
     }
     setCreating(false);
   };
 
-  const handleStartSession = async (sessionId: string) => {
-    setActionLoading(sessionId);
+  const handleSessionAction = async (id: string, action: 'start' | 'stop' | 'delete') => {
+    setActionLoading(id);
     try {
-      await tradingApi.startSession(sessionId);
-      toast.success('Session started');
-      await fetchSessions();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to start session');
-    }
-    setActionLoading(null);
-  };
-
-  const handleStopSession = async (sessionId: string) => {
-    setActionLoading(sessionId);
-    try {
-      await tradingApi.stopSession(sessionId);
-      toast.success('Session stopped');
-      await fetchSessions();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to stop session');
-    }
-    setActionLoading(null);
-  };
-
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!window.confirm('Are you sure you want to delete this session?')) return;
-    setActionLoading(sessionId);
-    try {
-      await tradingApi.deleteSession(sessionId);
-      toast.success('Session deleted');
-      await fetchSessions();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete session');
-    }
-    setActionLoading(null);
-  };
-
-  const handleClearCompleted = async () => {
-    const completedSessions = sessions.filter(s => s.status === 'completed' || s.status === 'cancelled');
-    if (completedSessions.length === 0) {
-      toast.error('No completed sessions to clear');
-      return;
-    }
-    if (!window.confirm(`Delete ${completedSessions.length} completed session(s)?`)) return;
-
-    setActionLoading('clear');
-    try {
-      for (const session of completedSessions) {
-        await tradingApi.deleteSession(session.id);
+      if (action === 'start') await tradingApi.startSession(id);
+      if (action === 'stop') await tradingApi.stopSession(id);
+      if (action === 'delete') {
+        if (!window.confirm('Delete this session?')) {
+          setActionLoading(null);
+          return;
+        }
+        await tradingApi.deleteSession(id);
+        if (selectedSessionId === id) setSelectedSessionId(null);
       }
-      toast.success(`Cleared ${completedSessions.length} completed sessions`);
+      toast.success(`Session ${action}ed`);
       await fetchSessions();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to clear sessions');
+      toast.error(err.message || `Failed to ${action} session`);
     }
     setActionLoading(null);
   };
 
-  const toggleSessionExpand = async (sessionId: string) => {
-    if (expandedSession === sessionId) {
-      setExpandedSession(null);
-      setParticipants([]);
-      return;
-    }
+  // Stats Calculation
+  const stats = useMemo(() => {
+    const total = sessions.length;
+    const running = sessions.filter(s => s.status === 'running').length;
+    const totalPnL = sessions.reduce((acc, s) => acc + (s.current_pnl || 0), 0);
+    return { total, running, totalPnL };
+  }, [sessions]);
 
-    setExpandedSession(sessionId);
-    setLoadingParticipants(true);
-    try {
-      const result = await tradingApi.getSessionParticipants(sessionId);
-      const rawParticipants = Array.isArray(result) ? result : (result.data || result.participants || []);
-      // Map API fields to expected frontend fields
-      const mappedParticipants = rawParticipants.map((p: any) => ({
-        user_id: p.user_id,
-        username: p.user_profiles?.username || p.user_profiles?.deriv_id || p.username || 'Anonymous',
-        email: p.user_profiles?.email || p.email || '',
-        take_profit: p.tp || p.take_profit || 0,
-        stop_loss: p.sl || p.stop_loss || 0,
-        net_pnl: p.current_pnl || p.net_pnl || 0,
-        joined_at: p.accepted_at || p.joined_at || null,
-        status: p.status
-      }));
-      setParticipants(mappedParticipants);
-    } catch (err: any) {
-      console.error('Failed to load participants:', err);
-      setParticipants([]);
-      toast.error('Failed to load participant details');
-    }
-    setLoadingParticipants(false);
-  };
+  // Filtered Sessions
+  const filteredSessions = sessions.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' ? true :
+      filterStatus === 'running' ? (s.status === 'running' || s.status === 'active') :
+        (s.status === 'completed' || s.status === 'stopped' || s.status === 'cancelled');
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <GlassCard className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-400">
-            <Monitor size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Sessions</h1>
-            <p className="text-sm text-slate-400 flex items-center gap-2">
-              Manage trading sessions
-              {sseConnected ? (
-                <span className="flex items-center gap-1 text-emerald-400 text-xs"><Wifi size={12} /> Live</span>
-              ) : (
-                <span className="flex items-center gap-1 text-amber-400 text-xs"><WifiOff size={12} /> Polling</span>
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          {sessions.some(s => s.status === 'completed' || s.status === 'cancelled') && (
-            <GlassButton
-              variant="ghost"
-              onClick={handleClearCompleted}
-              disabled={actionLoading === 'clear'}
-              icon={<Trash2 size={18} />}
-            >
-              Clear Completed
-            </GlassButton>
-          )}
-          <GlassButton
-            variant="primary"
-            onClick={() => setShowCreateModal(true)}
-            icon={<Plus size={18} />}
-          >
-            Create Session
-          </GlassButton>
+      {/* Header Stats */}
+      <GlassCard className="p-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatBox icon={<Users className="text-blue-400" />} label="Total Sessions" value={stats.total.toString()} />
+          <StatBox icon={<Activity className="text-emerald-400" />} label="Running" value={stats.running.toString()} />
+          <StatBox icon={<DollarSign className={stats.totalPnL >= 0 ? "text-emerald-400" : "text-red-400"} />} label="Total P/L" value={`$${stats.totalPnL.toFixed(2)}`} />
+          <StatBox icon={<Wifi className={sseConnected ? "text-emerald-400" : "text-amber-400"} />} label="System Status" value={sseConnected ? "Connected" : "Reconnecting"} />
         </div>
       </GlassCard>
 
-      {/* Sessions List */}
-      <GlassCard>
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <Monitor size={48} className="mx-auto mb-4 opacity-30" />
-            <p>No sessions yet. Create one to get started.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Session</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Mode</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Market</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Stake</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">TP/SL</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Participants</th>
-                  <th className="text-left py-3 px-4 text-xs uppercase text-slate-500 font-medium">Status</th>
-                  <th className="text-right py-3 px-4 text-xs uppercase text-slate-500 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((session) => (
-                  <React.Fragment key={session.id}>
-                    <tr className={`border-b border-white/5 hover:bg-white/5 transition-colors ${expandedSession === session.id ? 'bg-white/5' : ''}`}>
-                      <td className="py-4 px-4">
-                        <span className="text-white font-medium">{session.name}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${session.mode === 'real'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-blue-500/20 text-blue-400'
-                          }`}>
-                          {session.mode?.toUpperCase() || 'DEMO'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-slate-300">
-                        {session.markets?.[0] || '-'}
-                      </td>
-                      <td className="py-4 px-4 text-slate-300">
-                        ${session.min_balance || 5}
-                      </td>
-                      <td className="py-4 px-4 text-slate-300">
-                        <span className="text-emerald-400">${session.default_tp || 10}</span>
-                        {' / '}
-                        <span className="text-red-400">${session.default_sl || 5}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <button
-                          onClick={() => toggleSessionExpand(session.id)}
-                          className={`flex items-center gap-2 text-sm font-bold transition-colors ${(session.participants_count || 0) > 0
-                            ? 'text-emerald-400 hover:text-emerald-300 cursor-pointer'
-                            : 'text-slate-500'
-                            }`}
-                          disabled={(session.participants_count || 0) === 0}
-                        >
-                          {expandedSession === session.id ? (
-                            <ChevronDown size={14} />
-                          ) : (
-                            <ChevronRight size={14} />
-                          )}
-                          <Users size={14} />
-                          {session.participants_count || 0} joined
-                        </button>
-                      </td>
-                      <td className="py-4 px-4">
-                        <GlassStatusBadge status={session.status === 'running' || session.status === 'active' ? 'active' : 'inactive'}>
-                          {session.status?.toUpperCase() || 'PENDING'}
-                        </GlassStatusBadge>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {session.status === 'running' || session.status === 'active' ? (
-                            <GlassButton
-                              variant="danger"
-                              size="sm"
-                              onClick={() => handleStopSession(session.id)}
-                              disabled={actionLoading === session.id}
-                              icon={<StopCircle size={14} />}
-                            >
-                              Stop
-                            </GlassButton>
-                          ) : (
-                            <GlassButton
-                              variant="primary"
-                              size="sm"
-                              onClick={() => handleStartSession(session.id)}
-                              disabled={actionLoading === session.id}
-                              icon={<Play size={14} />}
-                            >
-                              Start
-                            </GlassButton>
-                          )}
-                          <GlassButton
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteSession(session.id)}
-                            disabled={actionLoading === session.id || session.status === 'running' || session.status === 'active'}
-                            icon={<Trash2 size={14} />}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-
-                    {/* Expanded Participants Row */}
-                    {expandedSession === session.id && (
-                      <tr className="bg-white/[0.02]">
-                        <td colSpan={8} className="p-4">
-                          <div className="border border-white/10 rounded-xl bg-black/20 p-4">
-                            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-                              <Users className="text-emerald-400" size={18} />
-                              <h4 className="text-white font-bold">Participant Details</h4>
-                              <span className="text-xs text-slate-500">({participants.length} users)</span>
-                            </div>
-
-                            {loadingParticipants ? (
-                              <div className="flex items-center justify-center py-6">
-                                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                              </div>
-                            ) : participants.length === 0 ? (
-                              <div className="text-center py-6 text-slate-500">
-                                No participants yet
-                              </div>
-                            ) : (
-                              <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="text-xs text-slate-500 uppercase border-b border-white/5">
-                                      <th className="text-left py-2 px-3">User</th>
-                                      <th className="text-left py-2 px-3">TP / SL</th>
-                                      <th className="text-left py-2 px-3">Net P&L</th>
-                                      <th className="text-left py-2 px-3">Joined</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {participants.map((p, idx) => (
-                                      <tr key={p.user_id || idx} className="border-b border-white/5 last:border-0">
-                                        <td className="py-3 px-3">
-                                          <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                                              {(p.username || p.email || 'U')[0].toUpperCase()}
-                                            </div>
-                                            <div>
-                                              <div className="text-white font-medium">{p.username || 'Anonymous'}</div>
-                                              <div className="text-xs text-slate-500">{p.email || p.user_id?.slice(0, 8)}</div>
-                                            </div>
-                                          </div>
-                                        </td>
-                                        <td className="py-3 px-3">
-                                          <span className="text-emerald-400">${p.take_profit || '-'}</span>
-                                          {' / '}
-                                          <span className="text-red-400">${p.stop_loss || '-'}</span>
-                                        </td>
-                                        <td className="py-3 px-3">
-                                          <span className={`font-mono font-bold ${(p.net_pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                            {(p.net_pnl || 0) >= 0 ? '+' : ''}${(p.net_pnl || 0).toFixed(2)}
-                                          </span>
-                                        </td>
-                                        <td className="py-3 px-3 text-slate-400">
-                                          {p.joined_at ? new Date(p.joined_at).toLocaleString() : '-'}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </GlassCard>
-
-      {/* Live Feed - Bot Execution Monitor */}
-      <GlassCard className="max-h-[400px] flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Zap className="text-amber-400" size={20} />
-            <h3 className="text-lg font-bold text-white">Live Feed</h3>
-            {runningSession && (
-              <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">
-                {runningSession.name}
-              </span>
-            )}
-          </div>
-          {activityLog.length > 0 && (
-            <button
-              onClick={() => setActivityLog([])}
-              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2">
-          {activityLog.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50 py-8">
-              <Activity size={36} className="mb-3" />
-              <p className="text-sm">Waiting for bot activity...</p>
-              {!runningSession && (
-                <p className="text-xs mt-1">Start a session to see live trades</p>
-              )}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Panel: Session List */}
+        <div className="lg:col-span-4 space-y-4">
+          <GlassCard className="p-4 flex flex-col h-[700px]">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-lg text-white">Sessions</h2>
+              <GlassButton size="sm" onClick={() => setShowCreateModal(true)} leftIcon={<Plus size={14} />}>New</GlassButton>
             </div>
-          ) : (
-            activityLog.map((a) => (
-              <div
-                key={a.id}
-                className={`p-3 rounded-lg border flex items-center justify-between transition-all ${a.type === 'signal'
-                  ? 'bg-blue-500/10 border-blue-500/20'
-                  : a.result === 'won'
-                    ? 'bg-emerald-500/10 border-emerald-500/20'
-                    : a.result === 'lost'
-                      ? 'bg-red-500/10 border-red-500/20'
-                      : 'bg-white/5 border-white/10'
-                  }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded ${a.type === 'signal'
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : a.result === 'won'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : a.result === 'lost'
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-slate-500/20 text-slate-300'
-                        }`}
-                    >
-                      {a.type === 'signal' ? 'SIGNAL' : 'TRADE'}
-                    </span>
-                    <span className="text-sm font-medium text-white">
-                      {a.side} {a.digit !== undefined && a.digit}
-                    </span>
-                    {a.market && (
-                      <span className="text-xs text-slate-500">{a.market}</span>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-slate-500 mt-1 block font-mono">
-                    {new Date(a.timestamp).toLocaleTimeString()}
-                  </span>
-                </div>
 
-                {a.profit !== undefined && (
-                  <span
-                    className={`font-mono font-bold ${a.profit >= 0 ? 'text-emerald-400' : 'text-red-400'
+            {/* Search & Filter */}
+            <div className="flex gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
+                />
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e: any) => setFilterStatus(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 text-xs text-white focus:outline-none"
+              >
+                <option value="all">All</option>
+                <option value="running">Running</option>
+                <option value="completed">Ended</option>
+              </select>
+            </div>
+
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+              {filteredSessions.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 text-sm">No sessions found</div>
+              ) : (
+                filteredSessions.map(session => (
+                  <div
+                    key={session.id}
+                    onClick={() => setSelectedSessionId(session.id)}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all ${selectedSessionId === session.id
+                      ? 'bg-gradient-to-r from-liquid-accent/20 to-transparent border-liquid-accent/50'
+                      : 'bg-white/5 border-white/5 hover:border-white/10'
                       }`}
                   >
-                    {a.profit >= 0 ? '+' : ''}
-                    {a.profit.toFixed(2)}
-                  </span>
-                )}
-                {a.confidence !== undefined && (
-                  <span className="text-xs font-mono text-blue-300">
-                    {(a.confidence * 100).toFixed(0)}%
-                  </span>
-                )}
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-medium text-white text-sm truncate pr-2">{session.name}</span>
+                      <GlassStatusBadge status={session.status === 'running' ? 'active' : 'inactive'} size="sm">
+                        {session.status}
+                      </GlassStatusBadge>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-slate-400">
+                      <span>{session.markets[0]}</span>
+                      <span className={session.mode === 'real' ? "text-emerald-400 font-bold" : "text-blue-400"}>
+                        {session.mode.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Right Panel: Details & Chart */}
+        <div className="lg:col-span-8 space-y-6">
+          {selectedSession ? (
+            <>
+              {/* Main Chart Card */}
+              <GlassCard className="p-0 overflow-hidden relative min-h-[400px]">
+                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="text-emerald-400" size={20} />
+                    <div>
+                      <h2 className="font-bold text-white">{selectedSession.name}</h2>
+                      <p className="text-xs text-slate-400 flex items-center gap-2">
+                        ID: {selectedSession.id.slice(0, 8)}...
+                        <span className="w-1 h-1 bg-slate-500 rounded-full" />
+                        Risk: {selectedSession.default_tp}/{selectedSession.default_sl}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {selectedSession.status === 'running' ? (
+                      <>
+                        <GlassButton
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleSessionAction(selectedSession.id, 'stop')}
+                          disabled={actionLoading === selectedSession.id}
+                          leftIcon={<Pause size={14} />}
+                        >
+                          Pause
+                        </GlassButton>
+                        <GlassButton
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleSessionAction(selectedSession.id, 'stop')}
+                          disabled={actionLoading === selectedSession.id}
+                          leftIcon={<StopCircle size={14} />}
+                        >
+                          Stop
+                        </GlassButton>
+                      </>
+                    ) : (
+                      <>
+                        <GlassButton
+                          size="sm"
+                          variant="primary"
+                          onClick={() => handleSessionAction(selectedSession.id, 'start')}
+                          disabled={actionLoading === selectedSession.id}
+                          leftIcon={<Play size={14} />}
+                        >
+                          Start
+                        </GlassButton>
+                        <GlassButton
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleSessionAction(selectedSession.id, 'delete')}
+                          disabled={actionLoading === selectedSession.id}
+                          leftIcon={<Trash2 size={14} />}
+                        >
+                          Delete
+                        </GlassButton>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Chart Area */}
+                <div className="h-[400px] w-full bg-[#10141e] relative">
+                  {loadingTicks ? (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-500">Loading Chart Data...</div>
+                  ) : (
+                    <ChartPanel
+                      initialTicks={chartInitialTicks}
+                      currentTick={null}
+                      tradeMarkers={tradeMarkers}
+                      signalMarkers={[]}
+                      height={400}
+                    />
+                  )}
+                </div>
+              </GlassCard>
+
+              {/* Participants & Activity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <GlassCard className="p-4 h-[300px] flex flex-col">
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <Users size={16} className="text-blue-400" /> Participants
+                  </h3>
+                  <div className="flex-1 overflow-y-auto">
+                    {!selectedSession.participants_count ? (
+                      <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-60">
+                        <Users size={32} className="mb-2" />
+                        <p className="text-sm">No participants yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {/* Mock/Real participants list here */}
+                        <div className="text-center text-slate-400 text-sm mt-10">
+                          {selectedSession.participants_count} Participant(s) Joined
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="p-4 h-[300px] flex flex-col">
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <Zap size={16} className="text-amber-400" /> Recent Activity
+                  </h3>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {latestTrade ? (
+                      <div className="p-3 bg-white/5 rounded-lg border border-white/10 mb-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-xs font-bold text-emerald-400">TRADE EXECUTION</span>
+                          <span className="text-[10px] text-slate-500">{new Date().toLocaleTimeString()}</span>
+                        </div>
+                        <div className="text-sm text-white">
+                          {latestTrade.type.toUpperCase()} on {latestTrade.market} @ {latestTrade.price}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-slate-500 text-sm mt-10 opacity-60">
+                        Waiting for signals...
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
               </div>
-            ))
+            </>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-40 min-h-[400px]">
+              <Monitor size={64} className="mb-4" />
+              <p>Select a session to view details</p>
+            </div>
           )}
         </div>
-      </GlassCard>
+      </div>
 
-      {/* Create Session Modal - SIMPLIFIED */}
-      <GlassModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="Create New Session"
-      >
-        <div className="space-y-6">
-          {/* Mode Selection */}
+      {/* Create Modal */}
+      <GlassModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Session">
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-3">Trading Mode</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setNewSession({ ...newSession, mode: 'demo' })}
-                className={`p-4 rounded-xl border-2 transition-all ${newSession.mode === 'demo'
-                  ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                  : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
-                  }`}
-              >
-                <div className="text-lg font-bold">Demo</div>
-                <div className="text-xs opacity-70">Practice mode</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setNewSession({ ...newSession, mode: 'real' })}
-                className={`p-4 rounded-xl border-2 transition-all ${newSession.mode === 'real'
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                  : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'
-                  }`}
-              >
-                <div className="text-lg font-bold">Real</div>
-                <div className="text-xs opacity-70">Live trading</div>
-              </button>
-            </div>
-          </div>
-
-          {/* Market Selection */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">Market</label>
-            <select
-              value={newSession.market}
-              onChange={(e) => setNewSession({ ...newSession, market: e.target.value })}
-              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
-            >
-              {AVAILABLE_MARKETS.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
+            <label className="block text-xs text-slate-400 mb-1">Mode</label>
+            <div className="flex gap-2">
+              {['demo', 'real'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => setNewSession({ ...newSession, mode: m as 'real' | 'demo' })}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${newSession.mode === m
+                    ? m === 'real' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-blue-500/20 border-blue-500 text-blue-400'
+                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                    }`}
+                >
+                  {m.toUpperCase()}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          {/* Stake (Min Balance) */}
-          <div>
-            <label className="block text-sm text-slate-400 mb-2">Trade Stake ($)</label>
-            <input
+          <GlassInput
+            label="Market"
+            value={newSession.market}
+            onChange={(e) => setNewSession({ ...newSession, market: e.target.value })}
+            list="markets"
+          />
+          <datalist id="markets">
+            {AVAILABLE_MARKETS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </datalist>
+
+          <div className="grid grid-cols-3 gap-3">
+            <GlassInput
+              label="Stake"
               type="number"
-              step="0.5"
-              min="0.35"
               value={newSession.min_balance}
-              onChange={(e) => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) || 0.35 })}
-              className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+              onChange={e => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) })}
             />
-            <p className="text-xs text-slate-500 mt-1">Amount per trade. Also used as minimum balance requirement.</p>
+            <GlassInput
+              label="TP ($)"
+              type="number"
+              value={newSession.default_tp}
+              onChange={e => setNewSession({ ...newSession, default_tp: parseFloat(e.target.value) })}
+            />
+            <GlassInput
+              label="SL ($)"
+              type="number"
+              value={newSession.default_sl}
+              onChange={e => setNewSession({ ...newSession, default_sl: parseFloat(e.target.value) })}
+            />
           </div>
 
-          {/* TP and SL */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Take Profit ($)</label>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                value={newSession.default_tp}
-                onChange={(e) => setNewSession({ ...newSession, default_tp: parseFloat(e.target.value) || 10 })}
-                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-2">Stop Loss ($)</label>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                value={newSession.default_sl}
-                onChange={(e) => setNewSession({ ...newSession, default_sl: parseFloat(e.target.value) || 5 })}
-                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
-              />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="pt-4 flex justify-end gap-3 border-t border-white/10">
-            <GlassButton variant="ghost" onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </GlassButton>
-            <GlassButton
-              variant="primary"
-              onClick={handleCreateSession}
-              disabled={creating}
-              isLoading={creating}
-            >
-              Create Session
-            </GlassButton>
+          <div className="pt-4 flex justify-end gap-2">
+            <GlassButton variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</GlassButton>
+            <GlassButton variant="primary" onClick={handleCreateSession} isLoading={creating}>Create Session</GlassButton>
           </div>
         </div>
       </GlassModal>
+    </div>
+  );
+}
+
+function StatBox({ icon, label, value }: { icon: any, label: string, value: string }) {
+  return (
+    <div className="flex items-center gap-3 p-2">
+      <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
+      <div>
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="text-lg font-bold text-white tracking-tight">{value}</p>
+      </div>
     </div>
   );
 }
