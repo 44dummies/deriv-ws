@@ -1,15 +1,16 @@
-
 import React, { useEffect, useState } from 'react';
 import { Bell, User, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
 import { GlassButton } from '../ui/glass/GlassButton';
 import { tradingApi } from '../../trading/tradingApi';
+import { CONFIG } from '../../config/constants';
 
 export const TopBar: React.FC = () => {
     const { user } = useAuth();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [balance, setBalance] = useState<string | null>(null);
+    const { activeSession, isOnline, serverLatency, setServerLatency } = useDashboardData();
 
     // Fetch balance on mount
     useEffect(() => {
@@ -30,6 +31,21 @@ export const TopBar: React.FC = () => {
         if (user) fetchBalance();
     }, [user]);
 
+    // Simple ping for latency
+    useEffect(() => {
+        const pingInterval = setInterval(async () => {
+            const start = Date.now();
+            try {
+                await tradingApi.getBotStatus();
+                setServerLatency(Date.now() - start);
+            } catch (e) {
+                setServerLatency(null);
+            }
+        }, CONFIG.UI.PING_INTERVAL);
+
+        return () => clearInterval(pingInterval);
+    }, [setServerLatency]);
+
     const getFirstName = (fullName: string | undefined) => {
         if (!fullName) return 'Trader';
         return fullName.split(' ')[0];
@@ -38,6 +54,12 @@ export const TopBar: React.FC = () => {
     const handleNotificationClick = () => {
         // Placeholder for notification logic
         alert('No new notifications');
+    };
+
+    const getStatusColor = () => {
+        if (!activeSession) return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
+        if (activeSession.status === 'running' || activeSession.status === 'live') return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+        return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
     };
 
     return (

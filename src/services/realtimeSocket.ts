@@ -6,7 +6,7 @@
 import { io } from 'socket.io-client';
 import { TokenService } from './tokenService';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'wss://tradermind-server.up.railway.app';
+const SOCKET_URL = process.env.REACT_APP_WS_URL || 'https://tradermind-server.up.railway.app';
 
 class RealtimeSocketService {
   socket: any;

@@ -38,7 +38,7 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 const API_BASE = (typeof process !== 'undefined' && process.env?.REACT_APP_SERVER_URL)
-    ? `${process.env.REACT_APP_SERVER_URL}/api`
+    ? `${process.env.REACT_APP_SERVER_URL}`
     : 'https://tradermind-server.up.railway.app/api';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

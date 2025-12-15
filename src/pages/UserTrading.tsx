@@ -1,3 +1,5 @@
+import { CONFIG, MARKETS } from '../config/constants';
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, TrendingUp, TrendingDown, CheckCircle, XCircle, AlertCircle, Play, Shield, Activity, Zap, Clock, Target, Radio } from 'lucide-react';
@@ -53,7 +55,7 @@ const UserTrading = () => {
   const [activityLog, setActivityLog] = useState<any[]>([]);
 
   // Real-time hooks
-  const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, ['R_100', 'R_75', 'R_50', 'R_25', 'R_10']);
+  const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, CONFIG.TRADING.MARKET_TIERS as unknown as string[]);
 
   useEffect(() => {
     loadUserData();
@@ -68,11 +70,11 @@ const UserTrading = () => {
         id: `signal-${Date.now()}`,
         side: latestSignal.side || 'OVER',
         digit: latestSignal.digit || 0,
-        stake: 0.35,
-        market: latestSignal.market || 'R_100',
+        stake: CONFIG.TRADING.DEFAULT_STAKE,
+        market: latestSignal.market || CONFIG.TRADING.DEFAULT_MARKET,
         status: 'pending',
         ticksElapsed: 0,
-        totalTicks: 5,
+        totalTicks: CONFIG.TRADING.DEFAULT_DURATION,
         startTime: new Date()
       });
     }
@@ -94,12 +96,12 @@ const UserTrading = () => {
           status: 'open',
           entryPrice: latestTrade.price,
           potentialPayout: latestTrade.payout,
-          stake: latestTrade.stake || 0.35,
+          stake: latestTrade.stake || CONFIG.TRADING.DEFAULT_STAKE,
           side,
-          market: latestTrade.market || prev?.market || 'R_100',
+          market: latestTrade.market || prev?.market || CONFIG.TRADING.DEFAULT_MARKET,
           digit: latestTrade.digit || prev?.digit || 0,
           ticksElapsed: 1,
-          totalTicks: 5,
+          totalTicks: CONFIG.TRADING.DEFAULT_DURATION,
           startTime: prev?.startTime || new Date()
         } as ActiveTrade));
       } else if (isWin || isLoss) {
