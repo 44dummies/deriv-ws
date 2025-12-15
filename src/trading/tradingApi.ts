@@ -127,11 +127,16 @@ export async function getMyActiveSession() {
     const result = await getSessions({ limit: 50 });
 
     // Check if result has sessions array or is the array itself
-    const sessions = result.sessions || result || [];
+    let sessions: any[] = [];
+    if (result && Array.isArray(result.sessions)) {
+      sessions = result.sessions;
+    } else if (Array.isArray(result)) {
+      sessions = result;
+    }
 
     // Find the first session that is running/active
     // We prioritize 'running' status
-    const activeSession = sessions.find(s =>
+    const activeSession = sessions.find((s: any) =>
       ['running', 'active', 'live'].includes(s.status?.toLowerCase() || s.sessionStatus?.toLowerCase())
     );
 
