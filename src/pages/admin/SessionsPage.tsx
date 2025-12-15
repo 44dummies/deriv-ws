@@ -1,13 +1,13 @@
 /**
- * Sessions Page - Advanced Session Management with Glass UI (Verified)
+ * Sessions Page - Command Center View
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Activity, Play, Pause, Square, Plus, Filter, Search, ChevronDown, ChevronRight,
-  TrendingUp, TrendingDown, DollarSign, Users, Shield, Zap, Bell, CheckCircle,
-  Monitor, Wifi, WifiOff, Trash2, StopCircle
+  Activity, Play, Pause, Plus, Search,
+  TrendingUp, DollarSign, Users, Shield, Zap,
+  Trash2, StopCircle, Terminal, BarChart2, Layers
 } from 'lucide-react';
 import { tradingApi } from '../../trading/tradingApi';
 import { useWebSocketEvents } from '../../hooks/useWebSocketEvents';
@@ -35,7 +35,7 @@ interface Session {
   created_at: string;
   participants_count?: number;
   participants?: any[];
-  current_pnl?: number; // Added to support pnl tracking
+  current_pnl?: number;
 }
 
 const AVAILABLE_MARKETS = [
@@ -77,7 +77,7 @@ export default function SessionsPage() {
   });
 
   // Data Hooks
-  const { latestTrade, latestSignal } = useWebSocketEvents(selectedSession?.id || null, selectedSession?.markets || []);
+  const { latestTrade } = useWebSocketEvents(selectedSession?.id || null, selectedSession?.markets || []);
   const { isConnected: sseConnected } = useEventStream({
     topics: ['session:events'],
     onEvent: (event) => {
@@ -92,12 +92,7 @@ export default function SessionsPage() {
   const activeMarket = selectedSession?.markets[0] || 'R_100';
   const chartInitialTicks = sessionTicks[activeMarket] || [];
 
-  // Real-time chart updates (using WebSocket latestTrade/Signal just for markers, usually ticks come from separate stream but we reuse WS trade tick if available or just rely on regular polling from useSessionTicks)
-  // For now, we will just use the tick history + websocket trades as markers.
-
-  // Derived Markers
   const tradeMarkers = useMemo(() => {
-    // In a real app we would merge historical trades with live incoming trades
     if (!latestTrade) return [];
     return [{
       time: latestTrade.timestamp ? new Date(latestTrade.timestamp).getTime() / 1000 : Date.now() / 1000,
@@ -116,7 +111,6 @@ export default function SessionsPage() {
       const data = Array.isArray(response) ? response : (response.data || response.sessions || []);
       setSessions(Array.isArray(data) ? data : []);
 
-      // Auto-select first running session if none selected
       if (!selectedSessionId && data.length > 0) {
         const running = data.find((s: Session) => s.status === 'running');
         if (running) setSelectedSessionId(running.id);
@@ -149,7 +143,6 @@ export default function SessionsPage() {
         toast.success('Session created successfully');
         await fetchSessions();
         setShowCreateModal(false);
-        // Reset
         setNewSession({ mode: 'demo', market: '1HZ100V', min_balance: 5, default_tp: 10, default_sl: 5 });
       }
     } catch (err: any) {
@@ -179,7 +172,6 @@ export default function SessionsPage() {
     setActionLoading(null);
   };
 
-  // Stats Calculation
   const stats = useMemo(() => {
     const total = sessions.length;
     const running = sessions.filter(s => s.status === 'running').length;
@@ -187,7 +179,6 @@ export default function SessionsPage() {
     return { total, running, totalPnL };
   }, [sessions]);
 
-  // Filtered Sessions
   const filteredSessions = sessions.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' ? true :
@@ -198,240 +189,212 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <GlassCard className="p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatBox icon={<Users className="text-blue-400" />} label="Total Sessions" value={stats.total.toString()} />
-          <StatBox icon={<Activity className="text-emerald-400" />} label="Running" value={stats.running.toString()} />
-          <StatBox icon={<DollarSign className={stats.totalPnL >= 0 ? "text-emerald-400" : "text-red-400"} />} label="Total P/L" value={`$${stats.totalPnL.toFixed(2)}`} />
-          <StatBox icon={<Wifi className={sseConnected ? "text-emerald-400" : "text-amber-400"} />} label="System Status" value={sseConnected ? "Connected" : "Reconnecting"} />
+      {/* Header Stats Bar */}
+      <GlassCard className="p-3 bg-brand-card/50 border-white/5">
+        <div className="flex items-center justify-between gap-6 overflow-x-auto hide-scrollbar">
+          <div className="flex items-center gap-4 min-w-[150px]">
+            <div className="p-2 bg-blue-500/10 rounded-lg"><Layers className="text-blue-400" size={18} /></div>
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-widest">Total Sessions</div>
+              <div className="text-xl font-mono font-bold text-white">{stats.total}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 min-w-[150px]">
+            <div className="p-2 bg-emerald-500/10 rounded-lg"><Activity className="text-emerald-400" size={18} /></div>
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-widest">Active Running</div>
+              <div className="text-xl font-mono font-bold text-white">{stats.running}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 min-w-[150px]">
+            <div className="p-2 bg-brand-red/10 rounded-lg"><DollarSign className="text-brand-red" size={18} /></div>
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-widest">Global P&L</div>
+              <div className={`text-xl font-mono font-bold ${stats.totalPnL >= 0 ? 'text-emerald-400' : 'text-brand-red'}`}>
+                {stats.totalPnL >= 0 ? '+' : ''}${stats.totalPnL.toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 min-w-[150px]">
+            <div className={`p-2 rounded-lg ${sseConnected ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
+              <Zap className={sseConnected ? 'text-emerald-400' : 'text-amber-400'} size={18} />
+            </div>
+            <div>
+              <div className="text-[10px] text-gray-500 uppercase tracking-widest">Stream Status</div>
+              <div className="text-sm font-bold text-white">{sseConnected ? "CONNECTED" : "RECONNECTING"}</div>
+            </div>
+          </div>
         </div>
       </GlassCard>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Panel: Session List */}
-        <div className="lg:col-span-4 space-y-4">
-          <GlassCard className="p-4 flex flex-col h-[700px]">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-lg text-white">Sessions</h2>
-              <GlassButton size="sm" onClick={() => setShowCreateModal(true)} leftIcon={<Plus size={14} />}>New</GlassButton>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-220px)] min-h-[600px]">
+        {/* Left Panel: Session List (3 col) */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-bold text-sm text-white uppercase tracking-wider flex items-center gap-2">
+              <Terminal size={14} /> Active Sessions
+            </h2>
+            <GlassButton size="xs" variant="primary" onClick={() => setShowCreateModal(true)} leftIcon={<Plus size={12} />}>NEW</GlassButton>
+          </div>
 
-            {/* Search & Filter */}
-            <div className="flex gap-2 mb-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
-                />
-              </div>
-              <select
-                value={filterStatus}
-                onChange={(e: any) => setFilterStatus(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-2 text-xs text-white focus:outline-none"
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={12} />
+            <input
+              type="text"
+              placeholder="Filter sessions..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full bg-brand-card border border-white/10 rounded-lg pl-8 pr-3 py-2 text-xs text-white focus:border-blue-500/50 outline-none"
+            />
+          </div>
+
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
+            {filteredSessions.map(session => (
+              <div
+                key={session.id}
+                onClick={() => setSelectedSessionId(session.id)}
+                className={`
+                        p-3 rounded-lg border cursor-pointer transition-all group relative overflow-hidden
+                        ${selectedSessionId === session.id
+                    ? 'bg-brand-card border-brand-red/50 shadow-lg shadow-brand-red/5'
+                    : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/10'
+                  }
+                    `}
               >
-                <option value="all">All</option>
-                <option value="running">Running</option>
-                <option value="completed">Ended</option>
-              </select>
-            </div>
+                {selectedSessionId === session.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand-red" />}
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1">
-              {filteredSessions.length === 0 ? (
-                <div className="text-center py-8 text-slate-500 text-sm">No sessions found</div>
-              ) : (
-                filteredSessions.map(session => (
-                  <div
-                    key={session.id}
-                    onClick={() => setSelectedSessionId(session.id)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all ${selectedSessionId === session.id
-                      ? 'bg-gradient-to-r from-liquid-accent/20 to-transparent border-liquid-accent/50'
-                      : 'bg-white/5 border-white/5 hover:border-white/10'
-                      }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium text-white text-sm truncate pr-2">{session.name}</span>
-                      <GlassStatusBadge status={session.status === 'running' ? 'active' : 'inactive'} size="sm">
-                        {session.status}
-                      </GlassStatusBadge>
-                    </div>
-                    <div className="flex justify-between items-center text-xs text-slate-400">
-                      <span>{session.markets[0]}</span>
-                      <span className={session.mode === 'real' ? "text-emerald-400 font-bold" : "text-blue-400"}>
-                        {session.mode.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </GlassCard>
+                <div className="flex justify-between items-start mb-1">
+                  <span className={`text-xs font-bold truncate pr-2 ${selectedSessionId === session.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
+                    {session.name}
+                  </span>
+                  <div className={`w-2 h-2 rounded-full ${session.status === 'running' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-600'}`} />
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] text-gray-500 font-mono">
+                  <span className="text-brand-red">{session.markets[0]}</span>
+                  <span>pnl: ${session.current_pnl?.toFixed(2) || '0.00'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Right Panel: Details & Chart */}
-        <div className="lg:col-span-8 space-y-6">
+        {/* Center Panel: Command Center (Main Chart) (6 col) */}
+        <div className="lg:col-span-6 flex flex-col bg-brand-card rounded-xl border border-white/5 overflow-hidden relative">
           {selectedSession ? (
             <>
-              {/* Main Chart Card */}
-              <GlassCard className="p-0 overflow-hidden relative min-h-[400px]">
-                <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="text-emerald-400" size={20} />
-                    <div>
-                      <h2 className="font-bold text-white">{selectedSession.name}</h2>
-                      <p className="text-xs text-slate-400 flex items-center gap-2">
-                        ID: {selectedSession.id.slice(0, 8)}...
-                        <span className="w-1 h-1 bg-slate-500 rounded-full" />
-                        Risk: {selectedSession.default_tp}/{selectedSession.default_sl}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {selectedSession.status === 'running' ? (
-                      <>
-                        <GlassButton
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleSessionAction(selectedSession.id, 'stop')}
-                          disabled={actionLoading === selectedSession.id}
-                          leftIcon={<Pause size={14} />}
-                        >
-                          Pause
-                        </GlassButton>
-                        <GlassButton
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleSessionAction(selectedSession.id, 'stop')}
-                          disabled={actionLoading === selectedSession.id}
-                          leftIcon={<StopCircle size={14} />}
-                        >
-                          Stop
-                        </GlassButton>
-                      </>
-                    ) : (
-                      <>
-                        <GlassButton
-                          size="sm"
-                          variant="primary"
-                          onClick={() => handleSessionAction(selectedSession.id, 'start')}
-                          disabled={actionLoading === selectedSession.id}
-                          leftIcon={<Play size={14} />}
-                        >
-                          Start
-                        </GlassButton>
-                        <GlassButton
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleSessionAction(selectedSession.id, 'delete')}
-                          disabled={actionLoading === selectedSession.id}
-                          leftIcon={<Trash2 size={14} />}
-                        >
-                          Delete
-                        </GlassButton>
-                      </>
-                    )}
-                  </div>
+              <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 bg-brand-dark/50">
+                <div className="flex items-center gap-3">
+                  <h2 className="font-bold text-white text-sm">{selectedSession.name}</h2>
+                  <span className="text-xs font-mono text-gray-500">{selectedSession.id}</span>
                 </div>
-
-                {/* Chart Area */}
-                <div className="h-[400px] w-full bg-[#10141e] relative">
-                  {loadingTicks ? (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-500">Loading Chart Data...</div>
+                <div className="flex items-center gap-2">
+                  {selectedSession.status === 'running' ? (
+                    <>
+                      <button onClick={() => handleSessionAction(selectedSession.id, 'stop')} className="text-xs bg-amber-500/10 text-amber-500 px-3 py-1 rounded hover:bg-amber-500/20 transition-colors uppercase font-bold tracking-wider">Pause</button>
+                      <button onClick={() => handleSessionAction(selectedSession.id, 'stop')} className="text-xs bg-brand-red/10 text-brand-red px-3 py-1 rounded hover:bg-brand-red/20 transition-colors uppercase font-bold tracking-wider">Stop</button>
+                    </>
                   ) : (
-                    <ChartPanel
-                      initialTicks={chartInitialTicks}
-                      currentTick={null}
-                      tradeMarkers={tradeMarkers}
-                      signalMarkers={[]}
-                      height={400}
-                    />
+                    <button onClick={() => handleSessionAction(selectedSession.id, 'start')} className="text-xs bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded hover:bg-emerald-500/20 transition-colors uppercase font-bold tracking-wider flex items-center gap-1"><Play size={10} /> Start</button>
                   )}
                 </div>
-              </GlassCard>
+              </div>
 
-              {/* Participants & Activity */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <GlassCard className="p-4 h-[300px] flex flex-col">
-                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <Users size={16} className="text-blue-400" /> Participants
-                  </h3>
-                  <div className="flex-1 overflow-y-auto">
-                    {!selectedSession.participants_count ? (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-500 opacity-60">
-                        <Users size={32} className="mb-2" />
-                        <p className="text-sm">No participants yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {/* Mock/Real participants list here */}
-                        <div className="text-center text-slate-400 text-sm mt-10">
-                          {selectedSession.participants_count} Participant(s) Joined
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </GlassCard>
-
-                <GlassCard className="p-4 h-[300px] flex flex-col">
-                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <Zap size={16} className="text-amber-400" /> Recent Activity
-                  </h3>
-                  <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {latestTrade ? (
-                      <div className="p-3 bg-white/5 rounded-lg border border-white/10 mb-2">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs font-bold text-emerald-400">TRADE EXECUTION</span>
-                          <span className="text-[10px] text-slate-500">{new Date().toLocaleTimeString()}</span>
-                        </div>
-                        <div className="text-sm text-white">
-                          {latestTrade.type.toUpperCase()} on {latestTrade.market} @ {latestTrade.price}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center text-slate-500 text-sm mt-10 opacity-60">
-                        Waiting for signals...
-                      </div>
-                    )}
-                  </div>
-                </GlassCard>
+              <div className="flex-1 relative bg-brand-dark">
+                {loadingTicks ? (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-500 font-mono text-xs">LOADING MARKET DATA...</div>
+                ) : (
+                  <ChartPanel
+                    initialTicks={chartInitialTicks}
+                    currentTick={null}
+                    tradeMarkers={tradeMarkers}
+                    signalMarkers={[]}
+                    height={500}
+                  />
+                )}
               </div>
             </>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-40 min-h-[400px]">
-              <Monitor size={64} className="mb-4" />
-              <p>Select a session to view details</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
+              <BarChart2 size={48} className="mb-4 opacity-20" />
+              <p className="text-xs font-mono uppercase tracking-widest">Select a Session</p>
             </div>
+          )}
+        </div>
+
+        {/* Right Panel: Risk & Activity (3 col) */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
+          {selectedSession && (
+            <>
+              <GlassCard className="p-4 flex flex-col gap-4">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Shield size={12} /> Risk Parameters
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-1">TAKE PROFIT</div>
+                    <div className="text-xl font-mono font-bold text-emerald-400">${selectedSession.default_tp}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-1">STOP LOSS</div>
+                    <div className="text-xl font-mono font-bold text-brand-red">${selectedSession.default_sl}</div>
+                  </div>
+                </div>
+                <div className="h-px bg-white/5" />
+                <div>
+                  <div className="text-[10px] text-gray-500 mb-1">MIN BALANCE</div>
+                  <div className="text-lg font-mono text-white">${selectedSession.min_balance}</div>
+                </div>
+              </GlassCard>
+
+              <GlassCard className="flex-1 flex flex-col p-0 overflow-hidden">
+                <div className="p-3 border-b border-white/5 bg-white/5">
+                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                    <Terminal size={12} /> Session Logs
+                  </h3>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 font-mono text-[10px] space-y-2 text-gray-400 bg-black/20">
+                  {latestTrade ? (
+                    <div className="flex gap-2 text-white">
+                      <span className="text-gray-600">[{new Date().toLocaleTimeString()}]</span>
+                      <span>
+                        <span className={latestTrade.type === 'CHECK' ? 'text-blue-400' : 'text-emerald-400'}>{latestTrade.type}</span>
+                        {' '}{latestTrade.market} @ {latestTrade.price}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-gray-600 italic">System initialized. Waiting for events...</div>
+                  )}
+                </div>
+              </GlassCard>
+            </>
           )}
         </div>
       </div>
 
       {/* Create Modal */}
-      <GlassModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Session">
+      <GlassModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="DEPLOY NEW SESSION">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Mode</label>
+            <label className="block text-xs text-gray-500 mb-1 uppercase tracking-wider">Environment</label>
             <div className="flex gap-2">
               {['demo', 'real'].map(m => (
                 <button
                   key={m}
                   onClick={() => setNewSession({ ...newSession, mode: m as 'real' | 'demo' })}
-                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${newSession.mode === m
-                    ? m === 'real' ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-blue-500/20 border-blue-500 text-blue-400'
-                    : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                  className={`flex-1 py-3 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all ${newSession.mode === m
+                    ? m === 'real' ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-400' : 'bg-blue-500/10 border-blue-500/50 text-blue-400'
+                    : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
                     }`}
                 >
-                  {m.toUpperCase()}
+                  {m}
                 </button>
               ))}
             </div>
           </div>
 
           <GlassInput
-            label="Market"
+            label="MARKET INDEX"
             value={newSession.market}
             onChange={(e) => setNewSession({ ...newSession, market: e.target.value })}
             list="markets"
@@ -442,7 +405,7 @@ export default function SessionsPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <GlassInput
-              label="Stake"
+              label="STAKE ($)"
               type="number"
               value={newSession.min_balance}
               onChange={e => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) })}
@@ -462,23 +425,11 @@ export default function SessionsPage() {
           </div>
 
           <div className="pt-4 flex justify-end gap-2">
-            <GlassButton variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</GlassButton>
-            <GlassButton variant="primary" onClick={handleCreateSession} isLoading={creating}>Create Session</GlassButton>
+            <GlassButton variant="ghost" onClick={() => setShowCreateModal(false)}>CANCEL</GlassButton>
+            <GlassButton variant="primary" onClick={handleCreateSession} isLoading={creating}>DEPLOY SESSION</GlassButton>
           </div>
         </div>
       </GlassModal>
-    </div>
-  );
-}
-
-function StatBox({ icon, label, value }: { icon: any, label: string, value: string }) {
-  return (
-    <div className="flex items-center gap-3 p-2">
-      <div className="p-2 bg-white/5 rounded-lg">{icon}</div>
-      <div>
-        <p className="text-xs text-slate-400">{label}</p>
-        <p className="text-lg font-bold text-white tracking-tight">{value}</p>
-      </div>
     </div>
   );
 }

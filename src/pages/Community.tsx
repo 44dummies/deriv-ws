@@ -28,16 +28,16 @@ const EMOJI_LIST = ['👍', '❤️', '🔥', '😂', '😮', '😢', '🎉', '�
 
 const Community = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
-  const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // User state
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Posts/messages state
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [feedLoading, setFeedLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
@@ -45,27 +45,27 @@ const Community = () => {
 
   // Composer state
   const [messageInput, setMessageInput] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [filePreviews, setFilePreviews] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [filePreviews, setFilePreviews] = useState<any[]>([]);
   const [posting, setPosting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyingTo, setReplyingTo] = useState<any>(null);
 
   // UI state
   const [showMediaGallery, setShowMediaGallery] = useState(false);
-  const [mediaGalleryItems, setMediaGalleryItems] = useState([]);
-  const [selectedMedia, setSelectedMedia] = useState(null);
-  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [mediaGalleryItems, setMediaGalleryItems] = useState<any[]>([]);
+  const [selectedMedia, setSelectedMedia] = useState<any>(null);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const [showSidebar, setShowSidebar] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typingUsers, setTypingUsers] = useState([]);
+  const [typingUsers, setTypingUsers] = useState<any[]>([]);
 
   // Comments state
-  const [expandedPost, setExpandedPost] = useState(null);
-  const [comments, setComments] = useState({});
-  const [commentInputs, setCommentInputs] = useState({});
-  const [loadingComments, setLoadingComments] = useState({});
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  const [comments, setComments] = useState<Record<string, any[]>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     initializeCommunity();
@@ -151,7 +151,7 @@ const Community = () => {
     (realtimeSocket as any).off('community:typing');
   };
 
-  const transformPost = (post) => ({
+  const transformPost = (post: any) => ({
     id: post.id,
     content: post.content,
     postType: post.post_type || post.postType || 'general',
@@ -175,7 +175,7 @@ const Community = () => {
     }
   });
 
-  const transformComment = (comment) => ({
+  const transformComment = (comment: any) => ({
     id: comment.id,
     content: comment.content,
     createdAt: comment.created_at || comment.createdAt,
@@ -279,7 +279,7 @@ const Community = () => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          setFilePreviews(prev => [...prev, { file, preview: e.target.result, type: 'image' }]);
+          setFilePreviews(prev => [...prev, { file, preview: e.target?.result, type: 'image' }]);
         };
         reader.readAsDataURL(file);
       } else {
@@ -288,7 +288,7 @@ const Community = () => {
     });
   };
 
-  const removeFile = (index) => {
+  const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setFilePreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -365,9 +365,11 @@ const Community = () => {
     }
   };
 
-  const likePost = async (postId) => {
+  const likePost = async (postId: string) => {
     try {
       const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
       const newLiked = !post.liked;
 
       setPosts(prev => prev.map(p =>
@@ -389,7 +391,7 @@ const Community = () => {
     }
   };
 
-  const loadComments = async (postId) => {
+  const loadComments = async (postId: string) => {
     if (loadingComments[postId]) return;
 
     setLoadingComments(prev => ({ ...prev, [postId]: true }));
@@ -406,7 +408,7 @@ const Community = () => {
     }
   };
 
-  const toggleComments = (postId) => {
+  const toggleComments = (postId: string) => {
     if (expandedPost === postId) {
       setExpandedPost(null);
     } else {
@@ -417,7 +419,7 @@ const Community = () => {
     }
   };
 
-  const addComment = async (postId) => {
+  const addComment = async (postId: string) => {
     const content = commentInputs[postId]?.trim();
     if (!content) return;
 
@@ -447,7 +449,7 @@ const Community = () => {
     }
   };
 
-  const deletePost = async (postId) => {
+  const deletePost = async (postId: string) => {
     if (!window.confirm('Delete this message?')) return;
 
     try {
@@ -471,14 +473,14 @@ const Community = () => {
     return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const formatFileSize = (bytes) => {
+  const formatFileSize = (bytes: number) => {
     if (!bytes) return '';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const getFileIcon = (fileType) => {
+  const getFileIcon = (fileType: string) => {
     if (!fileType) return File;
     if (fileType.startsWith('image/')) return ImageIcon;
     if (fileType.startsWith('video/')) return Video;
@@ -487,19 +489,19 @@ const Community = () => {
     return File;
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       createPost();
     }
   };
 
-  const insertEmoji = (emoji) => {
+  const insertEmoji = (emoji: string) => {
     setMessageInput(prev => prev + emoji);
     setShowEmojiPicker(false);
   };
 
-  const getAvatarContent = (user, className = "w-10 h-10") => {
+  const getAvatarContent = (user: any, className = "w-10 h-10") => {
     if (user?.avatarUrl) {
       if (user.avatarUrl.startsWith('avatar:')) {
         const avatarId = parseInt(user.avatarUrl.split(':')[1]) || 1;
@@ -528,28 +530,26 @@ const Community = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-brand-red animate-spin" />
         <p className="mt-4 text-slate-400">Loading community...</p>
       </div>
     );
   }
 
+  // NOTE: Used brand colors from tailwind.config.js for replacement
+  // bg-[#0e0e12] -> bg-brand-dark
+  // bg-[#1c1c28] -> bg-brand-card or bg-white/5
+  // bg-[#2a2a35] -> bg-white/5
+
   return (
-    <div className="h-full flex flex-col bg-[#0e0e12] overflow-hidden">
+    <div className="h-[calc(100vh-140px)] flex flex-col bg-brand-dark overflow-hidden rounded-xl border border-white/5 shadow-2xl">
       <Toaster position="top-center" />
 
       {/* Header */}
-      <div className="flex-none p-4 border-b border-white/5 flex items-center justify-between bg-[#1c1c28]/95 backdrop-blur-md z-10">
+      <div className="flex-none p-4 border-b border-white/5 flex items-center justify-between bg-brand-card/80 backdrop-blur-md z-10">
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-lg hover:bg-white/5 text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => setShowSidebar(true)}>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-brand-red flex items-center justify-center shadow-lg shadow-brand-red/20">
               <MessageCircle size={20} className="text-white" />
             </div>
             <div>
@@ -586,7 +586,7 @@ const Community = () => {
 
       {/* Search Bar */}
       {showSearch && (
-        <div className="flex-none p-3 border-b border-white/5 bg-[#1c1c28]">
+        <div className="flex-none p-3 border-b border-white/5 bg-brand-card">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -594,7 +594,7 @@ const Community = () => {
               placeholder="Search messages..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0e0e12] border border-white/10 rounded-xl py-2 pl-10 pr-10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+              className="w-full bg-brand-dark border border-white/10 rounded-xl py-2 pl-10 pr-10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
               autoFocus
             />
             <button
@@ -608,14 +608,14 @@ const Community = () => {
       )}
 
       {/* Category Tabs */}
-      <div className="flex-none px-4 py-3 border-b border-white/5 overflow-x-auto hide-scrollbar flex gap-2">
+      <div className="flex-none px-4 py-3 border-b border-white/5 overflow-x-auto hide-scrollbar flex gap-2 bg-brand-dark/50">
         {POST_CATEGORIES.map(cat => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
             className={`flex-none px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${activeCategory === cat.id
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+              : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'
               }`}
           >
             <span>{cat.emoji}</span>
@@ -626,13 +626,13 @@ const Community = () => {
 
       {/* Main Chat Area */}
       <div
-        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+        className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-brand-dark"
         ref={chatContainerRef}
         onScroll={handleScroll}
       >
         {feedLoading && page === 1 && (
           <div className="flex justify-center py-4">
-            <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+            <Loader2 className="w-6 h-6 text-brand-red animate-spin" />
           </div>
         )}
 
@@ -685,8 +685,8 @@ const Community = () => {
                   )}
 
                   <div className={`group relative p-3 rounded-2xl ${isOwn
-                      ? 'bg-blue-600 text-white rounded-tr-sm shadow-lg shadow-blue-600/10'
-                      : 'bg-[#2a2a35] text-white rounded-tl-sm border border-white/5'
+                    ? 'bg-blue-600 text-white rounded-tr-sm shadow-lg shadow-blue-600/10'
+                    : 'bg-white/5 text-white rounded-tl-sm border border-white/5 hover:bg-white/10 transition-colors'
                     }`}>
                     {/* Reply indicator */}
                     {post.replyTo && (
@@ -736,7 +736,7 @@ const Community = () => {
                   <div className={`flex items-center gap-2 mt-1 px-1 opacity-0 group-hover:opacity-100 transition-opacity ${isOwn ? 'flex-row-reverse' : ''}`}>
                     <button
                       onClick={() => likePost(post.id)}
-                      className={`flex items-center gap-1 text-xs hover:text-red-400 transition-colors ${post.liked ? 'text-red-500 font-bold' : 'text-slate-500'}`}
+                      className={`flex items-center gap-1 text-xs hover:text-red-400 transition-colors ${post.liked ? 'text-brand-red font-bold' : 'text-slate-500'}`}
                     >
                       <Heart size={14} fill={post.liked ? 'currentColor' : 'none'} />
                       {post.likeCount > 0 && <span>{post.likeCount}</span>}
@@ -771,7 +771,7 @@ const Community = () => {
                       ) : (
                         <>
                           {(comments[post.id] || []).map(comment => (
-                            <div key={comment.id} className="text-sm bg-[#1c1c28] p-2 rounded-lg">
+                            <div key={comment.id} className="text-sm bg-white/5 p-2 rounded-lg">
                               <div className="flex items-center gap-2 mb-1">
                                 {getAvatarContent(comment.author, "w-5 h-5")}
                                 <span className="text-xs font-bold text-slate-300">@{comment.author.username}</span>
@@ -787,7 +787,7 @@ const Community = () => {
                               value={commentInputs[post.id] || ''}
                               onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
                               onKeyDown={(e) => e.key === 'Enter' && addComment(post.id)}
-                              className="flex-1 bg-[#1c1c28] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
                             />
                             <button
                               onClick={() => addComment(post.id)}
@@ -819,7 +819,7 @@ const Community = () => {
 
       {/* Reply preview */}
       {replyingTo && (
-        <div className="flex-none p-2 bg-[#1c1c28] border-t border-white/5 flex items-center justify-between">
+        <div className="flex-none p-2 bg-brand-card border-t border-white/5 flex items-center justify-between">
           <div className="flex flex-col text-sm border-l-2 border-blue-500 pl-2">
             <span className="text-blue-400 font-bold text-xs">Reply to @{replyingTo.author.username}</span>
             <span className="text-slate-400 text-xs truncate max-w-[300px]">{replyingTo.content}</span>
@@ -832,7 +832,7 @@ const Community = () => {
 
       {/* File previews */}
       {filePreviews.length > 0 && (
-        <div className="flex-none p-2 bg-[#1c1c28] border-t border-white/5 flex gap-2 overflow-x-auto">
+        <div className="flex-none p-2 bg-brand-card border-t border-white/5 flex gap-2 overflow-x-auto">
           {filePreviews.map((item, index) => (
             <div key={index} className="relative group w-16 h-16 rounded-lg bg-black/20 flex-none border border-white/5 overflow-hidden">
               {item.type === 'image' ? (
@@ -852,8 +852,8 @@ const Community = () => {
       )}
 
       {/* Input area */}
-      <div className="flex-none p-4 bg-[#1c1c28] border-t border-white/5">
-        <div className="flex items-end gap-2 bg-[#0e0e12] rounded-2xl p-2 border border-white/10 focus-within:border-blue-500/50 transition-colors">
+      <div className="flex-none p-4 bg-brand-card border-t border-white/5">
+        <div className="flex items-end gap-2 bg-brand-dark rounded-2xl p-2 border border-white/10 focus-within:border-blue-500/50 transition-colors">
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
             className="p-2 text-slate-400 hover:text-yellow-400 transition-colors"
@@ -862,7 +862,7 @@ const Community = () => {
           </button>
 
           {showEmojiPicker && (
-            <div className="absolute bottom-20 left-4 bg-[#1c1c28] border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-2 shadow-xl z-50">
+            <div className="absolute bottom-20 left-4 bg-brand-card border border-white/10 rounded-xl p-2 grid grid-cols-5 gap-2 shadow-xl z-50">
               {EMOJI_LIST.map(emoji => (
                 <button key={emoji} onClick={() => insertEmoji(emoji)} className="p-2 hover:bg-white/5 rounded-lg text-xl">
                   {emoji}
@@ -896,8 +896,8 @@ const Community = () => {
             onClick={createPost}
             disabled={posting || (!messageInput.trim() && selectedFiles.length === 0)}
             className={`p-2 rounded-xl transition-all ${(!messageInput.trim() && selectedFiles.length === 0)
-                ? 'bg-white/5 text-slate-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700'
+              ? 'bg-white/5 text-slate-500 cursor-not-allowed'
+              : 'bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700'
               }`}
           >
             {posting ? (
@@ -912,14 +912,14 @@ const Community = () => {
       {/* Media Gallery Modal */}
       {showMediaGallery && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMediaGallery(false)}>
-          <GlassCard className="w-full max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#1c1c28]">
+          <GlassCard className="w-full max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onClick={(e: any) => e.stopPropagation()}>
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-brand-card">
               <h2 className="text-xl font-bold text-white">Shared Media</h2>
               <button onClick={() => setShowMediaGallery(false)} className="text-slate-400 hover:text-white">
                 <X size={24} />
               </button>
             </div>
-            <div className="flex gap-4 p-4 border-b border-white/5 bg-[#1c1c28]/50">
+            <div className="flex gap-4 p-4 border-b border-white/5 bg-brand-card/50">
               <button className="text-blue-400 font-medium flex items-center gap-2 pb-2 border-b-2 border-blue-400">
                 <ImageIcon size={16} /> Photos
               </button>
@@ -927,7 +927,7 @@ const Community = () => {
                 <File size={16} /> Files
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 bg-[#0e0e12]">
+            <div className="flex-1 overflow-y-auto p-4 bg-brand-dark">
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {mediaGalleryItems
                   .filter(m => m.type === 'image')
@@ -968,7 +968,7 @@ const Community = () => {
       {/* Sidebar */}
       {showSidebar && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setShowSidebar(false)}>
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-[#1c1c28] border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right" onClick={e => e.stopPropagation()}>
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-brand-card border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right" onClick={(e: any) => e.stopPropagation()}>
             <div className="p-6 border-b border-white/5 flex flex-col items-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl mb-3 shadow-lg shadow-purple-500/20">
                 💬
@@ -984,10 +984,10 @@ const Community = () => {
                 </h3>
                 <div className="space-y-3">
                   {onlineUsers.slice(0, 15).map(user => (
-                    <div key={user.id || user.derivId} className="flex items-center gap-3">
+                    <div key={user.id || user.derivId || Math.random()} className="flex items-center gap-3">
                       <div className="relative">
                         {getAvatarContent(user, "w-8 h-8")}
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-[#1c1c28] rounded-full"></span>
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-brand-card rounded-full"></span>
                       </div>
                       <span className="text-sm text-slate-200">@{user.username}</span>
                     </div>
@@ -1031,7 +1031,7 @@ const Community = () => {
 };
 
 // Helper function to generate consistent color from string
-const stringToColor = (str) => {
+const stringToColor = (str: string) => {
   if (!str) return '#8b5cf6';
   let hash = 0;
   for (let i = 0; i < str.length; i++) {

@@ -105,21 +105,18 @@ function App(): React.ReactElement {
                 </UserRoute>
               }
             />
+            {/* Redirects for SPA architecture */}
             <Route
               path="/user/trading"
-              element={
-                <UserRoute>
-                  <UserTrading />
-                </UserRoute>
-              }
+              element={<Navigate to="/user/dashboard?tab=trading" replace />}
             />
             <Route
               path="/user/community"
-              element={
-                <UserRoute>
-                  <Community />
-                </UserRoute>
-              }
+              element={<Navigate to="/user/dashboard?tab=community" replace />}
+            />
+            <Route
+              path="/user/settings"
+              element={<Navigate to="/user/dashboard?tab=settings" replace />}
             />
             {/* Fallback for /user/* */}
             <Route path="/user/*" element={<Navigate to="/user/dashboard" replace />} />
@@ -128,23 +125,15 @@ function App(): React.ReactElement {
           {/* Legacy routes - Keep for backwards compatibility */}
           <Route
             path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard" replace />}
           />
           <Route
             path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/user/dashboard?tab=settings" replace />}
           />
           <Route
             path="/community"
-            element={<Navigate to="/user/community" replace />}
+            element={<Navigate to="/user/dashboard?tab=community" replace />}
           />
           <Route
             path="/trading"

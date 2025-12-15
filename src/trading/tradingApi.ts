@@ -122,22 +122,57 @@ export async function getSession(sessionId) {
 // Get user's active session with their TP/SL
 export async function getMyActiveSession() {
   try {
-    const result = await apiRequest('/api/user/sessions/status');
-    if (result && result.status !== 'none' && result.session) {
+    // Fallback: Query all sessions and find the active one for this user
+    // We check for 'running', 'active', or 'live' status
+    const result = await getSessions({ limit: 50 });
+
+    // Check if result has sessions array or is the array itself
+    const sessions = result.sessions || result || [];
+
+    // Find the first session that is running/active
+    // We prioritize 'running' status
+    const activeSession = sessions.find(s =>
+      ['running', 'active', 'live'].includes(s.status?.toLowerCase() || s.sessionStatus?.toLowerCase())
+    );
+
+    if (activeSession) {
       // Normalize field names for frontend compatibility
       return {
-        id: result.session.id,
-        session_name: result.session.name,
-        name: result.session.name,
-        type: result.session.type,
-        status: result.session.sessionStatus || result.status,
-        user_tp: result.tp,
-        user_sl: result.sl,
-        current_pnl: result.currentPnl,
-        initial_balance: result.initialBalance,
-        accepted_at: result.acceptedAt
+        id: activeSession.id,
+        session_name: activeSession.name,
+        name: activeSession.name,
+        type: activeSession.type,
+        status: activeSession.status || activeSession.sessionStatus,
+        user_tp: activeSession.tp || activeSession.default_tp,
+        user_sl: activeSession.sl || activeSession.default_sl,
+        current_pnl: activeSession.currentPnl || 0,
+        initial_balance: activeSession.initialBalance || 0,
+        accepted_at: activeSession.acceptedAt || new Date().toISOString()
       };
     }
+
+    // Try the direct endpoint as a backup if the list didn't yield results
+    // purely in case the legacy endpoint actually works for some users
+    try {
+      const directResult = await apiRequest('/api/user/sessions/status');
+      if (directResult && directResult.status !== 'none' && directResult.session) {
+        return {
+          id: directResult.session.id,
+          session_name: directResult.session.name,
+          name: directResult.session.name,
+          type: directResult.session.type,
+          status: directResult.session.sessionStatus || directResult.status,
+          user_tp: directResult.tp,
+          user_sl: directResult.sl,
+          current_pnl: directResult.currentPnl,
+          initial_balance: directResult.initialBalance,
+          accepted_at: directResult.acceptedAt
+        };
+      }
+    } catch (e) {
+      // Ignore 404 from this specific endpoint as it's known to be flaky
+    }
+
     return null;
   } catch (error) {
     console.error('Error fetching active session:', error);

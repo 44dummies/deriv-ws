@@ -22,17 +22,17 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
     const baseStyles = "relative inline-flex items-center justify-center font-medium rounded-xl transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden";
 
     const variants = {
-        primary: "bg-gradient-to-r from-liquid-accent to-blue-600 text-white shadow-lg shadow-liquid-accent/20 hover:shadow-liquid-accent/40 hover:scale-[1.02]",
+        primary: "bg-brand-red hover:bg-brand-redHover text-white shadow-lg shadow-brand-red/20 hover:shadow-brand-red/30 hover:scale-[1.02]",
         secondary: "bg-white/5 text-white border border-white/10 hover:bg-white/10 hover:border-white/20",
-        ghost: "text-liquid-text-muted hover:text-white hover:bg-white/5",
-        danger: "bg-gradient-to-r from-red-500 to-pink-600 text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/40",
-        success: "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
+        ghost: "text-brand-gray-300 hover:text-white hover:bg-white/5",
+        danger: "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg shadow-red-600/20 hover:shadow-red-600/40",
+        success: "bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40"
     };
 
     const sizes = {
         sm: "px-3 py-1.5 text-xs gap-1.5",
         md: "px-5 py-2.5 text-sm gap-2",
-        lg: "px-7 py-3.5 text-base gap-2.5",
+        lg: "px-8 py-4 text-base gap-2.5",
         icon: "p-2.5"
     };
 

@@ -15,11 +15,11 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     ...props
 }) => {
     const variants = {
-        default: 'bg-black/40 border-white/5 hover:border-white/10',
-        active: 'bg-liquid-accent/5 border-liquid-accent/20 shadow-[0_0_20px_rgba(0,209,255,0.1)]',
+        default: 'bg-[#15171B] border-white/5 shadow-2xl backdrop-blur-sm',
+        active: 'bg-brand-red/5 border-brand-red/20 shadow-[0_0_20px_rgba(255,68,79,0.1)]',
         success: 'bg-emerald-500/5 border-emerald-500/20',
         warning: 'bg-amber-500/5 border-amber-500/20',
-        danger: 'bg-red-500/5 border-red-500/20',
+        danger: 'bg-brand-red/5 border-brand-red/20',
     };
 
     return (

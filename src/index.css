@@ -6,15 +6,15 @@
 @tailwind utilities;
 
 :root {
-  --liquid-bg: #05070a;
-  --liquid-card: rgba(255, 255, 255, 0.03);
-  --liquid-border: rgba(255, 255, 255, 0.08);
-  --liquid-accent: #00D1FF;
-  --liquid-secondary: #7928CA;
+  --liquid-bg: #0E0E0E;
+  --liquid-card: rgba(21, 23, 27, 0.7);
+  --liquid-border: rgba(255, 255, 255, 0.05);
+  --liquid-accent: #FF444F;
+  --liquid-secondary: #85ACB0;
 
   --glass-reflect: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.01) 100%);
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0.00) 100%);
 }
 
 @layer base {
@@ -24,10 +24,14 @@
 
   body {
     background-color: var(--liquid-bg);
+    /* Very subtle ambient light - almost invisible */
+    background-image:
+      radial-gradient(circle at 15% 50%, rgba(255, 68, 79, 0.015) 0%, transparent 35%),
+      radial-gradient(circle at 85% 30%, rgba(133, 172, 176, 0.015) 0%, transparent 35%);
     color: #ffffff;
     font-family: 'Inter', sans-serif;
     overflow-x: hidden;
-    @apply antialiased selection:bg-liquid-accent/30 selection:text-white;
+    @apply antialiased selection:bg-brand-red/30 selection:text-white;
   }
 
   /* Custom Scrollbar */
@@ -47,22 +51,22 @@
 
 @layer utilities {
   .glass-base {
-    @apply bg-liquid-card backdrop-blur-xl border border-liquid-border shadow-xl;
+    @apply bg-brand-card/80 backdrop-blur-xl border border-white/5 shadow-2xl;
   }
 
   .glass-panel {
-    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+    background: linear-gradient(145deg, rgba(21, 23, 27, 0.8) 0%, rgba(21, 23, 27, 0.6) 100%);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
   }
 
   .text-glow {
-    text-shadow: 0 0 20px rgba(0, 209, 255, 0.5);
+    text-shadow: 0 0 20px rgba(255, 68, 79, 0.3);
   }
 
   .text-gradient-liquid {
-    background: linear-gradient(135deg, #00D1FF 0%, #7928CA 100%);
+    background: linear-gradient(135deg, #FF444F 0%, #FF8F96 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -78,17 +82,9 @@
   }
 }
 
-/* Background Ambient Blobs */
-.ambient-light {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 15% 50%, rgba(0, 209, 255, 0.08) 0%, transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(121, 40, 202, 0.08) 0%, transparent 25%);
-  filter: blur(60px);
+/* Background - Subtle Technical Grid (Optional but adds premium feel) */
+.bg-grid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
 }

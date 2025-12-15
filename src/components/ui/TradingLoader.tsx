@@ -1,61 +1,17 @@
 
 import React from 'react';
 
-export const TradingLoader = () => {
+export const TradingLoader: React.FC = () => {
     return (
-        <div className="flex flex-col items-center justify-center gap-4">
-            <div className="candles-loader">
-                <div className="candle candle-1"></div>
-                <div className="candle candle-2"></div>
-                <div className="candle candle-3"></div>
-                <div className="candle candle-4"></div>
+        <div className="flex flex-col items-center justify-center p-8 space-y-4">
+            {/* Candlestick Animation */}
+            <div className="flex items-end gap-1 h-12">
+                <div className="w-2 bg-brand-red h-4 animate-[pulse_1s_ease-in-out_infinite]" />
+                <div className="w-2 bg-emerald-500 h-8 animate-[pulse_1.2s_ease-in-out_infinite_0.1s]" />
+                <div className="w-2 bg-brand-red h-6 animate-[pulse_0.8s_ease-in-out_infinite_0.2s]" />
+                <div className="w-2 bg-emerald-500 h-10 animate-[pulse_1.5s_ease-in-out_infinite_0.3s]" />
             </div>
-            <div className="text-xs font-medium text-emerald-400 animate-pulse tracking-widest uppercase">
-                Loading Market Data
-            </div>
-
-            <style>{`
-                .candles-loader {
-                    display: flex;
-                    align-items: flex-end;
-                    justify-content: center;
-                    height: 40px;
-                    gap: 6px;
-                }
-                
-                .candle {
-                    width: 6px;
-                    background: #10b981;
-                    border-radius: 2px;
-                    position: relative;
-                    animation: candle-fluctuate 1.2s infinite ease-in-out;
-                    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-                }
-                
-                /* Wicks */
-                .candle::before {
-                    content: '';
-                    position: absolute;
-                    top: -4px;
-                    left: 2px;
-                    width: 2px;
-                    height: calc(100% + 8px);
-                    background: rgba(16, 185, 129, 0.5);
-                    z-index: -1;
-                }
-
-                .candle-1 { height: 30%; animation-delay: 0s; }
-                .candle-2 { height: 60%; animation-delay: 0.1s; background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-                .candle-2::before { background: rgba(239, 68, 68, 0.5); }
-                
-                .candle-3 { height: 40%; animation-delay: 0.2s; }
-                .candle-4 { height: 80%; animation-delay: 0.3s; }
-
-                @keyframes candle-fluctuate {
-                    0%, 100% { height: 30%; opacity: 0.8; }
-                    50% { height: 80%; opacity: 1; }
-                }
-            `}</style>
+            <div className="text-gray-500 font-mono text-xs tracking-widest uppercase">Initializing Feed...</div>
         </div>
     );
 };
