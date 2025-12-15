@@ -8,39 +8,36 @@ import { tradingApi } from '../../trading/tradingApi';
 
 export const TopBar: React.FC = () => {
     const { user } = useAuth();
-    const { activeSession } = useDashboardData();
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [serverLatency, setServerLatency] = useState<number | null>(null);
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [balance, setBalance] = useState<string | null>(null);
 
+    // Fetch balance on mount
     useEffect(() => {
-        const handleOnline = () => setIsOnline(true);
-        const handleOffline = () => setIsOnline(false);
-
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-
-        // Simple ping for latency
-        const pingInterval = setInterval(async () => {
-            const start = Date.now();
+        const fetchBalance = async () => {
             try {
-                await tradingApi.getBotStatus();
-                setServerLatency(Date.now() - start);
-            } catch (e) {
-                setServerLatency(null);
+                // Try to get accounts to find demo balance
+                const response = await tradingApi.getAccounts();
+                if (response.success && response.data) {
+                    const demoAccount = response.data.find((acc: any) => acc.accountType === 'demo' || acc.is_virtual);
+                    if (demoAccount) {
+                        setBalance(`${demoAccount.currency} ${demoAccount.balance}`);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch balance', err);
             }
-        }, 10000);
-
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-            clearInterval(pingInterval);
         };
-    }, []);
+        if (user) fetchBalance();
+    }, [user]);
 
-    const getStatusColor = () => {
-        if (!activeSession) return 'text-gray-500 bg-gray-500/10 border-gray-500/20';
-        if (activeSession.status === 'running' || activeSession.status === 'live') return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
-        return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+    const getFirstName = (fullName: string | undefined) => {
+        if (!fullName) return 'Trader';
+        return fullName.split(' ')[0];
+    };
+
+    const handleNotificationClick = () => {
+        // Placeholder for notification logic
+        alert('No new notifications');
     };
 
     return (
@@ -66,6 +63,14 @@ export const TopBar: React.FC = () => {
 
             {/* Right: System Status & Profile */}
             <div className="flex items-center gap-4">
+                {/* Balance Display (Demo) */}
+                {balance && (
+                    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+                        <span>DEMO:</span>
+                        <span className="font-bold text-emerald-300">{balance}</span>
+                    </div>
+                )}
+
                 {/* Latency Indicator */}
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/20 border border-white/5 text-[10px] font-mono text-gray-400">
                     {isOnline ? <Wifi size={12} className="text-green-500" /> : <WifiOff size={12} className="text-red-500" />}
@@ -73,7 +78,10 @@ export const TopBar: React.FC = () => {
                 </div>
 
                 {/* Notifications */}
-                <button className="relative p-2 text-gray-400 hover:text-white transition-colors">
+                <button
+                    onClick={handleNotificationClick}
+                    className="relative p-2 text-gray-400 hover:text-white transition-colors"
+                >
                     <Bell size={18} />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-red rounded-full border-2 border-[#0E0E0E]"></span>
                 </button>
@@ -82,18 +90,49 @@ export const TopBar: React.FC = () => {
                 <div className="w-px h-6 bg-white/10 mx-1"></div>
 
                 {/* User Profile */}
-                <div className="flex items-center gap-3 pl-1">
-                    <div className="text-right hidden sm:block">
-                        <div className="text-sm font-medium text-white leading-none">{user?.fullName || 'Trader'}</div>
-                        <div className="text-[10px] text-brand-red font-mono mt-1 opacity-80">{user?.role || 'PRO'}</div>
-                    </div>
-                    <div className="w-8 h-8 rounded-lg bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
-                        {user?.profile_photo ? (
-                            <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                            <User size={16} className="text-gray-400" />
-                        )}
-                    </div>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        className="flex items-center gap-3 pl-1 hover:bg-white/5 p-1.5 rounded-lg transition-colors text-left"
+                    >
+                        <div className="hidden sm:block">
+                            <div className="text-sm font-medium text-white leading-none">{getFirstName(user?.fullName)}</div>
+                            <div className="text-[10px] text-brand-red font-mono mt-1 opacity-80">{user?.role || 'PRO'}</div>
+                        </div>
+                        <div className="w-8 h-8 rounded-lg bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
+                            {user?.profile_photo ? (
+                                <img src={user.profile_photo} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={16} className="text-gray-400" />
+                            )}
+                        </div>
+                    </button>
+
+                    {/* Profile Dropdown */}
+                    {showProfileMenu && (
+                        <>
+                            <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setShowProfileMenu(false)}
+                            ></div>
+                            <div className="absolute right-0 top-full mt-2 w-64 bg-[#1E1E1E] border border-white/10 rounded-xl shadow-2xl p-4 z-50 flex flex-col gap-3">
+                                <div className="pb-3 border-b border-white/10">
+                                    <p className="text-xs text-gray-500 uppercase font-mono mb-1">Account</p>
+                                    <p className="text-white font-medium">{user?.fullName}</p>
+                                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase font-mono mb-1">Deriv ID</p>
+                                    <p className="text-brand-red font-mono">{user?.derivId || 'N/A'}</p>
+                                </div>
+                                <div className="pt-2">
+                                    <button className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors">
+                                        Account Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </header>
