@@ -23,7 +23,7 @@ TraderMind is a full-stack trading automation platform that enables administrato
 ### Admin Dashboard  
 - Bot control panel (start/stop/pause/resume)
 - Session creation and management
-- Real-time trading dashboard with liquid glass UI
+- Real-time trading dashboard
 - User account management
 - Activity logs
 - Balance monitoring (aggregated across all users)
