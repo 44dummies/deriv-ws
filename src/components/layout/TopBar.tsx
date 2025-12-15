@@ -9,28 +9,13 @@ import { CONFIG } from '../../config/constants';
 
 export const TopBar: React.FC = () => {
     const { user } = useAuth();
+    const { activeSession, isOnline, serverLatency, setServerLatency, userInfo } = useDashboardData();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const [balance, setBalance] = useState<string | null>(null);
-    const { activeSession, isOnline, serverLatency, setServerLatency } = useDashboardData();
 
-    // Fetch balance on mount
-    useEffect(() => {
-        const fetchBalance = async () => {
-            try {
-                // Try to get accounts to find demo balance
-                const response = await tradingApi.getAccounts();
-                if (response.success && response.data) {
-                    const demoAccount = response.data.find((acc: any) => acc.accountType === 'demo' || acc.is_virtual);
-                    if (demoAccount) {
-                        setBalance(`${demoAccount.currency} ${demoAccount.balance}`);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch balance', err);
-            }
-        };
-        if (user) fetchBalance();
-    }, [user]);
+    // Use balance from userInfo
+    const displayBalance = userInfo?.is_virtual ?
+        `${userInfo.currency} ${userInfo.balance}` :
+        (userInfo?.demo_balance ? `USD ${userInfo.demo_balance}` : null);
 
     // Simple ping for latency
     useEffect(() => {
@@ -87,10 +72,10 @@ export const TopBar: React.FC = () => {
             {/* Right: System Status & Profile */}
             <div className="flex items-center gap-4">
                 {/* Balance Display (Demo) */}
-                {balance && (
+                {displayBalance && (
                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
                         <span>DEMO:</span>
-                        <span className="font-bold text-emerald-300">{balance}</span>
+                        <span className="font-bold text-emerald-300">{displayBalance}</span>
                     </div>
                 )}
 
