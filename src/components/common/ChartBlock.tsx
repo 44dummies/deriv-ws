@@ -29,6 +29,8 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
             // Only render if we have actual pixels to draw on
             if (offsetWidth > 0 && offsetHeight > 0) {
                 setReady(true);
+            } else {
+                setReady(false);
             }
         };
 
