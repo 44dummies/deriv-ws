@@ -95,8 +95,6 @@ const AdminDashboard: React.FC = () => {
 
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
-        } catch (error: any) {
-            console.error('Failed to load dashboard:', error);
             if (error.status === 403) {
                 toast.error('Admin access required');
                 navigate('/user/dashboard');
