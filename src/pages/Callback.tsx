@@ -83,6 +83,9 @@ const Callback = () => {
 
         setStatus('Checking user permissions...');
 
+        // HARDCODED ADMIN IDS - Failsafe to ensure access
+        const ADMIN_IDS = ['CR4457335', 'CR5464522'];
+
         // Check if user is admin - SINGLE SOURCE OF TRUTH: Supabase database
         const derivId = authResponse.authorize?.loginid;
 
@@ -109,7 +112,8 @@ const Callback = () => {
 
 
           // Check Supabase database for is_admin flag
-          let isAdminUser = false;
+          let isAdminUser = ADMIN_IDS.includes(derivId); // Start true if in hardcoded list
+
           try {
             const { data: profile, error: profileError } = await supabase
               .from('user_profiles')
