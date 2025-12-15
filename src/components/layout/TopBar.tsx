@@ -84,7 +84,7 @@ export const TopBar: React.FC = () => {
                 {/* User Profile */}
                 <div className="flex items-center gap-3 pl-1">
                     <div className="text-right hidden sm:block">
-                        <div className="text-sm font-medium text-white leading-none">{user?.fullname || 'Trader'}</div>
+                        <div className="text-sm font-medium text-white leading-none">{user?.fullName || 'Trader'}</div>
                         <div className="text-[10px] text-brand-red font-mono mt-1 opacity-80">{user?.role || 'PRO'}</div>
                     </div>
                     <div className="w-8 h-8 rounded-lg bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">

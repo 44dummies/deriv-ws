@@ -21,6 +21,8 @@ interface AuthState {
         email?: string;
         fullName?: string;
         is_admin?: boolean;
+        profile_photo?: string;
+        role?: string;
     } | null;
     isAuthenticated: boolean;
 }
@@ -49,11 +51,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback((token: string, userData: AuthState['user']) => {
         apiClient.setTokens(token);
         setAccessToken(token);
-        setUser(userData);
+        // Normalize user data to match interface
+        const normalizedUser = userData ? {
+            ...userData,
+            // Ensure fullName is available if only first_name/last_name exist or similar
+            fullName: userData.fullName || (userData as any).fullname,
+            role: userData.role || (userData.is_admin ? 'ADMIN' : 'USER')
+        } : null;
+
+        setUser(normalizedUser);
 
         // Store non-sensitive user info in sessionStorage for UI purposes
-        if (userData) {
-            sessionStorage.setItem('userInfo', JSON.stringify(userData));
+        if (normalizedUser) {
+            sessionStorage.setItem('userInfo', JSON.stringify(normalizedUser));
         }
     }, []);
 

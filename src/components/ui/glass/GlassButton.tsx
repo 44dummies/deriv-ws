@@ -2,10 +2,11 @@ import React from 'react';
 
 interface GlassButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
-    size?: 'sm' | 'md' | 'lg' | 'icon';
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'icon';
     isLoading?: boolean;
     leftIcon?: React.ReactNode;
     rightIcon?: React.ReactNode;
+    icon?: React.ReactNode;
 }
 
 export const GlassButton: React.FC<GlassButtonProps> = ({
@@ -16,6 +17,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
     isLoading = false,
     leftIcon,
     rightIcon,
+    icon,
     disabled,
     ...props
 }) => {
@@ -30,11 +32,15 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
     };
 
     const sizes = {
+        xs: "px-2.5 py-1 text-xs gap-1.5",
         sm: "px-3 py-1.5 text-xs gap-1.5",
         md: "px-5 py-2.5 text-sm gap-2",
         lg: "px-8 py-4 text-base gap-2.5",
         icon: "p-2.5"
     };
+
+    // Use icon prop as leftIcon if leftIcon is not provided
+    const effectiveLeftIcon = leftIcon || icon;
 
     return (
         <button
@@ -49,8 +55,8 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
 
             {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-            ) : leftIcon ? (
-                <span className="relative z-10">{leftIcon}</span>
+            ) : effectiveLeftIcon ? (
+                <span className="relative z-10">{effectiveLeftIcon}</span>
             ) : null}
 
             <span className="relative z-10">{isLoading ? 'Loading...' : children}</span>
