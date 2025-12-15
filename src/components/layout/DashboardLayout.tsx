@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { ModernSidebar } from './ModernSidebar';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Bell, Menu, Search } from 'lucide-react'; // Search kept just in case but we remove the bar
 import { NotificationDrawer } from '../notifications/NotificationDrawer';
+import { Logo } from '../ui/Logo';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -25,6 +26,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isAd
     const user = getUserInfo();
     const [notificationOpen, setNotificationOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar toggle
 
     // Detect screen size for layout adjustments
     useEffect(() => {
@@ -36,58 +38,64 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, isAd
         return () => window.removeEventListener('resize', checkScreenSize);
     }, []);
 
-    // Margin left changes based on screen size (sidebar is fixed)
-    const mainMargin = isMobile ? 'ml-0 pt-16' : 'ml-20 lg:ml-64';
+    const sidebarWidth = '80px'; // Matching the ModernSidebar width usually
 
     return (
-        <div className="min-h-screen bg-[#0a0a0f] text-white font-sans selection:bg-emerald-500/30">
-            {/* Global Blobs (Liquid Background) */}
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
-                <div className="absolute top-1/2 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob animation-delay-2000" />
-                <div className="absolute bottom-0 left-1/3 w-[500px] h-[500px] bg-emerald-500/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob animation-delay-4000" />
+        <div className="min-h-screen relative overflow-hidden bg-[#0a0a0f] text-white font-sans selection:bg-[#ff3355]/30">
+            {/* Liquid Background - Consistent with Dashboard */}
+            <div className="fixed inset-0 pointer-events-none z-0">
+                <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#3b82f6]/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob" />
+                <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-[#8b5cf6]/10 rounded-full mix-blend-screen filter blur-[120px] animate-blob animation-delay-2000" />
             </div>
 
             {/* Sidebar */}
-            <ModernSidebar isAdmin={isAdmin} userEmail={user.email} />
+            <ModernSidebar
+                isAdmin={isAdmin}
+                userEmail={user.email}
+                isMobileOpen={sidebarOpen}
+                onMobileClose={() => setSidebarOpen(false)}
+            />
 
             {/* Main Content Area */}
-            <main className={`relative z-10 transition-all duration-300 ${mainMargin} p-4 sm:p-6 lg:p-8`}>
-                {/* Top Metrics / utility Bar */}
-                <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-lg">
-                    <div className="flex items-center gap-4 text-slate-400">
-                        <span className="text-sm font-mono hidden sm:block">{new Date().toLocaleDateString()}</span>
-                        <div className="h-4 w-px bg-white/10 hidden sm:block" />
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-xs text-emerald-400 font-medium">SYSTEM OPERATIONAL</span>
-                        </div>
+            {/* Added left margin to account for fixed sidebar on desktop */}
+            <main
+                className={`relative z-10 transition-all duration-300 min-h-screen flex flex-col`}
+                style={{ marginLeft: isMobile ? 0 : sidebarWidth }}
+            >
+                {/* Header - Minimal & Glassmorphic (Replaces the blocking top bar) */}
+                <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-2xl px-6 h-20 flex items-center justify-between supports-[backdrop-filter]:bg-[#0a0a0f]/60">
+                    <div className="flex items-center gap-4">
+                        {isMobile && (
+                            <button
+                                onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="p-2 rounded-xl bg-white/5 text-gray-400 hover:text-white"
+                            >
+                                <Menu size={20} />
+                            </button>
+                        )}
+
+                        {/* Page Title or Breadcrumb could go here, for now just Logo on mobile or context */}
+                        {isMobile && (
+                            <div className="flex items-center gap-3">
+                                <Logo size={28} />
+                                <span className="font-bold text-lg tracking-tight">TraderMind</span>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        {/* Search (Visual Only) */}
-                        <div className="relative flex-1 sm:flex-none">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className="w-full sm:w-48 lg:w-64 bg-black/20 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-all"
-                            />
-                        </div>
-
-                        {/* Notifications */}
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setNotificationOpen(true)}
-                            className="relative p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors border border-white/5 flex-shrink-0"
+                            className="relative p-2.5 rounded-full hover:bg-white/5 text-gray-400 hover:text-white transition-all group"
                         >
-                            <Bell size={20} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                            <Bell size={20} className="group-hover:text-[#ff3355] transition-colors" />
+                            <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[#ff3355] rounded-full shadow-[0_0_8px_rgba(255,51,85,0.5)]" />
                         </button>
                     </div>
-                </div>
+                </header>
 
                 {/* Page Content */}
-                <div className="animate-fade-in">
+                <div className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in">
                     {children}
                 </div>
             </main>

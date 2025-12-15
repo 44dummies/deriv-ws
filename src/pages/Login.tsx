@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { TokenService } from '../services/tokenService';
 import { OAUTH_URL } from '../config';
+import { GlassButton } from '../components/ui/glass/GlassButton';
+import { Logo } from '../components/ui/Logo';
 
 interface Feature {
     icon: ReactElement;
@@ -112,80 +114,56 @@ const Login: React.FC = () => {
             </div>
 
             {/* Navigation */}
-            <nav className="fixed top-0 w-full z-50 glass-card border-b-0 rounded-none bg-black/30 backdrop-blur-xl">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="relative group">
-                            <div className="absolute -inset-0.5 sm:-inset-1 bg-gradient-to-r from-[#ff3355] to-[#ff8042] rounded-lg sm:rounded-xl blur opacity-40 group-hover:opacity-75 transition duration-300" />
-                            <div className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center shadow-lg shadow-[#ff3355]/30">
-                                <span className="text-lg sm:text-xl font-bold text-white">T</span>
-                            </div>
-                        </div>
+            <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#050510]/80 backdrop-blur-xl supports-[backdrop-filter]:bg-[#050510]/60">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Logo size={40} />
                         <div>
-                            <span className="text-base sm:text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300">TraderMind</span>
-                            <p className="hidden sm:block text-[10px] text-gray-500 -mt-0.5 uppercase tracking-widest">Analytics Platform</p>
+                            <span className="text-xl font-bold tracking-tight text-white block leading-none">TraderMind</span>
+                            <span className="text-[10px] text-gray-500 tracking-[0.2em] font-medium uppercase">Analytics Platform</span>
                         </div>
                     </div>
 
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-                        <a href="#features" className="hover:text-white transition-colors relative group">
-                            Features
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
-                        </a>
-                        <a href="#stats" className="hover:text-white transition-colors relative group">
-                            Stats
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
-                        </a>
-                        <a href="#testimonials" className="hover:text-white transition-colors relative group">
-                            Reviews
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#ff3355] to-[#ff8042] group-hover:w-full transition-all duration-300" />
-                        </a>
+                        <a href="#features" className="hover:text-white transition-colors">Features</a>
+                        <a href="#stats" className="hover:text-white transition-colors">Stats</a>
+                        <a href="#testimonials" className="hover:text-white transition-colors">Reviews</a>
                     </div>
 
-                    {/* Mobile Menu Button */}
+                    {/* Desktop CTA */}
+                    <div className="hidden md:flex items-center gap-4">
+                        <button
+                            onClick={handleLogin}
+                            className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                        >
+                            Log In
+                        </button>
+                        <GlassButton
+                            variant="brand"
+                            size="sm"
+                            onClick={handleLogin}
+                            className="bg-gradient-to-r from-[#ff3355] to-[#ff8042] border-none text-white shadow-lg shadow-[#ff3355]/25"
+                        >
+                            Get Started
+                        </GlassButton>
+                    </div>
+
+                    {/* Mobile Menu Button - simplified for brevity in this edit */}
                     <button
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         className="md:hidden p-2 text-gray-400 hover:text-white transition-colors"
-                        aria-label="Toggle menu"
                     >
                         {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-                    </button>
-
-                    {/* Desktop CTA */}
-                    <button
-                        onClick={handleLogin}
-                        className="hidden md:block group relative px-5 py-2.5 rounded-xl text-sm font-semibold overflow-hidden min-h-[44px]"
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#ff3355] to-[#ff8042] opacity-80 group-hover:opacity-100 transition-opacity" />
-                        <span className="relative text-white flex items-center gap-2">
-                            Get Started
-                            <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
-                        </span>
                     </button>
                 </div>
 
                 {/* Mobile Menu */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-white/10 bg-black/40 backdrop-blur-xl">
-                        <div className="px-4 py-4 space-y-3">
-                            <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-base text-gray-300 hover:text-white transition-colors border-b border-white/5">
-                                Features
-                            </a>
-                            <a href="#stats" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-base text-gray-300 hover:text-white transition-colors border-b border-white/5">
-                                Stats
-                            </a>
-                            <a href="#testimonials" onClick={() => setMobileMenuOpen(false)} className="block py-3 text-base text-gray-300 hover:text-white transition-colors border-b border-white/5">
-                                Reviews
-                            </a>
-                            <button
-                                onClick={handleLogin}
-                                className="w-full mt-4 py-3.5 rounded-xl text-base font-semibold text-white min-h-[48px]"
-                                style={{ background: 'linear-gradient(135deg, #ff3355 0%, #ff8042 100%)' }}
-                            >
-                                Get Started
-                            </button>
-                        </div>
+                    <div className="md:hidden border-t border-white/10 bg-black/95 backdrop-blur-xl absolute w-full left-0 top-full p-4 space-y-4 shadow-2xl">
+                        <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-gray-400 hover:text-white">Features</a>
+                        <a href="#stats" onClick={() => setMobileMenuOpen(false)} className="block text-gray-400 hover:text-white">Stats</a>
+                        <GlassButton variant="brand" className="w-full" onClick={handleLogin}>Get Started</GlassButton>
                     </div>
                 )}
             </nav>

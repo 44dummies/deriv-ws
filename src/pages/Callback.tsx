@@ -4,6 +4,7 @@ import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 import { supabase } from '../services/supabaseService';
 import apiClient from '../services/apiClient';
+import { Logo } from '../components/ui/Logo';
 
 const Callback = () => {
   const navigate = useNavigate();
@@ -189,26 +190,40 @@ const Callback = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#040404] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff3355] to-[#ff8042] flex items-center justify-center text-2xl font-bold mx-auto mb-6 text-white">
-          T
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
+      {/* Liquid Background */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#ff3355]/10 rounded-full blur-[120px] animate-pulse" />
+      </div>
+
+      <div className="text-center relative z-10 p-8 glass-card rounded-3xl border-white/5 bg-black/40 backdrop-blur-2xl max-w-sm w-full mx-4 shadow-2xl">
+        <div className="mb-8 flex justify-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-[#ff3355] blur-xl opacity-20 animate-pulse" />
+            <Logo size={64} className="animate-float" />
+          </div>
         </div>
 
         {error ? (
-          <>
-            <h2 className="text-xl font-semibold text-red-400 mb-2">Authentication Error</h2>
-            <p className="text-gray-400">{error}</p>
-            <p className="text-sm text-gray-500 mt-4">Redirecting to login...</p>
-          </>
+          <div className="animate-fade-in">
+            <h2 className="text-xl font-bold text-red-500 mb-2">Authentication Failed</h2>
+            <p className="text-gray-400 text-sm mb-6">{error}</p>
+            <button
+              onClick={() => navigate('/')}
+              className="text-white bg-red-500/10 border border-red-500/20 px-6 py-2 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-all"
+            >
+              Return to Login
+            </button>
+            <p className="text-xs text-gray-600 mt-6">Redirecting in a few seconds...</p>
+          </div>
         ) : (
-          <>
-            <div className="flex justify-center mb-4">
-              <div className="w-8 h-8 border-2 border-[#ff3355] border-t-transparent rounded-full animate-spin"></div>
+          <div className="animate-fade-in">
+            <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Authenticating</h2>
+            <div className="h-1 w-16 bg-white/10 rounded-full mx-auto mb-4 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#ff3355] to-[#ff8042] w-1/2 animate-loading-bar" />
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Authenticating</h2>
-            <p className="text-gray-400">{status}</p>
-          </>
+            <p className="text-gray-400 text-sm">{status}</p>
+          </div>
         )}
       </div>
     </div>

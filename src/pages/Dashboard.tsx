@@ -23,6 +23,7 @@ import apiClient from '../services/apiClient';
 import { TierChatroom } from '../components/community';
 import { NotificationBell } from '../components/trading';
 import MobileNavigation from '../components/layout/MobileNavigation';
+import { Logo } from '../components/ui/Logo';
 
 const STORAGE_KEYS = {
   JOURNAL: 'tradermind_journal',
@@ -1674,10 +1675,8 @@ const Dashboard = () => {
                   <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate('/dashboard')}>
                     <div className="relative">
                       <div className="absolute inset-0 bg-purple-500 blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                      <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#ffffff] to-[#999999] p-[1px]">
-                        <div className="w-full h-full rounded-xl bg-black flex items-center justify-center">
-                          <Bot className="text-white w-5 h-5" />
-                        </div>
+                      <div className="relative w-10 h-10 flex items-center justify-center">
+                        <Logo size={40} />
                       </div>
                     </div>
                     <div>

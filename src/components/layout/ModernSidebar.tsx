@@ -26,16 +26,20 @@ interface ModernSidebarProps {
     isAdmin?: boolean;
     userEmail?: string;
     onLogout?: () => void;
+    isMobileOpen?: boolean;
+    onMobileClose?: () => void;
 }
 
 export const ModernSidebar: React.FC<ModernSidebarProps> = ({
     isAdmin = false,
     userEmail = 'admin@deriv.com',
-    onLogout
+    onLogout,
+    isMobileOpen = false,
+    onMobileClose
 }) => {
     const [collapsed, setCollapsed] = useState(true);
     const [isMobile, setIsMobile] = useState(false);
-    const [mobileOpen, setMobileOpen] = useState(false);
+    // Removed internal mobileOpen state
     const sidebarRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -50,7 +54,7 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
                 setCollapsed(false);
             } else {
                 setCollapsed(true);
-                setMobileOpen(false);
+                if (onMobileClose) onMobileClose();
             }
         };
 
@@ -61,22 +65,22 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
 
     // Close mobile sidebar when route changes
     useEffect(() => {
-        if (isMobile) {
-            setMobileOpen(false);
+        if (isMobile && onMobileClose) {
+            onMobileClose();
         }
     }, [location.pathname, isMobile]);
 
     // Close mobile sidebar when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (isMobile && mobileOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
-                setMobileOpen(false);
+            if (isMobile && isMobileOpen && sidebarRef.current && !sidebarRef.current.contains(event.target as Node)) {
+                if (onMobileClose) onMobileClose();
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isMobile, mobileOpen]);
+    }, [isMobile, isMobileOpen]);
 
     const menuItems: SidebarItem[] = [
         { icon: <LayoutDashboard size={20} />, label: 'Dashboard', to: isAdmin ? '/admin/dashboard' : '/user/dashboard', roles: ['admin', 'user'] },
@@ -96,27 +100,16 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
     };
 
     // Determine if sidebar is showing
-    const isOpen = isMobile ? mobileOpen : !collapsed;
+    const isOpen = isMobile ? isMobileOpen : !collapsed;
     const sidebarWidth = isOpen ? 'w-64' : 'w-20';
 
     return (
         <>
-            {/* Mobile Menu Button - Fixed in top left */}
-            {isMobile && (
-                <button
-                    onClick={() => setMobileOpen(!mobileOpen)}
-                    className="fixed top-4 left-4 z-[60] p-3 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 text-white shadow-lg hover:bg-white/10 transition-all"
-                    aria-label="Toggle menu"
-                >
-                    {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
-            )}
-
             {/* Mobile Overlay */}
-            {isMobile && mobileOpen && (
+            {isMobile && isMobileOpen && (
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
-                    onClick={() => setMobileOpen(false)}
+                    onClick={onMobileClose}
                 />
             )}
 
@@ -130,7 +123,7 @@ export const ModernSidebar: React.FC<ModernSidebarProps> = ({
                     transition-all duration-300 z-50
                     flex flex-col justify-between
                     ${sidebarWidth}
-                    ${isMobile ? (mobileOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
+                    ${isMobile ? (isMobileOpen ? 'translate-x-0' : '-translate-x-full') : 'translate-x-0'}
                 `}
             >
                 {/* Header / Logo */}
