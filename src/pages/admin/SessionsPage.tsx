@@ -81,7 +81,7 @@ export default function SessionsPage() {
   });
 
   // Get running session for WebSocket events
-  const runningSession = sessions.find(s => s.status === 'running');
+  const runningSession = sessions.find(s => s.status === 'running' || s.status === 'active');
   const activeMarket = runningSession?.markets?.[0] || 'R_100';
 
   // WebSocket events for real-time trade/signal monitoring
