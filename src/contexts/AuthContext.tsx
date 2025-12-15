@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiClient } from '../services/apiClient';
+import { realtimeSocket } from '../services/realtimeSocket';
 
 interface AuthState {
     accessToken: string | null;
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
             console.error('Logout error:', e);
         }
+
+        realtimeSocket.disconnect();
 
         setAccessToken(null);
         setUser(null);

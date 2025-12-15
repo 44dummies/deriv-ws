@@ -63,6 +63,12 @@ class RealtimeSocketService {
         console.error('Socket connection error:', error.message);
         this.reconnectAttempts++;
 
+        // Stop retrying if authentication fails
+        if (error.message === 'Authentication required' || error.message === 'Invalid token' || error.message.includes('jwt')) {
+          console.log('[Socket] Auth failed, stopping reconnection');
+          this.socket.disconnect();
+          this.connected = false;
+        }
       });
 
       this.socket.on('disconnect', (reason) => {
