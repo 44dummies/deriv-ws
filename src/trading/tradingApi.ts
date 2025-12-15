@@ -156,34 +156,13 @@ export async function getMyActiveSession() {
       };
     }
 
-    // Try the direct endpoint as a backup if the list didn't yield results
-    // purely in case the legacy endpoint actually works for some users
-    try {
-      const directResult = await apiRequest('/api/user/sessions/status');
-      if (directResult && directResult.status !== 'none' && directResult.session) {
-        return {
-          id: directResult.session.id,
-          session_name: directResult.session.name,
-          name: directResult.session.name,
-          type: directResult.session.type,
-          status: directResult.session.sessionStatus || directResult.status,
-          user_tp: directResult.tp,
-          user_sl: directResult.sl,
-          current_pnl: directResult.currentPnl,
-          initial_balance: directResult.initialBalance,
-          accepted_at: directResult.acceptedAt
-        };
-      }
-    } catch (e) {
-      // Ignore 404 from this specific endpoint as it's known to be flaky
-    }
-
     return null;
   } catch (error) {
     console.error('Error fetching active session:', error);
     return null;
   }
 }
+
 
 // Accept a session with TP/SL
 export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number }) {
