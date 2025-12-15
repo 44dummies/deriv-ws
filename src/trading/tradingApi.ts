@@ -115,6 +115,10 @@ export async function getSessions(options: SessionQueryOptions = {}) {
   return apiRequest(`/api/trading/sessions${query ? '?' + query : ''}`);
 }
 
+export async function getAvailableSessions() {
+  return apiRequest('/api/user/sessions/available');
+}
+
 export async function getSession(sessionId) {
   return apiRequest(`/api/trading/sessions/${sessionId}`);
 }
@@ -401,6 +405,7 @@ export const tradingApi = {
 
   // Sessions
   getSessions,
+  getAvailableSessions,
   getSession,
   getMyActiveSession,
   acceptSession,

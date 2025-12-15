@@ -23,10 +23,40 @@ export const useDashboardData = () => {
             // Normalize data if needed
             const session = data.session || data;
 
-            setDashboardState(prev => ({
-                ...prev,
-                activeSession: session
-            }));
+            setDashboardState(prev => {
+                // Update active session if ID matches or if it's the *current* active one
+                const isActiveUpdate = prev.activeSession?.id === session.id;
+
+                // Update sessions list (replace or add)
+                // Note: If session ended, we might want to remove it? 
+                // User said "if a session ended it should not be displayed".
+                // backend /available filtered pending/active.
+                // If update says status is 'completed' or 'ended', remove from list.
+
+                let newSessions = [...prev.sessions];
+                const index = newSessions.findIndex(s => s.id === session.id);
+
+                if (['completed', 'ended', 'cancelled'].includes(session.status)) {
+                    // Remove ended session
+                    if (index !== -1) newSessions.splice(index, 1);
+                } else {
+                    // Update or Add active/pending session
+                    if (index !== -1) {
+                        newSessions[index] = { ...newSessions[index], ...session };
+                    } else {
+                        // Only add if it qualifies (pending/active)
+                        if (['pending', 'active'].includes(session.status)) {
+                            newSessions.push(session);
+                        }
+                    }
+                }
+
+                return {
+                    ...prev,
+                    sessions: newSessions,
+                    activeSession: isActiveUpdate ? { ...prev.activeSession, ...session } : prev.activeSession
+                };
+            });
         };
 
         realtimeSocket.on('session_update', handleSessionUpdate);
@@ -150,13 +180,19 @@ export const useDashboardData = () => {
                 }
             }
 
-            // Fetch Sessions
+            // Fetch Sessions (Filtered for User)
             let sessions = [];
             let activeSession = null;
             try {
-                const sessionsRes = await tradingApi.getSessions();
-                sessions = Array.isArray(sessionsRes) ? sessionsRes : (sessionsRes.data || []);
+                // Fetch available sessions for joining/viewing
+                const availableRes = await tradingApi.getAvailableSessions();
+                sessions = availableRes.sessions || []; // Ensure sessions array
+
+                // Also check for active session status
+                // If user has an active session, it might be in available (if started) or not (if full/private/etc, though unlikely for now)
                 activeSession = await tradingApi.getMyActiveSession();
+
+                // If active session exists, ensure it's in the list or handled appropriately
             } catch (e) {
                 console.error('Failed to fetch sessions:', e);
             }
@@ -207,12 +243,17 @@ export const useDashboardData = () => {
         loadDashboard();
     }, [loadDashboard]);
 
+    const [serverLatency, setServerLatency] = useState<number | null>(null);
+
     return {
         isLoading,
         userInfo: dashboardState.userInfo,
         sessions: dashboardState.sessions,
         activeSession: dashboardState.activeSession,
         derivWsConnected,
+        isOnline: derivWsConnected,
+        serverLatency,
+        setServerLatency,
         refresh: loadDashboard
     };
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Bell, User, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useDashboardData } from '../../hooks/useDashboardData';
+import { TokenService } from '../../services/tokenService';
 import { GlassButton } from '../ui/glass/GlassButton';
 import { tradingApi } from '../../trading/tradingApi';
 import { CONFIG } from '../../config/constants';
@@ -148,8 +149,17 @@ export const TopBar: React.FC = () => {
                                     <p className="text-brand-red font-mono">{user?.derivId || 'N/A'}</p>
                                 </div>
                                 <div className="pt-2">
-                                    <button className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors">
+                                    <button className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors mb-2">
                                         Account Settings
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            TokenService.clearTokens();
+                                            window.location.href = '/';
+                                        }}
+                                        className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-xs text-red-400 rounded-lg transition-colors border border-red-500/20"
+                                    >
+                                        Sign Out
                                     </button>
                                 </div>
                             </div>
