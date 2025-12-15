@@ -32,6 +32,7 @@ import AdminProtected from './components/routing/AdminProtected';
 
 import { TokenService } from './services/tokenService';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -66,85 +67,88 @@ function App(): React.ReactElement {
   }, []);
 
   return (
-    <ThemeProvider>
-      <Router>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Login />} />
-          <Route path="/callback" element={<Callback />} />
+    <AuthProvider>
+      <ThemeProvider>
+        <Router>
 
-          {/* Admin routes - Uses AdminProtected + AdminLayout */}
-          <Route path="/admin" element={<AdminProtected />}>
-            <Route element={<AdminLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="sessions" element={<SessionsPage />} />
-              <Route path="sessions/new" element={<SessionsPage />} />
-              <Route path="sessions/live" element={<SessionsPage />} />
-              <Route path="risk" element={<RiskManagement />} />
-              <Route path="users" element={<UsersPage />} />
-              <Route path="users/:userId" element={<UserDetailsPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="logs" element={<LogsPage />} />
-              <Route path="settings" element={<SettingsPage />} />
-              {/* Trading dashboard removed */}
-              {/* Reports */}
-              <Route path="reports" element={<AdminReportsPage />} />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Login />} />
+            <Route path="/callback" element={<Callback />} />
+
+            {/* Admin routes - Uses AdminProtected + AdminLayout */}
+            <Route path="/admin" element={<AdminProtected />}>
+              <Route element={<AdminLayout />}>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="sessions" element={<SessionsPage />} />
+                <Route path="sessions/new" element={<SessionsPage />} />
+                <Route path="sessions/live" element={<SessionsPage />} />
+                <Route path="risk" element={<RiskManagement />} />
+                <Route path="users" element={<UsersPage />} />
+                <Route path="users/:userId" element={<UserDetailsPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="logs" element={<LogsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
+                {/* Trading dashboard removed */}
+                {/* Reports */}
+                <Route path="reports" element={<AdminReportsPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* User routes - Use full Dashboard with community tab */}
-          {/* User routes - Use MainLayout */}
-          <Route element={<MainLayout />}>
+            {/* User routes - Use full Dashboard with community tab */}
+            {/* User routes - Use MainLayout */}
+            <Route element={<MainLayout />}>
+              <Route
+                path="/user/dashboard"
+                element={
+                  <UserRoute>
+                    <Dashboard />
+                  </UserRoute>
+                }
+              />
+              {/* Redirects for SPA architecture */}
+              <Route
+                path="/user/trading"
+                element={<Navigate to="/user/dashboard?tab=trading" replace />}
+              />
+              <Route
+                path="/user/community"
+                element={<Navigate to="/user/dashboard?tab=community" replace />}
+              />
+              <Route
+                path="/user/settings"
+                element={<Navigate to="/user/dashboard?tab=settings" replace />}
+              />
+              {/* Fallback for /user/* */}
+              <Route path="/user/*" element={<Navigate to="/user/dashboard" replace />} />
+            </Route>
+
+            {/* Legacy routes - Keep for backwards compatibility */}
             <Route
-              path="/user/dashboard"
-              element={
-                <UserRoute>
-                  <Dashboard />
-                </UserRoute>
-              }
+              path="/dashboard"
+              element={<Navigate to="/user/dashboard" replace />}
             />
-            {/* Redirects for SPA architecture */}
             <Route
-              path="/user/trading"
-              element={<Navigate to="/user/dashboard?tab=trading" replace />}
+              path="/settings"
+              element={<Navigate to="/user/dashboard?tab=settings" replace />}
             />
             <Route
-              path="/user/community"
+              path="/community"
               element={<Navigate to="/user/dashboard?tab=community" replace />}
             />
             <Route
-              path="/user/settings"
-              element={<Navigate to="/user/dashboard?tab=settings" replace />}
+              path="/trading"
+              element={<Navigate to="/user/trading" replace />}
             />
-            {/* Fallback for /user/* */}
-            <Route path="/user/*" element={<Navigate to="/user/dashboard" replace />} />
-          </Route>
 
-          {/* Legacy routes - Keep for backwards compatibility */}
-          <Route
-            path="/dashboard"
-            element={<Navigate to="/user/dashboard" replace />}
-          />
-          <Route
-            path="/settings"
-            element={<Navigate to="/user/dashboard?tab=settings" replace />}
-          />
-          <Route
-            path="/community"
-            element={<Navigate to="/user/dashboard?tab=community" replace />}
-          />
-          <Route
-            path="/trading"
-            element={<Navigate to="/user/trading" replace />}
-          />
-
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
