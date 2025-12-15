@@ -156,32 +156,45 @@ class ApiClient {
         return data as T;
     }
 
+    private refreshPromise: Promise<boolean> | null = null;
+
     /**
-     * Refresh access token using HttpOnly cookie (Non-blocking)
+     * Refresh access token using HttpOnly cookie (Non-blocking + Deduped)
      */
     async refreshAccessToken(): Promise<boolean> {
+        // Dedup multiple simultaneous refresh requests
+        if (this.refreshPromise) {
+            return this.refreshPromise;
+        }
+
         if (!process.env.REACT_APP_SERVER_URL && window.location.hostname === 'localhost') {
             // Dev mode optimization: prevent spam if obviously no session
             // But we can't check HttpOnly cookie existence client-side
         }
 
-        try {
-            const response = await fetch(`${API_URL}/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include'
-            });
+        this.refreshPromise = (async () => {
+            try {
+                const response = await fetch(`${API_URL}/auth/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
 
-            if (response.ok) {
-                const data = await response.json();
-                this.setTokens(data.accessToken);
-                return true;
+                if (response.ok) {
+                    const data = await response.json();
+                    this.setTokens(data.accessToken);
+                    return true;
+                }
+                // Silent fail - let app lifecycle handle it
+                return false;
+            } catch {
+                return false;
+            } finally {
+                this.refreshPromise = null;
             }
-            // Silent fail - let app lifecycle handle it
-            return false;
-        } catch {
-            return false;
-        }
+        })();
+
+        return this.refreshPromise;
     }
 
     // HTTP Methods

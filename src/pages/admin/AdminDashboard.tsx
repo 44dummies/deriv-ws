@@ -24,6 +24,7 @@ import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
 import { GlassStatusBadge } from '../../components/ui/glass/GlassStatusBadge';
+import { ChartBlock } from '../../components/common/ChartBlock';
 
 // Interfaces
 interface BotStatus {
@@ -351,43 +352,45 @@ const AdminDashboard: React.FC = () => {
                             </h4>
                             <span className="text-xs text-emerald-400 font-mono">+14.2%</span>
                         </div>
-                        <ResponsiveContainer width="100%" height="90%" minWidth={0} minHeight={250}>
-                            <AreaChart data={chartData}>
-                                <defs>
-                                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="rgba(255,255,255,0.3)"
-                                    fontSize={10}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="rgba(255,255,255,0.3)"
-                                    fontSize={10}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(val) => `$${val}`}
-                                />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
-                                    labelStyle={{ color: '#94a3b8' }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="profit"
-                                    stroke="#10b981"
-                                    fillOpacity={1}
-                                    fill="url(#colorProfit)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        <ChartBlock minHeight={250}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={chartData}>
+                                    <defs>
+                                        <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="rgba(255,255,255,0.3)"
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="rgba(255,255,255,0.3)"
+                                        fontSize={10}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(val) => `$${val}`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        itemStyle={{ color: '#fff' }}
+                                        labelStyle={{ color: '#94a3b8' }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="profit"
+                                        stroke="#10b981"
+                                        fillOpacity={1}
+                                        fill="url(#colorProfit)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </ChartBlock>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 mt-4 border-t border-white/5">
@@ -418,27 +421,29 @@ const AdminDashboard: React.FC = () => {
                             <PieIcon size={14} /> Signals by Market
                         </h4>
                         <div className="h-[200px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
-                                <PieChart>
-                                    <Pie
-                                        data={signalData.length > 0 ? signalData : [{ name: 'No Signals', value: 1 }]}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {(signalData.length > 0 ? signalData : [{ name: 'No Signals', value: 1 }]).map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <ChartBlock height={200} minHeight={200}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={signalData.length > 0 ? signalData : [{ name: 'No Signals', value: 1 }]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            fill="#8884d8"
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {(signalData.length > 0 ? signalData : [{ name: 'No Signals', value: 1 }]).map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(23, 23, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </ChartBlock>
                         </div>
                         <div className="flex flex-wrap gap-2 justify-center mt-2">
                             {signalData.map((entry, index) => (
