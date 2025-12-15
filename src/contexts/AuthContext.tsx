@@ -54,9 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Normalize user data to match interface
         const normalizedUser = userData ? {
             ...userData,
-            // Ensure fullName is available if only first_name/last_name exist or similar
-            fullName: userData.fullName || (userData as any).fullname,
-            role: userData.role || (userData.is_admin ? 'ADMIN' : 'USER')
+            ...userData,
+            // Robust mapping for name and id
+            fullName: userData.fullName || (userData as any).fullname || (userData as any).display_name || (userData as any).displayName,
+            derivId: userData.derivId || (userData as any).deriv_id,
+            role: userData.role || ((userData as any).is_admin ? 'ADMIN' : 'USER'),
+            is_admin: (userData as any).is_admin || userData.role === 'admin'
         } : null;
 
         setUser(normalizedUser);
@@ -121,15 +124,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Try to refresh token on mount (handles page refresh)
     useEffect(() => {
         const tryRefresh = async () => {
-            // Check if we have user info in session (meaning user was logged in)
-            const storedUserInfo = sessionStorage.getItem('userInfo');
-            if (storedUserInfo) {
-                const token = await refreshAccessToken();
-                if (token) {
-                    try {
-                        setUser(JSON.parse(storedUserInfo));
-                    } catch (e) {
-                        // Invalid user info
+            const token = await refreshAccessToken();
+            if (token) {
+                // Fetch fresh user data from backend to ensure roles are up to date
+                try {
+                    const profile = await apiClient.getMyProfile();
+                    if (profile) {
+                        const normalizedUser = {
+                            ...profile,
+                            // Ensure compatibility with AuthState interface
+                            fullName: profile.fullname || profile.fullName || (profile as any).display_name,
+                            fullName: profile.display_name || (profile as any).fullname || (profile as any).fullName,
+                            derivId: profile.deriv_id || (profile as any).derivId,
+                            role: profile.role || (profile.is_admin ? 'ADMIN' : 'USER'),
+                            is_admin: profile.is_admin || profile.role === 'admin'
+                        };
+                        setUser(normalizedUser);
+                        sessionStorage.setItem('userInfo', JSON.stringify(normalizedUser));
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch user profile on refresh:', e);
+                    // Fallback to session storage if fetch fails
+                    const storedUserInfo = sessionStorage.getItem('userInfo');
+                    if (storedUserInfo) {
+                        try {
+                            setUser(JSON.parse(storedUserInfo));
+                        } catch (err) { }
                     }
                 }
             }
