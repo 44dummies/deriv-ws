@@ -310,7 +310,7 @@ const AdminDashboard: React.FC = () => {
                             </h4>
                             <span className="text-xs text-emerald-400 font-mono">+14.2%</span>
                         </div>
-                        <ResponsiveContainer width="100%" height="90%" minWidth={0}>
+                        <ResponsiveContainer width="100%" height="90%" minWidth={0} minHeight={250}>
                             <AreaChart data={chartData}>
                                 <defs>
                                     <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
@@ -377,7 +377,7 @@ const AdminDashboard: React.FC = () => {
                             <PieIcon size={14} /> Signals by Market
                         </h4>
                         <div className="h-[200px] w-full">
-                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                                 <PieChart>
                                     <Pie
                                         data={signalData.length > 0 ? signalData : [{ name: 'No Signals', value: 1 }]}

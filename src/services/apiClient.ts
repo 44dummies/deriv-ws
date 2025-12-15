@@ -128,10 +128,10 @@ class ApiClient {
                     });
                     return this.handleResponse<T>(retryResponse);
                 } else {
-                    this.clearTokens();
-                    if (this.onAuthError) {
-                        this.onAuthError();
-                    }
+                    // Do NOT unconditionally clear tokens to prevent UI flicker/crash
+                    // Let the caller handle the 401 if refresh failed
+                    // this.clearTokens(); 
+                    // if (this.onAuthError) this.onAuthError();
                     throw new Error('Session expired');
                 }
             }
@@ -157,14 +157,19 @@ class ApiClient {
     }
 
     /**
-     * Refresh access token using HttpOnly cookie
+     * Refresh access token using HttpOnly cookie (Non-blocking)
      */
     async refreshAccessToken(): Promise<boolean> {
+        if (!process.env.REACT_APP_SERVER_URL && window.location.hostname === 'localhost') {
+            // Dev mode optimization: prevent spam if obviously no session
+            // But we can't check HttpOnly cookie existence client-side
+        }
+
         try {
             const response = await fetch(`${API_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include' // Browser sends HttpOnly cookie
+                credentials: 'include'
             });
 
             if (response.ok) {
@@ -172,6 +177,7 @@ class ApiClient {
                 this.setTokens(data.accessToken);
                 return true;
             }
+            // Silent fail - let app lifecycle handle it
             return false;
         } catch {
             return false;
