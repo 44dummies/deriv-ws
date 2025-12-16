@@ -2,9 +2,6 @@
   "name": "deriv-auth-app",
   "version": "1.0.0",
   "private": true,
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
     "date-fns": "^4.1.0",
