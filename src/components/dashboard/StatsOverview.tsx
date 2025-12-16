@@ -4,16 +4,18 @@ import { GlassBadge } from '../ui/glass/GlassBadge';
 import { TrendingUp, TrendingDown, DollarSign, Wallet, Activity } from 'lucide-react';
 
 interface StatsOverviewProps {
-    balance: number;
+    realBalance?: number;
+    demoBalance?: number;
     currency: string;
     todayPnL: number;
     winRate: number;
     totalTrades: number;
-    accountType: 'Demo' | 'Real';
+    accountType?: 'Demo' | 'Real'; // Kept for backward compat but unused in balance card now
 }
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({
-    balance,
+    realBalance,
+    demoBalance,
     currency = 'USD',
     todayPnL,
     winRate,
@@ -24,23 +26,45 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Balance Card */}
             <GlassCard className="relative overflow-hidden group p-4 border-brand-card shadow-sm">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <p className="text-xs text-slate-400 mb-1 flex items-center gap-2 uppercase tracking-wide font-medium">
-                            Total Balance
-                        </p>
-                        <h2 className="text-2xl font-bold text-white tracking-tight flex items-baseline gap-1 font-mono">
-                            <span className="text-sm text-slate-500">$</span>
-                            {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </h2>
-                        <div className="mt-2">
-                            <GlassBadge variant={accountType === 'Demo' ? 'info' : 'warning'} size="sm">
-                                {accountType.toUpperCase()}
-                            </GlassBadge>
+                <div className="flex flex-col gap-4">
+                    {/* Real Balance */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 mb-1 flex items-center gap-2 uppercase tracking-wide font-medium">
+                                Real Balance
+                            </p>
+                            <h2 className="text-xl font-bold text-white tracking-tight flex items-baseline gap-1 font-mono">
+                                <span className="text-sm text-slate-500">$</span>
+                                {(realBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                            <div className="mt-1">
+                                <GlassBadge variant="warning" size="sm">REAL</GlassBadge>
+                            </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                            <Wallet size={18} />
                         </div>
                     </div>
-                    <div className="p-2 rounded-lg bg-brand-card/50 text-slate-300 border border-white/5">
-                        <Wallet size={18} />
+
+                    <div className="h-px bg-white/5" />
+
+                    {/* Demo Balance */}
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-400 mb-1 flex items-center gap-2 uppercase tracking-wide font-medium">
+                                Demo Balance
+                            </p>
+                            <h2 className="text-lg font-bold text-slate-300 tracking-tight flex items-baseline gap-1 font-mono">
+                                <span className="text-sm text-slate-500">$</span>
+                                {(demoBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h2>
+                            <div className="mt-1">
+                                <GlassBadge variant="info" size="sm">DEMO</GlassBadge>
+                            </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                            <Activity size={18} />
+                        </div>
                     </div>
                 </div>
             </GlassCard>

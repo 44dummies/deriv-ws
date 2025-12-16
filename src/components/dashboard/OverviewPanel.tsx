@@ -74,7 +74,9 @@ export const OverviewPanel: React.FC = () => {
 
             {/* Stats */}
             <StatsOverview
-                balance={balance || 0}
+                realBalance={userInfo?.real_balance}
+                demoBalance={userInfo?.demo_balance}
+                // balance={balance || 0} // removed legacy prop
                 currency={userInfo?.currency || 'USD'}
                 todayPnL={0}
                 winRate={0}
