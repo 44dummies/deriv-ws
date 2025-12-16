@@ -60,11 +60,16 @@ class ApiClient {
     /**
      * Set access token - and sync to sessionStorage for tradingApi compatibility
      */
-    setTokens(accessToken: string): void {
+    setTokens(accessToken: string, refreshToken?: string): void {
         this.accessToken = accessToken;
         this.isSessionExpired = false; // Reset on new valid token
         // Sync to sessionStorage so tradingApi.ts works
         sessionStorage.setItem('accessToken', accessToken);
+
+        if (refreshToken) {
+            this.refreshToken = refreshToken;
+            sessionStorage.setItem('refreshToken', refreshToken);
+        }
     }
 
     /**
@@ -74,6 +79,9 @@ class ApiClient {
         if (!this.accessToken) {
             this.accessToken = sessionStorage.getItem('accessToken');
         }
+        if (!this.refreshToken) {
+            this.refreshToken = sessionStorage.getItem('refreshToken');
+        }
         return { accessToken: this.accessToken };
     }
 
@@ -82,8 +90,10 @@ class ApiClient {
      */
     clearTokens(): void {
         this.accessToken = null;
+        this.refreshToken = null;
         this.isSessionExpired = true; // prevent further requests until login
         sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('refreshToken');
     }
 
     // Token refresh callback removed - now using HttpOnly cookies
@@ -189,19 +199,20 @@ class ApiClient {
                 const response = await fetch(`${API_URL}/auth/refresh`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include'
+                    credentials: 'include',
+                    body: JSON.stringify({ refreshToken: this.refreshToken }) // Handled as fallback by backend
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    this.setTokens(data.accessToken);
+                    this.setTokens(data.accessToken, data.refreshToken);
                     this.refreshFailedOnce = false; // Reset on success
                     return true;
                 }
 
                 // 401/400 = no valid refresh token, mark as failed
                 if (response.status === 401 || response.status === 400) {
-                    console.debug('[ApiClient] Refresh failed: no valid token (this is expected if not logged in)');
+                    console.debug('[ApiClient] Refresh failed: no valid token', response.status);
                     this.refreshFailedOnce = true;
                 }
                 return false;
@@ -306,7 +317,7 @@ class ApiClient {
             body: JSON.stringify(data),
             credentials: 'include'
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.setTokens(result.accessToken);
+        this.setTokens(result.accessToken, (result as any).refreshToken);
         return result;
     }
 
@@ -317,7 +328,7 @@ class ApiClient {
             body: JSON.stringify({ email, password }),
             credentials: 'include'
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.setTokens(result.accessToken);
+        this.setTokens(result.accessToken, (result as any).refreshToken);
         return result;
     }
 
@@ -328,7 +339,7 @@ class ApiClient {
             body: JSON.stringify(derivData),
             credentials: 'include' // Receive HttpOnly cookie
         }).then(r => this.handleResponse<AuthResult>(r));
-        this.setTokens(result.accessToken);
+        this.setTokens(result.accessToken, (result as any).refreshToken);
         return result;
     }
 
