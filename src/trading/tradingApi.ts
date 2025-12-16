@@ -397,6 +397,14 @@ export async function resetRecovery(sessionId) {
   });
 }
 
+// ==================== Health / Ping ====================
+
+export async function pingServer() {
+  const start = Date.now();
+  await apiRequest('/health'); // Uses /health endpoint from index.js
+  return Date.now() - start;
+}
+
 // ==================== Unified Export ====================
 
 export const tradingApi = {
@@ -458,5 +466,8 @@ export const tradingApi = {
 
   // Recovery
   getRecoveryState,
-  resetRecovery
+  resetRecovery,
+
+  // System
+  ping: pingServer
 };

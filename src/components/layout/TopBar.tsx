@@ -20,10 +20,10 @@ export const TopBar: React.FC = () => {
     // Simple ping for latency
     useEffect(() => {
         const pingInterval = setInterval(async () => {
-            const start = Date.now();
             try {
-                await tradingApi.getBotStatus();
-                setServerLatency(Date.now() - start);
+                // Use public health check instead of admin-only bot status
+                const latency = await tradingApi.ping();
+                setServerLatency(latency);
             } catch (e) {
                 setServerLatency(null);
             }
@@ -134,7 +134,7 @@ export const TopBar: React.FC = () => {
                                     <p className="text-brand-red font-mono">{userInfo?.loginid || userInfo?.id || 'N/A'}</p>
                                 </div>
                                 <div className="pt-2">
-                                    <button 
+                                    <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setShowProfileMenu(false);
