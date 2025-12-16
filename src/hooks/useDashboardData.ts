@@ -155,11 +155,16 @@ export const useDashboardData = () => {
 
                         console.log('[Debug] Parsed Balances - Demo:', demoBalance, 'Real:', realBalance); // DEBUG LOG
 
-                        setUserInfo((prev: any) => prev ? {
-                            ...prev,
+                        // Update userData with balances
+                        userData = {
+                            ...userData,
                             demo_balance: demoBalance,
                             real_balance: realBalance
-                        } : null);
+                        };
+
+                        // Also update sessionStorage with correct balances
+                        sessionStorage.setItem('userInfo', JSON.stringify(userData));
+                        setUserInfo(userData);
                     }
                 } catch (e) {
                     console.error('Failed to fetch balances', e);
