@@ -161,19 +161,27 @@ class ApiClient {
     }
 
     private refreshPromise: Promise<boolean> | null = null;
+    private refreshFailedOnce = false; // Prevent repeated refresh attempts after first failure
 
     /**
-     * Refresh access token using HttpOnly cookie (Non-blocking + Deduped)
+     * Refresh access token using HttpOnly cookie (Non-blocking + Deduped + Guarded)
      */
     async refreshAccessToken(): Promise<boolean> {
+        // Guard: Don't retry if session is already marked expired
+        if (this.isSessionExpired) {
+            console.debug('[ApiClient] Refresh skipped: session already expired');
+            return false;
+        }
+
+        // Guard: Don't spam refresh if it already failed once this session
+        if (this.refreshFailedOnce) {
+            console.debug('[ApiClient] Refresh skipped: already failed this session');
+            return false;
+        }
+
         // Dedup multiple simultaneous refresh requests
         if (this.refreshPromise) {
             return this.refreshPromise;
-        }
-
-        if (!process.env.REACT_APP_SERVER_URL && window.location.hostname === 'localhost') {
-            // Dev mode optimization: prevent spam if obviously no session
-            // But we can't check HttpOnly cookie existence client-side
         }
 
         this.refreshPromise = (async () => {
@@ -187,11 +195,18 @@ class ApiClient {
                 if (response.ok) {
                     const data = await response.json();
                     this.setTokens(data.accessToken);
+                    this.refreshFailedOnce = false; // Reset on success
                     return true;
                 }
-                // Silent fail - let app lifecycle handle it
+
+                // 401/400 = no valid refresh token, mark as failed
+                if (response.status === 401 || response.status === 400) {
+                    console.debug('[ApiClient] Refresh failed: no valid token (this is expected if not logged in)');
+                    this.refreshFailedOnce = true;
+                }
                 return false;
             } catch {
+                console.debug('[ApiClient] Refresh failed: network error');
                 return false;
             } finally {
                 this.refreshPromise = null;
