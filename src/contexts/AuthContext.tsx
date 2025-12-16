@@ -157,8 +157,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } catch (err) { }
                 }
             } else {
-                // Refresh failed - clear stale session data
-                sessionStorage.removeItem('userInfo');
+                console.warn('[AuthContext] Initial refresh failed, forcing logout to clear state');
+                // Refresh failed - clear ALL stale session data to prevent loops
+                await logout();
             }
         };
         tryRefresh();

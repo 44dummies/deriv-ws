@@ -146,8 +146,13 @@ class ApiClient {
                         credentials: 'include'
                     });
                     return this.handleResponse<T>(retryResponse);
+                    return this.handleResponse<T>(retryResponse);
                 } else {
                     this.isSessionExpired = true; // Mark session as dead
+                    this.clearTokens();
+                    if (this.onAuthError) {
+                        this.onAuthError();
+                    }
                     throw new Error('Session expired');
                 }
             }
@@ -297,6 +302,7 @@ class ApiClient {
                     });
                     return this.handleResponse<T>(retryResponse);
                 } else {
+                    this.isSessionExpired = true;
                     this.clearTokens();
                     if (this.onAuthError) {
                         this.onAuthError();
