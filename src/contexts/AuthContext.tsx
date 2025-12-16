@@ -122,8 +122,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     // Try to refresh token on mount (handles page refresh)
+    // Guard: Only attempt refresh if there's evidence of a prior session
     useEffect(() => {
         const tryRefresh = async () => {
+            // Guard: Skip refresh if no prior session exists
+            const storedUserInfo = sessionStorage.getItem('userInfo');
+            if (!storedUserInfo) {
+                console.debug('[AuthContext] No prior session, skipping refresh');
+                return;
+            }
+
             const token = await refreshAccessToken();
             if (token) {
                 // Fetch fresh user data from backend to ensure roles are up to date
@@ -134,7 +142,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             ...profile,
                             // Ensure compatibility with AuthState interface
                             fullName: profile.fullname || profile.fullName || (profile as any).display_name,
-                            fullName: profile.display_name || (profile as any).fullname || (profile as any).fullName,
                             derivId: profile.deriv_id || (profile as any).derivId,
                             role: profile.role || (profile.is_admin ? 'ADMIN' : 'USER'),
                             is_admin: profile.is_admin || profile.role === 'admin'
@@ -145,13 +152,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } catch (e) {
                     console.error('Failed to fetch user profile on refresh:', e);
                     // Fallback to session storage if fetch fails
-                    const storedUserInfo = sessionStorage.getItem('userInfo');
-                    if (storedUserInfo) {
-                        try {
-                            setUser(JSON.parse(storedUserInfo));
-                        } catch (err) { }
-                    }
+                    try {
+                        setUser(JSON.parse(storedUserInfo));
+                    } catch (err) { }
                 }
+            } else {
+                // Refresh failed - clear stale session data
+                sessionStorage.removeItem('userInfo');
             }
         };
         tryRefresh();
