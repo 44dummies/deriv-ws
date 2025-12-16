@@ -104,7 +104,7 @@ export const TopBar: React.FC = () => {
                         className="flex items-center gap-3 pl-1 hover:bg-white/5 p-1.5 rounded-lg transition-colors text-left"
                     >
                         <div className="hidden sm:block">
-                            <div className="text-sm font-medium text-white leading-none">{getFirstName(user?.fullName)}</div>
+                            <div className="text-sm font-medium text-white leading-none">{getFirstName(userInfo?.fullname)}</div>
                             <div className="text-[10px] text-brand-red font-mono mt-1 opacity-80">{user?.role || 'PRO'}</div>
                         </div>
                         <div className="w-8 h-8 rounded-lg bg-brand-card border border-white/10 flex items-center justify-center overflow-hidden">
@@ -126,12 +126,12 @@ export const TopBar: React.FC = () => {
                             <div className="absolute right-0 top-full mt-2 w-64 bg-[#1E1E1E] border border-white/10 rounded-xl shadow-2xl p-4 z-50 flex flex-col gap-3">
                                 <div className="pb-3 border-b border-white/10">
                                     <p className="text-xs text-gray-500 uppercase font-mono mb-1">Account</p>
-                                    <p className="text-white font-medium">{user?.fullName}</p>
-                                    <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+                                    <p className="text-white font-medium">{userInfo?.fullname || 'Trader'}</p>
+                                    <p className="text-xs text-gray-400 truncate">{userInfo?.email || user?.email}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-500 uppercase font-mono mb-1">Deriv ID</p>
-                                    <p className="text-brand-red font-mono">{user?.derivId || 'N/A'}</p>
+                                    <p className="text-brand-red font-mono">{userInfo?.loginid || userInfo?.id || 'N/A'}</p>
                                 </div>
                                 <div className="pt-2">
                                     <button className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors mb-2">
