@@ -178,11 +178,13 @@ const AdminDashboard: React.FC = () => {
         const handleBalanceUpdate = (data: any) => {
             console.log('[Dashboard] Balance Update:', data);
             setBalances(prev => {
+                // Ensure we handle both 'demo' and 'virtual' as demo accounts
                 const isReal = data.accountType === 'real';
-                return {
-                    ...prev,
-                    [isReal ? 'real' : 'demo']: Number(data.balance)
-                };
+                const isDemo = data.accountType === 'demo' || data.accountType === 'virtual';
+
+                if (isReal) return { ...prev, real: Number(data.balance) };
+                if (isDemo) return { ...prev, demo: Number(data.balance) };
+                return prev;
             });
         };
 

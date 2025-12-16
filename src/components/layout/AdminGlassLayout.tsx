@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, Layers, Users, FileText, Settings,
-    LogOut, Menu, ChevronLeft, Bell, Search, Shield, Activity, Zap
+    LogOut, ChevronLeft, Bell, Search, Shield, Zap
 } from 'lucide-react';
+import { AdminMobileNav } from './AdminMobileNav';
 import { Logo } from '../ui/Logo';
 
 export const AdminGlassLayout: React.FC = () => {
     const [collapsed, setCollapsed] = useState(false);
-    const [mobileOpen, setMobileOpen] = useState(false);
     const navigate = useNavigate();
-    const location = useLocation();
 
     // Mock user for now - in real app get from context
     const user = { email: 'admin@deriv.com', role: 'admin' };
@@ -37,13 +36,12 @@ export const AdminGlassLayout: React.FC = () => {
                 <div className="absolute inset-0 bg-grid opacity-10"></div>
             </div>
 
-            {/* Sidebar */}
+            {/* Sidebar (Desktop Only) */}
             <aside
                 className={`
-                    fixed inset-y-0 left-0 z-50 bg-brand-card/90 backdrop-blur-xl border-r border-white/5 transition-all duration-300
-                    flex flex-col justify-between
+                    hidden md:flex fixed inset-y-0 left-0 z-50 bg-brand-card/90 backdrop-blur-xl border-r border-white/5 transition-all duration-300
+                    flex-col justify-between
                     ${collapsed ? 'w-16' : 'w-60'}
-                    ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
                 `}
             >
                 {/* Header */}
@@ -67,12 +65,8 @@ export const AdminGlassLayout: React.FC = () => {
                         <ChevronLeft size={12} className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
                     </button>
 
-                    <button
-                        onClick={() => setMobileOpen(false)}
-                        className="lg:hidden p-2 text-gray-400 hover:text-white"
-                    >
-                        <ChevronLeft size={20} />
-                    </button>
+                    {/* Mobile toggle removed in favor of bottom nav */}
+                    <div className="lg:hidden" />
                 </div>
 
                 {/* Nav */}
@@ -135,18 +129,19 @@ export const AdminGlassLayout: React.FC = () => {
             <main
                 className={`
                     flex-1 flex flex-col min-h-screen transition-all duration-300 relative z-10 content-security-policy
-                    ${collapsed ? 'lg:pl-16' : 'lg:pl-60'}
+                    md:pl-60 ${collapsed ? 'md:pl-16' : 'md:pl-60'} pb-20 md:pb-0
                 `}
             >
                 {/* Top Bar glass - High Density */}
                 <header className="sticky top-0 z-40 h-14 border-b border-white/5 bg-brand-card/80 backdrop-blur-xl flex items-center justify-between px-6">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setMobileOpen(true)}
-                            className="lg:hidden p-2 text-gray-400 hover:text-white"
-                        >
-                            <Menu size={20} />
-                        </button>
+                        {/* Mobile Logo for TopBar */}
+                        <div className="md:hidden flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center shrink-0">
+                                <Logo className="h-5 w-5 text-white" />
+                            </div>
+                            <span className="font-bold text-sm tracking-tight text-white uppercase">TraderMind</span>
+                        </div>
 
                         <div className="hidden sm:flex items-center gap-4 text-xs font-mono">
                             <div className="flex items-center gap-2 text-emerald-400">
@@ -190,13 +185,7 @@ export const AdminGlassLayout: React.FC = () => {
                 </div>
             </main>
 
-            {/* Mobile Backdrop */}
-            {mobileOpen && (
-                <div
-                    className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
-                    onClick={() => setMobileOpen(false)}
-                />
-            )}
+            <AdminMobileNav />
         </div>
     );
 };
