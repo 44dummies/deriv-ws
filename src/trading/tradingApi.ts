@@ -381,6 +381,10 @@ export async function getBalances() {
   return apiRequest('/api/admin/stats/balances');
 }
 
+export async function getUserPerformance() {
+  return apiRequest('/api/trading/performance');
+}
+
 // ==================== Recovery APIs ====================
 
 export async function getRecoveryState(sessionId) {
@@ -450,6 +454,7 @@ export const tradingApi = {
   getLiveStats,
   getStats,
   getBalances,
+  getUserPerformance,
 
   // Recovery
   getRecoveryState,

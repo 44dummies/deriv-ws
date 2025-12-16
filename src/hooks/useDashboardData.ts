@@ -227,22 +227,34 @@ export const useDashboardData = () => {
         userInfo: any;
         sessions: any[];
         activeSession: any;
+        stats: any;
     }>({
         userInfo: null,
         sessions: [],
-        activeSession: null
+        activeSession: null,
+        stats: null
     });
 
     // Wrapper to update state
     const loadDashboard = useCallback(async () => {
         setIsLoading(true);
         const data = await initializeDashboard();
+
+        let stats = null;
+        try {
+            const statsRes = await tradingApi.getUserPerformance();
+            stats = statsRes?.data;
+        } catch (e) {
+            console.warn('Failed to fetch user performance stats:', e);
+        }
+
         if (data) {
             setDashboardState(prev => ({
                 ...prev,
                 userInfo: data.userInfo,
                 sessions: data.sessions,
-                activeSession: data.activeSession
+                activeSession: data.activeSession,
+                stats
             }));
         }
         setIsLoading(false);
@@ -264,6 +276,8 @@ export const useDashboardData = () => {
         isOnline: derivWsConnected,
         serverLatency,
         setServerLatency,
-        refresh: loadDashboard
+
+        refresh: loadDashboard,
+        stats: dashboardState.stats
     };
 };

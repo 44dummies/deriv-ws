@@ -13,8 +13,12 @@ import { CONFIG } from '../../config/constants';
 import { TradingLoader } from '../ui/TradingLoader';
 
 export const OverviewPanel: React.FC = () => {
-    const { isLoading, userInfo, sessions, activeSession, refresh } = useDashboardData();
+    const { isLoading, userInfo, sessions, activeSession, refresh, stats } = useDashboardData();
     const navigate = useNavigate();
+
+    // Determine account status
+    const accountType = userInfo?.is_virtual ? 'Demo' : 'Real';
+    const balance = userInfo?.is_virtual ? userInfo.demo_balance : userInfo.real_balance;
 
     const handleJoinSession = async (sessionId: string) => {
         try {
@@ -44,8 +48,7 @@ export const OverviewPanel: React.FC = () => {
         );
     }
 
-    const accountType = userInfo?.is_virtual ? 'Demo' : 'Real';
-    const balance = userInfo?.is_virtual ? userInfo.demo_balance : userInfo.real_balance;
+
 
     return (
         <div className="space-y-8 animate-fade-in pb-10">
@@ -79,10 +82,11 @@ export const OverviewPanel: React.FC = () => {
                 demoBalance={userInfo?.demo_balance}
                 // balance={balance || 0} // removed legacy prop
                 currency={userInfo?.currency || 'USD'}
-                todayPnL={0}
-                winRate={0}
-                totalTrades={0}
+                todayPnL={stats?.todayPnL || 0}
+                winRate={stats?.winRate || 0}
+                totalTrades={stats?.totalTrades || 0}
                 accountType={accountType}
+                lastTradeTime={stats?.lastTradeTime}
             />
 
             {/* Active Session Banner */}

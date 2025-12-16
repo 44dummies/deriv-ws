@@ -10,8 +10,27 @@ interface StatsOverviewProps {
     todayPnL: number;
     winRate: number;
     totalTrades: number;
-    accountType?: 'Demo' | 'Real'; // Kept for backward compat but unused in balance card now
+    accountType?: 'Demo' | 'Real';
+    lastTradeTime?: string;
 }
+
+const getTimeAgo = (dateStr?: string) => {
+    if (!dateStr) return 'Never';
+    const seconds = Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 1000);
+
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m ago";
+    if (seconds < 10) return "just now";
+    return Math.floor(seconds) + "s ago";
+};
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({
     realBalance,
@@ -20,7 +39,8 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
     todayPnL,
     winRate,
     totalTrades,
-    accountType
+    accountType,
+    lastTradeTime
 }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -122,7 +142,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
                             {totalTrades}
                         </h2>
                         <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                            Last trade: 2m ago
+                            Last trade: {getTimeAgo(lastTradeTime)}
                         </div>
                     </div>
                     <div className="p-2 rounded-lg bg-brand-card/50 text-slate-300 border border-white/5">
