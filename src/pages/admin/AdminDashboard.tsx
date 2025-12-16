@@ -234,7 +234,7 @@ const AdminDashboard: React.FC = () => {
     const formatCurrency = (val?: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
 
     return (
-        <div className="space-y-6 md:space-y-8 animate-fade-in-up pb-12">
+        <div className="space-y-6 md:space-y-8 animate-fade-in-up pb-24 md:pb-12">
             <Toaster position="top-right" toastOptions={{ style: { background: '#1a1a20', color: '#fff' } }} />
 
             {/* Header / Wallet Section */}
@@ -305,7 +305,7 @@ const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                 {/* Bot Control Panel */}
                 <GlassCard className="lg:col-span-2 flex flex-col h-full">
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${botStatus?.isRunning ? 'bg-emerald-500/20 text-emerald-400 animate-pulse-subtle' : 'bg-red-500/20 text-red-400'}`}>
                                 <Server size={24} />
@@ -326,7 +326,7 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                             {!botStatus?.isRunning ? (
                                 <GlassButton variant="primary" onClick={handleBotStart} leftIcon={<Play size={16} />}>
                                     Start

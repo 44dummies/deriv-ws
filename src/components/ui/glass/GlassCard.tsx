@@ -27,7 +27,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
             className={`
                 relative backdrop-blur-xl border rounded-2xl transition-all duration-300
                 ${variants[variant]}
-                ${noPadding ? 'p-0' : 'p-6'}
+                ${noPadding ? 'p-0' : 'p-4 md:p-6'}
                 ${className}
             `}
             {...props}
