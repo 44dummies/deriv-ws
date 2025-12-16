@@ -61,6 +61,7 @@ class ApiClient {
      * Set access token - and sync to sessionStorage for tradingApi compatibility
      */
     setTokens(accessToken: string, refreshToken?: string): void {
+        console.debug('[ApiClient] Setting tokens. Access:', !!accessToken, 'Refresh:', !!refreshToken);
         this.accessToken = accessToken;
         this.isSessionExpired = false; // Reset on new valid token
         // Sync to sessionStorage so tradingApi.ts works
@@ -82,6 +83,7 @@ class ApiClient {
         if (!this.refreshToken) {
             this.refreshToken = sessionStorage.getItem('refreshToken');
         }
+        console.debug('[ApiClient] Loaded tokens. Access:', !!this.accessToken, 'Refresh:', !!this.refreshToken);
         return { accessToken: this.accessToken };
     }
 
@@ -196,6 +198,7 @@ class ApiClient {
 
         this.refreshPromise = (async () => {
             try {
+                console.debug('[ApiClient] Attempting refresh. Token available:', !!this.refreshToken);
                 const response = await fetch(`${API_URL}/auth/refresh`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
