@@ -16,9 +16,7 @@ export const OverviewPanel: React.FC = () => {
     const { isLoading, userInfo, sessions, activeSession, refresh, stats } = useDashboardData();
     const navigate = useNavigate();
 
-    // Determine account status
-    const accountType = userInfo?.is_virtual ? 'Demo' : 'Real';
-    const balance = userInfo?.is_virtual ? userInfo.demo_balance : userInfo.real_balance;
+
 
     const handleJoinSession = async (sessionId: string) => {
         try {
@@ -47,6 +45,10 @@ export const OverviewPanel: React.FC = () => {
             </div>
         );
     }
+
+    // Determine account status
+    const accountType = userInfo?.is_virtual ? 'Demo' : 'Real';
+    const balance = userInfo?.is_virtual ? userInfo?.demo_balance : userInfo?.real_balance;
 
 
 
