@@ -22,6 +22,7 @@ interface TradeUpdate {
     stake?: number;
     digit?: number;
     exitPrice?: number;
+    reason?: string;
 }
 
 interface SignalUpdate {
@@ -30,6 +31,7 @@ interface SignalUpdate {
     side: string;
     digit: number;
     confidence: number;
+    regime?: string; // e.g. 'TREND', 'RANGE', 'CHAOS'
     timestamp: string;
 }
 

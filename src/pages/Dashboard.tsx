@@ -1,11 +1,10 @@
-
 import React, { useMemo } from 'react';
 import { useLocation, Navigate } from 'react-router-dom';
 import { OverviewPanel } from '../components/dashboard/OverviewPanel';
 import UserTrading from './UserTrading';
 import Community from './Community';
 import Settings from './Settings';
-import { ReportsPlaceholder } from '../components/dashboard/ReportsPlaceholder';
+import { ReportsView } from '../components/dashboard/ReportsView';
 import { Toaster } from 'react-hot-toast';
 
 const Dashboard: React.FC = () => {
@@ -25,7 +24,7 @@ const Dashboard: React.FC = () => {
       case 'settings':
         return <Settings />;
       case 'reports':
-        return <ReportsPlaceholder />;
+        return <ReportsView />;
       default:
         return <Navigate to="/user/dashboard?tab=overview" replace />;
     }

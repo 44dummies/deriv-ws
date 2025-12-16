@@ -118,15 +118,49 @@ export const ChartPanel: React.FC<ChartProps> = ({
         const markers: any[] = [];
 
         // Add Trade Markers
+        // Add Trade Markers
         tradeMarkers.forEach(m => {
             const typeLower = m.type.toLowerCase();
-            const isCallSide = typeLower === 'buy' || typeLower === 'call' || typeLower === 'over';
+            let color = '#2196f3';
+            let shape: any = 'circle';
+            let text = m.type.toUpperCase();
+            let position: any = 'aboveBar';
+
+            if (typeLower.includes('break_even')) {
+                shape = 'square';
+                color = '#fbbf24'; // Amber
+                text = 'BE';
+                position = 'aboveBar';
+            } else if (typeLower.includes('trailing_stop') || typeLower.includes('trailing')) {
+                shape = 'arrowDown';
+                color = '#c084fc'; // Purple
+                text = 'TS';
+                position = 'aboveBar';
+            } else if (typeLower === 'tp_hit' || typeLower === 'win' || typeLower === 'won') {
+                shape = 'arrowUp';
+                color = '#4caf50';
+                text = 'TP';
+                position = 'belowBar';
+            } else if (typeLower === 'sl_hit' || typeLower === 'loss' || typeLower === 'lost') {
+                shape = 'arrowDown';
+                color = '#f44336';
+                text = 'SL';
+                position = 'aboveBar';
+            } else {
+                // Standard Entry
+                const isCallSide = typeLower.includes('buy') || typeLower.includes('call') || typeLower.includes('over');
+                position = isCallSide ? 'belowBar' : 'aboveBar';
+                color = isCallSide ? '#4caf50' : '#e91e63';
+                shape = isCallSide ? 'arrowUp' : 'arrowDown';
+                text = isCallSide ? 'OPEN' : 'OPEN';
+            }
+
             markers.push({
                 time: m.time as UTCTimestamp,
-                position: isCallSide ? 'belowBar' : 'aboveBar',
-                color: isCallSide ? '#4caf50' : '#e91e63',
-                shape: isCallSide ? 'arrowUp' : 'arrowDown',
-                text: m.type.toUpperCase(),
+                position: position,
+                color: color,
+                shape: shape,
+                text: text,
             });
         });
 

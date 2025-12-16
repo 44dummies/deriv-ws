@@ -18,6 +18,8 @@ import { GlassTable } from '../components/ui/glass/GlassTable';
 import LiveSessionFeed from '../components/trading/LiveSessionFeed';
 import { TradingLoader } from '../components/ui/TradingLoader';
 import { realtimeSocket } from '../services/realtimeSocket';
+import { ChartPanel } from '../components/chart/ChartPanel';
+import { RegimeIndicator } from '../components/dashboard/RegimeIndicator';
 
 // Active trade state for Deriv-style visualization
 interface ActiveTrade {
@@ -53,9 +55,31 @@ const UserTrading = () => {
   const [tradeHistory, setTradeHistory] = useState<any[]>([]);
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
   const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [tickHistory, setTickHistory] = useState<{ epoch: number; quote: number }[]>([]);
 
   // Real-time hooks
   const { latestTick, latestTrade, latestSignal } = useWebSocketEvents(activeSession?.id, CONFIG.TRADING.MARKET_TIERS as unknown as string[]);
+
+  // Maintain Tick History for Chart
+  useEffect(() => {
+    if (latestTick) {
+      setTickHistory(prev => {
+        const newHistory = [...prev, { epoch: latestTick.time, quote: latestTick.tick }];
+        // Keep last 300 ticks (~5 mins)
+        if (newHistory.length > 300) return newHistory.slice(newHistory.length - 300);
+        return newHistory;
+      });
+    }
+  }, [latestTick]);
+
+  // Generate Trade Markers from Trade History (Only Bot Trades)
+  const chartMarkers = React.useMemo(() => {
+    return tradeHistory.map((t: any) => ({
+      time: new Date(t.time).getTime() / 1000,
+      type: t.reason || t.type,
+      price: t.price
+    }));
+  }, [tradeHistory]);
 
   useEffect(() => {
     loadUserData();
@@ -122,6 +146,7 @@ const UserTrading = () => {
           price: latestTrade.price,
           profit: latestTrade.profit,
           status: isWin ? 'WIN' : 'LOSS',
+          reason: latestTrade.reason,
           time: new Date().toISOString()
         };
         setTradeHistory(prev => [newTrade, ...prev].slice(0, 50));
@@ -329,6 +354,13 @@ const UserTrading = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            {latestSignal?.regime && (
+              <RegimeIndicator
+                regime={latestSignal.regime}
+                confidence={latestSignal.confidence}
+                className="py-1 px-3 scale-90 origin-right"
+              />
+            )}
             <GlassMetricTile
               icon={<DollarSign size={16} />}
               label="BALANCE"
@@ -397,18 +429,35 @@ const UserTrading = () => {
           </GlassCard>
         )}
 
-        {/* 3. Live Feed Log */}
-        <div className="flex-1 min-h-0">
-          <LiveSessionFeed
-            sessionId={activeSession.id}
-            sessionName={activeSession.name}
-            market={activeSession.volatility_index}
-            latestTick={latestTick}
-            latestSignal={latestSignal}
-            latestTrade={latestTrade}
-            isConnected={realtimeSocket.isConnected()}
-            activityLog={activityLog}
-          />
+        {/* 3. Live Chart & Feed */}
+        <div className="flex-1 min-h-0 flex flex-col gap-4">
+          <GlassCard className="p-0 overflow-hidden min-h-[300px] flex-shrink-0">
+            <div className="p-2 border-b border-white/10 bg-white/5 flex justify-between items-center">
+              <span className="text-xs font-bold text-white px-2">LIVE CHART</span>
+            </div>
+            <div className="p-2">
+              <ChartPanel
+                initialTicks={tickHistory}
+                currentTick={latestTick ? { tick: latestTick.tick, time: latestTick.time } : null}
+                tradeMarkers={chartMarkers}
+                signalMarkers={[]}
+                height={300}
+              />
+            </div>
+          </GlassCard>
+
+          <div className="flex-1 min-h-0">
+            <LiveSessionFeed
+              sessionId={activeSession.id}
+              sessionName={activeSession.name}
+              market={activeSession.volatility_index}
+              latestTick={latestTick}
+              latestSignal={latestSignal}
+              latestTrade={latestTrade}
+              isConnected={realtimeSocket.isConnected()}
+              activityLog={activityLog}
+            />
+          </div>
         </div>
       </div>
 
@@ -455,6 +504,24 @@ const UserTrading = () => {
                 />
                 <TrendingDown className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-red/20 group-focus-within:text-brand-red transition-colors" size={20} />
               </div>
+
+              {/* Drawdown Usage Visualizer */}
+              {stopLoss && activeSession?.net_pnl < 0 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                    <span>RISK USAGE</span>
+                    <span>{Math.min(Math.abs(activeSession.net_pnl) / parseFloat(stopLoss) * 100, 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${(Math.abs(activeSession.net_pnl) / parseFloat(stopLoss)) > 0.8 ? 'bg-brand-red animate-pulse' :
+                        (Math.abs(activeSession.net_pnl) / parseFloat(stopLoss)) > 0.5 ? 'bg-amber-500' : 'bg-blue-500'
+                        }`}
+                      style={{ width: `${Math.min(Math.abs(activeSession.net_pnl) / parseFloat(stopLoss) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <GlassButton variant="primary" size="md" className="w-full" onClick={handleUpdateTPSL}>

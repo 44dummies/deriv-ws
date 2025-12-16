@@ -13,6 +13,12 @@ interface SessionCardProps {
 export const SessionCard: React.FC<SessionCardProps> = ({ session, onJoin, onLeave, isActive }) => {
     if (!session) return null;
 
+    const s = session as any;
+    const currentPnl = s.current_pnl !== undefined ? s.current_pnl : (s.pnl || 0);
+    const tradeCount = s.trade_count !== undefined ? s.trade_count : (s.trades?.length || 0);
+    const winCount = s.win_count || 0;
+    const winRate = tradeCount > 0 ? Math.round((winCount / tradeCount) * 100) : 0;
+
     return (
         <GlassCard className="relative group overflow-hidden" variant={isActive ? 'active' : 'default'}>
             {isActive && (
@@ -29,32 +35,36 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onJoin, onLea
                     <h3 className="text-xl font-bold text-white mb-1">{session.name || 'Unnamed Session'}</h3>
                     <div className="flex items-center gap-2 text-xs text-liquid-text-muted">
                         <Clock size={12} />
-                        <span>{session.duration ? `${Math.floor(session.duration / 60)} min` : 'Live'}</span>
+                        <span>{s.duration ? `${Math.floor(s.duration / 60)} min` : 'Live'}</span>
                         <span className="w-1 h-1 rounded-full bg-gray-500" />
-                        <span className={session.type === 'Real' ? 'text-liquid-warning' : 'text-liquid-success'}>
-                            {session.type || 'Demo'}
+                        <span className={s.type === 'Real' ? 'text-liquid-warning' : 'text-liquid-success'}>
+                            {s.type || 'Demo'}
                         </span>
                     </div>
                 </div>
 
                 <div className={`
                 p-2 rounded-xl flex items-center justify-center
-                ${session.pnl >= 0 ? 'bg-liquid-success/10 text-liquid-success' : 'bg-liquid-warning/10 text-liquid-warning'}
+                ${currentPnl >= 0 ? 'bg-liquid-success/10 text-liquid-success' : 'bg-liquid-warning/10 text-liquid-warning'}
             `}>
-                    {session.pnl >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+                    {currentPnl >= 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-2 mb-6">
                 <div>
                     <p className="text-xs text-liquid-text-muted mb-1">P&L</p>
-                    <p className={`text-lg font-mono font-bold ${session.pnl >= 0 ? 'text-liquid-success' : 'text-liquid-warning'}`}>
-                        {session.pnl >= 0 ? '+' : ''}{session.pnl?.toFixed(2) || '0.00'}
+                    <p className={`text-lg font-mono font-bold ${currentPnl >= 0 ? 'text-liquid-success' : 'text-liquid-warning'}`}>
+                        {currentPnl >= 0 ? '+' : ''}{currentPnl.toFixed(2)}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-liquid-text-muted mb-1">Trades</p>
-                    <p className="text-lg font-mono font-bold text-white">{session.trades?.length || 0}</p>
+                    <p className="text-lg font-mono font-bold text-white">{tradeCount}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-liquid-text-muted mb-1">Win Rate</p>
+                    <p className="text-lg font-mono font-bold text-blue-400">{winRate}%</p>
                 </div>
             </div>
 

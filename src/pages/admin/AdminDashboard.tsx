@@ -26,6 +26,7 @@ import { GlassButton } from '../../components/ui/glass/GlassButton';
 import { GlassStatusBadge } from '../../components/ui/glass/GlassStatusBadge';
 import { ChartBlock } from '../../components/common/ChartBlock';
 import { TradingLoader } from '../../components/ui/TradingLoader';
+import { RegimeIndicator } from '../../components/dashboard/RegimeIndicator';
 
 // Interfaces
 interface BotStatus {
@@ -110,40 +111,47 @@ const AdminDashboard: React.FC = () => {
 
     const loadDashboard = useCallback(async () => {
         try {
-            // Fetch accounts to get real balance
-            const [sessionsRes, botRes, statsRes, accountsRes] = await Promise.all([
+            // Fetch system state (fast Supabase calls)
+            const [sessionsRes, botRes, statsRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
-                tradingApi.getStats(),
-                tradingApi.getAccounts() // Fetch accounts
+                tradingApi.getStats()
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes || { isRunning: false });
             setStats(statsRes || {});
 
-            // Calculate balances from accounts
-            const accounts = accountsRes?.data || [];
-            const realAccount = accounts.find((a: any) => a.accountType === 'real' || !a.accountType); // Default to real if undefined
-            const demoAccount = accounts.find((a: any) => a.accountType === 'demo' || a.accountType === 'virtual');
-
-            setBalances({
-                real: realAccount?.balance || 0,
-                demo: demoAccount?.balance || 0
-            });
-
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
             if (error.status === 403) {
                 toast.error('Admin access required');
                 navigate('/user/dashboard');
-            } else if (error.status === 401 || error.message === 'Session expired') {
-                // navigate('/auth/login'); // Don't redirect immediately on minor API fails to prevent loops
             }
         } finally {
             setLoading(false);
         }
     }, [navigate]);
+
+    // Initial Balance Load
+    useEffect(() => {
+        const fetchBalances = async () => {
+            try {
+                const accountsRes = await tradingApi.getAccounts();
+                const accounts = accountsRes?.data || [];
+                const realAccount = accounts.find((a: any) => a.accountType === 'real' || !a.accountType);
+                const demoAccount = accounts.find((a: any) => a.accountType === 'demo' || a.accountType === 'virtual');
+
+                setBalances({
+                    real: realAccount?.balance || 0,
+                    demo: demoAccount?.balance || 0
+                });
+            } catch (error) {
+                console.error('Failed to fetch initial balances:', error);
+            }
+        };
+        fetchBalances();
+    }, []);
 
     if (loading) {
         return (
@@ -501,20 +509,34 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
+
             {/* Live Data Footer Ticker */}
             {botStatus?.isRunning && botStatus.signalStats && (
                 <div className="fixed bottom-4 left-4 right-4 z-50 pointer-events-none">
-                    <div className="max-w-screen-xl mx-auto flex gap-4 overflow-hidden mask-linear-fade">
-                        {Object.entries(botStatus.signalStats).map(([market, stat]: [string, any]) => (
-                            <div key={market} className="bg-black/60 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 flex items-center gap-3 animate-slide-left pointer-events-auto shadow-xl">
-                                <span className="text-xs font-bold text-slate-300">{market}</span>
-                                <div className={`flex items-center gap-1 text-sm font-bold ${stat.side === 'call' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                    {stat.side === 'call' ? <TrendingUp size={14} /> : <TrendingUp className="rotate-180" size={14} />}
-                                    {stat.side?.toUpperCase() || 'UNKNOWN'}
-                                </div>
-                                <span className="text-xs text-slate-400">{(stat.confidence * 100).toFixed(0)}%</span>
+                    <div className="max-w-screen-xl mx-auto flex flex-col items-center gap-2">
+                        {/* Display Primary Regime (Taking the first active market for now) */}
+                        {Object.values(botStatus.signalStats)[0] && (
+                            <div className="pointer-events-auto animate-fade-in-up">
+                                <RegimeIndicator
+                                    regime={(Object.values(botStatus.signalStats)[0] as any).regime}
+                                    confidence={(Object.values(botStatus.signalStats)[0] as any).confidence}
+                                    className="scale-90 opacity-90 backdrop-blur-md shadow-2xl"
+                                />
                             </div>
-                        ))}
+                        )}
+
+                        <div className="flex gap-4 overflow-hidden mask-linear-fade w-full justify-center">
+                            {Object.entries(botStatus.signalStats).map(([market, stat]: [string, any]) => (
+                                <div key={market} className="bg-black/60 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 flex items-center gap-3 animate-slide-left pointer-events-auto shadow-xl">
+                                    <span className="text-xs font-bold text-slate-300">{market}</span>
+                                    <div className={`flex items-center gap-1 text-sm font-bold ${stat.side === 'OVER' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {stat.side === 'OVER' ? <TrendingUp size={14} /> : <TrendingUp className="rotate-180" size={14} />}
+                                        {stat.side?.toUpperCase() || 'UNKNOWN'}
+                                    </div>
+                                    <span className="text-xs text-slate-400">{(stat.confidence * 100).toFixed(0)}%</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
