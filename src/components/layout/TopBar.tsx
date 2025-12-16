@@ -134,11 +134,20 @@ export const TopBar: React.FC = () => {
                                     <p className="text-brand-red font-mono">{userInfo?.loginid || userInfo?.id || 'N/A'}</p>
                                 </div>
                                 <div className="pt-2">
-                                    <button className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors mb-2">
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowProfileMenu(false);
+                                            // TODO: Navigate to account settings page
+                                            alert('Account settings page coming soon!');
+                                        }}
+                                        className="w-full py-2 bg-white/5 hover:bg-white/10 text-xs text-gray-300 rounded-lg transition-colors mb-2"
+                                    >
                                         Account Settings
                                     </button>
                                     <button
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                            e.stopPropagation();
                                             TokenService.clearTokens();
                                             window.location.href = '/';
                                         }}

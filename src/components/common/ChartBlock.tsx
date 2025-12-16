@@ -25,9 +25,11 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
 
         const check = () => {
             if (!ref.current) return;
-            const { offsetWidth, offsetHeight } = ref.current;
+            // use clientWidth/clientHeight to get inner dimensions (excluding border)
+            const { clientWidth, clientHeight } = ref.current;
+
             // Only render if we have actual pixels to draw on
-            if (offsetWidth > 0 && offsetHeight > 0) {
+            if (clientWidth > 0 && clientHeight > 0) {
                 setReady(true);
             } else {
                 setReady(false);

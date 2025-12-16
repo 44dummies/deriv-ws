@@ -273,7 +273,7 @@ const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Main Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <GlassMetricTile
                     label="Total Trades"
                     value={stats?.totalTrades || 0}
@@ -345,7 +345,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
 
                     {/* Performance Chart Area */}
-                    <div className="flex-1 min-h-[250px] bg-black/20 rounded-xl border border-white/5 p-4 relative">
+                    <div className="flex-1 min-h-[250px] bg-black/20 rounded-xl border border-white/5 p-4 relative overflow-hidden">
                         <div className="flex justify-between items-center mb-4">
                             <h4 className="text-sm font-medium text-slate-300 flex items-center gap-2">
                                 <BarIcon size={14} /> PnL Trend (Last 7 Days)
