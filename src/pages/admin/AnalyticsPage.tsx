@@ -13,6 +13,7 @@ import * as tradingApi from '../../trading/tradingApi';
 import { GlassCard } from '../../components/ui/glass/GlassCard';
 import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
+import { TradingLoader } from '../../components/ui/TradingLoader';
 
 interface AnalyticsData {
     totalTrades: number;
@@ -127,7 +128,7 @@ const AnalyticsPage: React.FC = () => {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+                <TradingLoader />
             </div>
         );
     }

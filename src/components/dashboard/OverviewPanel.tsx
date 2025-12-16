@@ -10,6 +10,7 @@ import { Play, Zap, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { tradingApi } from '../../trading/tradingApi';
 import { CONFIG } from '../../config/constants';
+import { TradingLoader } from '../ui/TradingLoader';
 
 export const OverviewPanel: React.FC = () => {
     const { isLoading, userInfo, sessions, activeSession, refresh } = useDashboardData();
@@ -38,7 +39,7 @@ export const OverviewPanel: React.FC = () => {
     if (isLoading) {
         return (
             <div className="flex h-full items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+                <TradingLoader />
             </div>
         );
     }

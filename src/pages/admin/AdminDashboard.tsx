@@ -25,6 +25,7 @@ import { GlassMetricTile } from '../../components/ui/glass/GlassMetricTile';
 import { GlassButton } from '../../components/ui/glass/GlassButton';
 import { GlassStatusBadge } from '../../components/ui/glass/GlassStatusBadge';
 import { ChartBlock } from '../../components/common/ChartBlock';
+import { TradingLoader } from '../../components/ui/TradingLoader';
 
 // Interfaces
 interface BotStatus {
@@ -143,6 +144,14 @@ const AdminDashboard: React.FC = () => {
             setLoading(false);
         }
     }, [navigate]);
+
+    if (loading) {
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <TradingLoader />
+            </div>
+        );
+    }
 
     useEffect(() => {
         loadDashboard();

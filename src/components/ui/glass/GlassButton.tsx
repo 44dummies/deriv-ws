@@ -54,7 +54,12 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
             )}
 
             {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                // Mini candlestick loader
+                <div className="flex items-end gap-0.5 h-4 mr-2">
+                    <div className="w-1 bg-white/80 h-2 animate-[pulse_0.6s_ease-in-out_infinite]" />
+                    <div className="w-1 bg-white/60 h-3 animate-[pulse_0.8s_ease-in-out_infinite_0.1s]" />
+                    <div className="w-1 bg-white/40 h-2.5 animate-[pulse_0.7s_ease-in-out_infinite_0.2s]" />
+                </div>
             ) : effectiveLeftIcon ? (
                 <span className="relative z-10">{effectiveLeftIcon}</span>
             ) : null}
