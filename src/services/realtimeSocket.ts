@@ -36,12 +36,21 @@ class RealtimeSocketService {
    */
   connect(accessToken) {
     if (this.socket?.connected) {
-      return Promise.resolve();
+      // If already connected with SAME token, return
+      if (this.socket.auth?.token === accessToken) {
+        return Promise.resolve();
+      }
+      // If token changed, disconnect and reconnect
+      console.log('[RealtimeSocket] Token changed, reconnecting...');
+      this.disconnect();
     }
+
+    // Ensure we use the freshest token available
+    const tokenToUse = accessToken || sessionStorage.getItem('accessToken');
 
     return new Promise<void>((resolve, reject) => {
       this.socket = io(SOCKET_URL, {
-        auth: { token: accessToken },
+        auth: { token: tokenToUse },
         transports: ['websocket'], // Force WebSocket only to match server config
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -61,19 +70,19 @@ class RealtimeSocketService {
       });
 
       this.socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error.message);
-        this.reconnectAttempts++;
-
-        // Stop retrying if authentication fails
+        // Only log critical auth errors, suppress general connection noise
         if (error.message === 'Authentication required' || error.message === 'Invalid token' || error.message.includes('jwt')) {
-          console.log('[Socket] Auth failed, stopping reconnection');
+          console.warn('[RealtimeSocket] Auth failed:', error.message);
           this.socket.disconnect();
           this.connected = false;
-          TokenService.clearTokens();
-          if (window.location.pathname !== '/') {
-            window.location.href = '/';
+          // Let AuthContext handle logout via 401s, don't force redirect here to avoid race conditions
+        } else {
+          // Debounce generic connection errors (e.g. 502s) to avoid spam
+          if (this.reconnectAttempts % 5 === 0) {
+            console.warn(`[RealtimeSocket] Connection retry ${this.reconnectAttempts}:`, error.message);
           }
         }
+        this.reconnectAttempts++;
       });
 
       this.socket.on('disconnect', (reason) => {
