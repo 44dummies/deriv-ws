@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 import {
@@ -912,9 +913,9 @@ const Community = () => {
         </div>
       </div>
 
-      {/* Media Gallery Modal */}
-      {showMediaGallery && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMediaGallery(false)}>
+      {/* Media Gallery Modal - Ported to body */}
+      {showMediaGallery && createPortal(
+        <div className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowMediaGallery(false)}>
           <GlassCard className="w-full max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden" onClick={(e: any) => e.stopPropagation()}>
             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-brand-card">
               <h2 className="text-xl font-bold text-white">Shared Media</h2>
@@ -955,22 +956,24 @@ const Community = () => {
               )}
             </div>
           </GlassCard>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Image viewer */}
-      {selectedMedia && (
-        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center" onClick={() => setSelectedMedia(null)}>
+      {/* Image viewer - Ported to body */}
+      {selectedMedia && createPortal(
+        <div className="fixed inset-0 z-[120] bg-black/95 flex items-center justify-center" onClick={() => setSelectedMedia(null)}>
           <button className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/50 rounded-full p-2">
             <X size={28} />
           </button>
           <img src={selectedMedia.url} alt="" className="max-w-full max-h-[90vh] object-contain" />
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Sidebar */}
-      {showSidebar && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={() => setShowSidebar(false)}>
+      {/* Sidebar - Ported to body to avoid z-index/transform clipping */}
+      {showSidebar && createPortal(
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm" onClick={() => setShowSidebar(false)}>
           <div className="absolute right-0 top-0 bottom-0 w-80 bg-brand-card border-l border-white/10 shadow-2xl flex flex-col animate-slide-in-right" onClick={(e: any) => e.stopPropagation()}>
             <div className="p-6 border-b border-white/5 flex flex-col items-center">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl mb-3 shadow-lg shadow-purple-500/20">
@@ -1027,7 +1030,8 @@ const Community = () => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
