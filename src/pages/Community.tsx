@@ -640,7 +640,7 @@ const Community = () => {
           </div>
         )}
 
-        {hasMore && page > 1 && (
+        {hasMore && (
           <div className="flex justify-center py-2">
             <button
               onClick={() => loadFeed(page + 1)}

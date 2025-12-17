@@ -42,6 +42,15 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (newState.stats !== undefined) setStats(newState.stats);
     }, []);
 
+    const fetchStats = useCallback(async () => {
+        try {
+            const statsRes = await tradingApi.getUserPerformance();
+            setStats(statsRes?.data);
+        } catch (e) {
+            console.warn('Failed to fetch user performance stats:', e);
+        }
+    }, []);
+
     // Listen for realtime session updates
     useEffect(() => {
         const handleSessionUpdate = (data: any) => {
@@ -77,20 +86,44 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
         };
 
-        realtimeSocket.on('session_update', handleSessionUpdate);
-        realtimeSocket.on('session_status', handleSessionUpdate);
-        realtimeSocket.on('trade_update', (data: any) => {
+        const handleTradeUpdate = (data: any) => {
             if (data.session) {
                 handleSessionUpdate(data.session);
             }
-        });
+            // Refetch stats on trade update
+            fetchStats();
+        };
+
+        const handleBalanceUpdate = (data: any) => {
+            console.log('[Dashboard] Balance Update:', data);
+            setUserInfo((prev: any) => {
+                if (!prev) return prev;
+                const isReal = data.accountType === 'real';
+                const isDemo = data.accountType === 'demo' || data.accountType === 'virtual';
+
+                return {
+                    ...prev,
+                    real_balance: isReal ? Number(data.balance) : prev.real_balance,
+                    demo_balance: isDemo ? Number(data.balance) : prev.demo_balance,
+                    balance: isReal ? Number(data.balance) : prev.balance // Update main balance if real
+                };
+            });
+        };
+
+        realtimeSocket.on('session_update', handleSessionUpdate);
+        realtimeSocket.on('session_status', handleSessionUpdate);
+        realtimeSocket.on('trade_update', handleTradeUpdate);
+        realtimeSocket.on('balance_update', handleBalanceUpdate);
+        realtimeSocket.on('admin_balance_update', handleBalanceUpdate);
 
         return () => {
             realtimeSocket.off('session_update', handleSessionUpdate);
             realtimeSocket.off('session_status', handleSessionUpdate);
-            realtimeSocket.off('trade_update', handleSessionUpdate);
+            realtimeSocket.off('trade_update', handleTradeUpdate);
+            realtimeSocket.off('balance_update', handleBalanceUpdate);
+            realtimeSocket.off('admin_balance_update', handleBalanceUpdate);
         };
-    }, [sessions, activeSession]); // Dependencies needed for closures if not using setState callback form fully
+    }, [sessions, activeSession, fetchStats]); // Dependencies needed for closures
 
     const initializeDashboard = useCallback(async () => {
         // Prevent double init
