@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { apiClient } from '../services/apiClient';
 import { CONFIG } from '../config/constants';
 
 interface Tick {
@@ -23,22 +24,13 @@ export const useSessionTicks = (sessionId: string | null) => {
             setLoading(true);
             setError(null);
             try {
-                const token = sessionStorage.getItem('accessToken');
-                const response = await fetch(`${CONFIG.API_URL}/trading/sessions/${sessionId}/ticks`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                // Use apiClient to handle auth headers and token refresh automatically
+                const response = await apiClient.get<any>(`/trading/sessions/${sessionId}/ticks`);
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch session ticks');
-                }
-
-                const data = await response.json();
-                if (data.success) {
-                    setTicks(data.data);
+                if (response.success) {
+                    setTicks(response.data);
                 } else {
-                    throw new Error(data.error || 'Unknown error');
+                    throw new Error(response.error || 'Unknown error');
                 }
             } catch (err: any) {
                 setError(err.message);

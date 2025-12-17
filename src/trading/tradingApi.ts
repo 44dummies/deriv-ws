@@ -151,7 +151,10 @@ export async function getMyActiveSession() {
         session_name: activeSession.name,
         name: activeSession.name,
         type: activeSession.type,
-        status: activeSession.status || activeSession.sessionStatus,
+        // Normalize Status: 'running', 'active', 'live' -> 'running'
+        status: (['running', 'active', 'live'].includes((activeSession.status || activeSession.sessionStatus || '').toLowerCase()))
+          ? 'running'
+          : (activeSession.status || activeSession.sessionStatus),
         user_tp: activeSession.tp || activeSession.default_tp,
         user_sl: activeSession.sl || activeSession.default_sl,
         current_pnl: activeSession.currentPnl || 0,
