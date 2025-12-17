@@ -109,21 +109,7 @@ const AdminDashboard: React.FC = () => {
         }
     });
 
-    const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
     const loadDashboard = useCallback(async (isInitial = false) => {
-        // Clear any existing timeout
-        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-
-        // Safety timeout for initial load (only when blocking UI)
-        if (isInitial) {
-            loadingTimeoutRef.current = setTimeout(() => {
-                console.warn('[Dashboard] Load timeout - forcing render');
-                toast.error('Dashboard load timed out. Showing limited data.');
-                setLoading(false);
-            }, 10000);
-        }
-
         try {
             // Fetch system state (fast Supabase calls)
             const [sessionsRes, botRes, statsRes] = await Promise.all([
@@ -142,11 +128,8 @@ const AdminDashboard: React.FC = () => {
                 toast.error('Admin access required');
                 navigate('/user/dashboard');
             }
-        } finally {
-            if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-            setLoading(false);
         }
-    }, [navigate]); // loading removed from deps
+    }, [navigate]);
 
     // Initial Balance Load
     useEffect(() => {
@@ -176,8 +159,37 @@ const AdminDashboard: React.FC = () => {
         );
     }
 
+    // Initial Load Effect - Runs ONCE
     useEffect(() => {
-        loadDashboard(true); // Trigger initial load with timeout
+        let isMounted = true;
+
+        const performInitialLoad = async () => {
+            // Safety timeout
+            const timeoutId = setTimeout(() => {
+                if (isMounted) {
+                    console.warn('[Dashboard] Load timeout - forcing render');
+                    toast.error('Dashboard load timed out. Showing available data.');
+                    setLoading(false);
+                }
+            }, 10000);
+
+            try {
+                await loadDashboard(true);
+            } finally {
+                clearTimeout(timeoutId);
+                if (isMounted) setLoading(false);
+            }
+        };
+
+        performInitialLoad();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []); // Empty dependency array ensures this runs only once on mount
+
+    // Socket & Updates Effect
+    useEffect(() => {
         const token = sessionStorage.getItem('accessToken');
         if (token && !realtimeSocket.isConnected()) {
             realtimeSocket.connect(token);
@@ -193,12 +205,14 @@ const AdminDashboard: React.FC = () => {
             }
         });
 
+        // Poll every 30s (or 60s if SSE connected) for non-realtime data sync
         const interval = setInterval(() => loadDashboard(false), sseConnected ? 60000 : 30000);
+
         return () => {
             clearInterval(interval);
             removeSignalListener();
         };
-    }, [loadDashboard, botStatus?.isRunning, sseConnected]);
+    }, [botStatus?.isRunning, sseConnected]); // Removed loadDashboard to prevent loops
 
     // Socket listeners for real-time updates
     useEffect(() => {
