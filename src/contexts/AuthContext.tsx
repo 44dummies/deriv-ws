@@ -12,6 +12,14 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { apiClient } from '../services/apiClient';
 import { realtimeSocket } from '../services/realtimeSocket';
+import { jwtDecode } from 'jwt-decode';
+
+interface DecodedToken {
+    exp: number;
+    iat: number;
+    userId: string;
+    role: string;
+}
 
 interface AuthState {
     accessToken: string | null;
@@ -141,8 +149,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         const normalizedUser = {
                             ...profile,
                             // Ensure compatibility with AuthState interface
-                            fullName: profile.fullname || profile.fullName || (profile as any).display_name,
-                            derivId: profile.deriv_id || (profile as any).derivId,
+                            fullName: profile.display_name || profile.username,
+                            derivId: profile.deriv_id,
                             role: profile.role || (profile.is_admin ? 'ADMIN' : 'USER'),
                             is_admin: profile.is_admin || profile.role === 'admin'
                         };
@@ -164,6 +172,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         tryRefresh();
     }, [refreshAccessToken]);
+
+    // Proactive Token Refresh Monitoring
+    useEffect(() => {
+        if (!accessToken) return;
+
+        const checkExpiry = async () => {
+            try {
+                const decoded = jwtDecode<DecodedToken>(accessToken);
+                const currentTime = Date.now() / 1000;
+                const timeUntilExpiry = decoded.exp - currentTime;
+
+                // Refresh if expiring within 2 minutes (120 seconds)
+                if (timeUntilExpiry < 120) {
+                    console.debug(`[AuthContext] Token expiring soon (${Math.round(timeUntilExpiry)}s), refreshing...`);
+                    await refreshAccessToken();
+                }
+            } catch (error) {
+                console.error('[AuthContext] Error checking token expiry:', error);
+            }
+        };
+
+        // Check every minute
+        const intervalId = setInterval(checkExpiry, 60 * 1000);
+        checkExpiry(); // Initial check
+
+        return () => clearInterval(intervalId);
+    }, [accessToken, refreshAccessToken]);
 
     return (
         <AuthContext.Provider

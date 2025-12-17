@@ -46,6 +46,20 @@ interface SearchOptions {
 type TokenRefreshCallback = (accessToken: string, refreshToken: string) => void;
 type AuthErrorCallback = () => void;
 
+async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    retries: number = 3,
+    delay: number = 1000
+): Promise<T> {
+    try {
+        return await fn();
+    } catch (error) {
+        if (retries === 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return retryWithBackoff(fn, retries - 1, delay * 2);
+    }
+}
+
 class ApiClient {
     private accessToken: string | null = null;
     private refreshToken: string | null = null;
@@ -203,31 +217,38 @@ class ApiClient {
 
         this.refreshPromise = (async () => {
             try {
-                console.debug('[ApiClient] Attempting refresh. Token available:', !!this.refreshToken);
-                const response = await fetch(`${API_URL}/auth/refresh`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ refreshToken: this.refreshToken }) // Handled as fallback by backend
-                });
+                // Use retryWithBackoff only for network/server errors (not 401s)
+                return await retryWithBackoff(async () => {
+                    console.debug('[ApiClient] Attempting refresh. Token available:', !!this.refreshToken);
+                    const response = await fetch(`${API_URL}/auth/refresh`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ refreshToken: this.refreshToken }) // Handled as fallback by backend
+                    });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    this.setTokens(data.accessToken, data.refreshToken);
-                    this.refreshFailedOnce = false; // Reset on success
-                    return true;
-                }
+                    // Immediate failure for 401/400 (don't retry invalid tokens)
+                    if (response.status === 401 || response.status === 400) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error('[ApiClient] Refresh failed details:', errorData);
+                        console.debug('[ApiClient] Refresh failed status:', response.status);
+                        this.refreshFailedOnce = true;
+                        return false; // Return false instead of throwing to stop retry
+                    }
 
-                // 401/400 = no valid refresh token, mark as failed
-                if (response.status === 401 || response.status === 400) {
-                    const errorData = await response.json().catch(() => ({}));
-                    console.error('[ApiClient] Refresh failed details:', errorData);
-                    console.debug('[ApiClient] Refresh failed status:', response.status);
-                    this.refreshFailedOnce = true;
-                }
-                return false;
-            } catch {
-                console.debug('[ApiClient] Refresh failed: network error');
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.setTokens(data.accessToken, data.refreshToken);
+                        this.refreshFailedOnce = false; // Reset on success
+                        return true;
+                    }
+
+                    // For other errors (5xx), throw to trigger retry
+                    throw new Error(`Refresh failed with status ${response.status}`);
+                }, 3, 1000);
+
+            } catch (error) {
+                console.debug('[ApiClient] Refresh failed after retries:', error);
                 return false;
             } finally {
                 this.refreshPromise = null;

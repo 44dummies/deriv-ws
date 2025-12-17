@@ -1,3 +1,4 @@
+import { NotificationDrawer } from '../notifications/NotificationDrawer'; // Check path
 import React, { useEffect, useState } from 'react';
 import { Bell, User, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,6 +12,7 @@ export const TopBar: React.FC = () => {
     const { user } = useAuth();
     const { activeSession, isOnline, serverLatency, setServerLatency, userInfo } = useDashboardData();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     // Use balance from userInfo
     const displayBalance = userInfo?.is_virtual ?
@@ -87,7 +89,7 @@ export const TopBar: React.FC = () => {
 
                 {/* Notifications */}
                 <button
-                    onClick={handleNotificationClick}
+                    onClick={() => setShowNotifications(true)}
                     className="relative p-2 text-gray-400 hover:text-white transition-colors"
                 >
                     <Bell size={18} />
@@ -161,6 +163,11 @@ export const TopBar: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            <NotificationDrawer
+                isOpen={showNotifications}
+                onClose={() => setShowNotifications(false)}
+            />
         </header>
     );
 };
