@@ -5,7 +5,7 @@
 
 import { apiClient } from '../services/apiClient';
 
-const API_BASE = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
+
 
 interface RequestOptions {
   method?: string;
