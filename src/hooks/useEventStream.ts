@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import CONFIG from '../config';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TradeEvent {
     id: string;
@@ -186,6 +187,7 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
  * Hook for admin SSE stream (all events)
  */
 export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics'> = {}) {
+    const { user } = useAuth();
     const [events, setEvents] = useState<TradeEvent[]>([]);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -211,12 +213,18 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
         // Include token in URL since EventSource can't send headers
         const token = sessionStorage.getItem('accessToken');
 
-        // ADMIN STREAM REQUIRES AUTH
+        // ADMIN STREAM REQUIRES AUTH AND ADMIN ROLE
         if (!token) {
-            // Only log once per session to avoid spam if feasible, but here we break the loop by stable callback
             console.log('[AdminEventStream] No access token found, skipping connection');
             setIsConnected(false);
             setError(new Error('Authentication required'));
+            return;
+        }
+
+        if (!user?.is_admin) {
+            console.log('[AdminEventStream] User is not admin, skipping connection');
+            setIsConnected(false);
+            // No error set because this is expected for non-admins
             return;
         }
 
@@ -261,7 +269,7 @@ export function useAdminEventStream(options: Omit<UseEventStreamOptions, 'topics
                 console.error('[AdminEventStream] Parse error:', err);
             }
         };
-    }, []); // Dependency array empty - strictly stable
+    }, [user?.is_admin]); // Re-connect only if admin status changes
 
     useEffect(() => {
         connect();

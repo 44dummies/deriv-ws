@@ -220,7 +220,9 @@ class ApiClient {
 
                 // 401/400 = no valid refresh token, mark as failed
                 if (response.status === 401 || response.status === 400) {
-                    console.debug('[ApiClient] Refresh failed: no valid token', response.status);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('[ApiClient] Refresh failed details:', errorData);
+                    console.debug('[ApiClient] Refresh failed status:', response.status);
                     this.refreshFailedOnce = true;
                 }
                 return false;

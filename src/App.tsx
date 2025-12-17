@@ -33,6 +33,7 @@ import AdminProtected from './components/routing/AdminProtected';
 import { TokenService } from './services/tokenService';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { DashboardProvider } from './contexts/DashboardContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -99,7 +100,11 @@ function App(): React.ReactElement {
 
             {/* User routes - Use full Dashboard with community tab */}
             {/* User routes - Use MainLayout */}
-            <Route element={<MainLayout />}>
+            <Route element={
+              <DashboardProvider>
+                <MainLayout />
+              </DashboardProvider>
+            }>
               <Route
                 path="/user/dashboard"
                 element={
