@@ -125,11 +125,11 @@ const AdminDashboard: React.FC = () => {
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
             if (error.status === 403) {
-                toast.error('Admin access required');
-                navigate('/user/dashboard');
+                toast.error('Admin access required (403). Check console for details.');
+                // navigate('/user/dashboard'); // PREVENT LOOP: Do not auto-navigate
             }
         }
-    }, [navigate]);
+    }, []);
 
     // Initial Balance Load
     useEffect(() => {
