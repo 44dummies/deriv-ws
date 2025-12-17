@@ -109,7 +109,21 @@ const AdminDashboard: React.FC = () => {
         }
     });
 
-    const loadDashboard = useCallback(async () => {
+    const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    const loadDashboard = useCallback(async (isInitial = false) => {
+        // Clear any existing timeout
+        if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
+
+        // Safety timeout for initial load (only when blocking UI)
+        if (isInitial) {
+            loadingTimeoutRef.current = setTimeout(() => {
+                console.warn('[Dashboard] Load timeout - forcing render');
+                toast.error('Dashboard load timed out. Showing limited data.');
+                setLoading(false);
+            }, 10000);
+        }
+
         try {
             // Fetch system state (fast Supabase calls)
             const [sessionsRes, botRes, statsRes] = await Promise.all([
@@ -129,9 +143,10 @@ const AdminDashboard: React.FC = () => {
                 navigate('/user/dashboard');
             }
         } finally {
+            if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
             setLoading(false);
         }
-    }, [navigate]);
+    }, [navigate]); // loading removed from deps
 
     // Initial Balance Load
     useEffect(() => {
@@ -162,7 +177,7 @@ const AdminDashboard: React.FC = () => {
     }
 
     useEffect(() => {
-        loadDashboard();
+        loadDashboard(true); // Trigger initial load with timeout
         const token = sessionStorage.getItem('accessToken');
         if (token && !realtimeSocket.isConnected()) {
             realtimeSocket.connect(token);
@@ -178,7 +193,7 @@ const AdminDashboard: React.FC = () => {
             }
         });
 
-        const interval = setInterval(loadDashboard, sseConnected ? 60000 : 30000);
+        const interval = setInterval(() => loadDashboard(false), sseConnected ? 60000 : 30000);
         return () => {
             clearInterval(interval);
             removeSignalListener();
