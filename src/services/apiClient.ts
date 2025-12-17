@@ -227,7 +227,7 @@ class ApiClient {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        // body: JSON.stringify({ refreshToken: this.refreshToken }) // Don't send stale token
+                        body: JSON.stringify({ refreshToken: this.refreshToken }) // Send as fallback for cross-origin
                     });
 
                     // Immediate failure for 401/400 (don't retry invalid tokens)
