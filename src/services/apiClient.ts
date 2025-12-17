@@ -220,11 +220,14 @@ class ApiClient {
                 // Use retryWithBackoff only for network/server errors (not 401s)
                 return await retryWithBackoff(async () => {
                     console.debug('[ApiClient] Attempting refresh. Token available:', !!this.refreshToken);
+
+                    // CRITICAL FIX: Prefer cookie (browser managed) over potentially stale body token
+                    // But send body as fallback if cookie fails/blocked.
                     const response = await fetch(`${API_URL}/auth/refresh`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ refreshToken: this.refreshToken }) // Handled as fallback by backend
+                        body: JSON.stringify({ refreshToken: this.refreshToken })
                     });
 
                     // Immediate failure for 401/400 (don't retry invalid tokens)
@@ -233,12 +236,19 @@ class ApiClient {
                         console.error('[ApiClient] Refresh failed details:', errorData);
                         console.debug('[ApiClient] Refresh failed status:', response.status);
                         this.refreshFailedOnce = true;
-                        return false; // Return false instead of throwing to stop retry
+                        return false;
                     }
 
                     if (response.ok) {
                         const data = await response.json();
-                        this.setTokens(data.accessToken, data.refreshToken);
+
+                        // 🔧 CRITICAL FIX: Update BOTH tokens if the server sends a new refresh token (Rotation)
+                        if (data.accessToken) {
+                            // Ensure we capture the new refresh token to prevent mismatch on next call
+                            this.setTokens(data.accessToken, data.refreshToken);
+                            console.debug('[ApiClient] Tokens rotated successfully.');
+                        }
+
                         this.refreshFailedOnce = false; // Reset on success
                         return true;
                     }
