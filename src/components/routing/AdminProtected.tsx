@@ -40,6 +40,13 @@ const AdminProtected: React.FC = () => {
             const userInfoStr = sessionStorage.getItem('userInfo');
             const derivId = sessionStorage.getItem('derivId');
 
+            // No userInfo = not logged in, redirect to login
+            if (!userInfoStr) {
+                console.debug('[AdminProtected] No session, redirecting to login');
+                window.location.href = '/';
+                return;
+            }
+
             // Collect debug info
             const debug: DebugInfo = {
                 hasUserInfo: !!userInfoStr,
@@ -48,21 +55,19 @@ const AdminProtected: React.FC = () => {
                 timestamp: new Date().toISOString()
             };
 
-            // Single check: is_admin from session (set during Callback from Supabase)
-            if (userInfoStr) {
-                try {
-                    const parsed: UserInfo = JSON.parse(userInfoStr);
-                    debug.isAdmin = parsed.is_admin || false;
-                    debug.loginid = parsed.loginid || parsed.deriv_id;
+            // Single check: is_admin from session (set during Callback from backend)
+            try {
+                const parsed: UserInfo = JSON.parse(userInfoStr);
+                debug.isAdmin = parsed.is_admin || false;
+                debug.loginid = parsed.loginid || parsed.deriv_id;
 
-                    if (parsed.is_admin === true) {
-                        setIsAuthorized(true);
-                        setChecking(false);
-                        return;
-                    }
-                } catch (e) {
-                    debug.parseError = (e as Error).message;
+                if (parsed.is_admin === true) {
+                    setIsAuthorized(true);
+                    setChecking(false);
+                    return;
                 }
+            } catch (e) {
+                debug.parseError = (e as Error).message;
             }
 
             setDebugInfo(debug);
