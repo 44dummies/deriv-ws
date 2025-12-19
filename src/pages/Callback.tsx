@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
@@ -10,8 +10,16 @@ const Callback = () => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('Parsing callback data...');
+  const hasExecuted = useRef(false); // CRITICAL: Prevent duplicate execution
 
   useEffect(() => {
+    // Guard: Only run once per component mount
+    if (hasExecuted.current) {
+      console.debug('[Callback] Already executed, skipping duplicate run');
+      return;
+    }
+    hasExecuted.current = true;
+
     const handleCallback = async () => {
       try {
         const urlParams = new URLSearchParams(window.location.search);
