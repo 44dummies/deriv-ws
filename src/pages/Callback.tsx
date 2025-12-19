@@ -84,12 +84,7 @@ const Callback = () => {
 
         setStatus('Checking user permissions...');
 
-        // HARDCODED ADMIN IDS - Failsafe to ensure access
-        const ADMIN_IDS = ['CR4457335', 'CR5464522'];
-
-        // Check if user is admin - SINGLE SOURCE OF TRUTH: Supabase database
         const derivId = authResponse.authorize?.loginid;
-
 
         if (derivId) {
           // Store derivId in sessionStorage for other pages to use
@@ -111,30 +106,8 @@ const Callback = () => {
           // Also store the current account's token for general use
           sessionStorage.setItem('derivToken', primaryAccount.token);
 
-
-          // Check Supabase database for is_admin flag
-          let isAdminUser = ADMIN_IDS.includes(derivId); // Start true if in hardcoded list
-
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('user_profiles')
-              .select('is_admin, deriv_id')
-              .eq('deriv_id', derivId)
-              .single();
-
-            if (profile && !profileError) {
-              isAdminUser = profile.is_admin === true;
-
-            } else if (profileError) {
-
-            }
-          } catch (err) {
-
-          }
-
-
-
-          // Authenticate with backend - refresh token is set as HttpOnly cookie
+          // Authenticate with backend - admin status is determined by backend (single source of truth)
+          let isAdminUser = false;
           try {
             const loginResult = await apiClient.loginWithDeriv({
               derivUserId: derivId,
@@ -146,12 +119,8 @@ const Callback = () => {
             // Only access token is returned - refresh token is in HttpOnly cookie
             TokenService.setBackendTokens(loginResult.accessToken, '');
 
-            // Use the authoritative role from the backend response if available
-            if (loginResult.user && loginResult.user.role === 'admin') {
-              isAdminUser = true;
-            } else if (loginResult.user && loginResult.user.is_admin === true) {
-              isAdminUser = true;
-            }
+            // Use the authoritative role from the backend response
+            isAdminUser = loginResult.user?.is_admin === true || loginResult.user?.role === 'admin';
           } catch (apiErr) {
             console.error('[Callback] Backend auth failed:', apiErr);
           }
