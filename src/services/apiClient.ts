@@ -235,7 +235,7 @@ class ApiClient {
                     // Immediate failure for 401/400 (don't retry invalid tokens)
                     if (response.status === 401 || response.status === 400) {
                         const errorData = await response.json().catch(() => ({}));
-                        console.error('[ApiClient] Refresh failed details:', errorData);
+                        console.debug('[ApiClient] Refresh failed details:', errorData);
                         console.debug('[ApiClient] Refresh failed status:', response.status);
                         this.refreshFailedOnce = true;
                         return false;

@@ -163,15 +163,9 @@ const Callback = () => {
             is_admin: isAdminUser
           }));
 
-          if (isAdminUser) {
-            setStatus('Admin access granted! Redirecting...');
-            setTimeout(() => navigate('/admin/dashboard'), 500);
-            return;
-          } else {
-            setStatus('Redirecting to your dashboard...');
-            setTimeout(() => navigate('/user/dashboard'), 500);
-            return;
-          }
+          // Always route to user dashboard - admin access is on-demand via /admin routes
+          setStatus('Success! Redirecting to your dashboard...');
+          setTimeout(() => navigate('/user/dashboard'), 500);
         }
 
 
