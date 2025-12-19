@@ -214,15 +214,13 @@ class ApiClient {
             try {
                 // Use retryWithBackoff only for network/server errors (not 401s)
                 return await retryWithBackoff(async () => {
-                    console.debug('[ApiClient] Attempting refresh. Token available:', !!this.refreshToken);
+                    console.debug('[ApiClient] Attempting refresh via HttpOnly cookie');
 
-                    // CRITICAL FIX: Prefer cookie (browser managed) over potentially stale body token
-                    // But send body as fallback if cookie fails/blocked.
+                    // Cookie-only refresh - no body token needed
                     const response = await fetch(`${API_URL}/auth/refresh`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ refreshToken: this.refreshToken }) // Send as fallback for cross-origin
+                        credentials: 'include' // CRITICAL: Send HttpOnly cookie
                     });
 
                     // Immediate failure for 401/400 (don't retry invalid tokens)
