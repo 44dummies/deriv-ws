@@ -33,6 +33,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [serverLatency, setServerLatency] = useState<number | null>(null);
 
     const isInitialized = useRef(false);
+    const lastBalanceFetchTime = useRef<number>(0); // Rate limit guard
 
     // Update state helper to match the useDashboardData logic
     const updateDashboardState = useCallback((newState: Partial<DashboardContextType>) => {
@@ -188,38 +189,46 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 sessionStorage.setItem('userInfo', JSON.stringify(userData));
                 setUserInfo(userData);
 
-                // Fetch All Balances
-                try {
-                    const allBalancesRes = await websocketService.getAllBalances();
-                    // console.log('[Debug] All Balances Response:', allBalancesRes);
+                // Fetch All Balances (with rate limit guard)
+                const now = Date.now();
+                const BALANCE_COOLDOWN_MS = 5000; // 5 second minimum between balance API calls
 
-                    if (allBalancesRes.balance?.accounts) {
-                        const accounts = allBalancesRes.balance.accounts;
-                        let demoBalance = 0;
-                        let realBalance = 0;
+                if (now - lastBalanceFetchTime.current > BALANCE_COOLDOWN_MS) {
+                    lastBalanceFetchTime.current = now;
+                    try {
+                        const allBalancesRes = await websocketService.getAllBalances();
 
-                        Object.entries(accounts).forEach(([id, acc]: [string, any]) => {
-                            if (acc.demo_account === 1 || id.startsWith('VRTC') || (acc.type && acc.type === 'demo')) {
-                                demoBalance = Number(acc.balance || 0);
-                            } else {
-                                realBalance = Number(acc.balance || 0);
-                            }
-                        });
+                        if (allBalancesRes.balance?.accounts) {
+                            const accounts = allBalancesRes.balance.accounts;
+                            let demoBalance = 0;
+                            let realBalance = 0;
 
-                        // console.log('[Debug] Parsed Balances - Demo:', demoBalance, 'Real:', realBalance);
+                            Object.entries(accounts).forEach(([id, acc]: [string, any]) => {
+                                if (acc.demo_account === 1 || id.startsWith('VRTC') || (acc.type && acc.type === 'demo')) {
+                                    demoBalance = Number(acc.balance || 0);
+                                } else {
+                                    realBalance = Number(acc.balance || 0);
+                                }
+                            });
 
-                        // Update userData with balances
-                        userData = {
-                            ...userData,
-                            demo_balance: demoBalance,
-                            real_balance: realBalance
-                        };
+                            // Update userData with balances
+                            userData = {
+                                ...userData,
+                                demo_balance: demoBalance,
+                                real_balance: realBalance
+                            };
 
-                        sessionStorage.setItem('userInfo', JSON.stringify(userData));
-                        setUserInfo(userData);
+                            sessionStorage.setItem('userInfo', JSON.stringify(userData));
+                            setUserInfo(userData);
+                        }
+                    } catch (e: any) {
+                        // Silently handle rate limit errors
+                        if (e?.code !== 'RateLimit') {
+                            console.error('Failed to fetch balances', e);
+                        }
                     }
-                } catch (e) {
-                    console.error('Failed to fetch balances', e);
+                } else {
+                    console.debug('[Dashboard] Skipping balance fetch - rate limited');
                 }
 
                 // Sync with Supabase (Background)
