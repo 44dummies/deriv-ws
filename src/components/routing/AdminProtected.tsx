@@ -114,19 +114,25 @@ const AdminProtected: React.FC = () => {
                     </p>
 
                     <div className="space-y-4">
-                        <a
-                            href="/"
-                            className="block w-full py-3 text-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium hover:opacity-90 transition-all shadow-lg shadow-blue-500/20"
+                        <button
+                            onClick={() => {
+                                // Clear session data and redirect to login
+                                sessionStorage.clear();
+                                window.location.href = '/';
+                            }}
+                            className="block w-full py-3 text-center rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium hover:opacity-90 transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
                         >
                             Return to Login
-                        </a>
+                        </button>
 
-                        <a
-                            href="/user/dashboard"
-                            className="block w-full py-3 text-center rounded-xl bg-[#1e1e24] border border-white/5 text-gray-300 font-medium hover:bg-[#25252b] transition-all"
+                        <button
+                            onClick={() => {
+                                window.location.href = '/user/dashboard';
+                            }}
+                            className="block w-full py-3 text-center rounded-xl bg-[#1e1e24] border border-white/5 text-gray-300 font-medium hover:bg-[#25252b] transition-all cursor-pointer"
                         >
                             Go to User Dashboard
-                        </a>
+                        </button>
                     </div>
 
                     {/* Debug Info */}
