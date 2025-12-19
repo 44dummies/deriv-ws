@@ -74,37 +74,43 @@ class ApiClient {
     }
 
     /**
-     * Set access token - refresh token is handled by HttpOnly cookie only
+     * Set access token - refresh token stored as fallback for browsers blocking cookies
      */
-    setTokens(accessToken: string, _refreshToken?: string): void {
-        console.debug('[ApiClient] Setting access token:', !!accessToken);
+    setTokens(accessToken: string, refreshToken?: string): void {
+        console.debug('[ApiClient] Setting tokens. Access:', !!accessToken, 'Refresh fallback:', !!refreshToken);
         this.accessToken = accessToken;
-        this.isSessionExpired = false; // Reset on new valid token
-        // Sync to sessionStorage so tradingApi.ts works
+        this.isSessionExpired = false;
         sessionStorage.setItem('accessToken', accessToken);
-        // NOTE: Refresh token is NOT stored here - it's in HttpOnly cookie only
+        // Store refresh token as FALLBACK for browsers blocking cross-origin cookies
+        if (refreshToken) {
+            this.refreshToken = refreshToken;
+            sessionStorage.setItem('refreshToken', refreshToken);
+        }
     }
 
     /**
-     * Load access token - check memory then sessionStorage
-     * NOTE: Refresh token is in HttpOnly cookie, not accessible here
+     * Load tokens from sessionStorage
      */
     loadTokens(): { accessToken: string | null } {
         if (!this.accessToken) {
             this.accessToken = sessionStorage.getItem('accessToken');
         }
-        console.debug('[ApiClient] Loaded access token:', !!this.accessToken);
+        if (!this.refreshToken) {
+            this.refreshToken = sessionStorage.getItem('refreshToken');
+        }
+        console.debug('[ApiClient] Loaded tokens. Access:', !!this.accessToken, 'Refresh fallback:', !!this.refreshToken);
         return { accessToken: this.accessToken };
     }
 
     /**
-     * Clear access token from memory and storage
+     * Clear tokens from memory and storage
      */
     clearTokens(): void {
         this.accessToken = null;
-        this.isSessionExpired = true; // prevent further requests until login
+        this.refreshToken = null;
+        this.isSessionExpired = true;
         sessionStorage.removeItem('accessToken');
-        // NOTE: Refresh token cookie is cleared by backend on logout
+        sessionStorage.removeItem('refreshToken');
     }
 
     // Token refresh callback removed - now using HttpOnly cookies
@@ -214,13 +220,14 @@ class ApiClient {
             try {
                 // Use retryWithBackoff only for network/server errors (not 401s)
                 return await retryWithBackoff(async () => {
-                    console.debug('[ApiClient] Attempting refresh via HttpOnly cookie');
+                    console.debug('[ApiClient] Attempting refresh. Has fallback token:', !!this.refreshToken);
 
-                    // Cookie-only refresh - no body token needed
+                    // Hybrid approach: cookie + sessionStorage fallback
                     const response = await fetch(`${API_URL}/auth/refresh`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include' // CRITICAL: Send HttpOnly cookie
+                        credentials: 'include', // TRY HttpOnly cookie first
+                        body: this.refreshToken ? JSON.stringify({ refreshToken: this.refreshToken }) : undefined
                     });
 
                     // Immediate failure for 401/400 (don't retry invalid tokens)
