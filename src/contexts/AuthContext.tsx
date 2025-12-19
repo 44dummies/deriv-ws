@@ -133,6 +133,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Guard: Only attempt refresh if there's evidence of a prior session
     useEffect(() => {
         const tryRefresh = async () => {
+            // Guard: Skip refresh on OAuth callback (Callback will handle auth)
+            if (window.location.pathname.includes('/callback')) {
+                console.debug('[AuthContext] On callback page, skipping auto-refresh');
+                return;
+            }
+
             // Guard: Skip refresh if no prior session exists
             const storedUserInfo = sessionStorage.getItem('userInfo');
             if (!storedUserInfo) {
