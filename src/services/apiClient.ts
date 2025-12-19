@@ -74,32 +74,26 @@ class ApiClient {
     }
 
     /**
-     * Set access token - and sync to sessionStorage for tradingApi compatibility
+     * Set access token - refresh token is handled by HttpOnly cookie only
      */
-    setTokens(accessToken: string, refreshToken?: string): void {
-        console.debug('[ApiClient] Setting tokens. Access:', !!accessToken, 'Refresh:', !!refreshToken);
+    setTokens(accessToken: string, _refreshToken?: string): void {
+        console.debug('[ApiClient] Setting access token:', !!accessToken);
         this.accessToken = accessToken;
         this.isSessionExpired = false; // Reset on new valid token
         // Sync to sessionStorage so tradingApi.ts works
         sessionStorage.setItem('accessToken', accessToken);
-
-        if (refreshToken) {
-            this.refreshToken = refreshToken;
-            sessionStorage.setItem('refreshToken', refreshToken);
-        }
+        // NOTE: Refresh token is NOT stored here - it's in HttpOnly cookie only
     }
 
     /**
-     * Load tokens - check memory then sessionStorage
+     * Load access token - check memory then sessionStorage
+     * NOTE: Refresh token is in HttpOnly cookie, not accessible here
      */
     loadTokens(): { accessToken: string | null } {
         if (!this.accessToken) {
             this.accessToken = sessionStorage.getItem('accessToken');
         }
-        if (!this.refreshToken) {
-            this.refreshToken = sessionStorage.getItem('refreshToken');
-        }
-        console.debug('[ApiClient] Loaded tokens. Access:', !!this.accessToken, 'Refresh:', !!this.refreshToken);
+        console.debug('[ApiClient] Loaded access token:', !!this.accessToken);
         return { accessToken: this.accessToken };
     }
 
@@ -108,10 +102,9 @@ class ApiClient {
      */
     clearTokens(): void {
         this.accessToken = null;
-        this.refreshToken = null;
         this.isSessionExpired = true; // prevent further requests until login
         sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('refreshToken');
+        // NOTE: Refresh token cookie is cleared by backend on logout
     }
 
     // Token refresh callback removed - now using HttpOnly cookies

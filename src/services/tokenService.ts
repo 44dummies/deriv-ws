@@ -9,7 +9,7 @@ const DERIV_ID_KEY = 'derivId';
 const BALANCE_KEY = 'balance';
 const CURRENCY_KEY = 'currency';
 const ACCESS_TOKEN_KEY = 'accessToken';
-const REFRESH_TOKEN_KEY = 'refreshToken';
+// NOTE: Refresh token is stored in HttpOnly cookie, NOT in sessionStorage
 
 interface DerivAccount {
     loginid?: string;
@@ -48,14 +48,14 @@ export const TokenService = {
         return tokens ? JSON.parse(tokens) : null;
     },
 
-    setBackendTokens: (accessToken?: string, refreshToken?: string): void => {
+    setBackendTokens: (accessToken?: string, _refreshToken?: string): void => {
         if (accessToken) sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-        if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+        // Refresh token is in HttpOnly cookie - not stored here
     },
 
     getBackendTokens: (): BackendTokens => ({
         accessToken: sessionStorage.getItem(ACCESS_TOKEN_KEY),
-        refreshToken: sessionStorage.getItem(REFRESH_TOKEN_KEY)
+        refreshToken: null // Refresh token is in HttpOnly cookie
     }),
 
     clearTokens: (): void => {
@@ -65,7 +65,7 @@ export const TokenService = {
         sessionStorage.removeItem(BALANCE_KEY);
         sessionStorage.removeItem(CURRENCY_KEY);
         sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-        sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+        // Refresh token cookie is cleared by backend on logout
     },
 
     setAccount: (account: DerivAccount): void => {
