@@ -135,13 +135,13 @@ const Callback = () => {
           // Always route to user dashboard - admin access is on-demand via /admin routes
           setStatus('Success! Redirecting to your dashboard...');
           setTimeout(() => navigate('/user/dashboard'), 500);
+          return; // CRITICAL: Exit here to prevent duplicate navigation
         }
 
-
-
-        // Fallback to user dashboard for regular users
-        setStatus('Success! Redirecting...');
-        setTimeout(() => navigate('/user/dashboard'), 500);
+        // Fallback: No derivId - redirect to login
+        console.warn('[Callback] No derivId found, redirecting to login');
+        setStatus('No account found. Redirecting...');
+        setTimeout(() => navigate('/'), 3000);
       } catch (err) {
         console.error('Callback error:', err);
         setError(err.message || 'An error occurred during authentication');
