@@ -165,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     } catch (err) { }
                 }
             } else {
-                console.warn('[AuthContext] Initial refresh failed, forcing logout to clear state');
+                console.debug('[AuthContext] Initial refresh failed, forcing logout to clear state');
                 // Refresh failed - clear ALL stale session data to prevent loops
                 await logout();
             }
