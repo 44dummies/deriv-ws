@@ -161,8 +161,8 @@ class ApiClient {
                         credentials: 'include'
                     });
                     return this.handleResponse<T>(retryResponse);
-                    return this.handleResponse<T>(retryResponse);
                 } else {
+                    console.warn('[ApiClient] Token refresh failed - session expired');
                     this.isSessionExpired = true; // Mark session as dead
                     this.clearTokens();
                     if (this.onAuthError) {

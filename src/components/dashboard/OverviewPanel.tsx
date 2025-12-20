@@ -55,10 +55,10 @@ export const OverviewPanel: React.FC = () => {
             {/* Header / Welcome */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">
+                    <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
                         Hello, <span className="text-brand-red">{userInfo?.fullname || 'Trader'}</span>
                     </h1>
-                    <p className="text-gray-400 mt-1">
+                    <p className="text-sm md:text-base text-gray-400 mt-1">
                         Here's what's happening with your portfolio today.
                     </p>
                 </div>

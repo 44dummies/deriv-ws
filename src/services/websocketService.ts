@@ -152,9 +152,15 @@ class DerivWebSocket {
     }
 
     if (this.isConnecting) {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          clearInterval(checkConnection);
+          reject(new Error('WebSocket connection wait timed out'));
+        }, 10000);
+
         const checkConnection = setInterval(() => {
           if (this.ws?.readyState === WebSocket.OPEN) {
+            clearTimeout(timeout);
             clearInterval(checkConnection);
             resolve();
           }
@@ -165,9 +171,22 @@ class DerivWebSocket {
     this.isConnecting = true;
 
     return new Promise((resolve, reject) => {
+      const connectionTimeout = setTimeout(() => {
+        if (this.isConnecting) {
+          this.isConnecting = false;
+          if (this.ws) {
+            this.ws.onopen = null;
+            this.ws.onerror = null;
+            this.ws.close();
+          }
+          reject(new Error('WebSocket connection timed out after 10s'));
+        }
+      }, 10000);
+
       this.ws = new WebSocket(`${CONFIG.WS_URL}?app_id=${CONFIG.APP_ID}`);
 
       this.ws.onopen = () => {
+        clearTimeout(connectionTimeout);
         console.log('WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;

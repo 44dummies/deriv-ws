@@ -16,6 +16,7 @@ import { GlassStatusBadge } from '../components/ui/glass/GlassStatusBadge';
 import { GlassMetricTile } from '../components/ui/glass/GlassMetricTile';
 import { GlassTable } from '../components/ui/glass/GlassTable';
 import LiveSessionFeed from '../components/trading/LiveSessionFeed';
+import { MarketSelector } from '../components/ui/MarketSelector';
 import { TradingLoader } from '../components/ui/TradingLoader';
 import { realtimeSocket } from '../services/realtimeSocket';
 import { ChartPanel } from '../components/chart/ChartPanel';
@@ -334,38 +335,45 @@ const UserTrading = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-140px)] min-h-[600px]">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto lg:h-[calc(100vh-140px)] min-h-screen lg:min-h-[600px] pb-20 lg:pb-0">
 
       {/* LEFT COLUMN: Main Trading Deck (70% on large screens) */}
       <div className="lg:col-span-8 flex flex-col gap-6 h-full overflow-hidden">
         {/* 1. Header & Active Status */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-xl md:text-2xl font-bold text-white flex flex-wrap items-center gap-2 md:gap-3">
               {activeSession.name}
-              <span className={`px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wide border ${sessionStatus === 'active'
+              <span className={`px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-wide border ${sessionStatus === 'active'
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                 {sessionStatus}
               </span>
             </h1>
-            <div className="text-xs text-brand-gray-400 font-mono mt-1">
-              MARKET: <span className="text-white">{activeSession.volatility_index || 'R_100'}</span> • ID: {activeSession.id.slice(0, 8)}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2">
+              <MarketSelector
+                currentMarketId={activeSession.volatility_index || 'R_100'}
+                onSelect={(market) => {
+                  // toast.success(`Switching to ${market.name}`); // toast not imported yet
+                  console.log(`Switching to ${market.name}`);
+                }}
+                className="w-full sm:w-72"
+              />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between md:justify-end gap-3 md:gap-4 overflow-x-auto pb-2 md:pb-0">
             {latestSignal?.regime && (
               <RegimeIndicator
                 regime={latestSignal.regime}
                 confidence={latestSignal.confidence}
-                className="py-1 px-3 scale-90 origin-right"
+                className="py-1 px-3 scale-75 md:scale-90 origin-right whitespace-nowrap"
               />
             )}
             <GlassMetricTile
               icon={<DollarSign size={16} />}
               label="BALANCE"
               value={userInfo ? `$${userInfo.balance.toFixed(2)}` : '---'}
-              className="py-2 px-4 min-w-[140px]"
+              className="py-1.5 md:py-2 px-3 md:px-4 min-w-[110px] md:min-w-[140px]"
             />
           </div>
         </div>

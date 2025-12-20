@@ -563,28 +563,28 @@ const AdminDashboard: React.FC = () => {
 
             {/* Live Data Footer Ticker */}
             {botStatus?.isRunning && botStatus.signalStats && (
-                <div className="fixed bottom-4 left-4 right-4 z-50 pointer-events-none">
+                <div className="fixed bottom-4 left-4 right-4 z-50 pointer-events-none mb-16 md:mb-0">
                     <div className="max-w-screen-xl mx-auto flex flex-col items-center gap-2">
                         {/* Display Primary Regime (Taking the first active market for now) */}
                         {Object.values(botStatus.signalStats)[0] && (
-                            <div className="pointer-events-auto animate-fade-in-up">
+                            <div className="pointer-events-auto animate-fade-in-up scale-75 md:scale-90">
                                 <RegimeIndicator
                                     regime={(Object.values(botStatus.signalStats)[0] as any).regime}
                                     confidence={(Object.values(botStatus.signalStats)[0] as any).confidence}
-                                    className="scale-90 opacity-90 backdrop-blur-md shadow-2xl"
+                                    className="opacity-90 backdrop-blur-md shadow-2xl"
                                 />
                             </div>
                         )}
 
-                        <div className="flex gap-4 overflow-hidden mask-linear-fade w-full justify-center">
+                        <div className="flex gap-2 md:gap-4 overflow-x-auto no-scrollbar mask-linear-fade w-full justify-start md:justify-center py-2">
                             {Object.entries(botStatus.signalStats).map(([market, stat]: [string, any]) => (
-                                <div key={market} className="bg-black/60 backdrop-blur-md rounded-full px-4 py-2 border border-white/10 flex items-center gap-3 animate-slide-left pointer-events-auto shadow-xl">
-                                    <span className="text-xs font-bold text-slate-300">{market}</span>
-                                    <div className={`flex items-center gap-1 text-sm font-bold ${stat.side === 'OVER' ? 'text-emerald-400' : 'text-red-400'}`}>
-                                        {stat.side === 'OVER' ? <TrendingUp size={14} /> : <TrendingUp className="rotate-180" size={14} />}
+                                <div key={market} className="bg-black/60 backdrop-blur-md rounded-full px-3 md:px-4 py-1.5 md:py-2 border border-white/10 flex items-center gap-2 md:gap-3 animate-slide-left pointer-events-auto shadow-xl flex-shrink-0">
+                                    <span className="text-[10px] md:text-xs font-bold text-slate-300">{market}</span>
+                                    <div className={`flex items-center gap-1 text-[11px] md:text-sm font-bold ${stat.side === 'OVER' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {stat.side === 'OVER' ? <TrendingUp size={12} /> : <TrendingUp className="rotate-180" size={12} />}
                                         {stat.side?.toUpperCase() || 'UNKNOWN'}
                                     </div>
-                                    <span className="text-xs text-slate-400">{(stat.confidence * 100).toFixed(0)}%</span>
+                                    <span className="text-[10px] md:text-xs text-slate-400">{(stat.confidence * 100).toFixed(0)}%</span>
                                 </div>
                             ))}
                         </div>

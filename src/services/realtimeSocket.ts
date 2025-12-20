@@ -50,6 +50,12 @@ class RealtimeSocketService {
     const tokenToUse = accessToken || sessionStorage.getItem('accessToken');
 
     return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (!this.connected) {
+          reject(new Error('Socket.IO connection timed out'));
+        }
+      }, 10000);
+
       this.socket = io(SOCKET_URL, {
         auth: { token: tokenToUse },
         transports: ['websocket'], // Force WebSocket only to match server config
@@ -63,6 +69,7 @@ class RealtimeSocketService {
       });
 
       this.socket.on('connect', () => {
+        clearTimeout(timeout);
         console.log('🔌 Socket connected');
         this.connected = true;
         this.reconnectAttempts = 0;
