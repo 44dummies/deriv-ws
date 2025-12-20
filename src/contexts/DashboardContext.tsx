@@ -75,7 +75,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     newSessions[index] = { ...newSessions[index], ...session };
                 } else {
                     // Only add if it qualifies (pending/active)
-                    if (['pending', 'active'].includes(session.status)) {
+                    if (['pending', 'active', 'running'].includes(session.status)) {
                         newSessions.push(session);
                     }
                 }

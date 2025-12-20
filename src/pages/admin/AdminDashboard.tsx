@@ -64,6 +64,7 @@ const AdminDashboard: React.FC = () => {
     const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
     const [stats, setStats] = useState<Stats | null>(null);
     const [balances, setBalances] = useState({ real: 0, demo: 0 });
+    const [error, setError] = useState<string | null>(null);
 
     const [timelineData, setTimelineData] = useState<any[]>([]);
 
@@ -118,9 +119,11 @@ const AdminDashboard: React.FC = () => {
 
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
-            if (error.status === 403) {
-                toast.error('Admin access required (403). Check console for details.');
-                // navigate('/user/dashboard'); // PREVENT LOOP: Do not auto-navigate
+            if (error.status === 403 || error.response?.status === 403) {
+                setError('You do not have administrative privileges to view this dashboard.');
+                toast.error('Admin access required.');
+            } else {
+                setError(error.message || 'Failed to connect to the server. Please check your connection.');
             }
         }
     }, []);
@@ -144,6 +147,24 @@ const AdminDashboard: React.FC = () => {
         };
         fetchBalances();
     }, []);
+
+    if (error) {
+        return (
+            <div className="flex h-96 flex-col items-center justify-center p-8 space-y-4">
+                <div className="p-4 rounded-full bg-red-500/20 text-red-500 mb-4 animate-bounce">
+                    <AlertTriangle size={48} />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Access Denied / Error</h2>
+                <p className="text-slate-400 max-w-md text-center">{error}</p>
+                <GlassButton onClick={() => window.location.reload()} variant="primary">
+                    Retry
+                </GlassButton>
+                <GlassButton onClick={() => navigate('/user/dashboard')} variant="secondary">
+                    Go to User Dashboard
+                </GlassButton>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
