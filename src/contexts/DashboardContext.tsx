@@ -152,10 +152,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const authResponse = await websocketService.authorize(tokens.token, false);
 
             if (authResponse.error) {
-                isInitialized.current = false; // Allow retry?
+                console.error('Authorization failed:', authResponse.error);
+                isInitialized.current = false;
                 setDerivWsConnected(false);
-                TokenService.clearTokens();
-                navigate('/');
+                // Do not navigate away immediately to prevent loops
+                // TokenService.clearTokens();
+                // navigate('/'); 
+                setIsLoading(false);
                 return;
             }
 
