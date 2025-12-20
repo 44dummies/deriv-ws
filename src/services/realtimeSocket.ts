@@ -327,7 +327,7 @@ class RealtimeSocketService {
   /**
    * Emit event to server (Socket.IO emit)
    */
-  emit(event, data) {
+  emit(event: string, data?: any) {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
     }

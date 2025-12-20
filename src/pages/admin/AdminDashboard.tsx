@@ -195,6 +195,7 @@ const AdminDashboard: React.FC = () => {
             realtimeSocket.connect(token);
         }
         realtimeSocket.emit('subscribe_market', 'R_100');
+        realtimeSocket.emit('joinAdminRoom');
 
         const removeSignalListener = realtimeSocket.on('signal_update', (data) => {
             if (botStatus?.isRunning) {
