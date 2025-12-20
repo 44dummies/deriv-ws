@@ -140,9 +140,14 @@ const Callback = () => {
             is_admin: isAdminUser
           }));
 
-          // Always route to user dashboard - admin access is on-demand via /admin routes
-          setStatus('Success! Redirecting to your dashboard...');
-          setTimeout(() => navigate('/user/dashboard'), 500);
+          // Route based on role
+          if (isAdminUser) {
+            setStatus('Welcome Admin! Redirecting to dashboard...');
+            setTimeout(() => navigate('/admin/dashboard'), 500);
+          } else {
+            setStatus('Success! Redirecting to your dashboard...');
+            setTimeout(() => navigate('/user/dashboard'), 500);
+          }
           return; // CRITICAL: Exit here to prevent duplicate navigation
         }
 
