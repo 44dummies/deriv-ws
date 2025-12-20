@@ -346,7 +346,7 @@ const TierChatroom: React.FC<TierChatroomProps> = ({ user, analytics }) => {
                   { }
                   <div className="message-avatar">
                     {msg.sender?.avatarUrl && msg.sender.avatarUrl.startsWith('http') ? (
-                      <img src={msg.sender.avatarUrl} alt="" />
+                      <img src={msg.sender.avatarUrl} alt="Avatar" />
                     ) : (
                       <div className="avatar-placeholder">
                         {(msg.sender?.username || 'U')[0].toUpperCase()}

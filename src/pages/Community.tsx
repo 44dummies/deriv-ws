@@ -519,7 +519,7 @@ const Community = () => {
       return (
         <img
           src={user.avatarUrl}
-          alt=""
+          alt="User Avatar"
           className={`${className} rounded-full object-cover border-2 border-white/10`}
         />
       );
@@ -705,7 +705,7 @@ const Community = () => {
                         className="mb-2 rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setSelectedMedia({ type: 'image', url: post.imageUrl })}
                       >
-                        <img src={post.imageUrl} alt="" className="max-w-full max-h-[300px] object-cover" loading="lazy" />
+                        <img src={post.imageUrl} alt="Post image" className="max-w-full max-h-[300px] object-cover" loading="lazy" />
                       </div>
                     )}
 
@@ -840,7 +840,7 @@ const Community = () => {
           {filePreviews.map((item, index) => (
             <div key={index} className="relative group w-16 h-16 rounded-lg bg-black/20 flex-none border border-white/5 overflow-hidden">
               {item.type === 'image' ? (
-                <img src={item.preview} alt="" className="w-full h-full object-cover" />
+                <img src={item.preview} alt="File preview" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-xs text-slate-400 p-1">
                   {React.createElement(getFileIcon(item.file.type), { size: 20 })}
@@ -941,7 +941,7 @@ const Community = () => {
                       className="aspect-square rounded-xl overflow-hidden cursor-pointer border border-white/10 hover:border-blue-500/50 transition-colors relative group"
                       onClick={() => setSelectedMedia({ type: 'image', url: media.url })}
                     >
-                      <img src={media.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      <img src={media.url} alt="Media gallery item" className="w-full h-full object-cover" loading="lazy" />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <ImageIcon className="text-white" />
                       </div>
@@ -966,7 +966,7 @@ const Community = () => {
           <button className="absolute top-4 right-4 text-white/70 hover:text-white bg-black/50 rounded-full p-2">
             <X size={28} />
           </button>
-          <img src={selectedMedia.url} alt="" className="max-w-full max-h-[90vh] object-contain" />
+          <img src={selectedMedia.url} alt="Full size media" className="max-w-full max-h-[90vh] object-contain" />
         </div>,
         document.body
       )}
@@ -1017,7 +1017,7 @@ const Community = () => {
                       className="aspect-square rounded-lg overflow-hidden bg-black/20 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => { setSelectedMedia({ type: 'image', url: media.url }); setShowSidebar(false); }}
                     >
-                      {media.type === 'image' && <img src={media.url} alt="" className="w-full h-full object-cover" />}
+                      {media.type === 'image' && <img src={media.url} alt="Shared media" className="w-full h-full object-cover" />}
                     </div>
                   ))}
                 </div>
