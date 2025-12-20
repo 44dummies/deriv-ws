@@ -408,6 +408,11 @@ export async function pingServer() {
   return Date.now() - start;
 }
 
+export async function getTimeline(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return apiRequest(`/api/admin/stats/timeline${query ? '?' + query : ''}`);
+}
+
 // ==================== Unified Export ====================
 
 export const tradingApi = {
@@ -466,6 +471,7 @@ export const tradingApi = {
   getStats,
   getBalances,
   getUserPerformance,
+  getTimeline,
 
   // Recovery
   getRecoveryState,

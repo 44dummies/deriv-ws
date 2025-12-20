@@ -65,24 +65,7 @@ const AdminDashboard: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [balances, setBalances] = useState({ real: 0, demo: 0 });
 
-    // Mock history data generator (replace with API if available)
-    const chartData = useMemo(() => {
-        const data = [];
-        let profit = stats?.totalProfit || 0;
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            // Simulate random daily fluctuation based on total profit
-            const dailyChange = (Math.random() - 0.4) * (Math.abs(profit) * 0.1);
-            data.push({
-                name: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                profit: profit - dailyChange * (i + 1), // Work backwards slightly
-            });
-        }
-        // Ensure last point matches current
-        if (data.length > 0) data[data.length - 1].profit = profit;
-        return data;
-    }, [stats?.totalProfit]);
+    const [timelineData, setTimelineData] = useState<any[]>([]);
 
     const signalData = useMemo(() => {
         if (!botStatus?.signalStats) return [];
@@ -112,15 +95,26 @@ const AdminDashboard: React.FC = () => {
     const loadDashboard = useCallback(async (isInitial = false) => {
         try {
             // Fetch system state (fast Supabase calls)
-            const [sessionsRes, botRes, statsRes] = await Promise.all([
+            const [sessionsRes, botRes, statsRes, timelineRes] = await Promise.all([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
-                tradingApi.getStats()
+                tradingApi.getStats(),
+                tradingApi.getTimeline({ interval: 'hour' })
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes?.data || { isRunning: false });
             setStats(statsRes?.data || {});
+
+            // Format timeline for chart
+            if (timelineRes?.timeline) {
+                const formattedTimeline = timelineRes.timeline.map((t: any) => ({
+                    name: new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    profit: t.cumulative,
+                    rawDate: t.timestamp
+                }));
+                setTimelineData(formattedTimeline);
+            }
 
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
@@ -403,7 +397,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <ChartBlock minHeight={250}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={chartData}>
+                                <AreaChart data={timelineData.length > 0 ? timelineData : [{ name: 'No Data', profit: 0 }]}>
                                     <defs>
                                         <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
