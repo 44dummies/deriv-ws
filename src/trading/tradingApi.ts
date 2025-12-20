@@ -126,43 +126,25 @@ export async function getSession(sessionId) {
 // Get user's active session with their TP/SL
 export async function getMyActiveSession() {
   try {
-    // Fallback: Query all sessions and find the active one for this user
-    // We check for 'running', 'active', or 'live' status
-    const result = await getSessions({ limit: 50 });
+    // Use the optimized /api/user/sessions/status endpoint instead of querying all sessions
+    const statusRes = await apiRequest('/api/user/sessions/status');
 
-    // Check if result has sessions array or is the array itself
-    let sessions: any[] = [];
-    if (result && Array.isArray(result.sessions)) {
-      sessions = result.sessions;
-    } else if (Array.isArray(result)) {
-      sessions = result;
-    }
-
-    // Find the first session that is running/active
-    // We prioritize 'running' status
-    const activeSession = sessions.find((s: any) =>
-      ['running', 'active', 'live'].includes(s.status?.toLowerCase() || s.sessionStatus?.toLowerCase())
-    );
-
-    if (activeSession) {
-      // Normalize field names for frontend compatibility
+    if (statusRes && statusRes.status === 'active' && statusRes.session) {
+      const activeSession = statusRes.session;
+      // Normalize to match frontend expected structure
       return {
         id: activeSession.id,
         session_name: activeSession.name,
         name: activeSession.name,
         type: activeSession.type,
-        // Normalize Status: 'running', 'active', 'live' -> 'running'
-        status: (['running', 'active', 'live'].includes((activeSession.status || activeSession.sessionStatus || '').toLowerCase()))
-          ? 'running'
-          : (activeSession.status || activeSession.sessionStatus),
-        user_tp: activeSession.tp || activeSession.default_tp,
-        user_sl: activeSession.sl || activeSession.default_sl,
-        current_pnl: activeSession.currentPnl || 0,
-        initial_balance: activeSession.initialBalance || 0,
-        accepted_at: activeSession.acceptedAt || new Date().toISOString()
+        status: statusRes.sessionStatus || 'running',
+        user_tp: statusRes.tp,
+        user_sl: statusRes.sl,
+        current_pnl: statusRes.currentPnl || 0,
+        initial_balance: statusRes.initialBalance || 0,
+        accepted_at: statusRes.acceptedAt
       };
     }
-
     return null;
   } catch (error) {
     console.error('Error fetching active session:', error);
@@ -171,11 +153,11 @@ export async function getMyActiveSession() {
 }
 
 
-// Accept a session with TP/SL
+// Accept a session with TP/SL (using V2 endpoint)
 export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number }) {
-  return apiRequest(`/api/trading/sessions/${data.sessionId}/join`, {
+  return apiRequest(`/api/user/sessions/${data.sessionId}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ accountId: data.accountId, takeProfit: data.takeProfit, stopLoss: data.stopLoss })
+    body: JSON.stringify({ tp: data.takeProfit, sl: data.stopLoss })
   });
 }
 
@@ -187,7 +169,7 @@ export async function updateUserTPSL(data: { sessionId: string; takeProfit: numb
   });
 }
 
-// Leave a session
+// Leave a session (using V2 endpoint)
 export async function leaveSession(sessionId: string) {
   return apiRequest(`/api/user/sessions/leave`, {
     method: 'POST',
