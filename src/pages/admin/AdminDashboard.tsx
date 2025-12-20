@@ -119,8 +119,8 @@ const AdminDashboard: React.FC = () => {
             ]);
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
-            setBotStatus(botRes || { isRunning: false });
-            setStats(statsRes || {});
+            setBotStatus(botRes?.data || { isRunning: false });
+            setStats(statsRes?.data || {});
 
         } catch (error: any) {
             console.error('Failed to load dashboard:', error);
@@ -570,6 +570,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
             )}
+
         </div>
     );
 };

@@ -275,6 +275,8 @@ export default function SessionsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={12} />
             <input
               type="text"
+              name="session_search"
+              id="session_search"
               placeholder="Filter sessions..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -489,6 +491,8 @@ export default function SessionsPage() {
           </div>
 
           <GlassInput
+            name="market_index"
+            id="market_index"
             label="MARKET INDEX"
             value={newSession.market}
             onChange={(e) => setNewSession({ ...newSession, market: e.target.value })}
@@ -500,18 +504,24 @@ export default function SessionsPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <GlassInput
+              name="stake_amount"
+              id="stake_amount"
               label="STAKE ($)"
               type="number"
               value={newSession.min_balance}
               onChange={e => setNewSession({ ...newSession, min_balance: parseFloat(e.target.value) })}
             />
             <GlassInput
+              name="take_profit"
+              id="take_profit"
               label="TP ($)"
               type="number"
               value={newSession.default_tp}
               onChange={e => setNewSession({ ...newSession, default_tp: parseFloat(e.target.value) })}
             />
             <GlassInput
+              name="stop_loss"
+              id="stop_loss"
               label="SL ($)"
               type="number"
               value={newSession.default_sl}
