@@ -445,7 +445,13 @@ const AdminDashboard: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 mt-4 border-t border-white/5">
                         <div>
                             <p className="text-xs text-slate-500 mb-1">Uptime</p>
-                            <p className="font-mono text-lg">{botStatus?.uptime ? `${Math.floor(botStatus.uptime / 60000)}m` : '0m'}</p>
+                            <p className="font-mono text-lg">
+                                {botStatus?.uptime ? (() => {
+                                    const hours = Math.floor(botStatus.uptime / 3600000);
+                                    const minutes = Math.floor((botStatus.uptime % 3600000) / 60000);
+                                    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+                                })() : '0m'}
+                            </p>
                         </div>
                         <div>
                             <p className="text-xs text-slate-500 mb-1">Executions</p>
