@@ -327,11 +327,32 @@ export default function SessionsPage() {
                 <div className="flex items-center gap-2">
                   {selectedSession.status === 'running' ? (
                     <>
-                      <button onClick={() => handleSessionAction(selectedSession.id, 'stop')} className="text-xs bg-amber-500/10 text-amber-500 px-3 py-1 rounded hover:bg-amber-500/20 transition-colors uppercase font-bold tracking-wider">Pause</button>
-                      <button onClick={() => handleSessionAction(selectedSession.id, 'stop')} className="text-xs bg-brand-red/10 text-brand-red px-3 py-1 rounded hover:bg-brand-red/20 transition-colors uppercase font-bold tracking-wider">Stop</button>
+                      <button
+                        disabled={!!actionLoading}
+                        onClick={() => handleSessionAction(selectedSession.id, 'stop')}
+                        className={`text-xs px-3 py-1 rounded transition-colors uppercase font-bold tracking-wider ${!!actionLoading ? 'bg-amber-500/5 text-amber-500/50 cursor-not-allowed' : 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+                          }`}
+                      >
+                        Pause
+                      </button>
+                      <button
+                        disabled={!!actionLoading}
+                        onClick={() => handleSessionAction(selectedSession.id, 'stop')}
+                        className={`text-xs px-3 py-1 rounded transition-colors uppercase font-bold tracking-wider ${!!actionLoading ? 'bg-brand-red/5 text-brand-red/50 cursor-not-allowed' : 'bg-brand-red/10 text-brand-red hover:bg-brand-red/20'
+                          }`}
+                      >
+                        Stop
+                      </button>
                     </>
                   ) : (
-                    <button onClick={() => handleSessionAction(selectedSession.id, 'start')} className="text-xs bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded hover:bg-emerald-500/20 transition-colors uppercase font-bold tracking-wider flex items-center gap-1"><Play size={10} /> Start</button>
+                    <button
+                      disabled={!!actionLoading}
+                      onClick={() => handleSessionAction(selectedSession.id, 'start')}
+                      className={`text-xs px-3 py-1 rounded transition-colors uppercase font-bold tracking-wider flex items-center gap-1 ${!!actionLoading ? 'bg-emerald-500/5 text-emerald-500/50 cursor-not-allowed' : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'
+                        }`}
+                    >
+                      <Play size={10} /> Start
+                    </button>
                   )}
                 </div>
               </div>
