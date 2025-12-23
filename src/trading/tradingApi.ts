@@ -154,10 +154,17 @@ export async function getMyActiveSession() {
 
 
 // Accept a session with TP/SL (using V2 endpoint)
-export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number }) {
+export async function acceptSession(data: { sessionId: string; accountId: string; takeProfit: number; stopLoss: number; derivToken?: string }) {
+  // Get the appropriate derivToken based on session mode (fallback to sessionStorage)
+  const token = data.derivToken || sessionStorage.getItem('derivDemoToken') || sessionStorage.getItem('derivRealToken') || sessionStorage.getItem('derivToken');
+
   return apiRequest(`/api/user/sessions/${data.sessionId}/accept`, {
     method: 'POST',
-    body: JSON.stringify({ tp: data.takeProfit, sl: data.stopLoss })
+    body: JSON.stringify({
+      tp: data.takeProfit,
+      sl: data.stopLoss,
+      derivToken: token  // Pass the token for the bot to use
+    })
   });
 }
 

@@ -4,10 +4,12 @@ import { TokenService } from '../services/tokenService';
 import websocketService from '../services/websocketService';
 import { supabase } from '../services/supabaseService';
 import apiClient from '../services/apiClient';
+import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
 
 const Callback = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('Parsing callback data...');
   const hasExecuted = useRef(false); // CRITICAL: Prevent duplicate execution
@@ -44,8 +46,6 @@ const Callback = () => {
           i++;
         }
 
-
-
         if (accounts.length === 0) {
           console.error('No accounts in callback. URL params:', window.location.search);
           setError('No account information received from Deriv');
@@ -54,7 +54,6 @@ const Callback = () => {
         }
 
         const primaryAccount = accounts[0];
-
 
         TokenService.setTokens({
           account: primaryAccount.account,
@@ -66,7 +65,6 @@ const Callback = () => {
 
         await websocketService.connect();
 
-
         setStatus('Authorizing your account...');
         const authResponse = await websocketService.authorize(primaryAccount.token);
 
@@ -77,8 +75,6 @@ const Callback = () => {
           setTimeout(() => navigate('/'), 3000);
           return;
         }
-
-
 
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
@@ -124,38 +120,50 @@ const Callback = () => {
               currency: authResponse.authorize.currency,
               fullname: authResponse.authorize.fullname
             });
+
+            if (!loginResult || !loginResult.accessToken) {
+              throw new Error('No access token received from backend');
+            }
+
             // Only access token is returned - refresh token is in HttpOnly cookie
             TokenService.setBackendTokens(loginResult.accessToken, '');
 
+            // Sync with AuthContext to update app state immediately
+            login(loginResult.accessToken, loginResult.user || { derivId });
+
             // Use the authoritative role from the backend response
             isAdminUser = loginResult.user?.is_admin === true || loginResult.user?.role === 'admin';
-          } catch (apiErr) {
+
+            // Store user info in sessionStorage for AdminProtected to check
+            sessionStorage.setItem('userInfo', JSON.stringify({
+              loginid: derivId,
+              deriv_id: derivId,
+              is_admin: isAdminUser
+            }));
+
+            // Route based on role
+            if (isAdminUser) {
+              setStatus('Welcome Admin! Redirecting to dashboard...');
+              setTimeout(() => navigate('/admin/dashboard'), 500);
+            } else {
+              setStatus('Success! Redirecting to your dashboard...');
+              setTimeout(() => navigate('/user/dashboard'), 500);
+            }
+            return; // CRITICAL: Exit here to prevent duplicate navigation
+
+          } catch (apiErr: any) {
             console.error('[Callback] Backend auth failed:', apiErr);
+            setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
+            // Do NOT redirect if backend auth fails, so user sees the error
+            return;
           }
-
-          // Store user info in sessionStorage for AdminProtected to check
-          sessionStorage.setItem('userInfo', JSON.stringify({
-            loginid: derivId,
-            deriv_id: derivId,
-            is_admin: isAdminUser
-          }));
-
-          // Route based on role
-          if (isAdminUser) {
-            setStatus('Welcome Admin! Redirecting to dashboard...');
-            setTimeout(() => navigate('/admin/dashboard'), 500);
-          } else {
-            setStatus('Success! Redirecting to your dashboard...');
-            setTimeout(() => navigate('/user/dashboard'), 500);
-          }
-          return; // CRITICAL: Exit here to prevent duplicate navigation
         }
 
         // Fallback: No derivId - redirect to login
         console.warn('[Callback] No derivId found, redirecting to login');
         setStatus('No account found. Redirecting...');
         setTimeout(() => navigate('/'), 3000);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Callback error:', err);
         setError(err.message || 'An error occurred during authentication');
         setTimeout(() => navigate('/'), 3000);
