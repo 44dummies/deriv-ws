@@ -57,7 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Login: store access token in memory and sync via apiClient
     const login = useCallback((token: string, userData: AuthState['user']) => {
-        apiClient.setTokens(token);
+        // Clear refresh token fallback on login to prevent stale token usage
+        apiClient.setTokens(token, '');
         setAccessToken(token);
         // Normalize user data to match interface
         const normalizedUser = userData ? {

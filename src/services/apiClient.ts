@@ -80,10 +80,16 @@ class ApiClient {
         this.accessToken = accessToken;
         this.isSessionExpired = false;
         sessionStorage.setItem('accessToken', accessToken);
+
         // Store refresh token as FALLBACK for browsers blocking cross-origin cookies
+        // CRITICAL FIX: If refreshToken is NOT provided (undefined/null/empty), 
+        // we must CLEAR the old one to prevent sending stale tokens.
         if (refreshToken) {
             this.refreshToken = refreshToken;
             sessionStorage.setItem('refreshToken', refreshToken);
+        } else {
+            this.refreshToken = null;
+            sessionStorage.removeItem('refreshToken');
         }
     }
 
