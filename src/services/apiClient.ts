@@ -21,6 +21,7 @@ interface DerivLoginData {
     currency?: string;
     country?: string;
     fullname?: string;
+    token?: string;
 }
 
 interface AuthResult {

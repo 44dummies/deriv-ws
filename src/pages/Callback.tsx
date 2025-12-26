@@ -118,7 +118,8 @@ const Callback = () => {
               loginid: derivId,
               email: authResponse.authorize.email,
               currency: authResponse.authorize.currency,
-              fullname: authResponse.authorize.fullname
+              fullname: authResponse.authorize.fullname,
+              token: primaryAccount.token
             });
 
             if (!loginResult || !loginResult.accessToken) {
