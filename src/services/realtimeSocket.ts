@@ -6,8 +6,9 @@
 import { io } from 'socket.io-client';
 import { TokenService } from './tokenService';
 
-const isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-const SOCKET_URL = process.env.REACT_APP_WS_URL || (isLocal ? 'http://localhost:3001' : 'https://tradermind-server.up.railway.app');
+import { CONFIG } from '../config/constants';
+
+const SOCKET_URL = CONFIG.WS_URL;
 
 class RealtimeSocketService {
   socket: any;

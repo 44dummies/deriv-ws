@@ -6,7 +6,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
+import { CONFIG } from '../../../config/constants';
+
+const SOCKET_URL = CONFIG.WS_URL;
 
 interface BotStatus {
     isRunning: boolean;

@@ -2,7 +2,9 @@
  * Shared Resources Service - Notes & Watchlists
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
+import { CONFIG } from '../config/constants';
+
+const API_URL = CONFIG.API_URL;
 
 const getAuthHeaders = () => {
   const token = sessionStorage.getItem('accessToken');
@@ -21,9 +23,9 @@ const handleResponse = async (response) => {
 };
 
 export const sharedService = {
-  
-  
-  
+
+
+
 
   async getNotes(chatId) {
     const response = await fetch(`${API_URL}/api/shared/${chatId}/notes`, {
@@ -41,9 +43,9 @@ export const sharedService = {
     return handleResponse(response);
   },
 
-  
-  
-  
+
+
+
 
   async getWatchlist(chatId) {
     const response = await fetch(`${API_URL}/api/shared/${chatId}/watchlist`, {

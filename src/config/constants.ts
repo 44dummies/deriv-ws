@@ -5,10 +5,12 @@
  * Note: Secrets should be loaded from environment variables.
  */
 
+import { SERVER_URL, WS_URL as BASE_WS_URL } from '../config';
+
 export const CONFIG = {
     // API Configuration
-    API_URL: process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app/api',
-    WS_URL: process.env.REACT_APP_WS_URL || 'https://tradermind-server.up.railway.app',
+    API_URL: `${SERVER_URL}/api`,
+    WS_URL: BASE_WS_URL,
 
     // Trading Defaults
     TRADING: {

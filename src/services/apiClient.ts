@@ -5,11 +5,9 @@
 
 import type { ApiResponse, UserProfile } from '../types';
 
-const API_URL: string = process.env.REACT_APP_SERVER_URL
-    ? `${process.env.REACT_APP_SERVER_URL}`
-    : (typeof window !== 'undefined' && window.location.hostname === 'localhost'
-        ? 'http://localhost:3001/api'
-        : 'https://tradermind-server.up.railway.app/api');
+import { CONFIG } from '../config/constants';
+
+const API_URL = CONFIG.API_URL;
 
 // Types
 interface RequestOptions extends RequestInit {

@@ -2,7 +2,9 @@
  * Mentor Service - Frontend API client
  */
 
-const API_URL = process.env.REACT_APP_SERVER_URL || 'https://tradermind-server.up.railway.app';
+import { CONFIG } from '../config/constants';
+
+const API_URL = CONFIG.API_URL;
 
 const getAuthHeaders = () => {
   const token = sessionStorage.getItem('accessToken');
