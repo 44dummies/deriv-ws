@@ -142,9 +142,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Guard: Skip refresh if no prior session exists
             const storedUserInfo = sessionStorage.getItem('userInfo');
+            const storedAccessToken = sessionStorage.getItem('accessToken');
+
             if (!storedUserInfo) {
                 console.debug('[AuthContext] No prior session, skipping refresh');
                 return;
+            }
+
+            // Trust efficient local token if valid (prevents race condition after login)
+            if (storedAccessToken) {
+                try {
+                    const decoded = jwtDecode<DecodedToken>(storedAccessToken);
+                    const currentTime = Date.now() / 1000;
+                    // If token has > 5 minutes valid time, use it instead of refreshing
+                    if (decoded.exp - currentTime > 300) {
+                        console.debug('[AuthContext] Valid local token found, skipping initial refresh');
+                        setAccessToken(storedAccessToken);
+
+                        try {
+                            const user = JSON.parse(storedUserInfo);
+                            setUser(user);
+                        } catch (e) { }
+
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('[AuthContext] Invalid local token, attempting refresh');
+                }
             }
 
             const token = await refreshAccessToken();
