@@ -163,18 +163,19 @@ const Callback = () => {
 
             // Route based on role
             if (!isMounted) return;
+            // Route based on role
+            if (!isMounted) return;
+
+            finishCallbackAuth(); // Success! Resume normal operations
+
             if (isAdminUser) {
               setStatus('Welcome Admin! Redirecting to dashboard...');
-              finishCallbackAuth(); // Success! Resume normal operations
-              if (isAdminUser) {
-                setStatus('Welcome Admin! Redirecting to dashboard...');
-                setTimeout(() => navigate('/admin/dashboard', { replace: true }), 500);
-              } else {
-                setStatus('Success! Redirecting to your dashboard...');
-                setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
-              }
-              return; // CRITICAL: Exit here to prevent duplicate navigation
+              setTimeout(() => navigate('/admin/dashboard', { replace: true }), 500);
+            } else {
+              setStatus('Success! Redirecting to your dashboard...');
+              setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
             }
+            return; // CRITICAL: Exit here to prevent duplicate navigation
 
           } catch (apiErr: any) {
             console.error('[Callback] Backend auth failed:', apiErr);
