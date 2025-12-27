@@ -316,7 +316,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 refreshAccessToken,
                 startCallbackAuth,
                 finishCallbackAuth,
-                failAuth
+                failAuth,
+                isLoading
             }}
         >
             {children}
