@@ -153,13 +153,23 @@ const WEIGHTS = {
 // UTILITY FUNCTIONS
 // ============================================
 
-function getDigit(tick: Tick): number {
-  const priceStr = tick.quote.toString();
+const SYMBOL_PRECISION: Record<string, number> = {
+  'R_10': 3, 'R_25': 3, 'R_50': 4, 'R_75': 4, 'R_100': 2,
+  '1HZ10V': 3, '1HZ25V': 3, '1HZ50V': 4, '1HZ75V': 4, '1HZ100V': 2,
+  'JD10': 3, 'JD25': 3, 'JD50': 3, 'JD75': 3, 'JD100': 3
+};
+
+function getDigit(tick: Tick, symbol: string = '1HZ100V'): number {
+  if (tick.quote === undefined || tick.quote === null) return 0;
+
+  // Use known precision or fallback to 3
+  const precision = SYMBOL_PRECISION[symbol] || 3;
+  const priceStr = tick.quote.toFixed(precision);
   return parseInt(priceStr[priceStr.length - 1]);
 }
 
-function extractDigits(ticks: Tick[]): number[] {
-  return ticks.map(getDigit);
+function extractDigits(ticks: Tick[], symbol: string = '1HZ100V'): number[] {
+  return ticks.map(t => getDigit(t, symbol));
 }
 
 export function calculateDigitStats(ticks: Tick[]): DigitStats | null {
@@ -504,7 +514,7 @@ export function analyzeForSignal(
   if (!ticks || ticks.length < 50) return { shouldTrade: false, market, direction: null, digit: null, confidence: 0, reasons: ['Initializing...'], strategies: { dfpm: null, vcs: null, der: null, tpc: null, dtp: null, dpb: null, mtd: null, rds: null, risk: { monteCarloRisk: 0, inLossZone: false, detectedPattern: null, safeMode: false } } };
 
   const buffer = ticks.slice(-TICK_BUFFER_SIZE);
-  const digits = extractDigits(buffer);
+  const digits = extractDigits(buffer, market);
 
   // 2. Run Core Strategies
   const dfpm = runDFPM(buffer);
