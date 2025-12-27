@@ -6,9 +6,9 @@
 import { io } from 'socket.io-client';
 import { TokenService } from './tokenService';
 
-import { CONFIG } from '../config/constants';
+import { SERVER_URL } from '../config';
 
-const SOCKET_URL = CONFIG.SERVER_URL;
+const SOCKET_URL = SERVER_URL;
 
 class RealtimeSocketService {
   socket: any;
