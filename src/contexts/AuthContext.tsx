@@ -62,56 +62,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const isAuthenticated = !!accessToken;
 
-    // Load state from storage on mount (Hydration)
-    useEffect(() => {
-        const hydrate = async () => {
-            try {
-                // Check memory first (unlikely on hard refresh)
-                if (accessToken) {
-                    setIsLoading(false);
-                    return;
-                }
-
-                // Check session storage for user info to prevent UI flickering
-                const storedUser = sessionStorage.getItem('userInfo');
-                if (storedUser) {
-                    try {
-                        setUser(JSON.parse(storedUser));
-                    } catch (e) {
-                        console.warn('Failed to parse user info', e);
-                    }
-                }
-
-                // API Client handles token persistence/recovery internally.
-                // We ask it if it has a valid session.
-                const { accessToken: loadedToken } = apiClient.loadTokens();
-                if (loadedToken) {
-                    setAccessToken(loadedToken);
-                    // If we have a token but no user, we might want to fetch /me here?
-                    // For now, let's rely on storedUser or lazy fetch.
-                }
-            } catch (error) {
-                console.error('Auth hydration failed:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        hydrate();
-    }, []);
-
     // Login: store access token in memory and sync via apiClient
     const login = useCallback((token: string, userData: AuthState['user']) => {
-        // Update tokens in apiClient without clearing refresh token fallback
-        // The apiClient will already have the correct refresh token if it was just set by loginWithDeriv
         apiClient.setTokens(token, sessionStorage.getItem('refreshToken') || undefined);
         setAccessToken(token);
         setIsLoading(false); // OPTIMISTIC: Unlock UI immediately
-        // Normalize user data to match interface
+
         const normalizedUser = userData ? {
             ...userData,
-            ...userData,
-            // Robust mapping for name and id
             fullName: userData.fullName || (userData as any).fullname || (userData as any).display_name || (userData as any).displayName,
             derivId: userData.derivId || (userData as any).deriv_id,
             role: userData.role || ((userData as any).is_admin ? 'ADMIN' : 'USER'),
@@ -120,7 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(normalizedUser);
 
-        // Store non-sensitive user info in sessionStorage for UI purposes
         if (normalizedUser) {
             sessionStorage.setItem('userInfo', JSON.stringify(normalizedUser));
         }
@@ -154,20 +111,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [logout]);
 
     // Refresh access token using HttpOnly cookie
-    // Lock to prevent multiple concurrent refresh requests (Singleton Promise)
     const refreshPromise = useRef<Promise<string | null> | null>(null);
 
     const refreshAccessToken = useCallback(async (): Promise<string | null> => {
         if (refreshPromise.current) {
-            console.debug('[AuthContext] Refresh already in progress, joining...');
             return refreshPromise.current;
         }
 
         refreshPromise.current = (async () => {
             try {
-                // Use apiClient to refresh (this updates apiClient state and sessionStorage)
                 const success = await apiClient.refreshAccessToken();
-
                 if (success) {
                     const { accessToken } = apiClient.loadTokens();
                     if (accessToken) {
@@ -175,11 +128,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         return accessToken;
                     }
                 }
-
-                // Refresh failed - user needs to re-login
-                // ONLY clear if we are sure it failed (not just network error)
-                // But apiClient.refreshAccessToken returns boolean success. 
-                // If distinct failure, clear state.
                 setAccessToken(null);
                 setUser(null);
                 return null;
@@ -187,87 +135,96 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 console.error('Token refresh failed:', error);
                 return null;
             } finally {
-                refreshPromise.current = null; // Release lock
+                refreshPromise.current = null;
             }
         })();
 
         return refreshPromise.current;
     }, []);
 
-    // Try to refresh token on mount (handles page refresh)
-    // Guard: Only attempt refresh if there's evidence of a prior session
+    // Unified Initialization Effect (Hydration + Initial Refresh)
     useEffect(() => {
-        const tryRefresh = async () => {
-            // Guard: Skip refresh on OAuth callback (Callback will handle auth)
-            if (window.location.pathname.includes('/callback') || isAuthenticating) {
-                console.debug('[AuthContext] On callback page or authenticating, skipping auto-refresh');
-                return;
-            }
-
-            // Guard: Skip refresh if no prior session exists
-            const storedUserInfo = sessionStorage.getItem('userInfo');
-            const storedAccessToken = sessionStorage.getItem('accessToken');
-
-            if (!storedUserInfo) {
-                console.debug('[AuthContext] No prior session, skipping refresh');
-                return;
-            }
-
-            // Trust efficient local token if valid (prevents race condition after login)
-            if (storedAccessToken) {
-                try {
-                    const decoded = jwtDecode<DecodedToken>(storedAccessToken);
-                    const currentTime = Date.now() / 1000;
-                    // If token has > 5 minutes valid time, use it instead of refreshing
-                    if (decoded.exp - currentTime > 300) {
-                        console.debug('[AuthContext] Valid local token found, skipping initial refresh');
-                        setAccessToken(storedAccessToken);
-
-                        try {
-                            const user = JSON.parse(storedUserInfo);
-                            setUser(user);
-                        } catch (e) { }
-
-                        return;
-                    }
-                } catch (e) {
-                    console.warn('[AuthContext] Invalid local token, attempting refresh');
+        const initializeAuth = async () => {
+            try {
+                // 1. Check memory first
+                if (accessToken) {
+                    setIsLoading(false);
+                    return;
                 }
-            }
 
-            const token = await refreshAccessToken();
-            if (token) {
-                // Fetch fresh user data from backend to ensure roles are up to date
-                try {
-                    const profile = await apiClient.getMyProfile();
-                    if (profile) {
-                        const normalizedUser = {
-                            ...profile,
-                            // Ensure compatibility with AuthState interface
-                            fullName: profile.display_name || profile.username,
-                            derivId: profile.deriv_id,
-                            role: profile.role || (profile.is_admin ? 'ADMIN' : 'USER'),
-                            is_admin: profile.is_admin || profile.role === 'admin'
-                        };
-                        setUser(normalizedUser);
-                        sessionStorage.setItem('userInfo', JSON.stringify(normalizedUser));
-                    }
-                } catch (e) {
-                    console.error('Failed to fetch user profile on refresh:', e);
-                    // Fallback to session storage if fetch fails
+                // 2. Load basic user info to prevent flickering
+                const storedUserInfo = sessionStorage.getItem('userInfo');
+                const storedAccessToken = sessionStorage.getItem('accessToken');
+
+                if (storedUserInfo) {
                     try {
                         setUser(JSON.parse(storedUserInfo));
-                    } catch (err) { }
+                    } catch (e) { console.warn('Parse user error', e); }
                 }
-            } else {
-                console.debug('[AuthContext] Initial refresh failed, forcing logout to clear state');
-                // Refresh failed - clear ALL stale session data to prevent loops
-                await logout();
+
+                // 3. Check if we have a valid token in storage
+                if (storedAccessToken) {
+                    try {
+                        const decoded = jwtDecode<DecodedToken>(storedAccessToken);
+                        const currentTime = Date.now() / 1000;
+
+                        // If token is valid (> 5 min remaining), use it
+                        if (decoded.exp - currentTime > 300) {
+                            setAccessToken(storedAccessToken);
+                            apiClient.setTokens(storedAccessToken);
+                            setIsLoading(false);
+                            return;
+                        }
+                    } catch (e) {
+                        // Invalid token, proceed to refresh
+                    }
+                }
+
+                // 4. If we have evidence of a session (storedUserInfo) but no valid access token,
+                //    attempt to refresh using the HttpOnly cookie.
+                if (storedUserInfo || storedAccessToken) {
+                    console.debug('[AuthContext] Attempting initial token refresh...');
+                    const newToken = await refreshAccessToken();
+                    if (newToken) {
+                        // Refresh successful, user is authenticated
+                        // Fetch fresh profile in background
+                        apiClient.getMyProfile().then(profile => {
+                            if (profile) {
+                                const normalizedUser = {
+                                    ...profile,
+                                    fullName: profile.display_name || profile.username,
+                                    derivId: profile.deriv_id,
+                                    role: profile.role || (profile.is_admin ? 'ADMIN' : 'USER'),
+                                    is_admin: profile.is_admin || profile.role === 'admin'
+                                };
+                                setUser(normalizedUser);
+                                sessionStorage.setItem('userInfo', JSON.stringify(normalizedUser));
+                            }
+                        }).catch(console.error);
+                    } else {
+                        // Refresh failed, clear session
+                        console.debug('[AuthContext] Initial refresh failed, clearing session.');
+                        await logout();
+                    }
+                } else {
+                    // No session evidence
+                }
+
+            } catch (error) {
+                console.error('Auth initialization error:', error);
+            } finally {
+                // ALWAYS release the loading state at the end
+                setIsLoading(false);
             }
         };
-        tryRefresh();
-    }, [refreshAccessToken]);
 
+        if (window.location.pathname.includes('/callback') || isAuthenticating) {
+            // Let callback handler manage loading state
+            return;
+        }
+
+        initializeAuth();
+    }, []); // Run once on mount
     // Proactive Token Refresh Monitoring
     useEffect(() => {
         if (!accessToken) return;

@@ -107,14 +107,16 @@ class RealtimeSocketService {
         if (error.message === 'Authentication required' || error.message === 'Invalid token' || error.message.includes('jwt')) {
           console.warn('[RealtimeSocket] Auth failed:', error.message);
 
-          // ATTEMPT SILENT REFRESH
+          // ATTEMPT SILENT REFRESH (Passive Mode)
           try {
             console.log('[RealtimeSocket] Attempting silent token refresh...');
-            const success = await apiClient.refreshAccessToken();
+            const success = await apiClient.refreshAccessToken(); // Uses apiClient logic
+
             if (success) {
               const newTokens = TokenService.getBackendTokens();
               if (newTokens.accessToken) {
                 console.log('[RealtimeSocket] Refresh successful, reconnecting with new token');
+                // Update local socket auth immediately
                 this.socket.auth.token = newTokens.accessToken;
                 this.socket.connect();
                 return;
@@ -124,6 +126,8 @@ class RealtimeSocketService {
             console.error('[RealtimeSocket] Refresh attempt failed:', refreshErr);
           }
 
+          // If refresh failed, we just stay disconnected or let the AuthContext handle logout eventually.
+          // We DO NOT force a logout here to prevent race conditions with the main AuthContext loop.
           this.socket.disconnect();
           this.connected = false;
         } else {

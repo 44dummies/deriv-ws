@@ -230,12 +230,35 @@ const AdminDashboard: React.FC = () => {
         realtimeSocket.emit('subscribe_market', 'R_100');
         realtimeSocket.emit('joinAdminRoom');
 
+        // Throttled Signal Updates to prevent render spam
+        const signalQueueStr = sessionStorage.getItem('signalQueue') || '{}'; // Persist slightly or just use Ref
+        // Actually simple ref is better
+        let pendingSignals: Record<string, any> = {};
+        let updateTimer: NodeJS.Timeout | null = null;
+
+        const flushSignals = () => {
+            if (Object.keys(pendingSignals).length === 0) return;
+
+            setBotStatus(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    signalStats: { ...prev.signalStats, ...pendingSignals }
+                };
+            });
+            pendingSignals = {};
+            updateTimer = null;
+        };
+
         const removeSignalListener = realtimeSocket.on('signal_update', (data) => {
-            if (botStatus?.isRunning) {
-                setBotStatus(prev => {
-                    if (!prev) return prev;
-                    return { ...prev, signalStats: { ...prev.signalStats, [data.market]: data } };
-                });
+            if (botStatus?.isRunning) { // Checking ref/state here might be stale, but we use it for gating
+                // Queue update
+                pendingSignals[data.market] = data;
+
+                // Debounce/Throttle: Flush max every 200ms
+                if (!updateTimer) {
+                    updateTimer = setTimeout(flushSignals, 200);
+                }
             }
         });
 
@@ -245,13 +268,14 @@ const AdminDashboard: React.FC = () => {
         return () => {
             // clearInterval(interval);
             removeSignalListener();
+            if (updateTimer) clearTimeout(updateTimer);
         };
     }, [botStatus?.isRunning, socketConnected]); // Removed loadDashboard to prevent loops
 
     // Socket listeners for real-time updates
     useEffect(() => {
         const socket = realtimeSocket.socket;
-        if (!socket || !sseConnected) return;
+        if (!socket) return; // Removed sseConnected check
 
         console.log('[Dashboard] Listening for real-time updates...');
 
