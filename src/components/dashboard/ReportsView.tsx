@@ -35,6 +35,12 @@ export const ReportsView: React.FC = () => {
             try {
                 if (!user) return;
 
+                if (!supabase) {
+                    console.warn('Supabase client not initialized');
+                    setTrades([]);
+                    return;
+                }
+
                 const { data, error } = await supabase
                     .from('trades')
                     .select('*')

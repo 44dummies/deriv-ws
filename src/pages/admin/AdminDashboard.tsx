@@ -17,7 +17,6 @@ import {
 } from 'recharts';
 import * as tradingApi from '../../trading/tradingApi';
 import { realtimeSocket } from '../../services/realtimeSocket';
-// import { useAdminEventStream } from '../../hooks/useEventStream';
 
 // Glass UI Components
 import { GlassCard } from '../../components/ui/glass/GlassCard';
