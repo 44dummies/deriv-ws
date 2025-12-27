@@ -102,8 +102,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Login: store access token in memory and sync via apiClient
     const login = useCallback((token: string, userData: AuthState['user']) => {
-        // Clear refresh token fallback on login to prevent stale token usage
-        apiClient.setTokens(token, '');
+        // Update tokens in apiClient without clearing refresh token fallback
+        // The apiClient will already have the correct refresh token if it was just set by loginWithDeriv
+        apiClient.setTokens(token, sessionStorage.getItem('refreshToken') || undefined);
         setAccessToken(token);
         setIsLoading(false); // OPTIMISTIC: Unlock UI immediately
         // Normalize user data to match interface

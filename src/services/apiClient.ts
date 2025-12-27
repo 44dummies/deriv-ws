@@ -160,6 +160,10 @@ class ApiClient {
             });
 
             if (response.status === 401) {
+                // Read error message from body for better logging
+                const errorData = await response.clone().json().catch(() => ({}));
+                console.warn(`[ApiClient] 401 Unauthorized for ${url}:`, errorData.error || 'No detail');
+
                 // Try to refresh using HttpOnly cookie
                 const refreshed = await this.refreshAccessToken();
                 if (refreshed) {
