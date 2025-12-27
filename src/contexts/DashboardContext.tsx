@@ -280,10 +280,11 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setStats(statsData);
 
         } catch (error) {
-            console.error('Initialization failed:', error);
+            console.error('Dashboard feed initialization failed:', error);
             isInitialized.current = false;
-            TokenService.clearTokens();
-            navigate('/');
+            setDerivWsConnected(false);
+            // DO NOT clear tokens or navigate away. Just mark feed as offline.
+            setIsLoading(false);
         }
     }, [navigate]);
 

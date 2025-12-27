@@ -133,7 +133,7 @@ export const TopBar: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="text-xs text-gray-500 uppercase font-mono mb-1">Deriv ID</p>
-                                    <p className="text-brand-red font-mono">{userInfo?.loginid || userInfo?.id || 'N/A'}</p>
+                                    <p className="text-brand-red font-mono">{user?.derivId || userInfo?.loginid || 'N/A'}</p>
                                 </div>
                                 <div className="pt-2">
                                     <button
