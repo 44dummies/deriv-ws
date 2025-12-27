@@ -33,6 +33,7 @@ interface AuthState {
         role?: string;
     } | null;
     isAuthenticated: boolean;
+    isAuthenticating: boolean; // True during callback/login process
 }
 
 interface AuthContextType extends AuthState {
@@ -41,6 +42,7 @@ interface AuthContextType extends AuthState {
     login: (accessToken: string, user: AuthState['user']) => void;
     logout: () => Promise<void>;
     refreshAccessToken: () => Promise<string | null>;
+    setIsAuthenticating: (isAuthenticating: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,6 +54,7 @@ const API_BASE = CONFIG.API_URL;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<AuthState['user']>(null);
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
 
     const isAuthenticated = !!accessToken;
 
@@ -135,8 +138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const tryRefresh = async () => {
             // Guard: Skip refresh on OAuth callback (Callback will handle auth)
-            if (window.location.pathname.includes('/callback')) {
-                console.debug('[AuthContext] On callback page, skipping auto-refresh');
+            if (window.location.pathname.includes('/callback') || isAuthenticating) {
+                console.debug('[AuthContext] On callback page or authenticating, skipping auto-refresh');
                 return;
             }
 
@@ -241,7 +244,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser,
                 login,
                 logout,
-                refreshAccessToken
+                refreshAccessToken,
+                isAuthenticating,
+                setIsAuthenticating
             }}
         >
             {children}

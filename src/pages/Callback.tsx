@@ -9,7 +9,7 @@ import { Logo } from '../components/ui/Logo';
 
 const Callback = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, setIsAuthenticating } = useAuth();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('Parsing callback data...');
   const hasExecuted = useRef(false); // CRITICAL: Prevent duplicate execution
@@ -20,10 +20,13 @@ const Callback = () => {
       console.debug('[Callback] Already executed, skipping duplicate run');
       return;
     }
-    hasExecuted.current = true;
+    hasExecuted.current = true; // Set IMMEDIATELY to prevent race conditions
+
+    let isMounted = true; // Cleanup guard
 
     const handleCallback = async () => {
       try {
+        setIsAuthenticating(true); // Pause auto-refresh in background
         const urlParams = new URLSearchParams(window.location.search);
 
         if (urlParams.has('error')) {
@@ -61,10 +64,12 @@ const Callback = () => {
           currency: primaryAccount.currency
         });
 
+        if (!isMounted) return;
         setStatus('Connecting to Deriv...');
 
         await websocketService.connect();
 
+        if (!isMounted) return;
         setStatus('Authorizing your account...');
         const authResponse = await websocketService.authorize(primaryAccount.token);
 
@@ -86,6 +91,7 @@ const Callback = () => {
           });
         }
 
+        if (!isMounted) return;
         setStatus('Checking user permissions...');
 
         const derivId = authResponse.authorize?.loginid;
@@ -143,6 +149,7 @@ const Callback = () => {
             }));
 
             // Route based on role
+            if (!isMounted) return;
             if (isAdminUser) {
               setStatus('Welcome Admin! Redirecting to dashboard...');
               setTimeout(() => navigate('/admin/dashboard'), 500);
@@ -172,7 +179,12 @@ const Callback = () => {
     };
 
     handleCallback();
-  }, [navigate]);
+
+    return () => {
+      isMounted = false; // Cleanup flag
+      setIsAuthenticating(false); // Resume auto-refresh
+    };
+  }, [navigate, login]); // Added login to dependencies
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
