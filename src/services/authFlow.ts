@@ -104,7 +104,18 @@ class AuthFlowService {
             }
 
             // 4. Update Context (Optimistic)
-            loginContextFn(loginResult.accessToken, loginResult.user);
+            // ROBUSTNESS: Force-merge the derivId from params to ensure it's never N/A
+            // even if backend response is minimal or delayed.
+            const robustUser = {
+                ...(loginResult.user || {}),
+                derivId: primaryAccount.account, // Source of Truth from URL
+                loginid: primaryAccount.account
+            };
+
+            // Explicitly set derivId in storage again to be safe
+            sessionStorage.setItem('derivId', primaryAccount.account || '');
+
+            loginContextFn(loginResult.accessToken, robustUser);
 
             this.hasCompleted = true;
             this.isProcessing = false;
