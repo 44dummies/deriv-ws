@@ -4,10 +4,14 @@ const isLocal = typeof window !== 'undefined' && (
     window.location.hostname === '0.0.0.0'
 );
 
-export const APP_ID: string = '114042'; // Hardcoded for production reliability
-export const REDIRECT_URL: string = isLocal ? `${window.location.origin}/callback` : 'https://www.tradermind.site/callback';
-export const WS_URL: string = 'wss://ws.derivws.com/websockets/v3';
-export const SERVER_URL: string = isLocal ? 'http://localhost:3001' : 'https://tradermind-server.up.railway.app';
+// Use Vite's import.meta.env for reliable environment variable access
+// Fallback to production URLs only if env vars are missing (Safety Net)
+
+export const APP_ID: string = import.meta.env.VITE_DERIV_APP_ID || '114042';
+export const REDIRECT_URL: string = import.meta.env.VITE_REDIRECT_URL || (isLocal ? `${window.location.origin}/callback` : 'https://www.tradermind.site/callback');
+export const WS_URL: string = import.meta.env.VITE_DERIV_WS_URL || 'wss://ws.derivws.com/websockets/v3';
+// Explicitly prefer VITE_SERVER_URL -> then try REACT_APP_SERVER_URL (legacy) -> finally fallback
+export const SERVER_URL: string = import.meta.env.VITE_SERVER_URL || import.meta.env.REACT_APP_SERVER_URL || (isLocal ? 'http://localhost:3001' : 'https://tradermind-server.up.railway.app');
 export const OAUTH_URL: string = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
 
 interface Config {
