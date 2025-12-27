@@ -95,13 +95,25 @@ const AdminDashboard: React.FC = () => {
 
     const loadDashboard = useCallback(async (isInitial = false) => {
         try {
-            // Fetch system state (fast Supabase calls)
-            const [sessionsRes, botRes, statsRes, timelineRes] = await Promise.all([
+            // Fetch system state (fast Supabase calls) - resilient loading
+            const results = await Promise.allSettled([
                 tradingApi.getSessions({ limit: 5 }),
                 tradingApi.getBotStatus(),
                 tradingApi.getStats(),
                 tradingApi.getTimeline({ interval: 'hour' })
             ]);
+
+            const sessionsRes = results[0].status === 'fulfilled' ? results[0].value : null;
+            const botRes = results[1].status === 'fulfilled' ? results[1].value : null;
+            const statsRes = results[2].status === 'fulfilled' ? results[2].value : null;
+            const timelineRes = results[3].status === 'fulfilled' ? results[3].value : null;
+
+            // Log failures but don't crash
+            results.forEach((res, index) => {
+                if (res.status === 'rejected') {
+                    console.warn(`[Dashboard] API call ${index} failed:`, res.reason);
+                }
+            });
 
             setSessions(sessionsRes?.data || sessionsRes?.sessions || []);
             setBotStatus(botRes?.data || { isRunning: false });
@@ -117,14 +129,17 @@ const AdminDashboard: React.FC = () => {
                 setTimelineData(formattedTimeline);
             }
 
-        } catch (error: any) {
-            console.error('Failed to load dashboard:', error);
-            if (error.status === 403 || error.response?.status === 403) {
-                setError('You do not have administrative privileges to view this dashboard.');
-                toast.error('Admin access required.');
-            } else {
-                setError(error.message || 'Failed to connect to the server. Please check your connection.');
+            // Clear general error if at least some data loaded
+            if (sessionsRes || botRes) {
+                setError(null);
             }
+
+        } catch (error: any) {
+            console.error('Failed to load dashboard (critical):', error);
+            // Only show blocking error if EVERYTHING failed
+            setError(error.message || 'Failed to connect to the server.');
+        } finally {
+            setLoading(false);
         }
     }, []);
 
