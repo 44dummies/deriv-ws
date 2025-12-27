@@ -255,7 +255,6 @@ const AdminDashboard: React.FC = () => {
         const handleBalanceUpdate = (data: any) => {
             console.log('[Dashboard] Balance Update:', data);
             setBalances(prev => {
-                // Ensure we handle both 'demo' and 'virtual' as demo accounts
                 const isReal = data.accountType === 'real';
                 const isDemo = data.accountType === 'demo' || data.accountType === 'virtual';
 
@@ -266,20 +265,53 @@ const AdminDashboard: React.FC = () => {
         };
 
         const handleBotStatus = (data: any) => {
-            // console.log('[Dashboard] Bot Status Update:', data); // Too noisy
             if (data && typeof data.isRunning === 'boolean') {
                 setBotStatus(prev => ({ ...prev, isRunning: data.isRunning }));
             }
         };
 
+        const handleTradeUpdate = (data: any) => {
+            console.log('[Dashboard] Real-time Trade Update:', data);
+            // Instant feedback: Update stats locally
+            if (data.status === 'won' || data.status === 'lost') {
+                const profit = parseFloat(data.profit_loss || 0);
+                const isWin = profit > 0;
+
+                toast(isWin ? `Trade Won: +$${profit.toFixed(2)}` : `Trade Lost: -$${Math.abs(profit).toFixed(2)}`, {
+                    icon: isWin ? '🎉' : '📉'
+                });
+
+                // Optimistically update stats
+                setStats(prev => {
+                    if (!prev) return prev;
+                    const newTotalTrades = (prev.totalTrades || 0) + 1;
+                    const newTotalProfit = (prev.totalProfit || 0) + profit;
+                    // Note: Win rate calculation requires knowing previous win count, which is tricky.
+                    // For now, simpler to just trigger a soft reload of dashboard data
+                    return { ...prev, totalTrades: newTotalTrades, totalProfit: newTotalProfit };
+                });
+
+                // Reload full dashboard data to ensure complete consistency
+                loadDashboard(false);
+            }
+        };
+
+        const handleSessionUpdate = () => {
+            loadDashboard(false);
+        };
+
         socket.on('balance_update', handleBalanceUpdate);
-        socket.on('admin_balance_update', handleBalanceUpdate); // Listen to both just in case
+        socket.on('admin_balance_update', handleBalanceUpdate);
         socket.on('bot_status', handleBotStatus);
+        socket.on('trade_update', handleTradeUpdate); // NEW: Listen for trades
+        socket.on('session_update', handleSessionUpdate); // NEW: Listen for session changes
 
         return () => {
             socket.off('balance_update', handleBalanceUpdate);
             socket.off('admin_balance_update', handleBalanceUpdate);
             socket.off('bot_status', handleBotStatus);
+            socket.off('trade_update', handleTradeUpdate);
+            socket.off('session_update', handleSessionUpdate);
         };
     }, [sseConnected]);
 
