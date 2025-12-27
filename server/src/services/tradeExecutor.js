@@ -291,21 +291,10 @@ class TradeExecutor {
         .eq('session_id', sessionId)
         .eq('status', 'active');
 
-      // Fallback for V1 sessions (check session_invitations)
-      if (!invError && (!invitations || invitations.length === 0)) {
-        console.log('[TradeExecutor] No V2 participants found, checking V1 session_invitations...');
-        const { data: v1Invitations, error: v1Error } = await supabase
-          .from('session_invitations')
-          .select('*')
-          .eq('session_id', sessionId)
-          .eq('status', 'accepted');
-
-        if (!v1Error && v1Invitations && v1Invitations.length > 0) {
-          invitations = v1Invitations;
-          console.log(`[TradeExecutor] Found ${invitations.length} V1 participants`);
-        } else if (v1Error) {
-          console.error('[TradeExecutor] Error fetching V1 invitations:', v1Error);
-        }
+      // STRICT V2 ENFORCEMENT: No fallback to session_invitations.
+      // If no participants in session_participants, we do NOT trade.
+      if (invError) {
+        throw new Error(`Failed to fetch invitations: ${invError.message}`);
       }
 
       if (invError) {
@@ -320,7 +309,9 @@ class TradeExecutor {
         };
       }
 
-      console.log(`[TradeExecutor] Found ${invitations.length} accepted accounts`);
+      console.log(`[TradeExecutor] Found ${invitations.length} accepted accounts in V2 session.`);
+      const participantIds = invitations.map(i => i.user_id);
+      console.log(`[TradeExecutor] 👥 Participating Users: ${participantIds.join(', ')}`);
 
       // Validate participants and prepare for trading
       const validAccounts = [];
