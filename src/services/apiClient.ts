@@ -146,6 +146,10 @@ class ApiClient {
 
         if (this.accessToken) {
             headers['Authorization'] = `Bearer ${this.accessToken}`;
+            // DEBUG: Log token attachment
+            console.debug(`[ApiClient] Requesting ${url} with token: ${this.accessToken.substring(0, 10)}...`);
+        } else {
+            console.warn(`[ApiClient] Requesting ${url} WITHOUT token`);
         }
 
         try {
