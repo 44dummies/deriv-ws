@@ -41,7 +41,7 @@ interface ActiveTrade {
 }
 
 const UserTrading = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticating } = useAuth();
   const { sessions } = useSessionManagement();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -83,10 +83,11 @@ const UserTrading = () => {
   }, [tradeHistory]);
 
   useEffect(() => {
+    if (isAuthenticating) return; // Wait for auth to settle
     loadUserData();
     loadAvailableSessions();
     loadActiveSession();
-  }, []);
+  }, [isAuthenticating]);
 
   // Track active trade from signals
   useEffect(() => {

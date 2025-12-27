@@ -42,7 +42,9 @@ interface AuthContextType extends AuthState {
     login: (accessToken: string, user: AuthState['user']) => void;
     logout: () => Promise<void>;
     refreshAccessToken: () => Promise<string | null>;
-    setIsAuthenticating: (isAuthenticating: boolean) => void;
+    startCallbackAuth: () => void;
+    finishCallbackAuth: () => void;
+    failAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -234,19 +236,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => clearInterval(intervalId);
     }, [accessToken, refreshAccessToken]);
 
+    // Explicit auth flow control
+    const startCallbackAuth = useCallback(() => setIsAuthenticating(true), []);
+    const finishCallbackAuth = useCallback(() => setIsAuthenticating(false), []);
+    const failAuth = useCallback(() => {
+        setAccessToken(null);
+        setUser(null);
+        setIsAuthenticating(false);
+    }, []);
+
     return (
         <AuthContext.Provider
             value={{
                 accessToken,
                 user,
                 isAuthenticated,
+                isAuthenticating, // Expose state
                 setAccessToken,
                 setUser,
                 login,
                 logout,
                 refreshAccessToken,
-                isAuthenticating,
-                setIsAuthenticating
+                startCallbackAuth,
+                finishCallbackAuth,
+                failAuth
             }}
         >
             {children}
