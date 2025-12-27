@@ -19,6 +19,12 @@ const UserRoute: React.FC<UserRouteProps> = ({ children }) => {
     const location = useLocation();
     const { isAuthenticated, isLoading } = useAuth();
 
+    // OPTIMIZATION: If already authenticated, show content immediately.
+    // This bypasses the spinner delta during login->redirect flow.
+    if (isAuthenticated) {
+        return <>{children}</>;
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-900">

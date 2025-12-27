@@ -105,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Clear refresh token fallback on login to prevent stale token usage
         apiClient.setTokens(token, '');
         setAccessToken(token);
+        setIsLoading(false); // OPTIMISTIC: Unlock UI immediately
         // Normalize user data to match interface
         const normalizedUser = userData ? {
             ...userData,

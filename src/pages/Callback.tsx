@@ -164,17 +164,13 @@ const Callback = () => {
 
             // Route based on role
             if (!isMounted) return;
-            // Route based on role
-            if (!isMounted) return;
-
-            finishCallbackAuth(); // Success! Resume normal operations
 
             finishCallbackAuth(); // Success! Resume normal operations
 
             // Modified per user request: ALWAYS redirect to user dashboard initially
             // Admin checks happen only when accessing /admin routes via AdminProtected
-            setStatus('Login successful! Redirecting...');
-            setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
+            setStatus('Login successful!');
+            navigate('/user/dashboard', { replace: true });
             return;
 
           } catch (apiErr: any) {
