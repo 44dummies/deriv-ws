@@ -5,6 +5,7 @@
 
 import { io } from 'socket.io-client';
 import { TokenService } from './tokenService';
+import apiClient from './apiClient';
 
 import { SERVER_URL } from '../config';
 
@@ -20,6 +21,9 @@ class RealtimeSocketService {
   connectionCallbacks: Set<Function>;
   reconnectAttempts: number;
   maxReconnectAttempts: number;
+  activeRooms: Set<string>;
+  activeMarkets: Set<string>;
+  isAdmin: boolean;
 
   constructor() {
     this.socket = null;
@@ -31,6 +35,9 @@ class RealtimeSocketService {
     this.connectionCallbacks = new Set();
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.activeRooms = new Set();
+    this.activeMarkets = new Set();
+    this.isAdmin = false;
   }
 
   /**
@@ -74,17 +81,51 @@ class RealtimeSocketService {
         console.log('🔌 Socket connected');
         this.connected = true;
         this.reconnectAttempts = 0;
+
+        // Re-apply rooms and subscriptions
+        this.activeRooms.forEach(roomId => {
+          console.log(`[RealtimeSocket] Re-joining room: ${roomId}`);
+          this.socket.emit('joinRoom', { roomId });
+        });
+
+        this.activeMarkets.forEach(market => {
+          console.log(`[RealtimeSocket] Re-subscribing to market: ${market}`);
+          this.socket.emit('subscribe_market', market);
+        });
+
+        if (this.isAdmin) {
+          console.log('[RealtimeSocket] Re-joining admin room');
+          this.socket.emit('joinAdminRoom');
+        }
+
         this.notifyConnectionChange(true);
         resolve();
       });
 
-      this.socket.on('connect_error', (error) => {
+      this.socket.on('connect_error', async (error) => {
         // Only log critical auth errors, suppress general connection noise
         if (error.message === 'Authentication required' || error.message === 'Invalid token' || error.message.includes('jwt')) {
           console.warn('[RealtimeSocket] Auth failed:', error.message);
+
+          // ATTEMPT SILENT REFRESH
+          try {
+            console.log('[RealtimeSocket] Attempting silent token refresh...');
+            const success = await apiClient.refreshAccessToken();
+            if (success) {
+              const newTokens = TokenService.getBackendTokens();
+              if (newTokens.accessToken) {
+                console.log('[RealtimeSocket] Refresh successful, reconnecting with new token');
+                this.socket.auth.token = newTokens.accessToken;
+                this.socket.connect();
+                return;
+              }
+            }
+          } catch (refreshErr) {
+            console.error('[RealtimeSocket] Refresh attempt failed:', refreshErr);
+          }
+
           this.socket.disconnect();
           this.connected = false;
-          // Let AuthContext handle logout via 401s, don't force redirect here to avoid race conditions
         } else {
           // Debounce generic connection errors (e.g. 502s) to avoid spam
           if (this.reconnectAttempts % 5 === 0) {
@@ -193,7 +234,17 @@ class RealtimeSocketService {
    */
   joinRoom(roomId) {
     if (!this.socket) return;
+    this.activeRooms.add(roomId);
     this.socket.emit('joinRoom', { roomId });
+  }
+
+  /**
+   * Special: Join Admin Room
+   */
+  joinAdminRoom() {
+    if (!this.socket) return;
+    this.isAdmin = true;
+    this.socket.emit('joinAdminRoom');
   }
 
   /**
@@ -201,6 +252,7 @@ class RealtimeSocketService {
    */
   leaveRoom(roomId) {
     if (!this.socket) return;
+    this.activeRooms.delete(roomId);
     this.socket.emit('leaveRoom', { roomId });
   }
 
@@ -333,10 +385,34 @@ class RealtimeSocketService {
   }
 
   /**
+   * Subscribe to market ticks
+   */
+  subscribeMarket(market: string) {
+    if (!this.socket) return;
+    this.activeMarkets.add(market);
+    this.socket.emit('subscribe_market', market);
+  }
+
+  /**
+   * Unsubscribe from market ticks
+   */
+  unsubscribeMarket(market: string) {
+    if (!this.socket) return;
+    this.activeMarkets.delete(market);
+    this.socket.emit('unsubscribe_market', market);
+  }
+
+  /**
    * Emit event to server (Socket.IO emit)
    */
   emit(event: string, data?: any) {
     if (this.socket?.connected) {
+      if (event === 'subscribe_market' && typeof data === 'string') {
+        this.activeMarkets.add(data);
+      }
+      if (event === 'joinAdminRoom') {
+        this.isAdmin = true;
+      }
       this.socket.emit(event, data);
     }
   }

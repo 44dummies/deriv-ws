@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import * as tradingApi from '../../trading/tradingApi';
 import { realtimeSocket } from '../../services/realtimeSocket';
-import { useAdminEventStream } from '../../hooks/useEventStream';
+// import { useAdminEventStream } from '../../hooks/useEventStream';
 
 // Glass UI Components
 import { GlassCard } from '../../components/ui/glass/GlassCard';
@@ -76,7 +76,8 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [botStatus?.signalStats]);
 
-    // SSE for real-time updates
+    // SSE for real-time updates - DEPRECATED in favor of Socket.IO
+    /*
     const { events: sseEvents, isConnected: sseConnected } = useAdminEventStream({
         onEvent: (event) => {
             if (event.type === 'trade.executed') {
@@ -92,6 +93,8 @@ const AdminDashboard: React.FC = () => {
             }
         }
     });
+    */
+    const socketConnected = realtimeSocket.isConnected();
 
     const loadDashboard = useCallback(async (isInitial = false) => {
         try {
@@ -236,14 +239,14 @@ const AdminDashboard: React.FC = () => {
             }
         });
 
-        // Poll every 30s (or 60s if SSE connected) for non-realtime data sync
-        const interval = setInterval(() => loadDashboard(false), sseConnected ? 60000 : 30000);
+        // OPTIMIZATION: Removed periodic polling. We now rely on enriched Socket.IO events.
+        // const interval = setInterval(() => loadDashboard(false), socketConnected ? 60000 : 30000);
 
         return () => {
-            clearInterval(interval);
+            // clearInterval(interval);
             removeSignalListener();
         };
-    }, [botStatus?.isRunning, sseConnected]); // Removed loadDashboard to prevent loops
+    }, [botStatus?.isRunning, socketConnected]); // Removed loadDashboard to prevent loops
 
     // Socket listeners for real-time updates
     useEffect(() => {
@@ -272,48 +275,81 @@ const AdminDashboard: React.FC = () => {
 
         const handleTradeUpdate = (data: any) => {
             console.log('[Dashboard] Real-time Trade Update:', data);
-            // Instant feedback: Update stats locally
-            if (data.status === 'won' || data.status === 'lost') {
-                const profit = parseFloat(data.profit_loss || 0);
-                const isWin = profit > 0;
+
+            // Instant feedback for admin
+            if (data.type === 'close' || data.result) {
+                const profit = parseFloat(data.profit || data.profit_loss || 0);
+                const isWin = data.result === 'win' || profit > 0;
 
                 toast(isWin ? `Trade Won: +$${profit.toFixed(2)}` : `Trade Lost: -$${Math.abs(profit).toFixed(2)}`, {
                     icon: isWin ? '🎉' : '📉'
                 });
 
-                // Optimistically update stats
+                // Optimistically update global admin stats
                 setStats(prev => {
                     if (!prev) return prev;
                     const newTotalTrades = (prev.totalTrades || 0) + 1;
                     const newTotalProfit = (prev.totalProfit || 0) + profit;
-                    // Note: Win rate calculation requires knowing previous win count, which is tricky.
-                    // For now, simpler to just trigger a soft reload of dashboard data
+                    // Win rate is harder to update precisely without knowing counts, 
+                    // but we can estimate or wait for the next stats_update
                     return { ...prev, totalTrades: newTotalTrades, totalProfit: newTotalProfit };
                 });
-
-                // Reload full dashboard data to ensure complete consistency
-                loadDashboard(false);
             }
         };
 
-        const handleSessionUpdate = () => {
-            loadDashboard(false);
+        const handleStatsUpdate = (data: any) => {
+            console.log('[Dashboard] Admin Stats Update:', data);
+            // This event comes from tradeExecutor.js:closeTrade
+            if (data.stats) {
+                setStats(prev => {
+                    if (!prev) return prev;
+                    // Note: This 'stats' from socket is session-specific.
+                    // For global admin stats, we might need a separate 'admin_stats_update' 
+                    // if we wanted to be 100% precise, but updating total profit/trades locally is a good start.
+                    return {
+                        ...prev,
+                        totalTrades: (prev.totalTrades || 0) + 1,
+                        totalProfit: (prev.totalProfit || 0) + (data.stats.last_trade_pnl || 0)
+                    };
+                });
+            }
+        };
+
+        const handleSessionUpdate = (data: any) => {
+            const session = data.session || data;
+            setSessions(prev => {
+                const index = prev.findIndex(s => s.id === session.id);
+                if (index !== -1) {
+                    const newSessions = [...prev];
+                    newSessions[index] = { ...newSessions[index], ...session };
+                    return newSessions;
+                }
+                // If it's a new running session, add it
+                if (['running', 'active', 'pending'].includes(session.status)) {
+                    return [session, ...prev].slice(0, 10);
+                }
+                return prev;
+            });
         };
 
         socket.on('balance_update', handleBalanceUpdate);
         socket.on('admin_balance_update', handleBalanceUpdate);
         socket.on('bot_status', handleBotStatus);
-        socket.on('trade_update', handleTradeUpdate); // NEW: Listen for trades
-        socket.on('session_update', handleSessionUpdate); // NEW: Listen for session changes
+        socket.on('trade_update', handleTradeUpdate);
+        socket.on('stats_update', handleStatsUpdate);
+        socket.on('session_update', handleSessionUpdate);
+        socket.on('session_status', handleSessionUpdate);
 
         return () => {
             socket.off('balance_update', handleBalanceUpdate);
             socket.off('admin_balance_update', handleBalanceUpdate);
             socket.off('bot_status', handleBotStatus);
             socket.off('trade_update', handleTradeUpdate);
+            socket.off('stats_update', handleStatsUpdate);
             socket.off('session_update', handleSessionUpdate);
+            socket.off('session_status', handleSessionUpdate);
         };
-    }, [sseConnected]);
+    }, [socketConnected]);
 
     const handleBotStart = async () => {
         const activeSession = sessions.find(s => s.status === 'running' || s.status === 'pending' || s.status === 'active');
@@ -428,7 +464,7 @@ const AdminDashboard: React.FC = () => {
                                         {botStatus?.isRunning ? 'RUNNING' : 'STOPPED'}
                                     </span>
                                     <span className="text-slate-600">|</span>
-                                    {sseConnected ? (
+                                    {socketConnected ? (
                                         <span className="flex items-center gap-1 text-emerald-400"><Wifi size={12} /> Live</span>
                                     ) : (
                                         <span className="flex items-center gap-1 text-amber-400"><WifiOff size={12} /> Polling</span>

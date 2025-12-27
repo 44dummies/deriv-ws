@@ -87,12 +87,39 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             }
         };
 
+        const handleStatsUpdate = (data: any) => {
+            console.log('[Dashboard] Stats Update:', data);
+            setStats((prev: any) => {
+                if (!prev) return data.stats; // Initial stats if none exist
+
+                // If the update is session-specific, we incorporate it into the global performance view
+                // This assumes the frontend stats object structure matches { todayPnL, winRate, totalTrades, totalProfit }
+                const isNewWin = data.stats.last_trade_result === 'win';
+                const pnlIncrement = Number(data.stats.last_trade_pnl || 0);
+
+                const newTotalTrades = (prev.totalTrades || 0) + 1;
+                const newWins = (prev.wins || 0) + (isNewWin ? 1 : 0);
+
+                return {
+                    ...prev,
+                    todayPnL: (prev.todayPnL || 0) + pnlIncrement,
+                    totalProfit: (prev.totalProfit || 0) + pnlIncrement,
+                    totalTrades: newTotalTrades,
+                    winRate: newTotalTrades > 0 ? (newWins / newTotalTrades) * 100 : prev.winRate,
+                    lastTradeTime: new Date().toISOString()
+                };
+            });
+        };
+
         const handleTradeUpdate = (data: any) => {
+            console.log('[Dashboard] Trade Update:', data);
             if (data.session) {
                 handleSessionUpdate(data.session);
             }
-            // Refetch stats on trade update
-            fetchStats();
+
+            // OPTIMIZATION: We no longer call fetchStats() here.
+            // The tradeExecutor now emits 'stats_update' which handleStatsUpdate will catch.
+            // This eliminates a redundant REST call on every trade.
         };
 
         const handleBalanceUpdate = (data: any) => {
@@ -114,6 +141,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         realtimeSocket.on('session_update', handleSessionUpdate);
         realtimeSocket.on('session_status', handleSessionUpdate);
         realtimeSocket.on('trade_update', handleTradeUpdate);
+        realtimeSocket.on('stats_update', handleStatsUpdate);
         realtimeSocket.on('balance_update', handleBalanceUpdate);
         realtimeSocket.on('admin_balance_update', handleBalanceUpdate);
 
@@ -121,6 +149,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             realtimeSocket.off('session_update', handleSessionUpdate);
             realtimeSocket.off('session_status', handleSessionUpdate);
             realtimeSocket.off('trade_update', handleTradeUpdate);
+            realtimeSocket.off('stats_update', handleStatsUpdate);
             realtimeSocket.off('balance_update', handleBalanceUpdate);
             realtimeSocket.off('admin_balance_update', handleBalanceUpdate);
         };
