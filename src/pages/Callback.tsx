@@ -164,37 +164,38 @@ const Callback = () => {
                 setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
               }
               return; // CRITICAL: Exit here to prevent duplicate navigation
-
-            } catch (apiErr: any) {
-              console.error('[Callback] Backend auth failed:', apiErr);
-              failAuth();
-              setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
-              // Do NOT redirect if backend auth fails, so user sees the error
-              return;
             }
+
+          } catch (apiErr: any) {
+            console.error('[Callback] Backend auth failed:', apiErr);
+            failAuth();
+            setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
+            // Do NOT redirect if backend auth fails, so user sees the error
+            return;
           }
+        }
 
         // Fallback: No derivId - redirect to login
         console.warn('[Callback] No derivId found, redirecting to login');
-          failAuth();
-          setStatus('No account found. Redirecting...');
-          setTimeout(() => navigate('/'), 3000);
-        } catch (err: any) {
-          console.error('Callback error:', err);
-          failAuth();
-          setError(err.message || 'An error occurred during authentication');
-          setTimeout(() => navigate('/'), 3000);
-        }
-      };
+        failAuth();
+        setStatus('No account found. Redirecting...');
+        setTimeout(() => navigate('/'), 3000);
+      } catch (err: any) {
+        console.error('Callback error:', err);
+        failAuth();
+        setError(err.message || 'An error occurred during authentication');
+        setTimeout(() => navigate('/'), 3000);
+      }
+    };
 
-      handleCallback();
+    handleCallback();
 
-      return () => {
-        isMounted = false; // Cleanup flag
-        // Do NOT call finishCallbackAuth() here - let success/failure handlers manage state
-        // This prevents race conditions where unmounting (due to navigation) prematurely re-enables background refresh
-      };
-    }, [navigate, login]); // Added login to dependencies
+    return () => {
+      isMounted = false; // Cleanup flag
+      // Do NOT call finishCallbackAuth() here - let success/failure handlers manage state
+      // This prevents race conditions where unmounting (due to navigation) prematurely re-enables background refresh
+    };
+  }, [navigate, login]); // Added login to dependencies
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
