@@ -139,6 +139,18 @@ pm2 logs tradermind-server
 - **Database**: Supabase PostgreSQL
 - **DNS**: Cloudflare
 
+## Git Workflow
+
+To ensure both the frontend and backend repositories are updated correctly, use the following command instead of `git push`:
+
+```bash
+npm run push:all
+```
+
+This will automatically:
+1.  Push the entire monorepo to `deriv-ws` (Origin).
+2.  Push the `server/` directory subtree to `tradermind-server` (Backend).
+
 ## Trading Bot System
 
 See [TRADING_BOT_ARCHITECTURE.md](./TRADING_BOT_ARCHITECTURE.md) for detailed documentation on:
