@@ -84,14 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 // API Client handles token persistence/recovery internally.
                 // We ask it if it has a valid session.
-                const hasSession = apiClient.isAuthenticated();
-                if (hasSession) {
-                    const token = apiClient.getToken();
-                    if (token) {
-                        setAccessToken(token);
-                        // If we have a token but no user, we might want to fetch /me here?
-                        // For now, let's rely on storedUser or lazy fetch.
-                    }
+                const { accessToken: loadedToken } = apiClient.loadTokens();
+                if (loadedToken) {
+                    setAccessToken(loadedToken);
+                    // If we have a token but no user, we might want to fetch /me here?
+                    // For now, let's rely on storedUser or lazy fetch.
                 }
             } catch (error) {
                 console.error('Auth hydration failed:', error);
