@@ -79,13 +79,16 @@ const Callback = () => {
         const authResponse = await websocketService.authorize(primaryAccount.token);
 
         if (authResponse.error) {
-          console.error('Authorization failed:', authResponse.error);
+          console.error('[Callback] Deriv Authorization failed:', authResponse.error);
           failAuth();
           setError(authResponse.error.message || 'Authorization failed');
           TokenService.clearTokens();
-          setTimeout(() => navigate('/'), 3000);
+          // Remove auto-redirect to let user see error
+          // setTimeout(() => navigate('/'), 3000);
           return;
         }
+
+        console.log('[Callback] Deriv Auth Response:', JSON.stringify(authResponse, null, 2));
 
         if (authResponse.authorize) {
           TokenService.setAccount(authResponse.authorize);
@@ -183,15 +186,16 @@ const Callback = () => {
         }
 
         // Fallback: No derivId - redirect to login
-        console.warn('[Callback] No derivId found, redirecting to login');
+        console.warn('[Callback] No derivId found in response');
         failAuth();
-        setStatus('No account found. Redirecting...');
-        setTimeout(() => navigate('/'), 3000);
+        setStatus('No account found.'); // Keep status helpful
+        setError('Login failed: No Deriv ID returned. Please try again.');
+        // setTimeout(() => navigate('/'), 3000);
       } catch (err: any) {
         console.error('Callback error:', err);
         failAuth();
         setError(err.message || 'An error occurred during authentication');
-        setTimeout(() => navigate('/'), 3000);
+        // setTimeout(() => navigate('/'), 3000);
       }
     };
 
