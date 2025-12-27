@@ -7,20 +7,23 @@ import apiClient from '../services/apiClient';
 import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
 
+// Global lock to prevent double execution across remounts (Strict Mode / Fast Refresh)
+let callbackExecutionLock = false;
+
 const Callback = () => {
   const navigate = useNavigate();
   const { login, startCallbackAuth, finishCallbackAuth, failAuth } = useAuth();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('Parsing callback data...');
-  const hasExecuted = useRef(false); // CRITICAL: Prevent duplicate execution
+  // const hasExecuted = useRef(false); // Removed in favor of global lock
 
   useEffect(() => {
-    // Guard: Only run once per component mount
-    if (hasExecuted.current) {
-      console.debug('[Callback] Already executed, skipping duplicate run');
+    // Guard: Only run once per page load, absolutely.
+    if (callbackExecutionLock) {
+      console.debug('[Callback] Already executed (Global Lock), skipping duplicate run');
       return;
     }
-    hasExecuted.current = true; // Set IMMEDIATELY to prevent race conditions
+    callbackExecutionLock = true;
 
     let isMounted = true; // Cleanup guard
 
