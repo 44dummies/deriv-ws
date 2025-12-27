@@ -17,25 +17,9 @@ import { useAuth } from '../../contexts/AuthContext';
  */
 const UserRoute: React.FC<UserRouteProps> = ({ children }) => {
     const location = useLocation();
-    const { isAuthenticated, isAuthenticating } = useAuth();
-    // We need a specific "isLoading" state from context, but isAuthenticating might be for callback?
-    // Let's assume initialized state. 
-    // Actually, AuthContext doesn't expose "isLoading" properly yet. Use a workaround or rely on isAuthenticated + token presence.
-    // Better: Rely on the simple fact that if we have a token in memory, we are good.
-    // If we are "refreshing", isAuthenticated might be false briefly?
+    const { isAuthenticated, isLoading } = useAuth();
 
-    // CHANGE: The AuthContext should really expose an `isLoading` or `isInitialized` flag.
-    // For now, let's trust the context's isAuthenticated which is updated on mount.
-
-    // PROBLEM: AuthContext's `tryRefresh` is async. We need to know when it's DONE.
-    // I will add `loading` to AuthContext in the next step. For now, let's just switch to useAuth.
-
-    // Temporary Hack until I update AuthContext:
-    // If no token in context, but token in storage, wait.
-    const hasStorageToken = !!sessionStorage.getItem('accessToken');
-
-    if (!isAuthenticated && hasStorageToken) {
-        // Context hasn't picked it up yet/is refreshing
+    if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-900">
                 <LoadingSpinner />
@@ -43,7 +27,7 @@ const UserRoute: React.FC<UserRouteProps> = ({ children }) => {
         );
     }
 
-    if (!isAuthenticated && !hasStorageToken) {
+    if (!isAuthenticated) {
         return <Navigate to="/" state={{ from: location }} replace />;
     }
 

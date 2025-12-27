@@ -45,6 +45,7 @@ interface AuthContextType extends AuthState {
     startCallbackAuth: () => void;
     finishCallbackAuth: () => void;
     failAuth: () => void;
+    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -56,9 +57,51 @@ const API_BASE = CONFIG.API_URL;
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [user, setUser] = useState<AuthState['user']>(null);
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [isAuthenticating, setIsAuthenticating] = useState(false); // For active login/callback
+    const [isLoading, setIsLoading] = useState(true); // For initial hydration
 
     const isAuthenticated = !!accessToken;
+
+    // Load state from storage on mount (Hydration)
+    useEffect(() => {
+        const hydrate = async () => {
+            try {
+                // Check memory first (unlikely on hard refresh)
+                if (accessToken) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Check session storage for user info to prevent UI flickering
+                const storedUser = sessionStorage.getItem('userInfo');
+                if (storedUser) {
+                    try {
+                        setUser(JSON.parse(storedUser));
+                    } catch (e) {
+                        console.warn('Failed to parse user info', e);
+                    }
+                }
+
+                // API Client handles token persistence/recovery internally.
+                // We ask it if it has a valid session.
+                const hasSession = apiClient.isAuthenticated();
+                if (hasSession) {
+                    const token = apiClient.getToken();
+                    if (token) {
+                        setAccessToken(token);
+                        // If we have a token but no user, we might want to fetch /me here?
+                        // For now, let's rely on storedUser or lazy fetch.
+                    }
+                }
+            } catch (error) {
+                console.error('Auth hydration failed:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        hydrate();
+    }, []);
 
     // Login: store access token in memory and sync via apiClient
     const login = useCallback((token: string, userData: AuthState['user']) => {
