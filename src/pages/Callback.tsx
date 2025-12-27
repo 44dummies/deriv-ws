@@ -26,180 +26,175 @@ const Callback = () => {
 
     const handleCallback = async () => {
       try {
-        try {
-          startCallbackAuth(); // Globally pause auto-refresh
-          const urlParams = new URLSearchParams(window.location.search);
+        startCallbackAuth(); // Globally pause auto-refresh
+        const urlParams = new URLSearchParams(window.location.search);
 
-          if (urlParams.has('error')) {
-            const errorMsg = urlParams.get('error') || 'Unknown OAuth error';
-            console.error('OAuth error from Deriv:', errorMsg);
-            failAuth(); // Reset global auth state
-            setError(`OAuth Error: ${errorMsg}`);
-            setTimeout(() => navigate('/'), 3000);
-            return;
-          }
+        if (urlParams.has('error')) {
+          const errorMsg = urlParams.get('error') || 'Unknown OAuth error';
+          console.error('OAuth error from Deriv:', errorMsg);
+          failAuth(); // Reset global auth state
+          setError(`OAuth Error: ${errorMsg}`);
+          setTimeout(() => navigate('/'), 3000);
+          return;
+        }
 
-          const accounts = [];
-          let i = 1;
+        const accounts = [];
+        let i = 1;
 
-          while (urlParams.has(`acct${i}`)) {
-            accounts.push({
-              account: urlParams.get(`acct${i}`),
-              token: urlParams.get(`token${i}`),
-              currency: urlParams.get(`cur${i}`) || 'USD'
-            });
-            i++;
-          }
-
-          if (accounts.length === 0) {
-            console.error('No accounts in callback. URL params:', window.location.search);
-            console.error('No accounts in callback. URL params:', window.location.search);
-            failAuth();
-            setError('No account information received from Deriv');
-            setTimeout(() => navigate('/'), 3000);
-            return;
-          }
-
-          const primaryAccount = accounts[0];
-
-          TokenService.setTokens({
-            account: primaryAccount.account,
-            token: primaryAccount.token,
-            currency: primaryAccount.currency
+        while (urlParams.has(`acct${i}`)) {
+          accounts.push({
+            account: urlParams.get(`acct${i}`),
+            token: urlParams.get(`token${i}`),
+            currency: urlParams.get(`cur${i}`) || 'USD'
           });
+          i++;
+        }
 
-          if (!isMounted) return;
-          setStatus('Connecting to Deriv...');
+        if (accounts.length === 0) {
+          console.error('No accounts in callback. URL params:', window.location.search);
+          failAuth();
+          setError('No account information received from Deriv');
+          setTimeout(() => navigate('/'), 3000);
+          return;
+        }
 
-          await websocketService.connect();
+        const primaryAccount = accounts[0];
 
-          if (!isMounted) return;
-          setStatus('Authorizing your account...');
-          const authResponse = await websocketService.authorize(primaryAccount.token);
+        TokenService.setTokens({
+          account: primaryAccount.account,
+          token: primaryAccount.token,
+          currency: primaryAccount.currency
+        });
 
-          if (authResponse.error) {
-            console.error('Authorization failed:', authResponse.error);
-            console.error('Authorization failed:', authResponse.error);
-            failAuth();
-            setError(authResponse.error.message || 'Authorization failed');
-            TokenService.clearTokens();
-            setTimeout(() => navigate('/'), 3000);
-            return;
+        if (!isMounted) return;
+        setStatus('Connecting to Deriv...');
+
+        await websocketService.connect();
+
+        if (!isMounted) return;
+        setStatus('Authorizing your account...');
+        const authResponse = await websocketService.authorize(primaryAccount.token);
+
+        if (authResponse.error) {
+          console.error('Authorization failed:', authResponse.error);
+          failAuth();
+          setError(authResponse.error.message || 'Authorization failed');
+          TokenService.clearTokens();
+          setTimeout(() => navigate('/'), 3000);
+          return;
+        }
+
+        if (authResponse.authorize) {
+          TokenService.setAccount(authResponse.authorize);
+          // Persist basic profile info for later use (balance, currency, derivId)
+          TokenService.setProfileInfo({
+            derivId: authResponse.authorize.loginid,
+            balance: authResponse.authorize.balance,
+            currency: authResponse.authorize.currency
+          });
+        }
+
+        if (!isMounted) return;
+        setStatus('Checking user permissions...');
+
+        const derivId = authResponse.authorize?.loginid;
+
+        if (derivId) {
+          // Store derivId in sessionStorage for other pages to use
+          sessionStorage.setItem('derivId', derivId);
+
+          // Store all accounts so we can use the correct token for demo/real sessions
+          // Demo accounts start with VRTC, real accounts start with CR
+          const demoAccount = accounts.find(a => a.account?.startsWith('VRTC'));
+          const realAccount = accounts.find(a => a.account?.startsWith('CR'));
+
+          if (demoAccount) {
+            sessionStorage.setItem('derivDemoToken', demoAccount.token);
+            sessionStorage.setItem('derivDemoAccount', demoAccount.account);
           }
+          if (realAccount) {
+            sessionStorage.setItem('derivRealToken', realAccount.token);
+            sessionStorage.setItem('derivRealAccount', realAccount.account);
+          }
+          // Also store the current account's token for general use
+          sessionStorage.setItem('derivToken', primaryAccount.token);
 
-          if (authResponse.authorize) {
-            TokenService.setAccount(authResponse.authorize);
-            // Persist basic profile info for later use (balance, currency, derivId)
-            TokenService.setProfileInfo({
-              derivId: authResponse.authorize.loginid,
-              balance: authResponse.authorize.balance,
-              currency: authResponse.authorize.currency
+          // Authenticate with backend - admin status is determined by backend (single source of truth)
+          let isAdminUser = false;
+          try {
+            const loginResult = await apiClient.loginWithDeriv({
+              derivUserId: derivId,
+              loginid: derivId,
+              email: authResponse.authorize.email,
+              currency: authResponse.authorize.currency,
+              fullname: authResponse.authorize.fullname,
+              token: primaryAccount.token
             });
-          }
 
-          if (!isMounted) return;
-          setStatus('Checking user permissions...');
-
-          const derivId = authResponse.authorize?.loginid;
-
-          if (derivId) {
-            // Store derivId in sessionStorage for other pages to use
-            sessionStorage.setItem('derivId', derivId);
-
-            // Store all accounts so we can use the correct token for demo/real sessions
-            // Demo accounts start with VRTC, real accounts start with CR
-            const demoAccount = accounts.find(a => a.account?.startsWith('VRTC'));
-            const realAccount = accounts.find(a => a.account?.startsWith('CR'));
-
-            if (demoAccount) {
-              sessionStorage.setItem('derivDemoToken', demoAccount.token);
-              sessionStorage.setItem('derivDemoAccount', demoAccount.account);
+            if (!loginResult || !loginResult.accessToken) {
+              throw new Error('No access token received from backend');
             }
-            if (realAccount) {
-              sessionStorage.setItem('derivRealToken', realAccount.token);
-              sessionStorage.setItem('derivRealAccount', realAccount.account);
-            }
-            // Also store the current account's token for general use
-            sessionStorage.setItem('derivToken', primaryAccount.token);
 
-            // Authenticate with backend - admin status is determined by backend (single source of truth)
-            let isAdminUser = false;
-            try {
-              const loginResult = await apiClient.loginWithDeriv({
-                derivUserId: derivId,
-                loginid: derivId,
-                email: authResponse.authorize.email,
-                currency: authResponse.authorize.currency,
-                fullname: authResponse.authorize.fullname,
-                token: primaryAccount.token
-              });
+            // Only access token is returned - refresh token is in HttpOnly cookie
+            TokenService.setBackendTokens(loginResult.accessToken, '');
 
-              if (!loginResult || !loginResult.accessToken) {
-                throw new Error('No access token received from backend');
-              }
+            // Sync with AuthContext to update app state immediately
+            login(loginResult.accessToken, loginResult.user || { derivId });
 
-              // Only access token is returned - refresh token is in HttpOnly cookie
-              TokenService.setBackendTokens(loginResult.accessToken, '');
+            // Use the authoritative role from the backend response
+            isAdminUser = loginResult.user?.is_admin === true || loginResult.user?.role === 'admin';
 
-              // Sync with AuthContext to update app state immediately
-              login(loginResult.accessToken, loginResult.user || { derivId });
+            // Store user info in sessionStorage for AdminProtected to check
+            sessionStorage.setItem('userInfo', JSON.stringify({
+              loginid: derivId,
+              deriv_id: derivId,
+              is_admin: isAdminUser
+            }));
 
-              // Use the authoritative role from the backend response
-              isAdminUser = loginResult.user?.is_admin === true || loginResult.user?.role === 'admin';
-
-              // Store user info in sessionStorage for AdminProtected to check
-              sessionStorage.setItem('userInfo', JSON.stringify({
-                loginid: derivId,
-                deriv_id: derivId,
-                is_admin: isAdminUser
-              }));
-
-              // Route based on role
-              if (!isMounted) return;
+            // Route based on role
+            if (!isMounted) return;
+            if (isAdminUser) {
+              setStatus('Welcome Admin! Redirecting to dashboard...');
+              finishCallbackAuth(); // Success! Resume normal operations
               if (isAdminUser) {
                 setStatus('Welcome Admin! Redirecting to dashboard...');
-                finishCallbackAuth(); // Success! Resume normal operations
-                if (isAdminUser) {
-                  setStatus('Welcome Admin! Redirecting to dashboard...');
-                  setTimeout(() => navigate('/admin/dashboard', { replace: true }), 500);
-                } else {
-                  setStatus('Success! Redirecting to your dashboard...');
-                  setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
-                }
-                return; // CRITICAL: Exit here to prevent duplicate navigation
-
-              } catch (apiErr: any) {
-                console.error('[Callback] Backend auth failed:', apiErr);
-                failAuth();
-                setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
-                // Do NOT redirect if backend auth fails, so user sees the error
-                return;
+                setTimeout(() => navigate('/admin/dashboard', { replace: true }), 500);
+              } else {
+                setStatus('Success! Redirecting to your dashboard...');
+                setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
               }
+              return; // CRITICAL: Exit here to prevent duplicate navigation
+
+            } catch (apiErr: any) {
+              console.error('[Callback] Backend auth failed:', apiErr);
+              failAuth();
+              setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
+              // Do NOT redirect if backend auth fails, so user sees the error
+              return;
             }
+          }
 
         // Fallback: No derivId - redirect to login
         console.warn('[Callback] No derivId found, redirecting to login');
-            console.warn('[Callback] No derivId found, redirecting to login');
-            failAuth();
-            setStatus('No account found. Redirecting...');
-            setTimeout(() => navigate('/'), 3000);
-          } catch (err: any) {
-            console.error('Callback error:', err);
-            console.error('Callback error:', err);
-            failAuth();
-            setError(err.message || 'An error occurred during authentication');
-            setTimeout(() => navigate('/'), 3000);
-          }
-        };
+          failAuth();
+          setStatus('No account found. Redirecting...');
+          setTimeout(() => navigate('/'), 3000);
+        } catch (err: any) {
+          console.error('Callback error:', err);
+          failAuth();
+          setError(err.message || 'An error occurred during authentication');
+          setTimeout(() => navigate('/'), 3000);
+        }
+      };
 
-        handleCallback();
+      handleCallback();
 
-        return () => {
-          isMounted = false; // Cleanup flag
-          // Do NOT call finishCallbackAuth() here - let success/failure handlers manage state
-          // This prevents race conditions where unmounting (due to navigation) prematurely re-enables background refresh
-        };
-      }, [navigate, login]); // Added login to dependencies
+      return () => {
+        isMounted = false; // Cleanup flag
+        // Do NOT call finishCallbackAuth() here - let success/failure handlers manage state
+        // This prevents race conditions where unmounting (due to navigation) prematurely re-enables background refresh
+      };
+    }, [navigate, login]); // Added login to dependencies
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
