@@ -8,7 +8,7 @@ import { TokenService } from './tokenService';
 
 import { CONFIG } from '../config/constants';
 
-const SOCKET_URL = CONFIG.WS_URL;
+const SOCKET_URL = CONFIG.SERVER_URL;
 
 class RealtimeSocketService {
   socket: any;
