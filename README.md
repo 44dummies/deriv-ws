@@ -87,7 +87,7 @@ TraderMind is a full-stack trading automation platform that enables administrato
 
 ### Frontend (.env)
 ```env
-REACT_APP_DERIV_APP_ID=your_deriv_app_id
+REACT_APP_DERIV_APP_ID=114042
 REACT_APP_SERVER_URL=https://your-backend-url
 REACT_APP_API_URL=https://your-backend-url
 ```
@@ -98,7 +98,7 @@ PORT=3001
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_KEY=your_service_key
 JWT_SECRET=your_jwt_secret
-DERIV_APP_ID=your_deriv_app_id
+DERIV_APP_ID=114042
 DERIV_MASTER_TOKEN=your_master_token
 CORS_ORIGIN=https://tradermind.site
 SENTRY_DSN=optional_error_tracking
