@@ -2,69 +2,27 @@
  * Notifications Service - Frontend API client
  */
 
-import { CONFIG } from '../config/constants';
-
-const API_URL = CONFIG.API_URL;
-
-const getAuthHeaders = () => {
-  const token = sessionStorage.getItem('accessToken');
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  };
-};
-
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || error.error || 'Request failed');
-  }
-  return response.json();
-};
+import { apiClient } from './apiClient';
 
 export const notificationsService = {
   async getNotifications(options: any = {}) {
-    const params = new URLSearchParams();
-    if (options.limit) params.append('limit', options.limit);
-    if (options.unreadOnly) params.append('unreadOnly', 'true');
-    if (options.offset) params.append('offset', options.offset);
-
-    const response = await fetch(
-      `${API_URL}/api/notifications?${params.toString()}`,
-      { headers: getAuthHeaders() }
-    );
-    return handleResponse(response);
+    return apiClient.get('/user/notifications', { params: options });
   },
 
   async getUnreadCount() {
-    const response = await fetch(`${API_URL}/api/notifications/unread/count`, {
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+    return apiClient.get('/user/notifications/unread/count');
   },
 
-  async markAsRead(notificationId) {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
-      method: 'PUT',
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+  async markAsRead(notificationId: string) {
+    return apiClient.put(`/user/notifications/${notificationId}/read`);
   },
 
   async markAllAsRead() {
-    const response = await fetch(`${API_URL}/api/notifications/read-all`, {
-      method: 'PUT',
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+    return apiClient.put('/user/notifications/read-all');
   },
 
-  async deleteNotification(notificationId) {
-    const response = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders()
-    });
-    return handleResponse(response);
+  async deleteNotification(notificationId: string) {
+    return apiClient.delete(`/user/notifications/${notificationId}`);
   }
 };
 
