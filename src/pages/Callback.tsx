@@ -1,246 +1,79 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { TokenService } from '../services/tokenService';
-import websocketService from '../services/websocketService';
-import { supabase } from '../services/supabaseService';
-import apiClient from '../services/apiClient';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { authFlowService } from '../services/authFlow';
 import { Logo } from '../components/ui/Logo';
 
-// Global lock to prevent double execution across remounts (Strict Mode / Fast Refresh)
 const Callback = () => {
   const navigate = useNavigate();
-  const { login, startCallbackAuth, finishCallbackAuth, failAuth } = useAuth();
-  const [error, setError] = useState(null);
-  const [status, setStatus] = useState('Parsing callback data...');
-  const lockKey = `auth_lock_${window.location.search}`;
+  const [searchParams] = useSearchParams();
+  const { login, failAuth } = useAuth();
+
+  const [status, setStatus] = useState('Authenticating...');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Guard: Only run once per unique callback URL
-    if (sessionStorage.getItem(lockKey)) {
-      console.debug('[Callback] Already executed (Session Lock), skipping duplicate run');
-      return;
-    }
-    sessionStorage.setItem(lockKey, 'true');
+    let mounted = true;
 
-    // Clear lock after 30s to allow retry
-    setTimeout(() => sessionStorage.removeItem(lockKey), 30000);
+    const runAuth = async () => {
+      // Direct handoff to the singleton service
+      const result = await authFlowService.handleCallback(searchParams, login);
 
-    let isMounted = true; // Cleanup guard
+      if (!mounted) return;
 
-    const handleCallback = async () => {
-      try {
-        startCallbackAuth(); // Globally pause auto-refresh
-        const urlParams = new URLSearchParams(window.location.search);
-
-        if (urlParams.has('error')) {
-          const errorMsg = urlParams.get('error') || 'Unknown OAuth error';
-          console.error('OAuth error from Deriv:', errorMsg);
-          failAuth(); // Reset global auth state
-          setError(`OAuth Error: ${errorMsg}`);
-          setTimeout(() => navigate('/'), 3000);
-          return;
-        }
-
-        const accounts = [];
-        let i = 1;
-
-        while (urlParams.has(`acct${i}`)) {
-          accounts.push({
-            account: urlParams.get(`acct${i}`),
-            token: urlParams.get(`token${i}`),
-            currency: urlParams.get(`cur${i}`) || 'USD'
-          });
-          i++;
-        }
-
-        if (accounts.length === 0) {
-          console.error('No accounts in callback. URL params:', window.location.search);
-          failAuth();
-          setError('No account information received from Deriv');
-          setTimeout(() => navigate('/'), 3000);
-          return;
-        }
-
-        const primaryAccount = accounts[0];
-
-        TokenService.setTokens({
-          account: primaryAccount.account,
-          token: primaryAccount.token,
-          currency: primaryAccount.currency
-        });
-
-        if (!isMounted) return;
-        setStatus('Connecting to Deriv...');
-
-        await websocketService.connect();
-
-        if (!isMounted) return;
-        setStatus('Authorizing your account...');
-        const authResponse = await websocketService.authorize(primaryAccount.token);
-
-        if (authResponse.error) {
-          console.error('[Callback] Deriv Authorization failed:', authResponse.error);
-          failAuth();
-          setError(authResponse.error.message || 'Authorization failed');
-          TokenService.clearTokens();
-          // Remove auto-redirect to let user see error
-          // setTimeout(() => navigate('/'), 3000);
-          return;
-        }
-
-        console.log('[Callback] Deriv Auth Response:', JSON.stringify(authResponse, null, 2));
-
-        if (authResponse.authorize) {
-          TokenService.setAccount(authResponse.authorize);
-          // Persist basic profile info for later use (balance, currency, derivId)
-          TokenService.setProfileInfo({
-            derivId: authResponse.authorize.loginid,
-            balance: authResponse.authorize.balance,
-            currency: authResponse.authorize.currency
-          });
-        }
-
-        if (!isMounted) return;
-        setStatus('Checking user permissions...');
-
-        const derivId = authResponse.authorize?.loginid;
-
-        if (derivId) {
-          // Store derivId in sessionStorage for other pages to use
-          sessionStorage.setItem('derivId', derivId);
-
-          // Store all accounts so we can use the correct token for demo/real sessions
-          // Demo accounts start with VRTC, real accounts start with CR
-          const demoAccount = accounts.find(a => a.account?.startsWith('VRTC'));
-          const realAccount = accounts.find(a => a.account?.startsWith('CR'));
-
-          if (demoAccount) {
-            sessionStorage.setItem('derivDemoToken', demoAccount.token);
-            sessionStorage.setItem('derivDemoAccount', demoAccount.account);
-          }
-          if (realAccount) {
-            sessionStorage.setItem('derivRealToken', realAccount.token);
-            sessionStorage.setItem('derivRealAccount', realAccount.account);
-          }
-          // Also store the current account's token for general use
-          sessionStorage.setItem('derivToken', primaryAccount.token);
-
-          // Authenticate with backend - admin status is determined by backend (single source of truth)
-          let isAdminUser = false;
-          try {
-            if (!primaryAccount.token) {
-              throw new Error('OAuth Callback Error: Token missing in parsed accounts');
-            }
-
-            const loginResult = await apiClient.loginWithDeriv({
-              derivUserId: derivId,
-              loginid: derivId,
-              email: authResponse.authorize.email,
-              currency: authResponse.authorize.currency,
-              fullname: authResponse.authorize.fullname,
-              token: primaryAccount.token
-            });
-
-            if (!loginResult || !loginResult.accessToken) {
-              throw new Error('No access token received from backend');
-            }
-
-            // Only access token is returned - refresh token is in HttpOnly cookie
-            TokenService.setBackendTokens(loginResult.accessToken, '');
-
-            // Sync with AuthContext to update app state immediately
-            login(loginResult.accessToken, loginResult.user || { derivId });
-
-            // Use the authoritative role from the backend response
-            isAdminUser = loginResult.user?.is_admin === true || loginResult.user?.role === 'admin';
-
-            // Store user info in sessionStorage for AdminProtected to check
-            sessionStorage.setItem('userInfo', JSON.stringify({
-              loginid: derivId,
-              deriv_id: derivId,
-              is_admin: isAdminUser
-            }));
-
-            // Route based on role
-            if (!isMounted) return;
-
-            finishCallbackAuth(); // Success! Resume normal operations
-
-            // Modified per user request: ALWAYS redirect to user dashboard initially
-            // Admin checks happen only when accessing /admin routes via AdminProtected
-            setStatus('Login successful!');
-            navigate('/user/dashboard', { replace: true });
-            return;
-
-          } catch (apiErr: any) {
-            console.error('[Callback] Backend auth failed:', apiErr);
-            failAuth();
-            setError(`Backend Authentication Failed: ${apiErr.message || 'Unknown error'}`);
-            // Do NOT redirect if backend auth fails, so user sees the error
-            return;
-          }
-        }
-
-        // Fallback: No derivId - redirect to login
-        console.warn('[Callback] No derivId found in response');
+      if (result.success && result.redirectTo) {
+        setStatus('Success! Redirecting...');
+        // Instant redirect (Optimistic)
+        navigate(result.redirectTo, { replace: true });
+      } else {
+        setStatus('Authentication Failed');
+        setError(result.error || 'Unknown error');
         failAuth();
-        setStatus('No account found.'); // Keep status helpful
-        setError('Login failed: No Deriv ID returned. Please try again.');
-        // setTimeout(() => navigate('/'), 3000);
-      } catch (err: any) {
-        console.error('Callback error:', err);
-        failAuth();
-        setError(err.message || 'An error occurred during authentication');
-        // setTimeout(() => navigate('/'), 3000);
       }
     };
 
-    handleCallback();
+    runAuth();
 
-    return () => {
-      isMounted = false; // Cleanup flag
-      // Do NOT call finishCallbackAuth() here - let success/failure handlers manage state
-      // This prevents race conditions where unmounting (due to navigation) prematurely re-enables background refresh
-    };
-  }, [navigate, login]); // Added login to dependencies
+    return () => { mounted = false; };
+  }, [searchParams, login, failAuth, navigate]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="bg-gray-800 p-8 rounded-lg shadow-xl max-w-md w-full text-center border border-red-500/30">
+          <div className="mx-auto mb-4 w-16 h-16 text-red-500">❌</div>
+          <h2 className="text-xl font-bold mb-2">Login Failed</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center relative overflow-hidden">
-      {/* Liquid Background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#ff3355]/10 rounded-full blur-[120px] animate-pulse" />
-      </div>
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center">
+      <div className="text-center space-y-6 animate-in fade-in zoom-in duration-300">
+        <div className="flex justify-center mb-8">
+          <Logo className="h-16 w-auto" />
+        </div>
 
-      <div className="text-center relative z-10 p-8 glass-card rounded-3xl border-white/5 bg-black/40 backdrop-blur-2xl max-w-sm w-full mx-4 shadow-2xl">
-        <div className="mb-8 flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-[#ff3355] blur-xl opacity-20 animate-pulse" />
-            <Logo size={64} className="animate-float" />
+        <div className="relative">
+          {/* Modern Spinner */}
+          <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-8 h-8 bg-indigo-500/10 rounded-full animate-pulse"></div>
           </div>
         </div>
 
-        {error ? (
-          <div className="animate-fade-in">
-            <h2 className="text-xl font-bold text-red-500 mb-2">Authentication Failed</h2>
-            <p className="text-gray-400 text-sm mb-6">{error}</p>
-            <button
-              onClick={() => navigate('/')}
-              className="text-white bg-red-500/10 border border-red-500/20 px-6 py-2 rounded-xl text-sm font-medium hover:bg-red-500/20 transition-all"
-            >
-              Return to Login
-            </button>
-            <p className="text-xs text-gray-600 mt-6">Redirecting in a few seconds...</p>
-          </div>
-        ) : (
-          <div className="animate-fade-in">
-            <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">Authenticating</h2>
-            <div className="h-1 w-16 bg-white/10 rounded-full mx-auto mb-4 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-[#ff3355] to-[#ff8042] w-1/2 animate-loading-bar" />
-            </div>
-            <p className="text-gray-400 text-sm">{status}</p>
-          </div>
-        )}
+        <div className="space-y-2">
+          <h2 className="text-2xl font-bold text-white tracking-tight">Verifying</h2>
+          <p className="text-gray-400">{status}</p>
+        </div>
       </div>
     </div>
   );
