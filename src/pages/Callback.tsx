@@ -168,14 +168,13 @@ const Callback = () => {
 
             finishCallbackAuth(); // Success! Resume normal operations
 
-            if (isAdminUser) {
-              setStatus('Welcome Admin! Redirecting to dashboard...');
-              setTimeout(() => navigate('/admin/dashboard', { replace: true }), 500);
-            } else {
-              setStatus('Success! Redirecting to your dashboard...');
-              setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
-            }
-            return; // CRITICAL: Exit here to prevent duplicate navigation
+            finishCallbackAuth(); // Success! Resume normal operations
+
+            // Modified per user request: ALWAYS redirect to user dashboard initially
+            // Admin checks happen only when accessing /admin routes via AdminProtected
+            setStatus('Login successful! Redirecting...');
+            setTimeout(() => navigate('/user/dashboard', { replace: true }), 500);
+            return;
 
           } catch (apiErr: any) {
             console.error('[Callback] Backend auth failed:', apiErr);
