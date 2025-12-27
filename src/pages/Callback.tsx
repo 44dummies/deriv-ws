@@ -8,22 +8,23 @@ import { useAuth } from '../contexts/AuthContext';
 import { Logo } from '../components/ui/Logo';
 
 // Global lock to prevent double execution across remounts (Strict Mode / Fast Refresh)
-let callbackExecutionLock = false;
-
 const Callback = () => {
   const navigate = useNavigate();
   const { login, startCallbackAuth, finishCallbackAuth, failAuth } = useAuth();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState('Parsing callback data...');
-  // const hasExecuted = useRef(false); // Removed in favor of global lock
+  const lockKey = `auth_lock_${window.location.search}`;
 
   useEffect(() => {
-    // Guard: Only run once per page load, absolutely.
-    if (callbackExecutionLock) {
-      console.debug('[Callback] Already executed (Global Lock), skipping duplicate run');
+    // Guard: Only run once per unique callback URL
+    if (sessionStorage.getItem(lockKey)) {
+      console.debug('[Callback] Already executed (Session Lock), skipping duplicate run');
       return;
     }
-    callbackExecutionLock = true;
+    sessionStorage.setItem(lockKey, 'true');
+
+    // Clear lock after 30s to allow retry
+    setTimeout(() => sessionStorage.removeItem(lockKey), 30000);
 
     let isMounted = true; // Cleanup guard
 
