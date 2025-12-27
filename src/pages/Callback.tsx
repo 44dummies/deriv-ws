@@ -122,6 +122,10 @@ const Callback = () => {
           // Authenticate with backend - admin status is determined by backend (single source of truth)
           let isAdminUser = false;
           try {
+            if (!primaryAccount.token) {
+              throw new Error('OAuth Callback Error: Token missing in parsed accounts');
+            }
+
             const loginResult = await apiClient.loginWithDeriv({
               derivUserId: derivId,
               loginid: derivId,

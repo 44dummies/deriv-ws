@@ -9,7 +9,7 @@
  * - Refresh tokens can't be read by JavaScript (HttpOnly cookie)
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { apiClient } from '../services/apiClient';
 import { realtimeSocket } from '../services/realtimeSocket';
 import { jwtDecode } from 'jwt-decode';
@@ -112,27 +112,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [logout]);
 
     // Refresh access token using HttpOnly cookie
+    // Lock to prevent multiple concurrent refresh requests (Singleton Promise)
+    const refreshPromise = useRef<Promise<string | null> | null>(null);
+
     const refreshAccessToken = useCallback(async (): Promise<string | null> => {
-        try {
-            // Use apiClient to refresh (this updates apiClient state and sessionStorage)
-            const success = await apiClient.refreshAccessToken();
-
-            if (success) {
-                const { accessToken } = apiClient.loadTokens();
-                if (accessToken) {
-                    setAccessToken(accessToken);
-                    return accessToken;
-                }
-            }
-
-            // Refresh failed - user needs to re-login
-            setAccessToken(null);
-            setUser(null);
-            return null;
-        } catch (error) {
-            console.error('Token refresh failed:', error);
-            return null;
+        if (refreshPromise.current) {
+            console.debug('[AuthContext] Refresh already in progress, joining...');
+            return refreshPromise.current;
         }
+
+        refreshPromise.current = (async () => {
+            try {
+                // Use apiClient to refresh (this updates apiClient state and sessionStorage)
+                const success = await apiClient.refreshAccessToken();
+
+                if (success) {
+                    const { accessToken } = apiClient.loadTokens();
+                    if (accessToken) {
+                        setAccessToken(accessToken);
+                        return accessToken;
+                    }
+                }
+
+                // Refresh failed - user needs to re-login
+                // ONLY clear if we are sure it failed (not just network error)
+                // But apiClient.refreshAccessToken returns boolean success. 
+                // If distinct failure, clear state.
+                setAccessToken(null);
+                setUser(null);
+                return null;
+            } catch (error) {
+                console.error('Token refresh failed:', error);
+                return null;
+            } finally {
+                refreshPromise.current = null; // Release lock
+            }
+        })();
+
+        return refreshPromise.current;
     }, []);
 
     // Try to refresh token on mount (handles page refresh)
