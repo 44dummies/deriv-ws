@@ -4,8 +4,9 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { riskGuard, RiskCheck } from './RiskGuard.js';
+import { memoryService } from './MemoryService.js';
 import { UserService } from './UserService.js';
 import { DerivWSClient } from './DerivWSClient.js';
 
@@ -63,12 +64,12 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     private async handleApprovedTrade(check: RiskCheck): Promise<void> {
         const idempotencyKey = this.generateIdempotencyKey(check);
 
-        if (await this.isDuplicate(idempotencyKey)) {
-            console.warn(`[ExecutionCore] Duplicate trade skipped: ${idempotencyKey}`);
-            return;
-        }
-
         try {
+            if (await this.isDuplicate(idempotencyKey)) {
+                console.warn(`[ExecutionCore] Duplicate trade skipped: ${idempotencyKey}`);
+                return;
+            }
+
             await this.executeTrade(check, idempotencyKey);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -89,6 +90,15 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 }
             };
             this.emit('TRADE_EXECUTED', failedResult);
+
+            if (check.memoryId) {
+                memoryService.updateOutcome(check.memoryId, {
+                    trade_id: '',
+                    result: 'FAILED',
+                    settled_at: new Date().toISOString(),
+                    pnl: 0
+                });
+            }
         }
     }
 
@@ -154,6 +164,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
             // 5. Success Result
             const tradeId = buyResult.transaction_id ? String(buyResult.transaction_id) : `trade_${Date.now()}`;
+            const contractId = buyResult.contract_id;
             const entryPrice = buyResult.buy_price ?? 0;
 
             const result: TradeResult = {
@@ -167,13 +178,78 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                     market: check.proposedTrade.market,
                     entryPrice: entryPrice,
                     risk_confidence: check.proposedTrade.confidence,
-                    contract_id: buyResult.contract_id,
+                    contract_id: contractId,
                     deriv_ref: buyResult.transaction_id
                 }
             };
 
             console.log(`[ExecutionCore] TRADE_EXECUTED: ${tradeId} @ ${entryPrice}`);
             this.emit('TRADE_EXECUTED', result);
+
+            if (check.memoryId) {
+                // Record submission first
+                memoryService.updateOutcome(check.memoryId, {
+                    trade_id: tradeId,
+                    result: 'SUBMITTED',
+                    settled_at: new Date().toISOString(),
+                    pnl: 0
+                });
+            }
+
+            // 6. Monitor for Settlement (Async but locally blocking this worker connection)
+            // We keep the connection open to monitor this specific trade
+            if (contractId) {
+                console.log(`[ExecutionCore] Waiting for settlement: ${contractId}`);
+                await client.monitorContract(contractId);
+
+                await new Promise<void>((resolve) => {
+                    const timeout = setTimeout(() => {
+                        console.warn(`[ExecutionCore] Settlement timeout for ${contractId}`);
+                        resolve();
+                    }, 60000 * 5); // 5 min timeout 
+
+                    client!.once('settled', (cId, outcome, profit) => {
+                        if (cId === contractId) {
+                            clearTimeout(timeout);
+                            console.log(`[ExecutionCore] Settlement received: ${outcome} (${profit})`);
+
+                            if (check.memoryId) {
+                                const settledAt = new Date().toISOString();
+                                const resultIsWin = outcome === 'win';
+
+                                // 1. Operational Update (Mutable)
+                                memoryService.updateOutcome(check.memoryId, {
+                                    trade_id: tradeId,
+                                    result: resultIsWin ? 'WIN' : 'LOSS',
+                                    settled_at: settledAt,
+                                    pnl: profit
+                                });
+
+                                // 2. Immutable Capture (Fire-and-forget)
+                                // Extract metadata safely
+                                const signal = check.proposedTrade;
+                                const meta: any = signal.metadata || {};
+
+                                try {
+                                    memoryService.capture({
+                                        market: signal.market,
+                                        features: meta.technicals || {},
+                                        signal: signal,
+                                        ai_confidence: meta.ai_inference?.confidence,
+                                        regime: meta.ai_inference?.regime,
+                                        decision: 'EXECUTED',
+                                        result: resultIsWin ? 'WIN' : 'LOSS',
+                                        pnl: profit
+                                    });
+                                } catch (captureErr) {
+                                    console.error('[ExecutionCore] Memory capture failed (Ignored):', captureErr);
+                                }
+                            }
+                            resolve();
+                        }
+                    });
+                });
+            }
 
         } finally {
             if (client) {

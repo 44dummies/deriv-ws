@@ -1,0 +1,9 @@
+{
+  "version": "v1.3",
+  "dataset": "datasets/training_snapshot_v1.csv",
+  "metrics": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0
+  }
+}

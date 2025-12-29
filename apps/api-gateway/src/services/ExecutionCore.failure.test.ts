@@ -73,27 +73,18 @@ describe('ExecutionCore Failure Scenarios', () => {
         userId,
         sessionId: 'session-1',
         result: 'APPROVED',
-        stake: 10,
-        approved_at: new Date().toISOString(),
+
+
         proposedTrade: {
             market: 'R_100',
             type: 'CALL',
-            duration: 1,
-            amount: 10,
-            symbol: 'R_100',
+
             confidence: 0.9,
+            reason: 'SMA_CROSS_UP',
             timestamp: new Date().toISOString(),
-            expiry: new Date().toISOString(),
-            payout: 19
+            expiry: new Date().toISOString()
         },
-        checks: {
-            is_paused: true,
-            global_loss: true,
-            daily_loss: true,
-            daily_trades: true,
-            drawdown: true,
-            market_open: true
-        }
+
     });
 
     it('should handle Network Timeout during connection', async () => {

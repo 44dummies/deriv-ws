@@ -31,7 +31,14 @@ export interface Signal {
     market: string;
     timestamp: string;
     expiry: string;
+    metadata?: {
+        technicals: IndicatorValues;
+        ai_inference?: AIInferenceResponse;
+        feature_version?: string;
+    };
 }
+
+
 
 export interface SessionConfig {
     max_participants?: number;
@@ -198,6 +205,14 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
                 const aiSignal = aiServiceClient.convertToSignal(aiResponse, tick.market);
 
                 if (aiSignal) {
+                    // Enrich with Technicals & AI Metadata
+                    // Enrich with Technicals & AI Metadata
+                    aiSignal.metadata = {
+                        technicals: JSON.parse(JSON.stringify(indicators)), // Feature Freeze v1
+                        ai_inference: aiResponse,
+                        feature_version: 'v1'
+                    };
+
                     // Check minimum confidence
                     const minConfidence = config.min_confidence ?? 0.6;
                     if (aiSignal.confidence >= minConfidence) {
@@ -432,6 +447,9 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             market,
             timestamp: now.toISOString(),
             expiry: expiry.toISOString(),
+            metadata: {
+                technicals: indicators
+            }
         };
     }
 

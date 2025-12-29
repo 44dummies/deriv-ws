@@ -50,6 +50,7 @@ type DerivWSEvents = {
     unsubscribed: (market: string) => void;
     circuitBreaker: (reason: string) => void;
     heartbeat: (latency: number) => void;
+    settled: (contractId: number, result: 'win' | 'loss', profit: number) => void;
 };
 
 // =============================================================================
@@ -136,10 +137,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.ws = new WebSocket(url);
 
         this.ws.on('open', () => this.handleOpen());
+
         this.ws.on('message', (data: WebSocket.RawData) => this.handleMessage(data));
         this.ws.on('close', (code: number, reason: Buffer) => this.handleClose(code, reason));
         this.ws.on('error', (error: Error) => this.handleError(error));
     }
+
+
 
     disconnect(): void {
         this.shouldReconnect = false;
@@ -155,6 +159,23 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         });
         this.pendingRequests.clear();
         console.log('[DerivWSClient] Disconnected');
+    }
+
+    // --- Settlement Monitoring ---
+
+    async monitorContract(contractId: number | string): Promise<void> {
+        if (!this.isConnected()) throw new Error('Not connected');
+
+        console.log(`[DerivWSClient] Monitoring contract: ${contractId}`);
+
+        // Subscribe to proposal_open_contract
+        const payload = {
+            proposal_open_contract: 1,
+            contract_id: contractId,
+            subscribe: 1
+        };
+
+        await this.sendRequest(payload);
     }
 
     // --- IDerivClient Implementation ---
@@ -424,7 +445,19 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         try {
             const message = JSON.parse(data.toString()) as any; // Cast to any to handle various shapes structure
 
-            // 1. Check Request ID (Response to a specific request)
+            // 1. Settlement Handling (proposal_open_contract)
+            if (message.msg_type === 'proposal_open_contract') {
+                const contract = message.proposal_open_contract;
+                if (contract.is_sold) {
+                    const profit = contract.profit;
+                    const result = profit >= 0 ? 'win' : 'loss';
+                    console.log(`[DerivWSClient] Contract ${contract.contract_id} settled: ${result} (${profit})`);
+                    this.emit('settled', contract.contract_id, result, profit);
+                }
+                return;
+            }
+
+            // 2. Check Request ID (Response to a specific request)
             if (message.req_id) {
                 const req = this.pendingRequests.get(message.req_id);
                 if (req) {

@@ -1,15 +1,8 @@
-/**
- * TraderMind RiskGuard
- * Service for evaluating trade risks and approval checks.
- */
-
 import { EventEmitter } from 'eventemitter3';
 import { Signal, quantEngine } from './QuantEngine.js';
 import { sessionRegistry } from './SessionRegistry.js';
-
-// =============================================================================
-// TYPES
-// =============================================================================
+import { memoryService } from './MemoryService.js';
+import { randomUUID } from 'crypto';
 
 export interface RiskCheck {
     userId: string;
@@ -17,6 +10,7 @@ export interface RiskCheck {
     proposedTrade: Signal;
     result: 'APPROVED' | 'REJECTED';
     reason?: string;
+    memoryId?: string; // Link to immutable memory record
     meta?: {
         userDrawdown?: number;
         sessionPnL?: number;
@@ -175,9 +169,62 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
     }
 
     private emitRiskResult(check: RiskCheck): void {
+        const memoryId = randomUUID();
+        check.memoryId = memoryId;
+
+        // Fire-and-forget memory recording
+        // We do not await this to avoid blocking trade execution latency
+        if (check.proposedTrade.metadata) {
+            memoryService.recordDecision({
+                id: memoryId,
+                session_id: check.sessionId,
+                user_id: check.userId,
+                market: check.proposedTrade.market,
+                timestamp: check.proposedTrade.timestamp,
+                technicals: check.proposedTrade.metadata.technicals,
+                ai_inference: check.proposedTrade.metadata.ai_inference,
+                signal: {
+                    type: check.proposedTrade.type,
+                    source: check.proposedTrade.metadata.ai_inference ? 'AI' : 'RULE',
+                    strength: check.proposedTrade.confidence,
+                    reason: check.proposedTrade.reason
+                },
+                risk_check: {
+                    approved: check.result === 'APPROVED',
+                    reason: check.reason,
+                    checks: check.meta
+                }
+            });
+        }
+
         this.emit('risk_check_completed', check);
         if (check.result === 'REJECTED') {
             console.warn(`[RiskGuard] REJECTED (User: ${check.userId}): ${check.reason}`);
+
+            if (check.memoryId) {
+                // 1. Update Operational Memory (Mutable)
+                memoryService.updateOutcome(check.memoryId, {
+                    trade_id: 'n/a',
+                    result: 'BLOCKED',
+                    settled_at: new Date().toISOString(),
+                    pnl: 0
+                });
+
+                // 2. Capture Immutable Feature/Signal Pair (Negative Sample)
+                const signal = check.proposedTrade;
+                const meta: any = signal.metadata || {};
+
+                memoryService.capture({
+                    market: signal.market,
+                    features: meta.technicals || {},
+                    signal: signal,
+                    ai_confidence: meta.ai_inference?.confidence,
+                    regime: meta.ai_inference?.regime,
+                    decision: 'BLOCKED',
+                    result: 'NO_TRADE',
+                    pnl: 0
+                });
+            }
         } else {
             console.log(`[RiskGuard] APPROVED (User: ${check.userId}): ${check.proposedTrade.market} ${check.proposedTrade.type}`);
         }
