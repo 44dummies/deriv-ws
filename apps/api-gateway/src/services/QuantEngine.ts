@@ -4,8 +4,10 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
+import { createHash } from 'crypto';
 import { NormalizedTick } from './MarketDataService.js';
 import { aiServiceClient, AIInferenceResponse } from './AIServiceClient.js';
+import { thresholdResolver } from './ThresholdResolver.js';
 
 // =============================================================================
 // TYPES
@@ -35,6 +37,7 @@ export interface Signal {
         technicals: IndicatorValues;
         ai_inference?: AIInferenceResponse;
         feature_version?: string;
+        threshold_version?: string;
     };
 }
 
@@ -48,6 +51,9 @@ export interface SessionConfig {
     min_confidence?: number;
     useAI?: boolean;
     aiSessionId?: string;
+    // Snapshot fields for Version Locking (Day 6)
+    thresholdConfig?: import('./ThresholdResolver.js').ThresholdConfig;
+    thresholdVersion?: string;
 }
 
 export interface IndicatorValues {
@@ -64,6 +70,7 @@ export interface IndicatorValues {
 type QuantEngineEvents = {
     signal: (signal: Signal) => void;
     ai_signal: (signal: Signal, aiResponse: AIInferenceResponse) => void;
+    shadow_signal: (modelId: string, aiResponse: AIInferenceResponse, inputHash: string, market: string, sessionId: string, entryPrice: number) => void;
     ai_fallback: (reason: string) => void;
     indicators: (market: string, indicators: IndicatorValues) => void;
 };
@@ -78,8 +85,9 @@ const EMA_SLOW_PERIOD = 21;
 const SMA_FAST_PERIOD = 10;
 const SMA_SLOW_PERIOD = 20;
 const ATR_PERIOD = 14;
-const RSI_OVERSOLD = 30;
-const RSI_OVERBOUGHT = 70;
+
+// Shadow Models configuration (Candidate models running in parallel)
+const SHADOW_MODELS = ['model_v1_4.pkl'];
 
 // =============================================================================
 // QUANT ENGINE
@@ -89,12 +97,30 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     private priceHistory: Map<string, number[]> = new Map();
     private emaFastValues: Map<string, number> = new Map();
     private emaSlowValues: Map<string, number> = new Map();
+    private priceHistory: Map<string, number[]> = new Map();
+    private emaFastValues: Map<string, number> = new Map();
+    private emaSlowValues: Map<string, number> = new Map();
     private prevEmaFast: Map<string, number> = new Map();
     private prevEmaSlow: Map<string, number> = new Map();
+
+    // Emergency Control (Day 5)
+    private aiEnabled = true;
 
     constructor() {
         super();
         console.log('[QuantEngine] Initialized');
+    }
+
+    /**
+     * Emergency Kill Switch / Auto-Disable Control
+     * @param enabled If false, AI processing is bypassed entirely
+     */
+    setAIEnabled(enabled: boolean): void {
+        this.aiEnabled = enabled;
+        console.warn(`[QuantEngine] AI Enabled Status: ${enabled}`);
+        if (!enabled) {
+            this.emit('ai_fallback', 'AI_DISABLED_BY_ADMIN_OR_GUARD');
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -136,9 +162,6 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         return signal;
     }
 
-    /**
-     * Process single tick (for real-time use)
-     */
     /**
      * Process single tick (for real-time use)
      * Optionally uses AI layer if config.useAI is true
@@ -192,13 +215,24 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         indicators: IndicatorValues,
         config: SessionConfig
     ): Promise<void> {
+        if (!this.aiEnabled) {
+            return; // Silently failover to rules (primary logic handles it)
+        }
+
         const sessionId = config.aiSessionId ?? 'default';
+
+        // COMPUTE INPUT PARITY HASH
+        // Ensures Active and Shadow models receive identical features
+        const featureString = JSON.stringify({ ...indicators, market: tick.market });
+        const inputHash = createHash('sha256').update(featureString).digest('hex');
 
         try {
             const aiResponse = await aiServiceClient.infer(
                 indicators,
                 tick.market,
-                sessionId
+                sessionId,
+                undefined, // Default model (Active)
+                inputHash
             );
 
             if (aiResponse) {
@@ -206,12 +240,17 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
                 if (aiSignal) {
                     // Enrich with Technicals & AI Metadata
-                    // Enrich with Technicals & AI Metadata
                     aiSignal.metadata = {
                         technicals: JSON.parse(JSON.stringify(indicators)), // Feature Freeze v1
                         ai_inference: aiResponse,
                         feature_version: 'v1'
                     };
+
+                    // >>> SHADOW MODE INJECTION <<<
+                    // Run candidates asynchronously without blocking main thread
+                    this.executeShadowModels(tick, indicators, sessionId, inputHash).catch(err => {
+                        console.error('[QuantEngine] Shadow execution error:', err);
+                    });
 
                     // Check minimum confidence
                     const minConfidence = config.min_confidence ?? 0.6;
@@ -224,6 +263,51 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             const message = error instanceof Error ? error.message : 'Unknown error';
             this.emit('ai_fallback', message);
         }
+    }
+
+    /**
+     * Shadow Mode Execution
+     * Runs specific candidate models in parallel and logs their signals
+     * WITHOUT triggering any trade execution.
+     */
+    private async executeShadowModels(
+        tick: NormalizedTick,
+        indicators: IndicatorValues,
+        sessionId: string,
+        inputHash: string
+    ): Promise<void> {
+        if (!SHADOW_MODELS || SHADOW_MODELS.length === 0) return;
+
+        const promises = SHADOW_MODELS.map(async (modelId) => {
+            try {
+                // Call AI Service with specific model ID
+                const shadowResponse = await aiServiceClient.infer(
+                    indicators,
+                    tick.market,
+                    sessionId,
+                    modelId
+                );
+
+                if (shadowResponse) {
+                    // Check if it's actually in Shadow Mode (Backend confirms)
+                    if (shadowResponse.mode === 'SHADOW') {
+                        console.log(`[QuantEngine] 👻 SHADOW SIGNAL (${modelId}): ${shadowResponse.signal_bias} Conf: ${shadowResponse.confidence}`);
+
+                        // Emit event for persistence
+                        this.emit('shadow_signal', modelId, shadowResponse, inputHash, tick.market, sessionId, tick.quote);
+
+                        // Log hash for parity check
+                        if (shadowResponse.request_hash && shadowResponse.request_hash !== inputHash && shadowResponse.request_hash !== 'hash_placeholder') {
+                            console.warn(`[QuantEngine] ⚠️ PARITY MISMATCH: Sent ${inputHash.substring(0, 8)}, Recv ${shadowResponse.request_hash.substring(0, 8)}`);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn(`[QuantEngine] Shadow execution failed for ${modelId}`, err);
+            }
+        });
+
+        await Promise.all(promises);
     }
 
     // ---------------------------------------------------------------------------
@@ -383,27 +467,33 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     // SIGNAL EVALUATION
     // ---------------------------------------------------------------------------
 
+
     private evaluateIndicators(
         market: string,
         indicators: IndicatorValues,
         config?: SessionConfig
     ): Signal | null {
+        // RESOLVE THRESHOLDS
+        const thresholds = thresholdResolver.resolve(market);
+
         const { rsi, emaFast, emaSlow, momentum, volatility } = indicators;
-        const minConfidence = config?.min_confidence ?? 0.6;
+        // Config override takes precedence for min_confidence if provided strictly, 
+        // but let's default to resolver if config is undefined, or cleaner: align them.
+        const minConfidence = config?.min_confidence ?? thresholds.confidence.min;
 
         let type: SignalType | null = null;
         let reason: SignalReason = 'NO_SIGNAL';
         let confidence = 0;
 
         // RSI signals
-        if (rsi < RSI_OVERSOLD) {
+        if (rsi < thresholds.rsi.oversold) {
             type = 'CALL';
             reason = 'RSI_OVERSOLD';
-            confidence = (RSI_OVERSOLD - rsi) / RSI_OVERSOLD * 0.8 + 0.2;
-        } else if (rsi > RSI_OVERBOUGHT) {
+            confidence = (thresholds.rsi.oversold - rsi) / thresholds.rsi.oversold * thresholds.confidence.baseMultiplier + thresholds.confidence.baseOffset;
+        } else if (rsi > thresholds.rsi.overbought) {
             type = 'PUT';
             reason = 'RSI_OVERBOUGHT';
-            confidence = (rsi - RSI_OVERBOUGHT) / (100 - RSI_OVERBOUGHT) * 0.8 + 0.2;
+            confidence = (rsi - thresholds.rsi.overbought) / (100 - thresholds.rsi.overbought) * thresholds.confidence.baseMultiplier + thresholds.confidence.baseOffset;
         }
 
         // EMA crossover signals (stronger than RSI)
@@ -414,18 +504,18 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         if (prevFast <= prevSlow && emaFast > emaSlow) {
             type = 'CALL';
             reason = 'EMA_CROSS_UP';
-            confidence = Math.min(0.95, 0.7 + Math.abs(momentum) * 2);
+            confidence = Math.min(thresholds.confidence.crossMax, 0.7 + Math.abs(momentum) * thresholds.weights.momentum);
         }
         // Bearish crossover: fast crosses below slow
         else if (prevFast >= prevSlow && emaFast < emaSlow) {
             type = 'PUT';
             reason = 'EMA_CROSS_DOWN';
-            confidence = Math.min(0.95, 0.7 + Math.abs(momentum) * 2);
+            confidence = Math.min(thresholds.confidence.crossMax, 0.7 + Math.abs(momentum) * thresholds.weights.momentum);
         }
 
         // Adjust confidence based on volatility
         if (volatility > 0.02) {
-            confidence *= 0.9; // High volatility = less confident
+            confidence *= thresholds.confidence.volatilityPenalty; // High volatility = less confident
         }
 
         // Check minimum confidence

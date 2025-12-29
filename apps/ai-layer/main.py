@@ -28,7 +28,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-MODEL_VERSION = "qil-v1.1.0-logreg"
+
+# Load Configuration
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config", "model_config.json")
+
+def load_model_version():
+    try:
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as f:
+                config = json.load(f)
+                return config.get("active_model", "qil-v1.1.0-logreg")
+    except Exception as e:
+        print(f"Failed to load config: {e}")
+    return "qil-v1.1.0-logreg"
+
+MODEL_VERSION = load_model_version()
 model_service = ModelService()
 
 # =============================================================================

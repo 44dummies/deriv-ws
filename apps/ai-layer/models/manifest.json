@@ -1,0 +1,37 @@
+{
+  "models": [
+    {
+      "model_id": "model_v1_3",
+      "filename": "model_v1_3.pkl",
+      "algorithm": "XGBoost",
+      "training_dataset_version": "2251254be1b6f18875c1a194c1710a6c03dc83737b8d11a2ad8ae9f5dc577bf6",
+      "hyperparameters": {},
+      "checksum": "ef1d27569112fc8b78582112608267c8cae885d1b9e6f6d8698af4870a4f918d",
+      "created_at": "2025-12-29T12:21:50.209871Z",
+      "locked": true,
+      "state": "ACTIVE",
+      "promoted_at": "2025-12-29T12:34:26.292470Z",
+      "rollback_target": true
+    },
+    {
+      "model_id": "model_v1_4",
+      "filename": "model_v1_4.pkl",
+      "algorithm": "XGBoost",
+      "training_dataset_version": "aef600ad3f646f721f0d053702781479c4876602abb5a8d0369ceabeedd488b6",
+      "hyperparameters": {
+        "use_label_encoder": false,
+        "eval_metric": "logloss",
+        "objective": "binary:logistic",
+        "reg_alpha": 0.1,
+        "reg_lambda": 1.0,
+        "max_depth": 4
+      },
+      "checksum": "d48cc27edb3cb1351e045345c4f04afb7a61ae212e02d7a6dd438b3090c70e2a",
+      "created_at": "2025-12-29T12:30:09.980554Z",
+      "locked": true,
+      "state": "ROLLED_BACK",
+      "promoted_at": "2025-12-29T12:32:05.276075Z",
+      "rolled_back_at": "2025-12-29T12:34:26.292616Z"
+    }
+  ]
+}

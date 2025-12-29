@@ -17,6 +17,7 @@ import tradesRoutes from './routes/trades.js';
 // Services
 import { initWebSocketServer, getWebSocketServer } from './services/WebSocketServer.js';
 import { sessionRegistry } from './services/SessionRegistry.js';
+import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
 const app = express();
 const httpServer = createServer(app);

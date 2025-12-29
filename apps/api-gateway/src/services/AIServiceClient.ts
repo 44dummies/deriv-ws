@@ -33,6 +33,8 @@ export interface AIInferenceResponse {
     reason: string;
     model_version: string;
     request_hash: string;
+    mode?: 'LIVE' | 'SHADOW';
+    market_regime?: string;
 }
 
 type AIClientEvents = {
@@ -88,7 +90,9 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
     async infer(
         indicators: IndicatorValues,
         market: string,
-        sessionId: string
+        sessionId: string,
+        modelId?: string,
+        inputHash?: string
     ): Promise<AIInferenceResponse | null> {
         if (!this.enabled) {
             return null;
@@ -109,6 +113,8 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
         const request: AIInferenceRequest = {
             features,
             session_id: sessionId,
+            model_id: modelId,
+            input_hash: inputHash
         };
 
         try {
