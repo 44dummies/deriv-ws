@@ -78,6 +78,8 @@ export interface IDerivClient {
     subscribeTicks(market: string): void;
     unsubscribeTicks(market: string): void;
     buyContract(parameters: any): Promise<any>;
+    sellContract(contractId: number, price: number): Promise<any>;
+    cancelContract(contractId: number): Promise<any>;
 }
 
 export enum DerivErrorCode {
@@ -214,6 +216,44 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         } catch (err: any) {
             // Ensure we don't leak raw objects if something weird happens
             throw new Error(err.message || 'Unknown Buy Error');
+        }
+    }
+
+    async sellContract(contractId: number, price: number): Promise<any> {
+        if (!this.isConnected()) throw new Error('Not connected');
+
+        const payload = { sell: contractId, price };
+        console.log(`[DerivWSClient] Selling contract ${contractId} at ${price}`);
+
+        try {
+            const response = await this.sendRequest(payload);
+            if (response.error) {
+                const code = this.mapErrorCode(response.error.code);
+                console.error(`[DerivWSClient] Sell failed: ${code} - ${response.error.message}`);
+                throw new Error(`${code}: ${response.error.message}`);
+            }
+            return response.sell;
+        } catch (err: any) {
+            throw new Error(err.message || 'Unknown Sell Error');
+        }
+    }
+
+    async cancelContract(contractId: number): Promise<any> {
+        if (!this.isConnected()) throw new Error('Not connected');
+
+        const payload = { cancel: contractId };
+        console.log(`[DerivWSClient] Cancelling contract ${contractId}`);
+
+        try {
+            const response = await this.sendRequest(payload);
+            if (response.error) {
+                const code = this.mapErrorCode(response.error.code);
+                console.error(`[DerivWSClient] Cancel failed: ${code} - ${response.error.message}`);
+                throw new Error(`${code}: ${response.error.message}`);
+            }
+            return response.cancel;
+        } catch (err: any) {
+            throw new Error(err.message || 'Unknown Cancel Error');
         }
     }
 

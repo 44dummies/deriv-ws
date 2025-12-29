@@ -281,15 +281,91 @@ export class SessionRegistry {
     /**
      * Recover state from database (placeholder)
      */
+    /**
+     * Recover state from database
+     */
     async recoverStateFromDB(): Promise<number> {
         console.log('[SessionRegistry] Recovering state from database...');
 
-        // TODO: Implement actual database recovery
-        // This would query Supabase for active sessions and rebuild state
+        const supabaseUrl = process.env['SUPABASE_URL'];
+        const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
-        // Placeholder: Return count of recovered sessions
-        const recoveredCount = 0;
-        console.log(`[SessionRegistry] Recovered ${recoveredCount} sessions`);
+        if (!supabaseUrl || !supabaseKey) {
+            console.warn('[SessionRegistry] Missing Supabase credentials. Skipping recovery.');
+            return 0;
+        }
+
+        const supabase = (await import('@supabase/supabase-js')).createClient(supabaseUrl, supabaseKey, {
+            auth: { persistSession: false, autoRefreshToken: false }
+        });
+
+        const { data: activeSessions, error } = await supabase
+            .from('sessions')
+            .select('*')
+            .in('status', ['ACTIVE', 'RUNNING', 'PAUSED']);
+
+        if (error) {
+            console.error('[SessionRegistry] Failed to fetch active sessions:', error);
+            return 0;
+        }
+
+        if (!activeSessions || activeSessions.length === 0) {
+            console.log('[SessionRegistry] No active sessions found in DB.');
+            return 0;
+        }
+
+        let recoveredCount = 0;
+
+        for (const dbSession of activeSessions) {
+            try {
+                // Fetch participants
+                const { data: participants, error: partError } = await supabase
+                    .from('participants')
+                    .select('*')
+                    .eq('session_id', dbSession.id)
+                    .neq('status', 'REMOVED'); // Don't recover removed users
+
+                if (partError) {
+                    console.error(`[SessionRegistry] Failed to fetch participants for ${dbSession.id}`, partError);
+                    continue;
+                }
+
+                const participantMap = new Map<string, Participant>();
+                for (const p of (participants || [])) {
+                    participantMap.set(p.user_id, {
+                        user_id: p.user_id,
+                        status: p.status as ParticipantStatus,
+                        pnl: p.pnl,
+                        joined_at: p.joined_at || new Date().toISOString()
+                    });
+
+                    // Restore user session mapping
+                    if (!this.userSessions.has(p.user_id)) {
+                        this.userSessions.set(p.user_id, new Set());
+                    }
+                    this.userSessions.get(p.user_id)!.add(dbSession.id);
+                }
+
+                const sessionState: SessionState = {
+                    id: dbSession.id,
+                    status: dbSession.status as SessionStatus,
+                    config_json: typeof dbSession.config_json === 'string' ? JSON.parse(dbSession.config_json) : dbSession.config_json,
+                    created_at: dbSession.created_at,
+                    started_at: dbSession.started_at,
+                    completed_at: dbSession.completed_at,
+                    participants: participantMap,
+                    admin_id: dbSession.admin_id // Assuming DB has this column, if not it might be null
+                };
+
+                this.sessions.set(dbSession.id, sessionState);
+                recoveredCount++;
+                console.log(`[SessionRegistry] Recovered session ${dbSession.id} with ${participantMap.size} participants.`);
+
+            } catch (err) {
+                console.error(`[SessionRegistry] Error recovering session ${dbSession.id}:`, err);
+            }
+        }
+
         return recoveredCount;
     }
 

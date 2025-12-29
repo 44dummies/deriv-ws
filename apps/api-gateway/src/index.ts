@@ -97,10 +97,20 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // =============================================================================
 
 const PORT = process.env['PORT'] ?? 4000;
-httpServer.listen(PORT, () => {
-    console.log(`API Gateway started on port ${PORT}`);
-    console.log(`WebSocket server ready`);
-    console.log(`Routes: /auth, /sessions, /users, /trades`);
+
+
+// Recover state before accepting traffic
+sessionRegistry.recoverStateFromDB().then((count) => {
+    console.log(`[Startup] Recovered ${count} active sessions.`);
+
+    httpServer.listen(PORT, () => {
+        console.log(`API Gateway started on port ${PORT}`);
+        console.log(`WebSocket server ready`);
+        console.log(`Routes: /auth, /sessions, /users, /trades`);
+    });
+}).catch(err => {
+    console.error('[Startup] Failed to recover state:', err);
+    process.exit(1);
 });
 
 export { app, httpServer, getWebSocketServer, sessionRegistry };

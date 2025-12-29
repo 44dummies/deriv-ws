@@ -67,7 +67,10 @@ async function runSimulation() {
     (quantEngine as any).useAI = false;
     // Force a "fake" opportunity by injecting a tailored dip at the end
     const dipTicks = [...rangingTicks];
-    dipTicks[dipTicks.length - 1].quote -= 20; // Sudden RSI dip
+    const lastTick = dipTicks[dipTicks.length - 1];
+    if (lastTick) {
+        lastTick.quote -= 20; // Sudden RSI dip
+    }
 
     const ruleSignal = await quantEngine.generateSignal(dipTicks, { min_confidence: 0.2 });
     console.log('  [Rule-Only] Signal:', ruleSignal ? `${ruleSignal.type} (${ruleSignal.confidence.toFixed(2)})` : 'None');

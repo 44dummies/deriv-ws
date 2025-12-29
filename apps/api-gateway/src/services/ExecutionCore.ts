@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
+import Redis from 'ioredis';
 import { riskGuard, RiskCheck } from './RiskGuard.js';
 import { UserService } from './UserService.js';
 import { DerivWSClient } from './DerivWSClient.js';
@@ -38,36 +39,37 @@ type ExecutionCoreEvents = {
 // =============================================================================
 
 export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
-    private processedKeys = new Set<string>();
+    private redis: Redis;
 
     constructor() {
         super();
+        this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
         this.initialize();
-        this.startCleanupInterval();
-        console.log('[ExecutionCore] Initialized');
+        console.log('[ExecutionCore] Initialized with Redis Idempotency');
     }
 
     private initialize(): void {
         // Listen for approved risk checks
         riskGuard.on('risk_check_completed', (check: RiskCheck) => {
             if (check.result === 'APPROVED') {
-                this.handleApprovedTrade(check);
+                // Fire and forget, but handle promise rejection logging if needed
+                this.handleApprovedTrade(check).catch(err => {
+                    console.error('[ExecutionCore] Error handling trade:', err);
+                });
             }
         });
     }
 
-    private handleApprovedTrade(check: RiskCheck): void {
+    private async handleApprovedTrade(check: RiskCheck): Promise<void> {
         const idempotencyKey = this.generateIdempotencyKey(check);
 
-        if (this.processedKeys.has(idempotencyKey)) {
+        if (await this.isDuplicate(idempotencyKey)) {
             console.warn(`[ExecutionCore] Duplicate trade skipped: ${idempotencyKey}`);
             return;
         }
 
-        this.processedKeys.add(idempotencyKey);
-
         try {
-            this.executeTrade(check, idempotencyKey);
+            await this.executeTrade(check, idempotencyKey);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(`[ExecutionCore] EXECUTION_FAILED: ${idempotencyKey} - ${errorMessage}`);
@@ -88,6 +90,14 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             };
             this.emit('TRADE_EXECUTED', failedResult);
         }
+    }
+
+    private async isDuplicate(key: string): Promise<boolean> {
+        const redisKey = `tradermind:exec:idempotency:${key}`;
+        // SET NX EX 3600 (1 hour)
+        // Returns 'OK' if set, null if already exists (which means duplicate)
+        const result = await this.redis.set(redisKey, '1', 'EX', 3600, 'NX');
+        return result === null;
     }
 
     private generateIdempotencyKey(check: RiskCheck): string {
@@ -165,35 +175,11 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             console.log(`[ExecutionCore] TRADE_EXECUTED: ${tradeId} @ ${entryPrice}`);
             this.emit('TRADE_EXECUTED', result);
 
-        } catch (error: any) {
-            console.error(`[ExecutionCore] Execution Failed: ${error.message}`);
-
-            // Emit FAILED result so system knows it failed
-            const failedResult: TradeResult = {
-                tradeId: `fail_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                userId: check.userId,
-                sessionId: check.sessionId,
-                status: 'FAILED',
-                profit: 0,
-                executedAt: new Date().toISOString(),
-                metadata_json: {
-                    market: check.proposedTrade.market,
-                    reason: error.message,
-                    risk_confidence: check.proposedTrade.confidence
-                }
-            };
-            this.emit('TRADE_EXECUTED', failedResult);
         } finally {
             if (client) {
                 client.disconnect();
             }
         }
-    }
-
-    private startCleanupInterval() {
-        setInterval(() => {
-            this.processedKeys.clear();
-        }, 3600000);
     }
 }
 

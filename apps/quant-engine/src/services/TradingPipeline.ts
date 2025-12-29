@@ -40,6 +40,7 @@ type PipelineEvents = {
 export class TradingPipeline extends EventEmitter<PipelineEvents> {
     private sessions: Map<string, DummySession> = new Map();
     private isRunning = false;
+    private isMarketDataConnected = false;
     private tickCount = 0;
     private signalCount = 0;
     private approvedCount = 0;
@@ -63,10 +64,12 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
 
         marketDataService.on('connected', () => {
             console.log('[TradingPipeline] MarketData connected');
+            this.isMarketDataConnected = true;
         });
 
         marketDataService.on('disconnected', (reason) => {
             console.log(`[TradingPipeline] MarketData disconnected: ${reason}`);
+            this.isMarketDataConnected = false;
         });
 
         // RiskGuard events
@@ -85,15 +88,22 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
     // PIPELINE HANDLERS
     // ---------------------------------------------------------------------------
 
-    private handleTick(tick: NormalizedTick): void {
+    private async handleTick(tick: NormalizedTick): Promise<void> {
         this.tickCount++;
         this.emit('tick', tick);
 
         if (!this.isRunning) return;
 
-        // Log every 10th tick
         if (this.tickCount % 10 === 0) {
             console.log(`[Pipeline] Tick #${this.tickCount}: ${tick.market} @ ${tick.quote.toFixed(2)}`);
+        }
+
+        if (!this.isMarketDataConnected) {
+            // Log once every 10 ticks to avoid spam if flood occurs
+            if (this.tickCount % 10 === 0) {
+                console.warn('[Pipeline] Tick ignored - MarketData disconnected');
+            }
+            return;
         }
 
         // Process tick through QuantEngine for each session
@@ -104,7 +114,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
             }
 
             // Generate signal
-            const signal = quantEngine.processTick(tick, {
+            const signal = await quantEngine.processTick(tick, {
                 allowed_markets: session.config.allowed_markets,
                 min_confidence: session.config.min_confidence,
             });
@@ -271,6 +281,9 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
 
         // Connect to market data
         marketDataService.connect();
+        if (marketDataService.isHealthy()) {
+            this.isMarketDataConnected = true;
+        }
         marketDataService.subscribeToDefaultMarkets();
     }
 

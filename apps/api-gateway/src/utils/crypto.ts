@@ -8,21 +8,29 @@ const KEY = Buffer.from(KEY_HEX, "hex");
 
 export function encrypt(text: string): string {
     const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv(ALGO, KEY, iv);
-    const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
+    // Explicitly cast to any or correct type to satisfy TS if environment types conflict
+    const cipher = crypto.createCipheriv(ALGO, KEY as any, iv as any);
+
+    // Concatenate encrypted content
+    const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()] as any[]);
     const tag = cipher.getAuthTag();
 
-    return Buffer.concat([iv, tag, encrypted]).toString("base64");
+    // Return IV + Tag + Encrypted
+    return Buffer.concat([iv, tag, encrypted] as any[]).toString("base64");
 }
 
 export function decrypt(payload: string): string {
     const buf = Buffer.from(payload, "base64");
+
+    // Extract parts
     const iv = buf.subarray(0, 12);
     const tag = buf.subarray(12, 28);
     const text = buf.subarray(28);
 
-    const decipher = crypto.createDecipheriv(ALGO, KEY, iv);
-    decipher.setAuthTag(tag);
+    const decipher = crypto.createDecipheriv(ALGO, KEY as any, iv as any);
+    decipher.setAuthTag(tag as any);
 
-    return decipher.update(text) + decipher.final("utf8");
+    // Decrypt
+    // Force string return
+    return decipher.update(text as any) + decipher.final("utf8");
 }

@@ -1,19 +1,17 @@
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { executionCore } from './ExecutionCore.js';
-import { userService } from './UserService.js';
-import { DerivWSClient } from './DerivWSClient.js';
-import { marketDataService } from './MarketDataService.js';
+import { UserService } from './UserService.js';
 
 // Mock Dependencies
 vi.mock('./UserService.js', () => ({
-    userService: {
-        getDerivToken: vi.fn()
+    UserService: {
+        getDerivToken: vi.fn(),
+        storeDerivToken: vi.fn()
     }
 }));
 
 // Mock DerivWSClient Class
-// We need to mock the *instance* methods
 const mockAuthorize = vi.fn();
 const mockBuy = vi.fn();
 const mockConnect = vi.fn();
@@ -21,23 +19,27 @@ const mockDisconnect = vi.fn();
 const mockSubscribe = vi.fn();
 const mockOn = vi.fn();
 const mockOff = vi.fn();
+const mockOnce = vi.fn();
 
 vi.mock('./DerivWSClient.js', () => {
     return {
-        DerivWSClient: vi.fn().mockImplementation(() => ({
-            connect: mockConnect,
-            authorize: mockAuthorize,
-            buyContract: mockBuy,
-            disconnect: mockDisconnect,
-            subscribe: mockSubscribe,
-            on: mockOn,
-            off: mockOff,
-            isConnected: () => true
-        }))
+        DerivWSClient: vi.fn().mockImplementation(function () {
+            return {
+                connect: mockConnect,
+                authorize: mockAuthorize,
+                buyContract: mockBuy,
+                disconnect: mockDisconnect,
+                subscribe: mockSubscribe,
+                on: mockOn,
+                once: mockOnce,
+                off: mockOff,
+                isConnected: () => true
+            };
+        })
     };
 });
 
-// Mock MarketDataService for price checks (optional but good practice)
+// Mock MarketDataService
 vi.mock('./MarketDataService.js', () => ({
     marketDataService: {
         getLastTicks: vi.fn().mockReturnValue([{ quote: 100 }])
@@ -47,38 +49,48 @@ vi.mock('./MarketDataService.js', () => ({
 describe('ExecutionCore Secure Flow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Reset ExecutionCore state if needed (e.g. processed keys)
         (executionCore as any).processedKeys.clear();
+
+        // Setup default mock behavior for connect
+        mockOnce.mockImplementation((event, cb) => {
+            if (event === 'connected') cb();
+            return this;
+        });
     });
 
     it('should execute trade successfully with valid token', async () => {
         // 1. Mock Encrypted Token retrieval
-        vi.mocked(userService.getDerivToken).mockResolvedValue('mock_decrypted_token');
+        vi.mocked(UserService.getDerivToken).mockResolvedValue('mock_decrypted_token');
 
         // 2. Mock Deriv Auth & Buy Success
         mockAuthorize.mockResolvedValue(true);
         mockBuy.mockResolvedValue({
             contract_id: 12345,
-            longcode: 'Win Payout'
+            longcode: 'Win Payout',
+            transaction_id: 999,
+            buy_price: 10.5
         });
 
-        // 3. Trigger Trade
-        const tradeRequest = {
+        // 3. Trigger Trade (Use proper RiskCheck structure)
+        const riskCheck = {
             userId: 'user-1',
-            symbol: 'R_100',
-            contractType: 'CALL',
-            amount: 10,
-            signalId: 'sig-1'
+            sessionId: 'session-1',
+            result: 'APPROVED',
+            proposedTrade: {
+                market: 'R_100',
+                type: 'CALL',
+                confidence: 0.9,
+                timestamp: new Date().toISOString(),
+                expiry: new Date().toISOString()
+            }
         };
 
-        const result = await executionCore.executeTrade(tradeRequest);
+        // Call private method
+        await (executionCore as any).executeTrade(riskCheck, 'key-1');
 
         // 4. Verification
-        expect(result.status).toBe('SUCCESS');
-        expect(result.metadata_json.contract_id).toBe(12345);
-
         // Verify Strict Isolation Flow
-        expect(userService.getDerivToken).toHaveBeenCalledWith('user-1');
+        expect(UserService.getDerivToken).toHaveBeenCalledWith('user-1');
         expect(mockConnect).toHaveBeenCalled();
         expect(mockAuthorize).toHaveBeenCalledWith('mock_decrypted_token');
         expect(mockBuy).toHaveBeenCalled();
@@ -86,44 +98,47 @@ describe('ExecutionCore Secure Flow', () => {
     });
 
     it('should fail immediately if user has no token', async () => {
-        // 1. Mock missing token
-        vi.mocked(userService.getDerivToken).mockResolvedValue(null);
+        vi.mocked(UserService.getDerivToken).mockResolvedValue(null);
 
-        const tradeRequest = {
+        const riskCheck = {
             userId: 'user-no-token',
-            symbol: 'R_100',
-            contractType: 'PUT',
-            amount: 10,
-            signalId: 'sig-2'
+            sessionId: 'session-1',
+            result: 'APPROVED',
+            proposedTrade: {
+                market: 'R_100',
+                type: 'PUT',
+                confidence: 0.8,
+                timestamp: new Date().toISOString(),
+                expiry: new Date().toISOString()
+            }
         };
 
-        const result = await executionCore.executeTrade(tradeRequest);
-
-        expect(result.status).toBe('FAILED');
-        expect(result.metadata_json.reason).toMatch(/User not authorized for trading/);
+        await (executionCore as any).executeTrade(riskCheck, 'key-2');
 
         // Should NOT try to connect to Deriv
         expect(mockConnect).not.toHaveBeenCalled();
     });
 
     it('should fail if Deriv Authorization fails', async () => {
-        vi.mocked(userService.getDerivToken).mockResolvedValue('invalid_token');
+        vi.mocked(UserService.getDerivToken).mockResolvedValue('invalid_token');
 
         // Mock Auth Failure
         mockAuthorize.mockRejectedValue(new Error('Invalid Token'));
 
-        const tradeRequest = {
+        const riskCheck = {
             userId: 'user-auth-fail',
-            symbol: 'R_100',
-            contractType: 'CALL',
-            amount: 10,
-            signalId: 'sig-3'
+            sessionId: 'session-1',
+            result: 'APPROVED',
+            proposedTrade: {
+                market: 'R_100',
+                type: 'CALL',
+                confidence: 0.9,
+                timestamp: new Date().toISOString(),
+                expiry: new Date().toISOString()
+            }
         };
 
-        const result = await executionCore.executeTrade(tradeRequest);
-
-        expect(result.status).toBe('FAILED');
-        expect(result.metadata_json.reason).toMatch(/Execution Error/);
+        await (executionCore as any).executeTrade(riskCheck, 'key-3');
 
         // Must still disconnect cleanup
         expect(mockDisconnect).toHaveBeenCalled();

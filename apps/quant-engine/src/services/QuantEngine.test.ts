@@ -119,8 +119,9 @@ async function runTests(): Promise<void> {
 
     if (emittedSignal) {
         console.log('  ✅ Signal event emitted');
-        if (emittedSignal.metadata && emittedSignal.metadata.reason_tags) {
-            console.log('  Explainability Tags:', emittedSignal.metadata.reason_tags);
+        const sig = emittedSignal as Signal;
+        if (sig.metadata && sig.metadata.reason_tags) {
+            console.log('  Explainability Tags:', sig.metadata.reason_tags);
             console.log('  ✅ Metadata populated');
         } else {
             console.log('  ⚠️ Metadata missing');

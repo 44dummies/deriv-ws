@@ -29,6 +29,12 @@ export interface Signal {
     reason: SignalReason;
     market: string;
     timestamp: string;
+    metadata?: {
+        ai_confidence?: number;
+        market_regime?: string;
+        reason_tags?: string[];
+        [key: string]: any;
+    };
 }
 
 export interface SessionConfig {

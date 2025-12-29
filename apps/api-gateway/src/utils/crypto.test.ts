@@ -1,24 +1,23 @@
+import { describe, it, expect } from 'vitest';
 import { encrypt, decrypt } from './crypto.js';
 
-console.log('Testing Crypto Utils...');
+describe('Crypto Utils', () => {
+    it('should encrypt and decrypt a string correctly', () => {
+        const original = "deriv_token_secret_123";
+        const encrypted = encrypt(original);
 
-const original = "deriv_token_secret_123";
-const encrypted = encrypt(original);
+        expect(encrypted).not.toBe(original);
+        expect(encrypted.length).toBeGreaterThan(0);
 
-console.log('Original:', original);
-console.log('Encrypted:', encrypted);
+        const decrypted = decrypt(encrypted);
+        expect(decrypted).toBe(original);
+    });
 
-if (encrypted === original) {
-    console.error('❌ Encryption failed: Output matches input');
-    process.exit(1);
-}
+    it('should generate different random IVs for same input', () => {
+        const input = "same_input";
+        const enc1 = encrypt(input);
+        const enc2 = encrypt(input);
 
-const decrypted = decrypt(encrypted);
-console.log('Decrypted:', decrypted);
-
-if (decrypted !== original) {
-    console.error(`❌ Decryption failed: Expected ${original}, got ${decrypted}`);
-    process.exit(1);
-}
-
-console.log('✅ Crypto Test Passed');
+        expect(enc1).not.toBe(enc2);
+    });
+});

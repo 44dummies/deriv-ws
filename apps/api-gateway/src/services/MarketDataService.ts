@@ -83,6 +83,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     private seenTickHashes: Map<string, Set<string>> = new Map();
     private marketStats: Map<string, MarketStats> = new Map();
     private lastTickTime: Map<string, number> = new Map();
+    private lastEpoch: Map<string, number> = new Map();
     private tickTimeoutTimers: Map<string, NodeJS.Timeout> = new Map();
     private activeSubscriptions: Set<string> = new Set();
     private isRunning = false;
@@ -199,6 +200,14 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
             this.incrementDuplicateCount(market);
             return;
         }
+
+        // Check for out-of-order
+        const lastEpoch = this.lastEpoch.get(market) ?? 0;
+        if (rawTick.epoch < lastEpoch) {
+            this.logAnomaly('out_of_order_tick', { market, epoch: rawTick.epoch, lastEpoch });
+            return;
+        }
+        this.lastEpoch.set(market, rawTick.epoch);
 
         // Validate price sanity
         if (!this.validatePrices(rawTick)) {

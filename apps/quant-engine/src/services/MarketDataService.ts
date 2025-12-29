@@ -329,6 +329,13 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     }
 
     /**
+     * Check if service is healthy (connected and running)
+     */
+    isHealthy(): boolean {
+        return this.isConnected();
+    }
+
+    /**
      * Get active subscriptions
      */
     getSubscriptions(): string[] {
