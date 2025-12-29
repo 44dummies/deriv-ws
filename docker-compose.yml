@@ -1,0 +1,98 @@
+# TraderMind Docker Compose
+# Development environment configuration
+
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # FRONTEND
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api-gateway
+    networks:
+      - tradermind
+
+  # ==========================================================================
+  # API GATEWAY
+  # ==========================================================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: apps/api-gateway/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - FRONTEND_URL=http://localhost:5173
+    depends_on:
+      - redis
+    networks:
+      - tradermind
+
+  # ==========================================================================
+  # QUANT ENGINE
+  # ==========================================================================
+  quant-engine:
+    build:
+      context: .
+      dockerfile: apps/quant-engine/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - AI_LAYER_URL=http://ai-layer:8000
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    depends_on:
+      - redis
+      - ai-layer
+    networks:
+      - tradermind
+
+  # ==========================================================================
+  # AI LAYER (Python FastAPI)
+  # SECURITY: Isolated network, no DB access
+  # ==========================================================================
+  ai-layer:
+    build:
+      context: ./apps/ai-layer
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    networks:
+      - tradermind
+    # No database or redis access - isolated by design
+
+  # ==========================================================================
+  # INFRASTRUCTURE
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - tradermind
+
+networks:
+  tradermind:
+    driver: bridge
+
+volumes:
+  redis_data:

@@ -1,0 +1,43 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": [
+            "ES2022"
+        ],
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noImplicitAny": true,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "isolatedModules": true,
+        "baseUrl": ".",
+        "paths": {
+            "@tradermind/schemas": [
+                "packages/schemas/src"
+            ],
+            "@tradermind/shared-utils": [
+                "packages/shared-utils/src"
+            ],
+            "@tradermind/risk-rules": [
+                "packages/risk-rules/src"
+            ]
+        }
+    },
+    "exclude": [
+        "node_modules",
+        "dist",
+        "**/dist",
+        "**/node_modules"
+    ]
+}

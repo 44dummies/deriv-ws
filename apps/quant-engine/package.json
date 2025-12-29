@@ -1,0 +1,31 @@
+{
+    "name": "@tradermind/quant-engine",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "lint": "eslint . --ext ts"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "2.39.3",
+        "@tradermind/schemas": "workspace:*",
+        "eventemitter3": "5.0.1",
+        "ioredis": "5.3.2",
+        "pino": "8.17.2",
+        "uuid": "9.0.0",
+        "ws": "8.16.0"
+    },
+    "devDependencies": {
+        "@types/node": "20.11.5",
+        "@types/uuid": "9.0.7",
+        "@types/ws": "8.5.10",
+        "tsx": "4.7.0",
+        "typescript": "5.3.3"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    }
+}

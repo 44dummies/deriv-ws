@@ -1,0 +1,192 @@
+import { create, StateCreator } from 'zustand';
+import { persist, PersistOptions } from 'zustand/middleware';
+
+// Type definitions
+export interface SignalPayload {
+    market: string;
+    type: 'CALL' | 'PUT';
+    confidence: number;
+    reason: string;
+    expiry: number;
+    timestamp: number;
+}
+
+export interface TradePayload {
+    tradeId: string;
+    userId: string;
+    sessionId: string;
+    status: 'SUCCESS' | 'FAILED' | 'PARTIAL';
+    profit: number;
+    executedAt: number;
+    metadata_json: {
+        market: string;
+        entryPrice: number;
+        reason: string;
+        risk_confidence: number;
+        failure_reason?: string;
+    };
+}
+
+export interface RiskRiskPayload {
+    checkPassed: boolean;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+}
+
+export interface WSDetail<T> {
+    id?: string;
+    timestamp: number;
+    payload: T;
+}
+
+export interface ChartDataPoint {
+    time: string;
+    timestamp: number;
+    balance: number;
+    pnl: number;
+}
+
+interface RealTimeState {
+    isConnected: boolean;
+    signals: WSDetail<SignalPayload>[];
+    trades: WSDetail<TradePayload>[];
+    riskEvents: WSDetail<RiskRiskPayload>[];
+
+    // Analytics State
+    history: ChartDataPoint[];
+    currentBalance: number;
+    totalPnL: number;
+
+    // Session State
+    sessionStatus: 'ACTIVE' | 'PAUSED' | 'COMPLETED';
+
+    // Actions
+    setConnected: (status: boolean) => void;
+    setSessionStatus: (status: 'ACTIVE' | 'PAUSED' | 'COMPLETED') => void;
+    addSignal: (payload: SignalPayload) => void;
+    addTrade: (payload: TradePayload) => void;
+    addRiskEvent: (payload: RiskRiskPayload) => void;
+    clearEvents: () => void;
+    pruneExpiredData: () => void;
+}
+
+// Max number of events to keep in memory
+const MAX_EVENTS = 50;
+const MAX_CHART_POINTS = 100;
+const SIGNAL_TTL = 300000; // 5 minutes
+
+type RealTimeStore = RealTimeState;
+
+type MyPersist = (
+    config: StateCreator<RealTimeStore>,
+    options: PersistOptions<RealTimeStore>
+) => StateCreator<RealTimeStore>;
+
+export const useRealTimeStore = create<RealTimeStore>()(
+    (persist as unknown as MyPersist)(
+        (set) => ({
+            isConnected: false,
+            signals: [],
+            trades: [],
+            riskEvents: [],
+            history: [{ time: 'Start', timestamp: Date.now(), balance: 10000, pnl: 0 }],
+            currentBalance: 10000,
+            totalPnL: 0,
+            sessionStatus: 'ACTIVE',
+
+            setConnected: (status: boolean) => set({ isConnected: status }),
+            setSessionStatus: (status) => set({ sessionStatus: status }),
+
+            addSignal: (payload: SignalPayload) => set((state) => {
+                const newSignals = [{
+                    id: Date.now().toString(),
+                    timestamp: Date.now(),
+                    payload
+                }, ...state.signals].slice(0, MAX_EVENTS);
+
+                return { signals: newSignals };
+            }),
+
+            addTrade: (payload: TradePayload) => set((state) => {
+                const profit = payload.profit || 0;
+                let newPnL = state.totalPnL;
+                let newBalance = state.currentBalance;
+
+                if (payload.status === 'SUCCESS') {
+                    newPnL += profit;
+                    newBalance += profit;
+                }
+
+                // Add to trade history
+                const newTrades = [{
+                    id: payload.tradeId || Date.now().toString(),
+                    timestamp: Date.now(),
+                    payload
+                }, ...state.trades].slice(0, MAX_EVENTS);
+
+                // Add to chart history
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const newPoint: ChartDataPoint = {
+                    time: timeStr,
+                    timestamp: now.getTime(),
+                    balance: newBalance,
+                    pnl: newPnL
+                };
+                const newHistory = [...state.history, newPoint].slice(-MAX_CHART_POINTS);
+
+                return {
+                    trades: newTrades,
+                    history: newHistory,
+                    currentBalance: newBalance,
+                    totalPnL: newPnL
+                };
+            }),
+
+            addRiskEvent: (payload: RiskRiskPayload) => set((state) => {
+                const newRisk = [{
+                    id: Date.now().toString(),
+                    timestamp: Date.now(),
+                    payload
+                }, ...state.riskEvents].slice(0, MAX_EVENTS);
+                return { riskEvents: newRisk };
+            }),
+
+            clearEvents: () => set({
+                signals: [],
+                trades: [],
+                riskEvents: [],
+                history: [{ time: 'Start', timestamp: Date.now(), balance: 10000, pnl: 0 }],
+                currentBalance: 10000,
+                totalPnL: 0
+            }),
+
+            pruneExpiredData: () => set((state) => {
+                const now = Date.now();
+                return {
+                    signals: state.signals.filter((s) => {
+                        const ts = typeof s.timestamp === 'number' ? s.timestamp : new Date(s.timestamp).getTime();
+                        return (now - ts) < SIGNAL_TTL;
+                    })
+                };
+            })
+        }),
+        {
+            name: 'tradermind-realtime-storage',
+            partialize: (state) => ({
+                signals: state.signals,
+                trades: state.trades,
+                riskEvents: state.riskEvents,
+                history: state.history,
+                currentBalance: state.currentBalance,
+                totalPnL: state.totalPnL,
+                sessionStatus: state.sessionStatus
+            } as RealTimeState),
+        }
+    )
+);
+
+// Expose store to window for Cypress testing
+if (typeof window !== 'undefined') {
+    (window as any).useRealTimeStore = useRealTimeStore;
+}
