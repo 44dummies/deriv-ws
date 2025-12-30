@@ -19,7 +19,10 @@
         "allowImportingTsExtensions": true,
         "noEmit": true,
         "outDir": "dist",
-        "rootDir": "src"
+        "rootDir": "src",
+        "types": [
+            "vite/client"
+        ]
     },
     "include": [
         "src"

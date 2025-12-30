@@ -4,9 +4,13 @@ import { useAuthStore } from './stores/useAuthStore';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LiveSession from './pages/LiveSession';
-import { Loader2 } from 'lucide-react';
-import { DerivCallback } from './features/auth/DerivCallback';
 import Landing from './pages/Landing';
+import Sessions from './pages/Sessions';
+import Statistics from './pages/Statistics';
+import Settings from './pages/Settings';
+import { DerivCallback } from './features/auth/DerivCallback';
+import DashboardLayout from './layouts/DashboardLayout';
+import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'user' }) {
     const { user, loading, isAdmin } = useAuthStore();
@@ -63,25 +67,29 @@ function App() {
 
                 <Route path="/auth/callback" element={<DerivCallback />} />
 
-                {/* Secure Dashboard Route */}
-                <Route path="/dashboard" element={
+                {/* Secure SPA Routes */}
+                <Route element={
                     <ProtectedRoute>
-                        <Dashboard />
+                        <DashboardLayout />
                     </ProtectedRoute>
-                } />
+                }>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/sessions" element={<Sessions />} />
+                    <Route path="/statistics" element={<Statistics />} />
+                    <Route path="/settings" element={<Settings />} />
 
+                    {/* Maintain legacy/admin routes if needed, or refactor later */}
+                    <Route path="/live-session/:sessionId" element={<LiveSession />} />
+                </Route>
+
+                {/* Admin Specific Route (Separated or integrated based on future need) */}
                 <Route path="/admin" element={
                     <ProtectedRoute role="admin">
                         <AdminDashboard />
                     </ProtectedRoute>
                 } />
 
-                <Route path="/session/:sessionId" element={
-                    <ProtectedRoute>
-                        <LiveSession />
-                    </ProtectedRoute>
-                } />
-
+                {/* Catch all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Router>
