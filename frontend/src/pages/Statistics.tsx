@@ -15,7 +15,7 @@ export default function Statistics() {
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ['stats'],
         queryFn: async () => {
-            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats`;
+            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats/summary`;
             const res = await fetch(url);
             if (!res.ok) throw new Error('Failed to fetch stats');
             return res.json();

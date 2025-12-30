@@ -33,6 +33,10 @@ export const useDerivBalance = () => {
             }
 
             if (data.msg_type === 'balance') {
+                if (!data.balance) {
+                    console.warn('Deriv Balance: Received balance message but data.balance is missing', data);
+                    return;
+                }
                 const { balance, currency } = data.balance;
                 updateBalance(Number(balance), currency);
             }
