@@ -29,10 +29,10 @@ const wsServer = initWebSocketServer(httpServer);
 // MIDDLEWARE
 // =============================================================================
 
-app.use(helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    crossOriginOpenerPolicy: { policy: "unsafe-none" },
-}));
+// app.use(helmet({
+//     crossOriginResourcePolicy: { policy: "cross-origin" },
+//     crossOriginOpenerPolicy: { policy: "unsafe-none" },
+// }));
 
 const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -88,6 +88,10 @@ app.use((req, _res, next) => {
 // =============================================================================
 
 // Health check
+app.get('/', (_req, res) => {
+    res.status(200).send('TraderMind API Gateway is running');
+});
+
 app.get('/health', (_req, res) => {
     const wsStats = wsServer.getStats();
     const registryStats = sessionRegistry.getStats();
@@ -145,7 +149,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // START SERVER
 // =============================================================================
 
-const PORT = process.env['PORT'] ?? 4000;
+const PORT = process.env['PORT'] ?? 3000;
 console.log('[Startup] Initializing TraderMind API Gateway...');
 console.log(`[Startup] Environment: ${process.env['NODE_ENV']}`);
 console.log(`[Startup] CORS Origin Config: ${process.env['CORS_ORIGIN']}`);
