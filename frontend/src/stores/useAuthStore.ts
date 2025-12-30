@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     loginWithDeriv: async (derivToken: string, accountId: string) => {
         try {
             set({ loading: true });
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/v1/auth/deriv/callback`, {
+            const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/auth/deriv/callback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ deriv_token: derivToken, account_id: accountId })
