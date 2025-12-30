@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { AuthService } from '../services/AuthService.js';
 
 // =============================================================================
 // TYPES
@@ -46,26 +47,39 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
 
     const token = authHeader.slice(7);
 
-    // Verify JWT with Supabase
-    supabase.auth.getUser(token)
-        .then(({ data, error }) => {
-            if (error || !data.user) {
-                res.status(401).json({ error: 'Invalid or expired token' });
-                return;
-            }
-
-            // Get user role from metadata or database
+    // 1. Try to verify as Internal Session Token
+    AuthService.verifySessionToken(token).then((payload) => {
+        if (payload) {
             req.user = {
-                id: data.user.id,
-                email: data.user.email ?? '',
-                role: (data.user.user_metadata?.['role'] as 'ADMIN' | 'USER') ?? 'USER',
+                id: payload.userId,
+                email: payload.email,
+                role: payload.role as 'ADMIN' | 'USER',
             };
-
             next();
-        })
-        .catch(() => {
-            res.status(401).json({ error: 'Authentication failed' });
-        });
+            return;
+        }
+
+        // 2. Fallback: Verify JWT with Supabase (Legacy/Hybrid support)
+        supabase.auth.getUser(token)
+            .then(({ data, error }) => {
+                if (error || !data.user) {
+                    res.status(401).json({ error: 'Invalid or expired token' });
+                    return;
+                }
+
+                // Get user role from metadata or database
+                req.user = {
+                    id: data.user.id,
+                    email: data.user.email ?? '',
+                    role: (data.user.user_metadata?.['role'] as 'ADMIN' | 'USER') ?? 'USER',
+                };
+
+                next();
+            })
+            .catch(() => {
+                res.status(401).json({ error: 'Authentication failed' });
+            });
+    });
 }
 
 /**

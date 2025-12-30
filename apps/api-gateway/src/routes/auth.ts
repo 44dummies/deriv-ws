@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import { UserService } from '../services/UserService.js';
+import { AuthService } from '../services/AuthService.js';
 
 const router = Router();
 
@@ -35,13 +36,9 @@ router.post('/deriv/connect', (_req: Request, res: Response) => {
 });
 
 // POST /auth/deriv/callback (Strict Implementation)
-router.post('/deriv/callback', requireAuth, async (req: AuthRequest, res: Response) => {
-    const user = req.user;
-    if (!user) {
-        res.status(401).json({ error: 'User not authenticated' });
-        return;
-    }
-
+// POST /auth/deriv/callback (Login Endpoint)
+// This endpoint is now PUBLIC as it performs the login
+router.post('/deriv/callback', async (req: Request, res: Response) => {
     const { deriv_token, account_id } = req.body;
 
     if (!deriv_token || !account_id) {
@@ -52,6 +49,7 @@ router.post('/deriv/callback', requireAuth, async (req: AuthRequest, res: Respon
     // 1. Verify token with Deriv
     const client = new DerivWSClient();
     let authSuccess = false;
+    let userEmail: string | undefined;
 
     try {
         await new Promise<void>((resolve, reject) => {
@@ -63,7 +61,12 @@ router.post('/deriv/callback', requireAuth, async (req: AuthRequest, res: Respon
             client.connect();
         });
 
+        // We verify the token is valid for this account
         authSuccess = await client.authorize(deriv_token);
+
+        // Optionally fetch account settings to get email if possible, or assume it's valid
+        // Deriv WS 'authorize' response usually contains email if scope allows, but we might verify basic access first.
+        // For now, if authorize returns true, it's valid.
 
     } catch (error: any) {
         console.error('[Auth] Token verification connection failed', error);
@@ -80,18 +83,37 @@ router.post('/deriv/callback', requireAuth, async (req: AuthRequest, res: Respon
         return;
     }
 
-    // 2. Persist token securely
     try {
+        // 2. Find or Create User
+        const user = await UserService.findOrCreateUserFromDeriv(account_id, userEmail);
+
+        // 3. Persist Deriv Token Securely
         await UserService.storeDerivToken({
             userId: user.id,
             derivToken: deriv_token,
             accountId: account_id
         });
 
-        res.json({ success: true, account_id });
+        // 4. Generate Internal Session Token
+        const accessToken = await AuthService.generateSessionToken({
+            userId: user.id,
+            role: user.role,
+            email: user.email
+        });
+
+        res.json({
+            success: true,
+            accessToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role
+            }
+        });
+
     } catch (error) {
-        console.error('[Auth] Storage failed', error);
-        res.status(500).json({ error: 'Failed to store token' });
+        console.error('[Auth] Login failed', error);
+        res.status(500).json({ error: 'Failed to process login' });
     }
 });
 

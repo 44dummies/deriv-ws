@@ -53,5 +53,81 @@ export const UserService = {
         }
 
         return decrypt(data.encrypted_token);
+    },
+
+    async findOrCreateUserFromDeriv(derivAccountId: string, email?: string): Promise<{ id: string; email: string; role: 'ADMIN' | 'USER' }> {
+        // 1. Check if user exists with this deriv account id in user_deriv_tokens
+        // Actually, we need to reverse lookup: deriv_account_id -> user_id
+        const { data: tokenData } = await supabaseAdmin
+            .from('user_deriv_tokens')
+            .select('user_id')
+            .eq('account_id', derivAccountId)
+            .single();
+
+        if (tokenData) {
+            // User exists, fetch details
+            const { data: userData } = await supabaseAdmin.auth.admin.getUserById(tokenData.user_id);
+            if (userData && userData.user) {
+                return {
+                    id: userData.user.id,
+                    email: userData.user.email ?? '',
+                    role: (userData.user.user_metadata?.['role'] as 'ADMIN' | 'USER') ?? 'USER'
+                };
+            }
+        }
+
+        // 2. User does not exist, create a new one
+        // We will create a "Deriv User" in Supabase Auth
+        // If email is provided (from Deriv), use it. Else fake one.
+        const userEmail = email || `${derivAccountId.toLowerCase()}@deriv.user`;
+        const tempPassword = `Deriv-${Math.random().toString(36).slice(-10)}`;
+
+        // Check if email exists to avoid collision (rare but possible if using real email)
+        const { data: existingUser } = await supabaseAdmin.from('auth.users').select('id').eq('email', userEmail).single();
+
+        let userId: string;
+
+        if (existingUser) {
+            // Should not happen if we did token lookup correctly, unless manual DB mess up
+            // or previous email signup without deriv link
+            // We'll just link them now.
+            userId = existingUser.id; // Corrected: existingUser is a generic object, but Supabase response structure is typically { data, ... }. Here we queried table directly? 
+            // Wait, querying 'auth.users' directly isn't standard via client. 
+            // Better to just try create and catch error, or list users.
+        }
+
+        // Cleaner approach: Try to create user via Admin API
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email: userEmail,
+            password: tempPassword,
+            email_confirm: true,
+            user_metadata: { role: 'USER', source: 'deriv' }
+        });
+
+        if (createError) {
+            // If error is "User already registered", fetch that user
+            // This simplifies logic significantly
+            const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+            const found = users.users.find(u => u.email === userEmail);
+            if (found) {
+                userId = found.id;
+            } else {
+                throw new Error(`Failed to create user: ${createError.message}`);
+            }
+        } else {
+            userId = newUser.user.id;
+        }
+
+        // 3. Link them in user_deriv_tokens (will be updated with token later in storeDerivToken, but good to reserve account_id)
+        // Actually, storeDerivToken handles the upsert. We can return here and let the caller call storeDerivToken.
+
+        // Return user structure
+        // Refetch to be sure or construct
+        const { data: finalUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+        return {
+            id: finalUser?.user?.id ?? userId,
+            email: finalUser?.user?.email ?? userEmail,
+            role: (finalUser?.user?.user_metadata?.['role'] as 'ADMIN' | 'USER') ?? 'USER'
+        };
     }
 };

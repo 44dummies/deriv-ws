@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LiveSession from './pages/LiveSession';
 import { Loader2 } from 'lucide-react';
+import { DerivCallback } from './features/auth/DerivCallback';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'user' }) {
     const { user, loading, isAdmin } = useAuthStore();
@@ -41,6 +42,7 @@ function App() {
         <Router>
             <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/auth/callback" element={<DerivCallback />} />
 
                 <Route path="/admin" element={
                     <ProtectedRoute role="admin">

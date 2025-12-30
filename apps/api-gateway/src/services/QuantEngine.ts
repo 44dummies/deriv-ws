@@ -97,9 +97,6 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     private priceHistory: Map<string, number[]> = new Map();
     private emaFastValues: Map<string, number> = new Map();
     private emaSlowValues: Map<string, number> = new Map();
-    private priceHistory: Map<string, number[]> = new Map();
-    private emaFastValues: Map<string, number> = new Map();
-    private emaSlowValues: Map<string, number> = new Map();
     private prevEmaFast: Map<string, number> = new Map();
     private prevEmaSlow: Map<string, number> = new Map();
 

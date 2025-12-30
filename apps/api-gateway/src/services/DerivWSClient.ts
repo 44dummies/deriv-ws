@@ -57,7 +57,7 @@ type DerivWSEvents = {
 // CONSTANTS
 // =============================================================================
 
-const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3';
+const DERIV_WS_URL = 'wss://ws.binaryws.com/websockets/v3';
 const DERIV_APP_ID = process.env['DERIV_APP_ID'] ?? '114042'; // Partner App ID
 const HEARTBEAT_INTERVAL = 10000;
 const HEARTBEAT_TIMEOUT = 15000;

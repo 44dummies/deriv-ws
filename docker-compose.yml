@@ -9,8 +9,8 @@ services:
   # ==========================================================================
   frontend:
     build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
+      context: ./apps/frontend
+      dockerfile: Dockerfile
     ports:
       - "5173:80"
     depends_on:
@@ -23,19 +23,21 @@ services:
   # ==========================================================================
   api-gateway:
     build:
-      context: .
-      dockerfile: apps/api-gateway/Dockerfile
+      context: ./apps/api-gateway
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379
+      - AI_LAYER_URL=http://ai-layer:8001
       - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - FRONTEND_URL=http://localhost:5173
     depends_on:
       - redis
+      - ai-layer
     networks:
       - tradermind
 
@@ -44,17 +46,17 @@ services:
   # ==========================================================================
   quant-engine:
     build:
-      context: .
-      dockerfile: apps/quant-engine/Dockerfile
+      context: ./apps/quant-engine
+      dockerfile: Dockerfile
     ports:
       - "3001:3001"
     environment:
       - NODE_ENV=production
       - PORT=3001
       - REDIS_URL=redis://redis:6379
-      - AI_LAYER_URL=http://ai-layer:8000
+      - AI_LAYER_URL=http://ai-layer:8001
       - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
       - redis
       - ai-layer
@@ -70,9 +72,9 @@ services:
       context: ./apps/ai-layer
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
-      - PORT=8000
+      - PORT=8001
     networks:
       - tradermind
     # No database or redis access - isolated by design

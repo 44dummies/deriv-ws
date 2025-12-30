@@ -1,0 +1,65 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  typescript-checks:
+    name: TypeScript Checks (Lint, Typecheck, Test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm -r run test --if-present
+
+  python-checks:
+    name: Python Checks (Lint, Test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd apps/ai-layer
+          pip install -r requirements.txt
+          pip install flake8 pytest
+
+      - name: Lint
+        run: |
+          cd apps/ai-layer
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Test
+        run: |
+          cd apps/ai-layer
+          pytest --if-present
