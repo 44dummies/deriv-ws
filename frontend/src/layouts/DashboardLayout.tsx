@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, History, PieChart, Settings, LogOut, Menu, X, MessageSquare, BrainCircuit, BarChart2 } from 'lucide-react';
+import {
+    LayoutDashboard,
+    Settings,
+    LogOut,
+    Menu,
+    X,
+    BrainCircuit,
+    BarChart2,
+    MessageSquare
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { cn } from '../lib/utils';

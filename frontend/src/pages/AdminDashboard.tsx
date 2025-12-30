@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../stores/useAuthStore';
 import { Database, Server, Cpu, Activity, ShieldAlert, Users, DollarSign, TrendingUp } from 'lucide-react';
 import { GlassCard } from '../components/ui/GlassCard';
 import { motion } from 'framer-motion';
@@ -13,7 +12,6 @@ interface SystemStats {
 }
 
 export default function AdminDashboard() {
-    const { user, signOut } = useAuthStore();
     const [stats, setStats] = useState<SystemStats | null>(null);
 
     // Fetch Live Stats

@@ -47,6 +47,11 @@ app.get('/api/v1/status', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Root healthcheck for deployment platforms (Railway/Render)
+app.get('/', (_req, res) => {
+    res.status(200).send('TraderMind API Gateway is running');
+});
+
 // WebSocket stats endpoint
 app.get('/api/v1/ws/stats', (_req, res) => {
     const stats = wsServer.getStats();
