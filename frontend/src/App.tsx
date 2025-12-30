@@ -87,7 +87,7 @@ function App() {
                     <Route path="settings" element={<Settings />} />
 
                     {/* Maintain legacy/admin routes if needed, or refactor later */}
-                    <Route path="/live-session/:sessionId" element={<LiveSession />} />
+                    <Route path="live-session/:sessionId" element={<LiveSession />} />
                 </Route>
 
                 {/* Admin Routes */}

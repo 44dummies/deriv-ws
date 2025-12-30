@@ -23,7 +23,15 @@ export function SessionCard({ session, isAdmin, onAction }: SessionCardProps) {
                     <span className={cn("px-3 py-1 rounded-full text-xs font-medium border", statusColors[session.status])}>
                         {session.status}
                     </span>
-                    <h3 className="text-lg font-semibold text-white mt-3">Session #{session.id.slice(0, 8)}</h3>
+                    <div className="flex items-center gap-3 mt-3">
+                        <h3 className="text-lg font-semibold text-white">Session #{session.id.slice(0, 8)}</h3>
+                        <a
+                            href={`/user/live-session/${session.id}`}
+                            className="px-2 py-1 text-xs bg-primary/10 text-primary border border-primary/20 rounded hover:bg-primary/20 transition-colors"
+                        >
+                            Enter Room
+                        </a>
+                    </div>
                 </div>
                 {isAdmin && session.status !== 'TERMINATED' && (
                     <div className="flex gap-2">
