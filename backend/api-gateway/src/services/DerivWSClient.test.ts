@@ -70,7 +70,7 @@ async function runTest(): Promise<void> {
         // 1. Test Authorization (Invalid)
         console.log('Test 1: Authorization (Invalid Token)');
         const authResult = await derivWSClient.authorize('invalid_token_123');
-        if (authResult === false) {
+        if (authResult === null) {
             console.log('  ✅ Auth correctly rejected invalid token');
         } else {
             console.log('  ❌ Auth accepted invalid token (Unexpected)');

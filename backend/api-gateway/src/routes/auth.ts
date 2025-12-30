@@ -50,6 +50,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
     const client = new DerivWSClient();
     let authSuccess = false;
     let userEmail: string | undefined;
+    let derivAccount: any; // Lifted scope
 
     try {
         await new Promise<void>((resolve, reject) => {
@@ -62,7 +63,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
         });
 
         // We verify the token is valid for this account
-        const derivAccount = await client.authorize(deriv_token);
+        derivAccount = await client.authorize(deriv_token);
         authSuccess = !!derivAccount;
 
         // Optionally fetch account settings to get email if possible, or assume it's valid
