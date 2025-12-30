@@ -141,6 +141,54 @@ def model_info():
         "deterministic": True,
     }
 
+# =============================================================================
+# CHAT ENDPOINT (OLLAMA PROXY)
+# =============================================================================
+
+class ChatRequest(BaseModel):
+    message: str
+    role: str = "USER" # "ADMIN" or "USER"
+    context: str = ""
+
+@app.post("/chat")
+async def chat(request: ChatRequest):
+    """
+    Proxies chat requests to the local Ollama instance.
+    Enforces Role Context in the prompt.
+    """
+    try:
+        import httpx
+        
+        # Construct the prompt with strict Role Context
+        full_prompt = (
+            f"Role: {request.role} | Context: {request.context}\n"
+            f"User: {request.message}"
+        )
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "tradermind",
+                    "prompt": full_prompt,
+                    "stream": False
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code != 200:
+                raise HTTPException(status_code=500, detail="Ollama Error")
+                
+            data = response.json()
+            return {"response": data.get("response", "")}
+            
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        # Fallback if Ollama is offline
+        return {
+            "response": "I am currently in Offline Evaluation Mode. Please check if the Ollama server is running."
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
