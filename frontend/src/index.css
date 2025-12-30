@@ -2,10 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global Styles matching TraderMind Dark Theme */
+/* Custom Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Global Reset */
 body {
-    background-color: #0a0f1c;
-    color: #ffffff;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #030712; /* Rich black base */
+    color: #e2e8f0;            /* Slate 200 text */
+    font-family: 'Inter', sans-serif;
+    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+@layer utilities {
+    /* The Core "Liquid Glass" Utility */
+    .glass-panel {
+        @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl;
+    }
+
+    .glass-panel-hover {
+        @apply transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-2xl hover:shadow-primary/10;
+    }
+
+    .text-glow {
+        text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    }
+}
+
+/* Background Animation */
+.bg-mesh-animate {
+    background-size: 400% 400%;
+    animation: gradientMove 15s ease infinite;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 50% }
+    50% { background-position: 100% 50% }
+    100% { background-position: 0% 50% }
 }

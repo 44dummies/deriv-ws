@@ -1,6 +1,20 @@
 import { create } from 'zustand';
-import { Session, User } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 // import { supabase } from '../lib/supabase';
+
+interface DerivAccount {
+    balance: number;
+    currency: string;
+    loginid: string;
+    is_virtual: number | boolean; // Deriv returns 0 or 1
+}
+
+interface User {
+    id: string;
+    email: string;
+    role: string;
+    deriv_account?: DerivAccount;
+}
 
 interface AuthState {
     user: User | null;

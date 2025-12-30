@@ -62,7 +62,8 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
         });
 
         // We verify the token is valid for this account
-        authSuccess = await client.authorize(deriv_token);
+        const derivAccount = await client.authorize(deriv_token);
+        authSuccess = !!derivAccount;
 
         // Optionally fetch account settings to get email if possible, or assume it's valid
         // Deriv WS 'authorize' response usually contains email if scope allows, but we might verify basic access first.
@@ -85,6 +86,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
 
     try {
         // 2. Find or Create User
+        // Use loginid from Deriv if available, or fallback to account_id
         const user = await UserService.findOrCreateUserFromDeriv(account_id, userEmail);
 
         // 3. Persist Deriv Token Securely
@@ -107,7 +109,8 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
             user: {
                 id: user.id,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                deriv_account: derivAccount // Pass full deriv account data (balance, currency, is_virtual)
             }
         });
 

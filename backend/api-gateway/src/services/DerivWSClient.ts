@@ -75,7 +75,7 @@ const CIRCUIT_BREAKER_THRESHOLD = 5;
 // =============================================================================
 
 export interface IDerivClient {
-    authorize(token: string): Promise<boolean>;
+    authorize(token: string): Promise<any>;
     subscribeTicks(market: string): void;
     unsubscribeTicks(market: string): void;
     buyContract(parameters: any): Promise<any>;
@@ -180,20 +180,20 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
 
     // --- IDerivClient Implementation ---
 
-    async authorize(token: string): Promise<boolean> {
+    async authorize(token: string): Promise<any> {
         if (!this.isConnected()) throw new Error('Not connected');
 
         try {
             const response = await this.sendRequest({ authorize: token });
             if (response.error) {
                 console.error('[DerivWSClient] Auth failed:', response.error);
-                return false;
+                return null;
             }
             console.log('[DerivWSClient] Authorized successfully');
-            return true;
+            return response.authorize;
         } catch (err) {
             console.error('[DerivWSClient] Auth error:', err);
-            return false;
+            return null;
         }
     }
 
