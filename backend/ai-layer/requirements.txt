@@ -7,7 +7,7 @@ pydantic==2.5.3
 
 # Optional: For future ML model integration
 # scikit-learn==1.4.0
-# xgboost==2.0.3
+xgboost==2.0.3
 # numpy==1.26.3
 
 # ML Dependencies
