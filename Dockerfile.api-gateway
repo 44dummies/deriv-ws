@@ -11,7 +11,8 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 # 1. Build all shared packages first
-RUN pnpm run --filter "./packages/**" build
+# 1. Build all shared packages explicitly to ensure they exist
+RUN pnpm run --filter @tradermind/schemas --filter @tradermind/shared-utils --filter @tradermind/risk-rules build
 
 # 2. Build API Gateway ONLY
 RUN pnpm run --filter @tradermind/api-gateway build

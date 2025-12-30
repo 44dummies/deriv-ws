@@ -151,10 +151,15 @@ console.log(`[Startup] Environment: ${process.env['NODE_ENV']}`);
 console.log(`[Startup] CORS Origin Config: ${process.env['CORS_ORIGIN']}`);
 
 // Start listening immediately to ensure health checks and CORS work
-httpServer.listen(PORT, () => {
+httpServer.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`[Startup] API Gateway started on port ${PORT}`);
     console.log(`[Startup] WebSocket server ready`);
     console.log(`[Startup] Routes: /auth, /sessions, /users, /trades`);
+
+    // Log uncaught exceptions to prevent silent crashes
+    process.on('uncaughtException', (err) => {
+        console.error('[CRITICAL] Uncaught Exception:', err);
+    });
 });
 
 // Recover state in background - DO NOT BLOCK server startup
