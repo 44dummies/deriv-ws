@@ -31,7 +31,29 @@ const wsServer = initWebSocketServer(httpServer);
 
 app.use(helmet());
 app.use(cors({
-    origin: process.env['CORS_ORIGIN'] || '*', // In production, set this to your frontend domain
+    origin: (origin, callback) => {
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:4173',
+            'https://deriv-ws-frontend.vercel.app',
+            process.env['CORS_ORIGIN']
+        ];
+
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            return callback(null, true);
+        }
+
+        // Allow all Vercel Preview deployments
+        if (origin.endsWith('.vercel.app')) {
+            return callback(null, true);
+        }
+
+        console.log('Blocked by CORS:', origin);
+        callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true
