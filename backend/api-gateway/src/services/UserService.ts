@@ -84,21 +84,9 @@ export const UserService = {
         const userEmail = email || `${derivAccountId.toLowerCase()}@deriv.user`;
         const tempPassword = `Deriv-${Math.random().toString(36).slice(-10)}`;
 
-        // Check if email exists to avoid collision (rare but possible if using real email)
-        const { data: existingUser } = await getSupabaseAdmin().from('auth.users').select('id').eq('email', userEmail).single();
-
         let userId: string;
 
-        if (existingUser) {
-            // Should not happen if we did token lookup correctly, unless manual DB mess up
-            // or previous email signup without deriv link
-            // We'll just link them now.
-            userId = existingUser.id; // Corrected: existingUser is a generic object, but Supabase response structure is typically { data, ... }. Here we queried table directly? 
-            // Wait, querying 'auth.users' directly isn't standard via client. 
-            // Better to just try create and catch error, or list users.
-        }
-
-        // Cleaner approach: Try to create user via Admin API
+        // Attempt to create user first. This handles formatted/normalized email checks safely.
         const { data: newUser, error: createError } = await getSupabaseAdmin().auth.admin.createUser({
             email: userEmail,
             password: tempPassword,
