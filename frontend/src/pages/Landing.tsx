@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Shield, Zap, BarChart3, Globe, Activity, Lock, TrendingUp, Cpu } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { ArrowRight, Activity, Lock, TrendingUp } from 'lucide-react';
 
 // --- Realtime Ticker Hook ---
 const useTicker = () => {
