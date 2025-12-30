@@ -298,6 +298,9 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             }, 10000); // 10s timeout
 
             this.pendingRequests.set(reqId, { resolve, reject, timeout });
+            const logPayload = { ...request };
+            if (logPayload.authorize) logPayload.authorize = '***';
+            console.log('[DerivWSClient] TX:', JSON.stringify(logPayload));
             this.ws.send(JSON.stringify(request));
         });
     }
@@ -442,8 +445,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     getSubscriptions(): string[] { return Array.from(this.subscriptions.keys()); }
 
     private handleMessage(data: WebSocket.RawData): void {
+        const raw = data.toString();
+        // console.log('[DerivWSClient] RX:', raw.length > 200 ? raw.substring(0, 200) + '...' : raw);
         try {
-            const message = JSON.parse(data.toString()) as any; // Cast to any to handle various shapes structure
+            const message = JSON.parse(raw) as any;
+            if (message.error) {
+                console.error('[DerivWSClient] API Error:', JSON.stringify(message.error));
+            }
 
             // 1. Settlement Handling (proposal_open_contract)
             if (message.msg_type === 'proposal_open_contract') {
