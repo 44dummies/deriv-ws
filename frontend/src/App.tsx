@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/useAuthStore';
-import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import LiveSession from './pages/LiveSession';
@@ -22,7 +21,7 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
     }
 
     if (!user) {
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        return <Navigate to="/" state={{ from: location }} replace />;
     }
 
     if (role === 'admin' && !isAdmin) {
@@ -62,7 +61,6 @@ function App() {
                     </PublicRoute>
                 } />
 
-                <Route path="/login" element={<Login />} />
                 <Route path="/auth/callback" element={<DerivCallback />} />
 
                 {/* Secure Dashboard Route */}
