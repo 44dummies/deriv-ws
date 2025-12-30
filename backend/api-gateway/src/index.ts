@@ -29,9 +29,13 @@ const wsServer = initWebSocketServer(httpServer);
 // MIDDLEWARE
 // =============================================================================
 
-app.use(helmet());
-app.use(cors({
-    origin: (origin, callback) => {
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: { policy: "unsafe-none" },
+}));
+
+const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         const allowedOrigins = [
             'http://localhost:5173',
             'http://localhost:4173',
@@ -42,7 +46,7 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
 
@@ -52,17 +56,23 @@ app.use(cors({
         }
 
         console.log('Blocked by CORS:', origin);
-        callback(new Error('Not allowed by CORS'));
+        callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true
-}));
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+// Enable pre-flight requests for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // Request logging
 app.use((req, _res, next) => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+    console.log(`${new Date().toISOString()} ${req.method} ${req.path} [Origin: ${req.headers.origin}]`);
     next();
 });
 
