@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+  # ==========================================================================
+  # API GATEWAY
+  # ==========================================================================
+  api-gateway:
+    build:
+      context: .
+      dockerfile: backend/api-gateway/Dockerfile
+    # ports:
+    #   - "127.0.0.1:3000:3000" # DISABLED: Internal only. Access via Nginx.
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - REDIS_URL=redis://redis:6379
+      - AI_LAYER_URL=http://ai-layer:8001
+      - CORS_ORIGIN=${CORS_ORIGIN:-*} # Set this to your frontend URL in .env
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - ai-layer
+    networks:
+      - tradermind-prod
+    restart: unless-stopped
+
+  # ==========================================================================
+  # QUANT ENGINE (Worker)
+  # ==========================================================================
+  quant-engine:
+    build:
+      context: .
+      dockerfile: backend/quant-engine/Dockerfile
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - ai-layer
+    networks:
+      - tradermind-prod
+    restart: unless-stopped
+
+  # ==========================================================================
+  # AI LAYER
+  # ==========================================================================
+  ai-layer:
+    build:
+      context: ./backend/ai-layer
+      dockerfile: Dockerfile
+    expose:
+      - "8001" # Internal only
+    environment:
+      - PORT=8001
+    networks:
+      - tradermind-prod
+    restart: unless-stopped
+
+  # ==========================================================================
+  # INFRASTRUCTURE
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data_prod:/data
+    command: redis-server --appendonly yes
+    networks:
+      - tradermind-prod
+    restart: unless-stopped
+
+  # ==========================================================================
+  # NGINX (Reverse Proxy)
+  # ==========================================================================
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      # - ./certs:/etc/nginx/certs # Uncomment when you have SSL certs
+    depends_on:
+      - api-gateway
+    networks:
+      - tradermind-prod
+    restart: unless-stopped
+
+networks:
+  tradermind-prod:
+    driver: bridge
+
+volumes:
+  redis_data_prod:

@@ -1,17 +1,22 @@
-
-FROM node:18-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY package*.json ./
-COPY tsconfig.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY backend/api-gateway ./backend/api-gateway
+COPY packages ./packages
 
-RUN npm ci
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
-COPY src ./src
+WORKDIR /app/backend/api-gateway
+RUN pnpm run build
 
-RUN npm run build
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+COPY --from=builder /app/backend/api-gateway/dist ./dist
+COPY --from=builder /app/backend/api-gateway/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
-
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/index.js"]
