@@ -1,136 +1,92 @@
-# Deployment Guide: VPS + Docker + Nginx
+# Deployment Guide: Railway + Vercel
 
-This guide explains how to deploy the TraderMind backend `backend/` to a VPS (Hetzner, DigitalOcean, etc.) using Docker and Nginx.
+This guide explains how to deploy the TraderMind backend infrastructure to **Railway** and the frontend to **Vercel**.
 
 ## Architecture
+
 **Traffic Flow:**
 ```
-[Internet]
-   ↓ (HTTPS: 443)
-[Nginx Container]
-   ↓ (Docker Internal Network)
-[API Gateway Container :3000]
-   ↓ (Docker Internal Network)
-[Quant Engine] [AI Layer] [Redis]
-```
-
-**Key Concept:**
-- Backend services are **NOT** exposed to the host (your VPS public IP).
-- They are accessible **ONLY** via the internal Docker network or through Nginx.
-- Nginx acts as the single gatekeeper for public traffic.
-
----
-
-## 1. Prerequisites
-- **VPS**: Ubuntu 22.04+ (2GB RAM min recommended).
-- **Domain**: Pointed to your VPS IP (A Record).
-- **Security**: SSH Key authentication enabled, UFW firewall active (allow 22, 80, 443).
-
-## 2. Server Setup (First Time)
-SSH into your server:
-```bash
-ssh user@your-vps-ip
-```
-
-### Install Docker & Compose
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-```
-
-### Clone Repository
-```bash
-git clone <your-repo-url> /opt/tradermind
-cd /opt/tradermind
+[User Browser]
+   ↓ (HTTPS)
+[Vercel Frontend] (React SPA)
+   ↓ (WSS / HTTPS)
+[Railway API Gateway] (Node.js)
+   ↓ (Internal Private Network)
+[Railway Quant Engine] [Railway AI Layer] [Supabase DB] [Railway Redis]
 ```
 
 ---
 
-## 3. Configuration
+## 1. Backend Deployment (Railway)
 
-### Environment Variables (CRITICAL)
-Create a `.env` file. **NEVER** copy this file to your frontend or commit it.
-```bash
-cp .env.example .env
-nano .env
-```
+We use **Railway** for all backend services (`api-gateway`, `quant-engine`, `ai-layer`) and Redis.
 
-**Add these Production Variables:**
-```ini
-# General
-NODE_ENV=production
-LOG_LEVEL=info
-PORT=3000
+### Prerequisites
+- [Railway CLI](https://docs.railway.app/guides/cli) installed (`npm i -g @railway/cli`)
+- Railway Account
 
-# Security
-# Set this to your Vercel/Frontend Domain to allow CORS (no trailing slash)
-CORS_ORIGIN=https://your-frontend.vercel.app
+### Setup & Deploy
+1.  **Login**: `railway login`
+2.  **Link Project**: `railway link` (Select your project)
+3.  **Environment Variables**:
+    Set these in the Railway Dashboard or via CLI:
+    - `NODE_ENV=production`
+    - `PORT=3000` (for API Gateway)
+    - `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY`
+    - `REDIS_URL` (Railway provides this if you add a Redis service)
+    - `DERIV_APP_ID` & `DERIV_API_TOKEN`
+    - `CORS_ORIGIN` (Your Vercel URL, e.g., `https://your-app.vercel.app`. No trailing slash)
 
-# Database & Infra
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
-REDIS_URL=redis://redis:6379
+4.  **Deployment**:
+    The project is configured with `railway.toml` to build specific Dockerfiles for each service.
+    - **Method A (Recommended)**: Connect your GitHub repo to Railway. Pushes to `main` trigger auto-deploy.
+    - **Method B (Manual)**: Run `railway up` in the root directory.
 
-# Deriv
-DERIV_APP_ID=your-app-id
-
-# AI Provider (if used)
-# OPENAI_API_KEY=sk-...
-```
+### Service Configuration (`railway.toml`)
+- **api-gateway**: Uses `Dockerfile.api-gateway`
+- **quant-engine**: Uses `Dockerfile.quant-engine`
+- **ai-layer**: Uses `Dockerfile.ai-layer`
 
 ---
 
-## 4. Run Production Services
-Start the stack using the production compose file.
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-*Note: This uses `restart: unless-stopped` to ensure services recover after a reboot.*
+## 2. Frontend Deployment (Vercel)
 
-### Verify Health
-```bash
-docker compose -f docker-compose.prod.yml ps
-```
-All services (`api-gateway`, `quant-engine`, `ai-layer`, `redis`, `nginx`) should be `Up`.
+We use **Vercel** for the React Frontend.
+
+### Setup
+1.  Import the repository into Vercel.
+2.  **Root Directory**: Set to `frontend` (NOT `apps/frontend`).
+3.  **Framework Preset**: Vite.
+
+### Environment Variables
+Go to Vercel Project Settings > Environment Variables:
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `VITE_API_GATEWAY_URL` | `https://your-railway-app.up.railway.app` | **CRITICAL**: The URL of your deployed API Gateway. |
+| `VITE_DERIV_APP_ID` | `Your_App_ID` | App ID from [Deriv API Manager](https://api.deriv.com/apps/modules). Must allow your Vercel domain as redirect. |
+
+### SPA Routing
+A `vercel.json` file is present in `frontend/` to handle client-side routing (rewrites all 404s to `index.html`).
 
 ---
 
-## 5. SSL & Nginx (HTTPS)
-The provided `nginx.conf` handles basic reverse proxying. To enable HTTPS (Recommended):
+## 3. Database (Supabase)
 
-1.  **Install Certbot on Host:**
+1.  **Migrations**:
+    Run migrations to set up tables (`trading_sessions`, `participants`, etc.).
     ```bash
-    sudo apt install certbot
+    supabase db push
     ```
-2.  **Generate Certificate:**
-    ```bash
-    sudo certbot certonly --standalone -d yourdomain.com
-    ```
-3.  **Update `docker-compose.prod.yml`:**
-    Uncomment the certificate volume mount in the `nginx` service:
-    ```yaml
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - /etc/letsencrypt:/etc/nginx/certs:ro # Read-only mount
-    ```
-4.  **Update `nginx.conf`:**
-    Uncomment the SSL configuration lines.
+    (Or copy SQL from `supabase/migrations/` to the Supabase SQL Editor).
 
-**Auto-renewal:** Certbot automatically sets up a cron job on the host. Since Nginx reads the files from the host mount, you just need to reload Nginx occasionally (e.g., cron job `docker compose exec nginx nginx -s reload`).
+2.  **Policies**:
+    RLS policies are defined in the migration files to secure data access.
 
 ---
 
-## 6. Frontend Configuration (Vercel)
-On your frontend deployment (Vercel/Netlify):
+## 4. Verification
 
-1.  **VITE_API_URL**: Set to `https://your-domain.com` (or `http://your-ip` if testing without SSL).
-2.  **Protocol**: Ensure you do not mix Protocols. If Frontend is HTTPS, Backend **MUST** be HTTPS (use SSL steps above).
-3.  **CORS**: Ensure the `CORS_ORIGIN` in your backend `.env` matches your Vercel domain exactly.
-
----
-
-## Troubleshooting
-
-- **Check Logs**: `docker compose -f docker-compose.prod.yml logs -f api-gateway`
-- **Network Issues**: Ensure you are NOT running `docker run --network host`. The compose file handles isolation correctly.
-- **Port Conflicts**: Ensure no other service (like Apache) is using port 80/443 on the host.
+After deployment:
+1.  **Check Backend Health**: `curl https://your-railway-app.up.railway.app/health` -> `{"status":"healthy"}`.
+2.  **Check Frontend**: Open Vercel URL -> Login -> Should redirect to Dashboard.

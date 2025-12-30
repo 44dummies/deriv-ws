@@ -1,82 +1,42 @@
-# TraderMind Repository Structure & Contents
+# Repository Structure
 
-## Overview
-TraderMind is an event-driven automated trading platform built with a monorepo architecture using `pnpm` workspaces. It integrates multiple services for signal generation, risk management, and order execution, with a strong emphasis on AI-driven governance and safety.
+This document outlines the organization of the TraderMind monorepo.
 
-## Root Directory Structure
-- `.agent/`: Internal agent workflows and task management.
-- `apps/`: Main service applications.
-- `docs/`: Technical documentation (Architecture, API Reference, Edge Cases, etc.).
-- `packages/`: Shared libraries and utilities used across apps.
-- `supabase/`: Database schema, migrations, and local development configurations.
-- `tests/`: System-level and E2E tests.
-- `docker-compose.yml`: Local orchestration for the entire stack.
-- `package.json`: Root manifest with workspace scripts.
-- `pnpm-workspace.yaml`: Workspace configuration.
-
----
-
-## Apps Breakdown (`/apps`)
-
-### 1. `api-gateway`
-- **Role**: Central orchestrator and API endpoint for the platform.
-- **Tech**: Node.js, TypeScript, Express, Socket.IO.
-- **Contents**:
-  - `src/services/`: Core business logic (QuantEngine, RiskExecution, SessionManager).
-  - `src/routes/`: REST endpoints for sessions, signals, and administrative controls.
-  - `src/utils/`: Shared logic for encryption, database access, and type definitions.
-
-### 2. `ai-layer`
-- **Role**: Deterministic AI inference and model management.
-- **Tech**: Python, FastAPI, Scikit-learn/XGBoost.
-- **Contents**:
-  - `main.py`: Entry point for the inference API.
-  - `src/model_service.py`: Logic for loading and executing AI specific models.
-  - `scripts/`: Safety governance tools (drift detection, kill switches, threshold management).
-
-### 3. `frontend`
-- **Role**: Real-time administrative and user dashboard.
-- **Tech**: React, TypeScript, Zustand, Tailwind CSS, Vite.
-- **Contents**:
-  - `src/components/`: Reusable UI elements and charts.
-  - `src/stores/`: Zustand state management for sessions, signals, and auth.
-  - `src/pages/`: Main views (Dashboard, Session Summary, Admin).
-
-### 4. `quant-engine`
-- **Role**: High-performance indicator calculation and signal generation.
-- **Tech**: TypeScript/Node.js.
-- **Contents**: Core math and logic for RSI, EMA, and Volatility calculations.
+## Root Directory
+| File/Folder | Description |
+|-------------|-------------|
+| `backend/` | Contains backend services source code. |
+| `frontend/` | React frontend application (Vercel deployment root). |
+| `packages/` | Internal shared libraries (npm workspaces). |
+| `supabase/` | Database migrations and configuration. |
+| `Dockerfile.*` | Service-specific Dockerfiles for Railway deployment. |
+| `railway.toml` | Configuration for Railway builds. |
+| `pnpm-workspace.yaml` | Monorepo configuration. |
 
 ---
 
-## Packages Breakdown (`/packages`)
+## Backend (`backend/`)
+| Service | Path | Description |
+|---------|------|-------------|
+| **API Gateway** | `api-gateway/` | Entry point. Handles WebSocket connections, Authentication, and REST routes. Connects to Redis and calls other services. |
+| **Quant Engine** | `quant-engine/` | The core trading brain. Subscribes to market data, checks risk, generates signals, and executes trades. |
+| **AI Layer** | `ai-layer/` | Python-based ML service. Exposes a simple HTTP API (`/infer`) for generating signal confidence based on features. |
 
-- `schemas/`: Shared Zod and JSON schemas for events and API payloads.
-- `risk-rules/`: Centralized business rules for trade validation and drawdown limits.
-- `shared-utils/`: Common logging, retry logic, and standard formatting tools.
+## Frontend (`frontend/`)
+Root for the Vercel deployment.
+- `src/pages/`: Main views (Login, Dashboard, LiveSession).
+- `src/services/`: API and WebSocket clients.
+- `src/stores/`: Zustand state management (`useAuthStore`, `useSessionStore`).
+- `vercel.json`: SPA routing configuration.
 
----
+## Shared Packages (`packages/`)
+| Package | Description |
+|---------|-------------|
+| `@tradermind/schemas` | Zod schemas for all domain entities (Users, Sessions, Trades, Signals). **Source of Truth**. |
+| `@tradermind/risk-rules` | Independent risk validation logic. |
+| `@tradermind/shared-utils` | Hashing, idempotency keys, and common helpers. |
 
-## Database & Data Layer (`/supabase`)
-
-- `migrations/`: Versioned SQL files for table definitions (signals, trades, sessions, thresholds).
-- `config.toml`: Local Supabase development configuration.
-
----
-
-## Documentation (`/docs`)
-
-- `ARCHITECTURE.md`: High-level system design and data flow diagrams.
-- `API_REFERENCE.md`: Detailed documentation for REST and WebSocket interfaces.
-- `EDGE_CASES.md`: Known system limits and failure recovery protocols.
-- `TECH_STACK.md`: Full list of languages, frameworks, and tools used.
-
----
-
-## Technical Stack Summary
-- **Backend Languages**: TypeScript (Node.js), Python (FastAPI).
-- **Frontend**: React (Vite).
-- **Databases**: PostgreSQL (Supabase), Redis (Session Caching).
-- **Communication**: REST, WebSockets (Socket.IO).
-- **Infrastructure**: Docker, Nginx (Frontend serve).
-- **Governance**: Automated drift/decay detection, manual and AI-triggered kill switches.
+## Infrastructure & Config
+- **Docker**: Root `Dockerfile.api-gateway`, `Dockerfile.quant-engine`, `Dockerfile.ai-layer` are used for isolated builds.
+- **Database**: Supabase (PostgreSQL). Migrations are tracked in `supabase/migrations`.
+- **Cache**: Redis (used for session store and Pub/Sub).
