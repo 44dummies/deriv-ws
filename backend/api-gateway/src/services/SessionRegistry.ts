@@ -300,7 +300,7 @@ export class SessionRegistry {
         });
 
         const { data: activeSessions, error } = await supabase
-            .from('trading_sessions')
+            .from('sessions')
             .select('*')
             .in('status', ['ACTIVE', 'RUNNING', 'PAUSED']);
 
@@ -320,7 +320,7 @@ export class SessionRegistry {
             try {
                 // Fetch participants
                 const { data: participants, error: partError } = await supabase
-                    .from('session_participants')
+                    .from('participants')
                     .select('*')
                     .eq('session_id', dbSession.id)
                     .neq('status', 'REMOVED'); // Don't recover removed users
