@@ -32,6 +32,12 @@ export const useDerivBalance = () => {
                 ws.send(JSON.stringify({ balance: 1, subscribe: 1 }));
             }
 
+            // Check for API errors
+            if (data.error) {
+                console.error('Deriv API Error:', data.error.code, data.error.message);
+                return;
+            }
+
             if (data.msg_type === 'balance') {
                 if (!data.balance) {
                     console.warn('Deriv Balance: Received balance message but data.balance is missing', data);
