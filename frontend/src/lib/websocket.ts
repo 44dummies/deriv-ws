@@ -9,7 +9,7 @@ import { io, Socket } from 'socket.io-client';
 // WEBSOCKET CLIENT
 // =============================================================================
 
-const API_GATEWAY_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL ?? 'http://localhost:3000';
 
 let socket: Socket | null = null;
 
