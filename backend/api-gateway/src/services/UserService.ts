@@ -2,25 +2,27 @@ import { createClient } from "@supabase/supabase-js";
 import { encrypt, decrypt } from "../utils/crypto.js";
 
 // Initialize Admin Client for Secure Operations (Bypass RLS)
-const supabaseUrl = process.env['SUPABASE_URL'] ?? '';
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+const getSupabaseAdmin = () => {
+    const supabaseUrl = process.env['SUPABASE_URL'];
+    const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
-if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn('[UserService] Missing Supabase URL or Service Key. Database operations will fail.');
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('[UserService] Missing Supabase URL or Service Key.');
     }
-});
+
+    return createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+};
 
 export const UserService = {
     async storeDerivToken({ userId, derivToken, accountId }: { userId: string, derivToken: string, accountId: string }) {
         const encrypted = encrypt(derivToken);
 
-        const { error } = await supabaseAdmin
+        const { error } = await getSupabaseAdmin()
             .from('user_deriv_tokens')
             .upsert(
                 {
@@ -41,7 +43,7 @@ export const UserService = {
     },
 
     async getDerivToken(userId: string): Promise<string | null> {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await getSupabaseAdmin()
             .from('user_deriv_tokens')
             .select('encrypted_token')
             .eq('user_id', userId)
@@ -58,7 +60,7 @@ export const UserService = {
     async findOrCreateUserFromDeriv(derivAccountId: string, email?: string): Promise<{ id: string; email: string; role: 'ADMIN' | 'USER' }> {
         // 1. Check if user exists with this deriv account id in user_deriv_tokens
         // Actually, we need to reverse lookup: deriv_account_id -> user_id
-        const { data: tokenData } = await supabaseAdmin
+        const { data: tokenData } = await getSupabaseAdmin()
             .from('user_deriv_tokens')
             .select('user_id')
             .eq('account_id', derivAccountId)
@@ -66,7 +68,7 @@ export const UserService = {
 
         if (tokenData) {
             // User exists, fetch details
-            const { data: userData } = await supabaseAdmin.auth.admin.getUserById(tokenData.user_id);
+            const { data: userData } = await getSupabaseAdmin().auth.admin.getUserById(tokenData.user_id);
             if (userData && userData.user) {
                 return {
                     id: userData.user.id,
@@ -83,7 +85,7 @@ export const UserService = {
         const tempPassword = `Deriv-${Math.random().toString(36).slice(-10)}`;
 
         // Check if email exists to avoid collision (rare but possible if using real email)
-        const { data: existingUser } = await supabaseAdmin.from('auth.users').select('id').eq('email', userEmail).single();
+        const { data: existingUser } = await getSupabaseAdmin().from('auth.users').select('id').eq('email', userEmail).single();
 
         let userId: string;
 
@@ -97,7 +99,7 @@ export const UserService = {
         }
 
         // Cleaner approach: Try to create user via Admin API
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: newUser, error: createError } = await getSupabaseAdmin().auth.admin.createUser({
             email: userEmail,
             password: tempPassword,
             email_confirm: true,
@@ -107,7 +109,7 @@ export const UserService = {
         if (createError) {
             // If error is "User already registered", fetch that user
             // This simplifies logic significantly
-            const { data: users } = await supabaseAdmin.auth.admin.listUsers();
+            const { data: users } = await getSupabaseAdmin().auth.admin.listUsers();
             const found = users.users.find(u => u.email === userEmail);
             if (found) {
                 userId = found.id;
@@ -123,7 +125,7 @@ export const UserService = {
 
         // Return user structure
         // Refetch to be sure or construct
-        const { data: finalUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+        const { data: finalUser } = await getSupabaseAdmin().auth.admin.getUserById(userId);
         return {
             id: finalUser?.user?.id ?? userId,
             email: finalUser?.user?.email ?? userEmail,

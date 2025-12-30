@@ -4,19 +4,22 @@ import { quantEngine } from "./QuantEngine.js";
 import { AIInferenceResponse } from "./AIServiceClient.js";
 
 // Initialize Admin Client (Bypass RLS for system logging)
-const supabaseUrl = process.env['SUPABASE_URL'] ?? '';
-const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
+const getSupabaseAdmin = () => {
+    const supabaseUrl = process.env['SUPABASE_URL'];
+    const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
-if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn('[ShadowLogger] Missing Supabase credentials. Shadow signals will NOT be persisted.');
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-        autoRefreshToken: false,
-        persistSession: false
+    if (!supabaseUrl || !supabaseServiceKey) {
+        console.warn('[ShadowLogger] Missing Supabase credentials. Shadow signals will NOT be persisted.');
+        return null;
     }
-});
+
+    return createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    });
+};
 
 export class ShadowLogger {
     constructor() {
@@ -36,6 +39,9 @@ export class ShadowLogger {
         sessionId: string
     ) {
         try {
+            const supabaseAdmin = getSupabaseAdmin();
+            if (!supabaseAdmin) return;
+
             const { error } = await supabaseAdmin
                 .from('shadow_signals')
                 .insert({
