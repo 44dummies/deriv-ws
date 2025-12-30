@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import LiveSession from './pages/LiveSession';
 import { Loader2 } from 'lucide-react';
 import { DerivCallback } from './features/auth/DerivCallback';
+import Landing from './pages/Landing';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'user' }) {
     const { user, loading, isAdmin } = useAuthStore();
@@ -31,6 +32,19 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
     return <>{children}</>;
 }
 
+function PublicRoute({ children }: { children: React.ReactNode }) {
+    const { user, loading } = useAuthStore();
+
+    if (loading) return null; // Avoid flicker
+
+    // If user is already logged in, send them to dashboard
+    if (user) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return <>{children}</>;
+}
+
 function App() {
     const { initialize } = useAuthStore();
 
@@ -41,18 +55,26 @@ function App() {
     return (
         <Router>
             <Routes>
+                {/* Public Landing Route */}
+                <Route path="/" element={
+                    <PublicRoute>
+                        <Landing />
+                    </PublicRoute>
+                } />
+
                 <Route path="/login" element={<Login />} />
                 <Route path="/auth/callback" element={<DerivCallback />} />
+
+                {/* Secure Dashboard Route */}
+                <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                } />
 
                 <Route path="/admin" element={
                     <ProtectedRoute role="admin">
                         <AdminDashboard />
-                    </ProtectedRoute>
-                } />
-
-                <Route path="/" element={
-                    <ProtectedRoute>
-                        <Dashboard />
                     </ProtectedRoute>
                 } />
 
