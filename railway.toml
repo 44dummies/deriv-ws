@@ -1,0 +1,11 @@
+[service.api-gateway]
+dockerfilePath = "Dockerfile.api-gateway"
+builder = "dockerfile"
+
+[service.quant-engine]
+dockerfilePath = "Dockerfile.quant-engine"
+builder = "dockerfile"
+
+[service.ai-layer]
+dockerfilePath = "Dockerfile.ai-layer"
+builder = "dockerfile"

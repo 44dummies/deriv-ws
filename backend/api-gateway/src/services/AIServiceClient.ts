@@ -25,6 +25,8 @@ export interface AIFeatureVector {
 export interface AIInferenceRequest {
     features: AIFeatureVector;
     session_id: string;
+    model_id?: string;
+    input_hash?: string;
 }
 
 export interface AIInferenceResponse {
@@ -113,9 +115,10 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
         const request: AIInferenceRequest = {
             features,
             session_id: sessionId,
-            model_id: modelId,
-            input_hash: inputHash
         };
+
+        if (modelId !== undefined) request.model_id = modelId;
+        if (inputHash !== undefined) request.input_hash = inputHash;
 
         try {
             const response = await this.callInferEndpoint(request);

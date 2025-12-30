@@ -41,8 +41,13 @@ async function generateSynthesis() {
     trades.forEach((t: any) => {
         const r = t.regime || 'UNKNOWN';
         if (!regimeStats[r]) regimeStats[r] = { wins: 0, total: 0 };
-        regimeStats[r].total++;
-        if (t.result === 'WIN') regimeStats[r].wins++;
+        // Safe check mostly done by initialization line above, but valid TS check might fail if it thinks index access returns undefined.
+        // It's strictly typed as Record<string, ...> so access matches.
+        // The error was: Object is possibly 'undefined' at line 44: regimeStats[r].total++
+        if (regimeStats[r]) {
+            regimeStats[r]!.total++;
+            if (t.result === 'WIN') regimeStats[r]!.wins++;
+        }
     });
 
     Object.entries(regimeStats).forEach(([regime, stat]) => {

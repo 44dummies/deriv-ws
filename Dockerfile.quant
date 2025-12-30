@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+RUN corepack enable
+
+ARG CACHEBUST=1
+
+# Copy EVERYTHING
+COPY . .
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build
+RUN pnpm run -r --filter "!@tradermind/frontend" build
+
+WORKDIR /app/backend/quant-engine
+CMD ["pnpm", "start"]

@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+RUN corepack enable
+
+# FORCE NEW BUILD LAYER - v4
+ARG CACHEBUST=4
+
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+
+# 1. Build all shared packages first
+RUN pnpm run --filter "./packages/**" build
+
+# 2. Build API Gateway ONLY
+RUN pnpm run --filter @tradermind/api-gateway build
+
+WORKDIR /app/backend/api-gateway
+EXPOSE 3000
+CMD ["pnpm", "start"]

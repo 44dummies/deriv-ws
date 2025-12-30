@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+RUN corepack enable
+
+ARG CACHEBUST=3
+
+COPY . .
+
+RUN pnpm install --frozen-lockfile
+
+# 1. Build all shared packages first
+RUN pnpm run --filter "./packages/**" build
+
+# 2. Build Quant Engine ONLY
+RUN pnpm run --filter @tradermind/quant-engine build
+
+WORKDIR /app/backend/quant-engine
+CMD ["pnpm", "start"]

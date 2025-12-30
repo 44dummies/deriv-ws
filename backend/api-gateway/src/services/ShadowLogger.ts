@@ -1,6 +1,7 @@
 
 import { createClient } from "@supabase/supabase-js";
-import { quantEngine, AIInferenceResponse } from "./QuantEngine.js";
+import { quantEngine } from "./QuantEngine.js";
+import { AIInferenceResponse } from "./AIServiceClient.js";
 
 // Initialize Admin Client (Bypass RLS for system logging)
 const supabaseUrl = process.env['SUPABASE_URL'] ?? '';

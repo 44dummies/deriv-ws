@@ -1,0 +1,18 @@
+FROM python:3.10
+
+WORKDIR /app
+
+# Upgrade pip just in case
+RUN pip install --upgrade pip
+
+COPY backend/ai-layer/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source (we need to be careful about directory structure if imports assume 'backend.ai-layer' or just root)
+# In Step 17, main.py is in backend/ai-layer/main.py.
+# If we copy 'backend/ai-layer' to '/app', then main.py is at /app/main.py.
+# The CMD 'uvicorn main:app' expects main.py in CWD.
+COPY backend/ai-layer .
+
+EXPOSE 8001
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]

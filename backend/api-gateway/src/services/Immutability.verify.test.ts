@@ -32,7 +32,7 @@ try {
         const envConfig = fs.readFileSync(envPath, 'utf-8');
         envConfig.split('\n').forEach(line => {
             const match = line.match(/^\s*([\w_]+)\s*=\s*(.*)?\s*$/);
-            if (match) {
+            if (match && match[1]) {
                 const key = match[1];
                 let value = match[2] || '';
                 if (value.length > 0 && value.charAt(0) === '"' && value.charAt(value.length - 1) === '"') {

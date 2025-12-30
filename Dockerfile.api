@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+RUN corepack enable
+
+# Force restart at this layer to ensure new files (like tsconfig.json) are copied
+ARG CACHEBUST=1
+
+# Copy EVERYTHING
+COPY . .
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Build everything except frontend
+RUN pnpm run -r --filter "!@tradermind/frontend" build
+
+# Start
+WORKDIR /app/backend/api-gateway
+EXPOSE 3000
+CMD ["pnpm", "start"]
