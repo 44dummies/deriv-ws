@@ -9,13 +9,23 @@ export const DerivCallback = () => {
 
     useEffect(() => {
         const handleCallback = async () => {
-            const token1 = searchParams.get('token1');
-            const acct1 = searchParams.get('acct1');
+            const accounts: { token: string; accountId: string; currency?: string }[] = [];
+            let i = 1;
+            while (searchParams.get(`acct${i}`)) {
+                const acct = searchParams.get(`acct${i}`);
+                const token = searchParams.get(`token${i}`);
+                const cur = searchParams.get(`cur${i}`);
+                if (acct && token) {
+                    accounts.push({ accountId: acct, token, currency: cur || 'USD' });
+                }
+                i++;
+            }
 
-            if (token1 && acct1) {
+            if (accounts.length > 0) {
                 try {
-                    await loginWithDeriv(token1, acct1);
-                    navigate('/dashboard'); // Or wherever users should land
+                    // Login with the first account initially
+                    await loginWithDeriv(searchParams.toString());
+                    navigate('/dashboard');
                 } catch (error) {
                     console.error("Login failed", error);
                     navigate('/login?error=auth_failed');

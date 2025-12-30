@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import sessionsRoutes from './routes/sessions.js';
 import usersRoutes from './routes/users.js';
 import tradesRoutes from './routes/trades.js';
+import statsRoutes from './routes/stats.js';
 
 // Services
 import { initWebSocketServer, getWebSocketServer } from './services/WebSocketServer.js';
@@ -25,95 +26,19 @@ const httpServer = createServer(app);
 // Initialize WebSocket Server
 const wsServer = initWebSocketServer(httpServer);
 
-// =============================================================================
-// MIDDLEWARE
-// =============================================================================
-
-// app.use(helmet({
-//     crossOriginResourcePolicy: { policy: "cross-origin" },
-//     crossOriginOpenerPolicy: { policy: "unsafe-none" },
-// }));
-
-const corsOptions = {
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        // Detailed debug logging
-        if (origin) {
-            console.log(`[CORS] Request from origin: ${origin}`);
-        } else {
-            console.log(`[CORS] Request with no origin (Server/Mobile)`);
-        }
-
-        const allowedOrigins = [
-            'http://localhost:5173',
-            'http://localhost:4173',
-            'https://deriv-ws-frontend.vercel.app',
-            process.env['CORS_ORIGIN']
-        ];
-
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-
-        // Allow all Vercel Preview deployments
-        if (origin.endsWith('.vercel.app')) {
-            return callback(null, true);
-        }
-
-        console.warn(`[CORS] Blocked request from: ${origin}`);
-        callback(null, false);
-    },
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true,
-    optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-// Enable pre-flight requests for all routes
-app.options('*', cors(corsOptions));
-
-app.use(express.json());
-
-// Request logging
-app.use((req, _res, next) => {
-    console.log(`${new Date().toISOString()} ${req.method} ${req.path} [Origin: ${req.headers.origin}]`);
-    next();
-});
-
-// =============================================================================
-// ROUTES
-// =============================================================================
-
-// Health check
-app.get('/', (_req, res) => {
-    res.status(200).send('TraderMind API Gateway is running');
-});
-
-app.get('/health', (_req, res) => {
-    const wsStats = wsServer.getStats();
-    const registryStats = sessionRegistry.getStats();
-    res.json({
-        status: 'healthy',
-        service: 'api-gateway',
-        websocket: wsStats,
-        sessions: registryStats,
-    });
-});
-
 // API v1 routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/sessions', sessionsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/trades', tradesRoutes);
+app.use('/api/v1/stats', statsRoutes);
 
 // Legacy routes (without /api/v1 prefix for backward compatibility)
 app.use('/auth', authRoutes);
 app.use('/sessions', sessionsRoutes);
 app.use('/users', usersRoutes);
 app.use('/trades', tradesRoutes);
+app.use('/stats', statsRoutes);
 
 // API status
 app.get('/api/v1/status', (_req, res) => {

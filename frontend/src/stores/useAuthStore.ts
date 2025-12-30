@@ -6,14 +6,16 @@ interface DerivAccount {
     balance: number;
     currency: string;
     loginid: string;
-    is_virtual: number | boolean; // Deriv returns 0 or 1
+    token: string;
+    is_virtual: boolean;
 }
 
 interface User {
     id: string;
     email: string;
     role: string;
-    deriv_account?: DerivAccount;
+    deriv_accounts: DerivAccount[];
+    active_account_id: string;
 }
 
 interface AuthState {
@@ -22,36 +24,43 @@ interface AuthState {
     loading: boolean;
     isAdmin: boolean;
     initialize: () => Promise<void>;
-    signIn: () => Promise<void>; // Will likely just redirect or handle generic flow
+    signIn: () => Promise<void>;
     signOut: () => Promise<void>;
-    loginWithDeriv: (derivToken: string, accountId: string) => Promise<void>;
+    loginWithDeriv: (queryString: string) => Promise<void>;
+    switchAccount: (accountId: string) => void;
+    updateBalance: (balance: number, currency: string) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     session: null,
     loading: true,
     isAdmin: false,
     initialize: async () => {
-        // Bypass for Cypress E2E Simulation
         if (typeof window !== 'undefined' && (window as any).__CYPRESS_TEST_MODE__) {
-            console.log('Skipping Auth Init (Cypress Mode)');
             return;
         }
 
         const token = localStorage.getItem('auth_token');
+        const storedAccounts = localStorage.getItem('deriv_accounts');
+
         if (token) {
-            // Validate token basically (decode) or call /me endpoint
-            // For now, assume valid or let middleware reject requests
             try {
-                // Determine user details from token payload if possible, or fetch from API
                 const parts = token.split('.');
                 if (parts.length < 2) throw new Error("Invalid token format");
 
                 const payload = JSON.parse(atob(parts[1] as string));
+                const accounts = storedAccounts ? JSON.parse(storedAccounts) : [];
+
                 set({
-                    user: { id: payload.userId, email: payload.email } as any,
-                    session: { access_token: token } as any, // Mock session structure
+                    user: {
+                        id: payload.userId,
+                        email: payload.email,
+                        role: payload.role,
+                        deriv_accounts: accounts,
+                        active_account_id: accounts[0]?.loginid
+                    },
+                    session: { access_token: token } as any,
                     loading: false,
                     isAdmin: payload.role === 'ADMIN'
                 });
@@ -64,25 +73,60 @@ export const useAuthStore = create<AuthState>((set) => ({
             set({ loading: false });
         }
     },
-    loginWithDeriv: async (derivToken: string, accountId: string) => {
+    loginWithDeriv: async (queryString: string) => {
         try {
             set({ loading: true });
+
+            // 1. Parse all accounts from query string
+            const searchParams = new URLSearchParams(queryString);
+            const accounts: DerivAccount[] = [];
+            let i = 1;
+            while (searchParams.get(`acct${i}`)) {
+                const loginid = searchParams.get(`acct${i}`)!;
+                const token = searchParams.get(`token${i}`)!;
+                const currency = searchParams.get(`cur${i}`) || 'USD';
+                const is_virtual = loginid.startsWith('VR');
+
+                accounts.push({
+                    loginid,
+                    token,
+                    currency,
+                    is_virtual,
+                    balance: 0 // Will be updated by WS
+                });
+                i++;
+            }
+
+            if (accounts.length === 0) throw new Error("No accounts found");
+
+            // 2. Authenticate with backend using the first (primary) account
+            const primaryAccount = accounts[0];
+            if (!primaryAccount) throw new Error("Primary account not found");
             const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/auth/deriv/callback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deriv_token: derivToken, account_id: accountId })
+                body: JSON.stringify({
+                    deriv_token: primaryAccount.token,
+                    account_id: primaryAccount.loginid
+                })
             });
 
-            if (!response.ok) {
-                throw new Error('Login failed');
-            }
+            if (!response.ok) throw new Error('Backend login failed');
 
             const data = await response.json();
 
             if (data.accessToken) {
                 localStorage.setItem('auth_token', data.accessToken);
+                localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
+
                 set({
-                    user: data.user,
+                    user: {
+                        id: data.user.id,
+                        email: data.user.email,
+                        role: data.user.role,
+                        deriv_accounts: accounts,
+                        active_account_id: primaryAccount.loginid
+                    },
                     session: { access_token: data.accessToken } as any,
                     isAdmin: data.user.role === 'ADMIN',
                     loading: false
@@ -95,14 +139,28 @@ export const useAuthStore = create<AuthState>((set) => ({
             throw error;
         }
     },
-    signIn: async () => {
-        // Placeholder for specific sign in logic if needed here, 
-        // usually handled in the Login component directly via supabase.auth.signInWith...
+    switchAccount: (accountId: string) => {
+        const { user } = get();
+        if (user) {
+            set({ user: { ...user, active_account_id: accountId } });
+        }
     },
+    updateBalance: (balance: number, currency: string) => {
+        const { user } = get();
+        if (user) {
+            const updatedAccounts = user.deriv_accounts.map(acc =>
+                acc.loginid === user.active_account_id
+                    ? { ...acc, balance, currency }
+                    : acc
+            );
+            set({ user: { ...user, deriv_accounts: updatedAccounts } });
+        }
+    },
+    signIn: async () => { },
     signOut: async () => {
         localStorage.removeItem('auth_token');
+        localStorage.removeItem('deriv_accounts');
         set({ user: null, session: null, isAdmin: false });
-        // Optional: window.location.href = '/';
     }
 }));
 

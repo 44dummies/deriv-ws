@@ -17,6 +17,7 @@ import os
 # Add src to path
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 from model_service import ModelService
+from intelligence_engine import IntelligenceEngine
 
 # =============================================================================
 # APP SETUP
@@ -28,22 +29,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
 # Load Configuration
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config", "model_config.json")
+PROMPT_PATH = os.path.join(os.path.dirname(__file__), "config", "locked_system_prompt.txt")
 
-def load_model_version():
-    try:
-        if os.path.exists(CONFIG_PATH):
-            with open(CONFIG_PATH, "r") as f:
-                config = json.load(f)
-                return config.get("active_model", "qil-v1.1.0-logreg")
-    except Exception as e:
-        print(f"Failed to load config: {e}")
-    return "qil-v1.1.0-logreg"
+def load_system_prompt():
+    if os.path.exists(PROMPT_PATH):
+        with open(PROMPT_PATH, "r") as f:
+            return f.read()
+    return "SYSTEM PROMPT NOT FOUND"
 
-MODEL_VERSION = load_model_version()
+SYSTEM_PROMPT = load_system_prompt()
+MODEL_VERSION = "qil-v1.2.0-eval" # Updated version
+
 model_service = ModelService()
+intelligence_engine = IntelligenceEngine()
 
 # =============================================================================
 # SCHEMAS
@@ -51,26 +51,27 @@ model_service = ModelService()
 
 class FeatureVector(BaseModel):
     """Input features for inference (Strict Contract)"""
-    rsi: float = Field(..., ge=0, le=100, description="RSI value (0-100)")
-    ema_fast: float = Field(..., description="Fast EMA value")
-    ema_slow: float = Field(..., description="Slow EMA value")
-    atr: float = Field(..., ge=0, description="Average True Range")
-    momentum: float = Field(..., description="Momentum")
-    volatility: float = Field(..., ge=0, description="Volatility coefficient")
-
+    rsi: float = Field(..., ge=0, le=100)
+    ema_fast: float
+    ema_slow: float
+    atr: float
+    momentum: float
+    volatility: float
+    market_regime: str = "unknown" # Added for context
 
 class InferenceRequest(BaseModel):
     """Request body for /infer endpoint"""
     features: FeatureVector
 
-
 class InferenceResponse(BaseModel):
     """Response from AI inference (Strict Contract)"""
-    ai_confidence: float = Field(..., ge=0, le=1)
-    market_regime: Literal["TRENDING", "RANGING", "VOLATILE"]
-    reason_tags: List[str]
+    ai_confidence: float
+    confidence_decay: float
+    anomaly_score: float
+    market_regime: str
+    risk_level: str
+    explanation: dict 
     model_version: str
-
 
 # =============================================================================
 # ENDPOINTS
@@ -83,56 +84,62 @@ def root():
         "service": "TraderMind AI Layer",
         "status": "healthy",
         "model_version": MODEL_VERSION,
+        "mode": "EVALUATION-ONLY"
     }
-
 
 @app.get("/health")
 def health():
-    """Health check for load balancers"""
     return {"status": "ok"}
-
 
 @app.post("/infer", response_model=InferenceResponse)
 def infer(request: InferenceRequest):
     """
-    Perform AI inference on feature vector.
+    Perform AI inference with Evaluation Logic.
     
     GUARANTEES:
     - Deterministic: Same input → Same output
     - No side effects: No DB writes, no external calls
     """
     try:
-        # Use ModelService for prediction
+        # 1. Get base prediction (stub or real model)
         confidence, regime, reasons = model_service.predict(request.features.model_dump())
         
+        # 2. Calculate Evaluation Metrics (Confidence Decay & Anomaly)
+        metrics = intelligence_engine.calculate_metrics(
+            volatility=request.features.volatility,
+            rsi=request.features.rsi,
+            market_regime=request.features.market_regime
+        )
+        
+        # 3. Generate Evaluation Explanation
+        explanation = intelligence_engine.generate_explanation(metrics, regime)
+        
+        # 4. Adjust Final Confidence
+        final_confidence = max(0.0, confidence - metrics["confidence_decay"])
+
         return InferenceResponse(
-            ai_confidence=confidence,
+            ai_confidence=final_confidence,
+            confidence_decay=metrics["confidence_decay"],
+            anomaly_score=metrics["anomaly_score"],
             market_regime=regime,
-            reason_tags=reasons,
+            risk_level=metrics["risk_level"],
+            explanation=explanation,
             model_version=MODEL_VERSION,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/model/info")
 def model_info():
     """Get model metadata"""
     return {
         "model_version": MODEL_VERSION,
-        "model_type": "rule-based-stub",
-        "features_required": [
-            "rsi", "ema_fast", "ema_slow", "sma_fast", "sma_slow",
-            "momentum", "volatility", "atr", "market"
-        ],
-        "outputs": ["signal_bias", "confidence", "reason"],
+        "status": "active",
+        "model_type": "deterministic-eval-engine",
+        "system_prompt_hash": hashlib.md5(SYSTEM_PROMPT.encode()).hexdigest(),
+        "outputs": ["confidence", "decay", "anomaly", "risk_level"],
         "deterministic": True,
     }
-
-
-# =============================================================================
-# MAIN
-# =============================================================================
 
 if __name__ == "__main__":
     import uvicorn

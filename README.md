@@ -1,83 +1,83 @@
 # TraderMind
 
-> Event-driven automated trading platform built on Deriv WebSocket API.
+**TraderMind** is a premium, AI-enhanced trading intelligence dashboard designed for the Deriv platform. It features a modern "Glassmorphism" UI, real-time data streaming, role-based session management, and a deterministic AI evaluation engine.
 
-## Overview
+![TraderMind Dashboard](frontend/public/tradermind-logo.png)
 
-TraderMind is a server-side, multi-user trading platform featuring:
-- **Core Execution Engine** (Node.js/TypeScript): Handles trade execution, risk management, and session orchestration.
-- **Quant Intelligence Layer** (Python): Provides probabilistic ML inference (Insight only, never control).
-- **Real-Time UI** (React): WebSocket-driven dashboard for live monitoring and control.
+## 🚀 Key Features
 
-**Philosophy:** Python provides the brains (insight), Node.js provides the muscle (execution).
+*   **Premium SPA UI**: Glassmorphism design, dynamic theming (Cyberpunk, Midnight), and smooth transitions.
+*   **Real-Time Data**: WebSocket streaming for account balances and multi-account support (Real/Demo).
+*   **Role-Based Access**: strict separation between Admin (Session Control) and User (Read-Only) roles.
+*   **AI Intelligence Engine**: Evaluation-only AI that provides confidence decay and anomaly scores—never trading advice.
+*   **Local AI Training**: Utilities to fine-tune local LLMs (via Ollama) on safety and evaluation protocols.
 
----
+## 🛠️ Architecture
 
-## Quick Start (Local)
+*   **Frontend**: React, TypeScript, Vite, Tailwind CSS, Zustand, TanStack Query.
+*   **Backend (API Gateway)**: Node.js, Express, WebSocket.
+*   **AI Layer**: Python, FastAPI, Deterministic Logic Engine.
+
+## 📦 Installation & Setup
 
 ### Prerequisites
-- Node.js 20+
-- pnpm
-- Python 3.10+
-- Docker (optional, for local DB/Redis)
+*   Node.js v18+
+*   Python 3.10+
+*   Ollama (optional, for local AI training)
 
-### Installation
+### 1. Backend Setup
 ```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Environment Setup
-cp .env.example .env
-
-# 3. Start Infrastructure (Redis + Supabase/Postgres)
-docker compose up -d redis
-
-# 4. Run Development Servers
-pnpm -r run dev
+# Install API Gateway dependencies
+cd backend/api-gateway
+npm install
+npm run build
+npm start
 ```
 
----
-
-## Deployment
-
-- **Backend**: Deployed on **Railway** (Dockerized).
-- **Frontend**: Deployed on **Vercel**.
-- **Database**: **Supabase** (PostgreSQL).
-
-👉 **See [DEPLOYMENT.md](./DEPLOYMENT.md) for full production guides.**
-
----
-
-## Repository Structure
-
-```
-tradermind/
-├── .agent/            # Agent workflows
-├── backend/
-│   ├── api-gateway/   # Express + Socket.IO (Entry point)
-│   ├── quant-engine/  # Signal generation & execution logic
-│   └── ai-layer/      # Python FastAPI (ML Inference)
-├── frontend/          # React + Vite + Tailwind (Vercel Root)
-├── packages/
-│   ├── schemas/       # Shared Zod schemas & types
-│   ├── shared-utils/  # Common utilities
-│   └── risk-rules/    # Risk validation logic
-├── supabase/          # Database migrations & config
-├── docker-compose.yml # Local development orchestration
-├── railway.toml       # Railway deployment config
-└── Dockerfile.*       # Production Dockerfiles
+### 2. AI Layer Setup
+```bash
+cd backend/ai-layer
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 main.py
 ```
 
----
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Architecture details
+## 🧠 AI Training (Ollama)
 
-| Module | Responsibility | Port (Local) |
-|--------|---------------|--------------|
-| **Frontend** | UI, WebSocket Client | 5173 |
-| **API Gateway** | Auth, WS Proxy, Rate Limiting | 3000 |
-| **Quant Engine** | Market Data, Signals, Execution | 3001 |
-| **AI Layer** | ML Inference (XGBoost/Scikit) | 8000 |
+TraderMind includes tools to train a local AI model that understands its specific risk language and constraints.
 
-## License
-UNLICENSED — Private
+1.  **Generate Dataset**:
+    ```bash
+    cd backend/ai-layer
+    python3 scripts/generate_eval_data.py
+    python3 scripts/generate_qa_refusals.py
+    python3 scripts/prepare_training_set.py
+    ```
+    This creates `datasets/tradermind_finetune.jsonl` (52,500 records).
+
+2.  **Create Model**:
+    Ensure Ollama is installed and running.
+    ```bash
+    ollama create tradermind -f Modelfile
+    ```
+
+3.  **Run Model**:
+    ```bash
+    ollama run tradermind
+    ```
+
+## 🔐 Security & Constraints
+*   **Encryption**: Sensitive tokens are handled securely.
+*   **AI Safety**: The AI is hard-coded to **never** provide trading instructions (Buy/Sell/Enter/Exit). It is an **Evaluation Only** engine.
+*   **RBAC**: Session controls are strictly validated on the backend.
+
+## 📄 License
+Private & Confidential.

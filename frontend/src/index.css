@@ -6,9 +6,18 @@
 @tailwind utilities;
 
 /* Global Reset */
+:root {
+    /* Default Theme (Blue) */
+    --color-primary: 217 91% 60%;
+    --color-primary-glow: #3b82f6;
+    --color-accent-glow: #8b5cf6;
+    --color-surface: 222 47% 11%; /* Slate 900 equivalent in HSL */
+    --color-background: 224 71% 4%; /* Slate 950 equivalent */
+}
+
 body {
-    background-color: #030712; /* Rich black base */
-    color: #e2e8f0;            /* Slate 200 text */
+    background-color: hsl(var(--color-background));
+    color: #e2e8f0;            
     font-family: 'Inter', sans-serif;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;

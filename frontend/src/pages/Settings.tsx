@@ -70,7 +70,7 @@ export default function Settings() {
                         </div>
                         <div>
                             <label className="text-xs text-gray-500 uppercase font-mono">Deriv Account ID</label>
-                            <div className="text-lg font-medium">{user?.deriv_account?.loginid || 'N/A'}</div>
+                            <div className="text-lg font-medium">{user?.active_account_id || 'N/A'}</div>
                         </div>
                     </div>
 
