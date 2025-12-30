@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, History, PieChart, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, History, PieChart, Settings, LogOut, Menu, X, MessageSquare, BrainCircuit, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { cn } from '../lib/utils';
@@ -17,8 +17,9 @@ export default function DashboardLayout() {
 
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-        { icon: History, label: 'Sessions', path: '/sessions' },
-        { icon: PieChart, label: 'Statistics', path: '/statistics' },
+        { icon: BarChart2, label: 'Sessions', path: '/user/sessions' },
+        { icon: BrainCircuit, label: 'Stats & AI', path: '/user/stats' }, // Updated Icon
+        { icon: MessageSquare, label: 'Assistant', path: '/user/chat' }, // New Chat Item
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 

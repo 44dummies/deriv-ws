@@ -14,6 +14,7 @@ import sessionsRoutes from './routes/sessions.js';
 import usersRoutes from './routes/users.js';
 import tradesRoutes from './routes/trades.js';
 import statsRoutes from './routes/stats.js';
+import chatRoutes from './routes/chat.js';
 
 // Services
 import { initWebSocketServer, getWebSocketServer } from './services/WebSocketServer.js';
@@ -32,6 +33,7 @@ app.use('/api/v1/sessions', sessionsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/trades', tradesRoutes);
 app.use('/api/v1/stats', statsRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 // Legacy routes (without /api/v1 prefix for backward compatibility)
 app.use('/auth', authRoutes);

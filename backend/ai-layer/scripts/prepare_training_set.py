@@ -1,10 +1,13 @@
 import json
 import glob
 import os
+import random
+import random
 
 # Configuration
 EVAL_DATA_PATH = "datasets/market_evaluation.jsonl"
 QA_DATA_PATH = "datasets/admin_qa_refusals.jsonl"
+CONVO_DATA_PATH = "datasets/general_conversation.jsonl"
 OUTPUT_FILE = "datasets/tradermind_finetune.jsonl"
 
 SYSTEM_PROMPT = """You are TraderMind AI.
@@ -59,21 +62,25 @@ def process_eval_records():
 
 def process_qa_records():
     records = []
-    if not os.path.exists(QA_DATA_PATH):
-        print(f"Warning: {QA_DATA_PATH} not found.")
-        return []
-        
-    with open(QA_DATA_PATH, "r") as f:
-        for line in f:
-            try:
-                record = json.loads(line)
-                records.append(format_for_ollama(
-                    record['instruction'],
-                    record['input'],
-                    record['output']
-                ))
-            except:
-                continue
+    # Process both QA Refusals AND General Conversation
+    paths = [QA_DATA_PATH, CONVO_DATA_PATH]
+    
+    for path in paths:
+        if not os.path.exists(path):
+            print(f"Warning: {path} not found.")
+            continue
+            
+        with open(path, "r") as f:
+            for line in f:
+                try:
+                    record = json.loads(line)
+                    records.append(format_for_ollama(
+                        record['instruction'],
+                        record['input'],
+                        record['output']
+                    ))
+                except:
+                    continue
     return records
 
 def main():
@@ -81,11 +88,12 @@ def main():
     eval_records = process_eval_records()
     print(f"Loaded {len(eval_records)} evaluation records.")
     
-    print("Processing Q&A/Refusal Records...")
+    print("Processing Conversation & QA Records...")
     qa_records = process_qa_records()
-    print(f"Loaded {len(qa_records)} Q&A records.")
+    print(f"Loaded {len(qa_records)} conversation/QA records.")
     
     all_records = eval_records + qa_records
+    random.shuffle(all_records) # Shuffle for better training
     
     print(f"Writing {len(all_records)} total records to {OUTPUT_FILE}...")
     with open(OUTPUT_FILE, "w") as f:
