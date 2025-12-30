@@ -45,11 +45,20 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
 function PublicRoute({ children }: { children: React.ReactNode }) {
     const { user, loading } = useAuthStore();
 
-    if (loading) return null; // Avoid flicker
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[#0a0f1c] flex items-center justify-center">
+                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            </div>
+        );
+    }
 
-    // If user is already logged in, send them to dashboard
+    // If user is already logged in, send them to dashboard based on role
     if (user) {
-        return <Navigate to="/dashboard" replace />;
+        if (user.role === 'ADMIN') {
+            return <Navigate to="/admin/overview" replace />;
+        }
+        return <Navigate to="/user/dashboard" replace />;
     }
 
     return <>{children}</>;
