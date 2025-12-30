@@ -27,6 +27,15 @@ const httpServer = createServer(app);
 // Initialize WebSocket Server
 const wsServer = initWebSocketServer(httpServer);
 
+// Middleware
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+app.use(helmet());
+app.use(express.json());
+
 // API v1 routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/sessions', sessionsRoutes);
