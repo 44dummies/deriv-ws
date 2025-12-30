@@ -36,6 +36,13 @@ app.use(helmet({
 
 const corsOptions = {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Detailed debug logging
+        if (origin) {
+            console.log(`[CORS] Request from origin: ${origin}`);
+        } else {
+            console.log(`[CORS] Request with no origin (Server/Mobile)`);
+        }
+
         const allowedOrigins = [
             'http://localhost:5173',
             'http://localhost:4173',
@@ -55,7 +62,7 @@ const corsOptions = {
             return callback(null, true);
         }
 
-        console.log('Blocked by CORS:', origin);
+        console.warn(`[CORS] Blocked request from: ${origin}`);
         callback(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -134,21 +141,28 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // START SERVER
 // =============================================================================
 
+// =============================================================================
+// START SERVER
+// =============================================================================
+
 const PORT = process.env['PORT'] ?? 4000;
+console.log('[Startup] Initializing TraderMind API Gateway...');
+console.log(`[Startup] Environment: ${process.env['NODE_ENV']}`);
+console.log(`[Startup] CORS Origin Config: ${process.env['CORS_ORIGIN']}`);
 
+// Start listening immediately to ensure health checks and CORS work
+httpServer.listen(PORT, () => {
+    console.log(`[Startup] API Gateway started on port ${PORT}`);
+    console.log(`[Startup] WebSocket server ready`);
+    console.log(`[Startup] Routes: /auth, /sessions, /users, /trades`);
+});
 
-// Recover state before accepting traffic
+// Recover state in background - DO NOT BLOCK server startup
 sessionRegistry.recoverStateFromDB().then((count) => {
     console.log(`[Startup] Recovered ${count} active sessions.`);
-
-    httpServer.listen(PORT, () => {
-        console.log(`API Gateway started on port ${PORT}`);
-        console.log(`WebSocket server ready`);
-        console.log(`Routes: /auth, /sessions, /users, /trades`);
-    });
 }).catch(err => {
-    console.error('[Startup] Failed to recover state:', err);
-    process.exit(1);
+    console.error('[Startup] Failed to recover state from DB (Non-fatal):', err);
+    // Do not exit, allow server to run for diagnostics
 });
 
 export { app, httpServer, getWebSocketServer, sessionRegistry };
