@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { signalStore } from '../services/SignalStore.js';
 import { sessionRegistry } from '../services/SessionRegistry.js';
-import { supabase } from '../lib/supabaseClient.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -14,7 +13,7 @@ async function getSystemStats() {
     const activeSessionCount = activeSessions.length;
 
     // Calculate real-time active users across all sessions
-    const activeParticipants = activeSessions.reduce((acc, sess) => acc + sess.participants.length, 0);
+    const activeParticipants = activeSessions.reduce((acc: number, sess: any) => acc + sess.participants.length, 0);
 
     // Mock Admin Balance (since Admin doesn't trade)
     // In a real app, this would query the Admin's specific wallet ID

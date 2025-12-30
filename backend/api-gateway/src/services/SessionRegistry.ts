@@ -124,6 +124,13 @@ export class SessionRegistry {
     }
 
     /**
+     * Alias for listSessions
+     */
+    getAllSessions(): SessionState[] {
+        return this.listSessions();
+    }
+
+    /**
      * Get active sessions (RUNNING or ACTIVE status)
      */
     getActiveSessions(): SessionState[] {
