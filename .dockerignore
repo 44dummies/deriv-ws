@@ -8,3 +8,7 @@ dist
 coverage
 .pytest_cache
 __pycache__
+
+# Exclude large models from build context
+backend/ai-layer/models/*.gguf
+**/*.gguf
