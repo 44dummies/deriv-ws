@@ -21,6 +21,25 @@ import { initWebSocketServer, getWebSocketServer } from './services/WebSocketSer
 import { sessionRegistry } from './services/SessionRegistry.js';
 import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
+// =============================================================================
+// CONFIG VALIDATION (Zero-Trust)
+// =============================================================================
+const REQUIRED_ENV = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'DERIV_TOKEN_KEY'
+];
+
+const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
+if (missingEnv.length > 0) {
+    console.error('[Startup] FATAL: Missing required environment variables:', missingEnv);
+    process.exit(1); // Fail fast in production
+}
+
+if (!process.env.AI_LAYER_URL) {
+    console.warn('[Startup] WARNING: AI_LAYER_URL not set. Defaulting to http://localhost:8001. This may fail in containerized environments.');
+}
+
 const app = express();
 const httpServer = createServer(app);
 

@@ -224,38 +224,31 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     // ---------------------------------------------------------------------------
 
     private async checkAIStatus(): Promise<void> {
-        // Read file only in server environment where fs is available
-        // Since this runs in Node.js (API Gateway), we can use fs
-        // But for portability, we'll use a mocked check or assume external service pushes updates.
-        // For Proof of Concept, we attempt to read the file if possible, or skip.
-        // Actually, importing 'fs' might break if this code is shared with frontend.
-        // Given project structure, 'QuantEngineAdapter' is in 'api-gateway', so it's Node.
+        const AI_LAYER_URL = process.env.AI_LAYER_URL || 'http://localhost:8001';
 
         try {
-            // Dynamic import to avoid build issues if mixed env
-            const fs = await import('fs/promises');
-            const path = await import('path');
+            // Use built-in fetch (Node 18+)
+            const response = await fetch(`${AI_LAYER_URL}/model/info`, {
+                signal: AbortSignal.timeout(2000)
+            });
 
-            // Hardcoded path to config/ai_status.json relative to CWD
-            // CWD is likely project root or apps/api-gateway
-            // We'll try absolute path or relative to known location
-            const statusPath = '/home/dzaddy/Documents/Deriv version 2/apps/ai-layer/config/ai_status.json';
-
-            try {
-                const content = await fs.readFile(statusPath, 'utf-8');
-                const status = JSON.parse(content);
-
-                if (status.status === 'DISABLED') {
+            if (response.ok) {
+                const data = await response.json() as any;
+                // If status is specifically DISABLED, respect it. Otherwise assume active.
+                if (data.status === 'DISABLED') {
                     quantEngine.setAIEnabled(false);
                 } else {
                     quantEngine.setAIEnabled(true);
                 }
-            } catch (err) {
-                // If file doesn't exist, assume enabled (default)
-                // console.warn('[QuantAdapter] Status file not found, assuming AI Enabled');
+            } else {
+                // Service reachable but returned error? logic debatable. 
+                // We'll keep current state or maybe warn.
+                console.warn(`[QuantAdapter] AI Health Check failed: ${response.status}`);
             }
         } catch (err) {
-            console.error('[QuantAdapter] Failed to check AI status:', err);
+            // Network error implies AI is down
+            console.warn('[QuantAdapter] AI Layer unreachable, disabling AI scoring temporarily.');
+            quantEngine.setAIEnabled(false);
         }
     }
 

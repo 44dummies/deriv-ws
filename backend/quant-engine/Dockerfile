@@ -30,4 +30,8 @@ ENV PORT=3001
 
 EXPOSE 3001
 
+# Security: Run as non-root user
+RUN chown -R node:node /app
+USER node
+
 CMD ["node", "dist/index.js"]

@@ -20,4 +20,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 
 EXPOSE 3000
+
+# Security: Run as non-root user
+RUN chown -R node:node /app
+USER node
+
 CMD ["node", "dist/index.js"]
