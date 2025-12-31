@@ -4,20 +4,27 @@ import { useDerivBalance } from '../hooks/useDerivBalance';
 import { Wallet, TrendingUp, ArrowUpRight, Activity, ChevronDown, Monitor, Shield } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-const mockData = [
-    { name: 'Mon', profit: 400 },
-    { name: 'Tue', profit: 300 },
-    { name: 'Wed', profit: 600 },
-    { name: 'Thu', profit: 400 },
-    { name: 'Fri', profit: 700 },
-    { name: 'Sat', profit: 800 },
-    { name: 'Sun', profit: 950 },
-];
+// Fetch real stats from backend instead of mock data
+const useRealStats = () => {
+    return useQuery({
+        queryKey: ['dashboard-stats'],
+        queryFn: async () => {
+            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats/summary`;
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            return res.json();
+        },
+        staleTime: 30000, // Refresh every 30s
+        refetchInterval: 30000
+    });
+};
 
 export default function Dashboard() {
     const { user, switchAccount } = useAuthStore();
     useDerivBalance(); // Activate real-time balance subscription
+    const { data: stats } = useRealStats(); // Fetch real dashboard stats
 
     const activeAccount = user?.deriv_accounts.find(a => a.loginid === user?.active_account_id) || user?.deriv_accounts[0];
     const isReal = !activeAccount?.is_virtual;
@@ -42,8 +49,8 @@ export default function Dashboard() {
                         <button
                             onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
                             className={`flex items-center gap-3 px-4 py-2 rounded-xl border transition-all duration-300 ${isReal
-                                    ? 'bg-success/5 border-success/20 hover:bg-success/10 text-success shadow-[0_0_15px_rgba(16,185,129,0.1)]'
-                                    : 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
+                                ? 'bg-success/5 border-success/20 hover:bg-success/10 text-success shadow-[0_0_15px_rgba(16,185,129,0.1)]'
+                                : 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10 text-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.1)]'
                                 }`}
                         >
                             <span className="w-2 h-2 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
@@ -64,8 +71,8 @@ export default function Dashboard() {
                                                 setIsAccountMenuOpen(false);
                                             }}
                                             className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${acc.loginid === activeAccount?.loginid
-                                                    ? 'bg-white/10 text-white'
-                                                    : 'hover:bg-white/5 text-gray-400 hover:text-white'
+                                                ? 'bg-white/10 text-white'
+                                                : 'hover:bg-white/5 text-gray-400 hover:text-white'
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2">
@@ -105,9 +112,11 @@ export default function Dashboard() {
                         <div className="p-3 rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 group-hover:scale-110 transition-transform duration-300">
                             <Wallet className="w-6 h-6" />
                         </div>
-                        <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold border border-success/10 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                            <ArrowUpRight className="w-3 h-3" /> +12.5%
-                        </span>
+                        {stats?.trading?.win_rate > 0 && (
+                            <span className="px-3 py-1 rounded-full bg-success/10 text-success text-xs font-bold border border-success/10 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                                <ArrowUpRight className="w-3 h-3" /> {stats.trading.win_rate}%
+                            </span>
+                        )}
                     </div>
 
                     <div className="relative z-10">
@@ -133,9 +142,13 @@ export default function Dashboard() {
                             <TrendingUp className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="text-sm text-gray-400 font-medium tracking-widest uppercase mb-1">7-Day Profit</div>
-                    <div className="text-4xl font-bold text-success tracking-tight">+$550.00</div>
-                    <div className="text-sm text-gray-500 mt-2 font-medium">+15% vs. last week</div>
+                    <div className="text-sm text-gray-400 font-medium tracking-widest uppercase mb-1">Total Profit</div>
+                    <div className="text-4xl font-bold text-success tracking-tight">
+                        ${(stats?.trading?.total_profit || 0).toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2 font-medium">
+                        {stats?.trading?.total_trades || 0} trades executed
+                    </div>
                 </motion.div>
 
                 {/* Active Bots */}
@@ -152,8 +165,12 @@ export default function Dashboard() {
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
                     </div>
                     <div className="text-sm text-gray-400 font-medium tracking-widest uppercase mb-1">Active Sessions</div>
-                    <div className="text-4xl font-bold text-white tracking-tight">3 <span className="text-2xl text-gray-600">/ 5</span></div>
-                    <div className="text-sm text-gray-500 mt-2 font-medium">System Load: Optimal</div>
+                    <div className="text-4xl font-bold text-white tracking-tight">
+                        {stats?.sessions?.active || 0}
+                    </div>
+                    <div className="text-sm text-gray-500 mt-2 font-medium">
+                        {stats?.users?.active || 0} users online
+                    </div>
                 </motion.div>
             </div>
 
@@ -179,7 +196,8 @@ export default function Dashboard() {
                 </div>
 
                 <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={mockData}>
+                    {/* Chart will be populated when historical data API is available */}
+                    <AreaChart data={[{ name: 'Now', profit: stats?.trading?.total_profit || 0 }]}>
                         <defs>
                             <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="var(--color-primary-glow)" stopOpacity={0.3} />

@@ -158,6 +158,7 @@ async def chat(request: ChatRequest):
     """
     try:
         import httpx
+        import os
         
         # Construct the prompt with strict Role Context
         full_prompt = (
@@ -165,9 +166,10 @@ async def chat(request: ChatRequest):
             f"User: {request.message}"
         )
 
+        ollama_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:11434/api/generate",
+                f"{ollama_url}/api/generate",
                 json={
                     "model": "tradermind",
                     "prompt": full_prompt,

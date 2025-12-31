@@ -17,7 +17,8 @@ const useTicker = () => {
 
     useEffect(() => {
         // Connect to Deriv Public WS
-        const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+        const appId = import.meta.env.VITE_DERIV_APP_ID || '1089';
+        const ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${appId}`);
         wsParams.current.ws = ws;
         wsParams.current.active = true;
 

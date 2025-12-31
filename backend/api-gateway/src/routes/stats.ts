@@ -76,7 +76,7 @@ router.get('/summary', async (_req: Request, res: Response) => {
                 const data = await aiRes.json() as any;
                 aiStatus = {
                     status: 'online',
-                    model: data.model_alias || 'tradermind:latest',
+                    model: data.model_alias || 'EMJ',
                     latency: Date.now() - start
                 };
             }

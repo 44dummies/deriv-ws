@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 
-const APP_ID = '1089';
+// Use the same App ID as configured in environment
+const APP_ID = import.meta.env.VITE_DERIV_APP_ID || '1089';
 
 export const useDerivBalance = () => {
     const { user, updateBalance } = useAuthStore();

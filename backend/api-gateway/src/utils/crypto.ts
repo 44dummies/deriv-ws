@@ -1,9 +1,12 @@
 import crypto from "crypto";
 
 const ALGO = "aes-256-gcm";
-// Ensure key is 32 bytes (64 hex characters)
-// Fallback for dev only - strictly requires env in prod
-const KEY_HEX = process.env.DERIV_TOKEN_KEY || "0000000000000000000000000000000000000000000000000000000000000000";
+
+// SECURITY: No fallback allowed - must be explicitly configured
+if (!process.env.DERIV_TOKEN_KEY) {
+    throw new Error('FATAL: DERIV_TOKEN_KEY environment variable is required. Generate with: openssl rand -hex 32');
+}
+const KEY_HEX = process.env.DERIV_TOKEN_KEY;
 const KEY = Buffer.from(KEY_HEX, "hex");
 
 export function encrypt(text: string): string {
