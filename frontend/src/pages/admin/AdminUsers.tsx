@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Search, Circle, Loader2 } from 'lucide-react';
+import { Users, Search, Loader2 } from 'lucide-react';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { useQuery } from '@tanstack/react-query';
 
@@ -63,27 +63,22 @@ export default function AdminUsers() {
                                     <tr className="text-slate-500 border-b border-white/5 text-left">
                                         <th className="pb-3 pl-4">User</th>
                                         <th className="pb-3">Role</th>
-                                        <th className="pb-3">Status</th>
-                                        <th className="pb-3">Balance (Real)</th>
-                                        <th className="pb-3">Last Seen</th>
+                                        <th className="pb-3">Joined</th>
                                         <th className="pb-3 text-right pr-4">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {filteredUsers.map((u) => (
+                                    {filteredUsers.map((u: { id: string; email: string; role: string; created_at: string }) => (
                                         <tr key={u.id} className="group hover:bg-white/5 transition-colors">
                                             <td className="py-4 pl-4 font-medium text-white">{u.email}</td>
                                             <td className="py-4">
-                                                <span className={`px-2 py-0.5 rounded textxs font-bold ${u.role === 'ADMIN' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'}`}>
-                                                    {u.role}
+                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'}`}>
+                                                    {u.role || 'USER'}
                                                 </span>
                                             </td>
-                                            <td className="py-4 flex items-center gap-2">
-                                                <Circle className={`h-2 w-2 fill-current ${u.status === 'online' ? 'text-green-500' : 'text-slate-600'}`} />
-                                                <span className="capitalize text-slate-400">{u.status}</span>
+                                            <td className="py-4 text-slate-500">
+                                                {new Date(u.created_at).toLocaleDateString()}
                                             </td>
-                                            <td className="py-4 font-mono text-slate-300">${u.balance.toLocaleString()}</td>
-                                            <td className="py-4 text-slate-500">{u.last_seen}</td>
                                             <td className="py-4 text-right pr-4">
                                                 <button className="text-blue-400 hover:text-white text-xs underline opacity-0 group-hover:opacity-100 transition-opacity">
                                                     View Profile

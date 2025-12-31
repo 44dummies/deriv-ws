@@ -8,11 +8,19 @@ RUN pip install --upgrade pip
 COPY backend/ai-layer/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source (we need to be careful about directory structure if imports assume 'backend.ai-layer' or just root)
-# In Step 17, main.py is in backend/ai-layer/main.py.
-# If we copy 'backend/ai-layer' to '/app', then main.py is at /app/main.py.
-# The CMD 'uvicorn main:app' expects main.py in CWD.
+# Install curl for downloading Ollama
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install Ollama
+RUN curl -fsSL https://ollama.com/install.sh | sh
+
+# Copy source
 COPY backend/ai-layer .
 
+# Make start script executable
+RUN chmod +x start.sh
+
 EXPOSE 8001
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+
+# Use start script
+CMD ["./start.sh"]

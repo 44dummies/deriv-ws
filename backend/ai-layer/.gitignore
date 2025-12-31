@@ -1,0 +1,5 @@
+# Exclude large model files
+models/*.gguf
+models/*.bin
+venv/
+__pycache__/

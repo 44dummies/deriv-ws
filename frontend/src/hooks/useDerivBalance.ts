@@ -23,10 +23,22 @@ export const useDerivBalance = () => {
         ws.onopen = () => {
             // Authorize
             ws.send(JSON.stringify({ authorize: activeAccount.token }));
+
+            // Start Keep-Alive Ping (every 30s)
+            const pingInterval = setInterval(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ ping: 1 }));
+                }
+            }, 30000);
+
+            // Clean up interval on close
+            ws.addEventListener('close', () => clearInterval(pingInterval));
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+
+            if (data.msg_type === 'ping') return; // Ignore ping responses
 
             if (data.msg_type === 'authorize') {
                 // Subscribe to balance

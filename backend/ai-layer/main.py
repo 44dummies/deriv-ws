@@ -171,7 +171,7 @@ async def chat(request: ChatRequest):
             response = await client.post(
                 f"{ollama_url}/api/generate",
                 json={
-                    "model": "tradermind",
+                    "model": "muzan",
                     "prompt": full_prompt,
                     "stream": False
                 },
