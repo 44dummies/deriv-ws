@@ -23,6 +23,7 @@ WORKDIR /app
 COPY --from=builder /app/backend/quant-engine/dist ./dist
 COPY --from=builder /app/backend/quant-engine/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
 
 ENV NODE_ENV=production
 ENV PORT=3001
