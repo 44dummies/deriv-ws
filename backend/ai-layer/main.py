@@ -54,7 +54,8 @@ class FeatureVector(BaseModel):
     rsi: float = Field(..., ge=0, le=100)
     ema_fast: float
     ema_slow: float
-    atr: float
+    atr: float = Field(default=14.0, description="Average True Range")
+    adx: float = Field(default=25.0, description="Average Directional Index - primary indicator for model")
     momentum: float
     volatility: float
     market_regime: str = "unknown" # Added for context
@@ -70,6 +71,7 @@ class InferenceResponse(BaseModel):
     anomaly_score: float
     market_regime: str
     risk_level: str
+    reason_tags: List[str]  # Added for backward compatibility with tests
     explanation: dict 
     model_version: str
 
@@ -102,7 +104,7 @@ def infer(request: InferenceRequest):
     """
     try:
         # 1. Get base prediction (stub or real model)
-        confidence, regime, reasons = model_service.predict(request.features.model_dump())
+        confidence, regime, reasons, model_used = model_service.predict(request.features.model_dump())
         
         # 2. Calculate Evaluation Metrics (Confidence Decay & Anomaly)
         metrics = intelligence_engine.calculate_metrics(
@@ -123,6 +125,7 @@ def infer(request: InferenceRequest):
             anomaly_score=metrics["anomaly_score"],
             market_regime=regime,
             risk_level=metrics["risk_level"],
+            reason_tags=reasons,
             explanation=explanation,
             model_version=MODEL_VERSION,
         )

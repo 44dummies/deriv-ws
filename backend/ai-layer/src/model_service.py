@@ -102,9 +102,11 @@ class ModelService:
                 # Ideally, the input should provide ADX.
                 
                 # Adapting input features to model expected features
+                # Use ADX if provided, otherwise fall back to ATR as rough proxy
+                adx_value = features.get('adx', features.get('atr', 25.0))
                 model_features = {
                     'rsi': features.get('rsi', 50),
-                    'adx': features.get('atr', 14), # Mapping ATR to ADX slot for now as placeholder or if actually same signal intent
+                    'adx': adx_value,
                     'ema_fast': features.get('ema_fast'),
                     'ema_slow': features.get('ema_slow'),
                     'volatility': features.get('volatility'),

@@ -5,12 +5,7 @@
         "rootDir": "src",
         "declaration": true,
         "declarationMap": true,
-        "composite": true,
-        "paths": {
-            "@tradermind/schemas": [
-                "../schemas/src/index.ts"
-            ]
-        }
+        "composite": true
     },
     "include": [
         "src"

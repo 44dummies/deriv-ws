@@ -6,6 +6,7 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { sessionRegistry, SessionState, Participant } from './SessionRegistry.js';
+import { AuthService } from './AuthService.js';
 
 // =============================================================================
 // TYPES
@@ -31,6 +32,8 @@ export interface WSEvent<T = unknown> {
 
 export interface AuthSocket extends Socket {
     userId?: string;
+    userEmail?: string;
+    userRole?: 'ADMIN' | 'USER';
     isAuthenticated?: boolean;
 }
 
@@ -62,23 +65,43 @@ export class WebSocketServer {
     // ---------------------------------------------------------------------------
 
     private setupMiddleware(): void {
-        // Authentication middleware
-        this.io.use((socket: AuthSocket, next) => {
+        // Authentication middleware with proper JWT validation
+        this.io.use(async (socket: AuthSocket, next) => {
             const token = socket.handshake.auth['token'] as string | undefined;
-            const userId = socket.handshake.auth['userId'] as string | undefined;
 
-            // Basic auth check (placeholder - extend with JWT verification)
-            if (token || userId) {
-                socket.userId = userId ?? 'anonymous';
-                socket.isAuthenticated = true;
-                console.log(`[WebSocketServer] Authenticated: ${socket.userId}`);
-            } else {
+            if (!token) {
+                // Allow guest connections for public data streams
                 socket.userId = 'guest';
                 socket.isAuthenticated = false;
-                console.log(`[WebSocketServer] Guest connection`);
+                console.log(`[WebSocketServer] Guest connection: ${socket.id}`);
+                return next();
             }
 
-            next();
+            try {
+                // Verify JWT token using AuthService
+                const payload = await AuthService.verifySessionToken(token);
+                
+                if (payload) {
+                    socket.userId = payload.userId;
+                    socket.userEmail = payload.email;
+                    socket.userRole = payload.role as 'ADMIN' | 'USER';
+                    socket.isAuthenticated = true;
+                    console.log(`[WebSocketServer] Authenticated: ${socket.userId} (${socket.userRole})`);
+                    return next();
+                }
+
+                // Token verification failed
+                console.warn(`[WebSocketServer] Invalid token for socket: ${socket.id}`);
+                socket.userId = 'guest';
+                socket.isAuthenticated = false;
+                return next();
+                
+            } catch (error) {
+                console.error(`[WebSocketServer] Auth error:`, error);
+                socket.userId = 'guest';
+                socket.isAuthenticated = false;
+                return next();
+            }
         });
     }
 

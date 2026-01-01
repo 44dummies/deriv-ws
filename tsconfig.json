@@ -20,19 +20,7 @@
         "declarationMap": true,
         "sourceMap": true,
         "resolveJsonModule": true,
-        "isolatedModules": true,
-        "baseUrl": ".",
-        "paths": {
-            "@tradermind/schemas": [
-                "packages/schemas/src"
-            ],
-            "@tradermind/shared-utils": [
-                "packages/shared-utils/src"
-            ],
-            "@tradermind/risk-rules": [
-                "packages/risk-rules/src"
-            ]
-        }
+        "isolatedModules": true
     },
     "exclude": [
         "node_modules",

@@ -36,6 +36,34 @@ type ExecutionCoreEvents = {
 };
 
 // =============================================================================
+// STAKE & DURATION CONFIGURATION
+// =============================================================================
+
+interface StakeConfig {
+    baseStake: number;
+    minStake: number;
+    maxStake: number;
+    confidenceMultiplier: boolean;
+}
+
+interface DurationConfig {
+    value: number;
+    unit: 'm' | 's' | 'h' | 'd' | 't';
+}
+
+const DEFAULT_STAKE_CONFIG: StakeConfig = {
+    baseStake: 10,
+    minStake: 1,
+    maxStake: 100,
+    confidenceMultiplier: true
+};
+
+const DEFAULT_DURATION: DurationConfig = {
+    value: 3,
+    unit: 'm'
+};
+
+// =============================================================================
 // EXECUTION CORE SERVICE
 // =============================================================================
 
@@ -110,6 +138,65 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
         return result === null;
     }
 
+    /**
+     * Calculate stake based on risk check, session config, and confidence
+     */
+    private calculateStake(check: RiskCheck): number {
+        // Get config from session or use defaults
+        const config = { ...DEFAULT_STAKE_CONFIG };
+        
+        // Check if session has custom stake config in metadata
+        const sessionMeta = check.meta as any;
+        if (sessionMeta?.stakeConfig) {
+            Object.assign(config, sessionMeta.stakeConfig);
+        }
+        
+        let stake = config.baseStake;
+        
+        // Apply confidence multiplier if enabled
+        if (config.confidenceMultiplier && check.proposedTrade.confidence) {
+            // Scale stake based on confidence (0.5 = half stake, 1.0 = full stake)
+            const confidenceMultiplier = Math.max(0.5, check.proposedTrade.confidence);
+            stake = stake * confidenceMultiplier;
+        }
+        
+        // Clamp to min/max
+        stake = Math.max(config.minStake, Math.min(config.maxStake, stake));
+        
+        // Round to 2 decimal places
+        return Math.round(stake * 100) / 100;
+    }
+
+    /**
+     * Calculate duration based on market and strategy
+     */
+    private calculateDuration(check: RiskCheck): DurationConfig {
+        // Get duration from signal metadata if available
+        const signalMeta = check.proposedTrade.metadata as any;
+        
+        if (signalMeta?.duration) {
+            return {
+                value: signalMeta.duration.value ?? DEFAULT_DURATION.value,
+                unit: signalMeta.duration.unit ?? DEFAULT_DURATION.unit
+            };
+        }
+        
+        // Market-specific defaults
+        const market = check.proposedTrade.market;
+        
+        // Volatility indices typically need shorter durations
+        if (market.startsWith('R_') || market.startsWith('1HZ')) {
+            return { value: 1, unit: 'm' };
+        }
+        
+        // Forex pairs might need longer durations
+        if (market.includes('USD') || market.includes('EUR')) {
+            return { value: 5, unit: 'm' };
+        }
+        
+        return DEFAULT_DURATION;
+    }
+
     private generateIdempotencyKey(check: RiskCheck): string {
         return `${check.userId}:${check.proposedTrade.market}:${check.proposedTrade.timestamp}`;
     }
@@ -148,15 +235,17 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             }
 
             // 4. Execute Buy
-            // Parameters based on Signal/RiskCheck
-            // Currently using simple market buy
+            // Parameters based on Signal/RiskCheck with dynamic stake from risk config
+            const stake = this.calculateStake(check);
+            const duration = this.calculateDuration(check);
+            
             const buyParams = {
                 contract_type: check.proposedTrade.type,
                 symbol: check.proposedTrade.market,
-                amount: 10, // Default stake (TODO: Get from RiskCheck / Config)
+                amount: stake,
                 basis: 'stake',
-                duration: 3, // Default duration (TODO: Get from strategy)
-                duration_unit: 'm',
+                duration: duration.value,
+                duration_unit: duration.unit,
                 currency: 'USD'
             };
 

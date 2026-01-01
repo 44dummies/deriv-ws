@@ -5,6 +5,15 @@
 
 import { createHash, randomBytes } from 'crypto';
 
+// Re-export trading core utilities (consolidated services)
+export * from './trading-core';
+export {
+    TechnicalIndicators,
+    RiskValidator,
+    RegimeDetector,
+    IdempotencyHelper
+} from './trading-core';
+
 /**
  * Generate idempotency key for trade execution (SR-003)
  */

@@ -79,14 +79,22 @@ def test_infer_endpoint_structure(sample_features):
     
     # Check strict contract fields
     assert "ai_confidence" in data
+    assert "confidence_decay" in data
+    assert "anomaly_score" in data
     assert "market_regime" in data
+    assert "risk_level" in data
     assert "reason_tags" in data
+    assert "explanation" in data
     assert "model_version" in data
     
     # Verify types
     assert isinstance(data["ai_confidence"], float)
+    assert isinstance(data["confidence_decay"], float)
+    assert isinstance(data["anomaly_score"], float)
     assert data["market_regime"] in ["TRENDING", "RANGING", "VOLATILE"]
+    assert data["risk_level"] in ["low", "medium", "high"]
     assert isinstance(data["reason_tags"], list)
+    assert isinstance(data["explanation"], dict)
 
 # =============================================================================
 # LOGIC TESTS (Via Endpoint)
@@ -95,10 +103,12 @@ def test_infer_endpoint_structure(sample_features):
 def test_high_volatility_regime(volatile_features):
     """High volatility should result in VOLATILE regime"""
     response = client.post("/infer", json={"features": volatile_features})
+    assert response.status_code == 200
     data = response.json()
     
     assert data["market_regime"] == "VOLATILE"
     assert "HIGH_VOLATILITY" in data["reason_tags"]
+    assert "risk_level" in data
 
 def test_rsi_oversold_signal():
     """RSI < 30 should typically result in Call/Buy signal"""

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from './stores/useAuthStore';
+import { ErrorBoundary, TradingErrorBoundary, DashboardErrorBoundary } from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import LiveSession from './pages/LiveSession';
 import Landing from './pages/Landing';
@@ -72,49 +73,79 @@ function App() {
     }, [initialize]);
 
     return (
-        <Router>
-            <Routes>
-                {/* Public Landing Route */}
-                <Route path="/" element={
-                    <PublicRoute>
-                        <Landing />
-                    </PublicRoute>
-                } />
+        <ErrorBoundary>
+            <Router>
+                <Routes>
+                    {/* Public Landing Route */}
+                    <Route path="/" element={
+                        <PublicRoute>
+                            <Landing />
+                        </PublicRoute>
+                    } />
 
-                <Route path="/auth/callback" element={<DerivCallback />} />
+                    <Route path="/auth/callback" element={<DerivCallback />} />
 
-                {/* Secure SPA Routes */}
-                <Route path="/user" element={
-                    <ProtectedRoute>
-                        <DashboardLayout />
-                    </ProtectedRoute>
-                }>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="sessions" element={<Sessions />} />
-                    <Route path="stats" element={<Statistics />} />
-                    <Route path="chat" element={<Chat />} /> {/* New Route */}
-                    <Route path="settings" element={<Settings />} />
+                    {/* Secure SPA Routes */}
+                    <Route path="/user" element={
+                        <ProtectedRoute>
+                            <DashboardLayout />
+                        </ProtectedRoute>
+                    }>
+                        <Route path="dashboard" element={
+                            <DashboardErrorBoundary>
+                                <Dashboard />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="sessions" element={
+                            <DashboardErrorBoundary>
+                                <Sessions />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="stats" element={
+                            <DashboardErrorBoundary>
+                                <Statistics />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="chat" element={<Chat />} />
+                        <Route path="settings" element={<Settings />} />
 
-                    {/* Maintain legacy/admin routes if needed, or refactor later */}
-                    <Route path="live-session/:sessionId" element={<LiveSession />} />
-                </Route>
+                        {/* Trading session with specialized error boundary */}
+                        <Route path="live-session/:sessionId" element={
+                            <TradingErrorBoundary>
+                                <LiveSession />
+                            </TradingErrorBoundary>
+                        } />
+                    </Route>
 
-                {/* Admin Routes */}
-                <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<Navigate to="overview" replace />} />
-                    <Route path="overview" element={<AdminDashboard />} />
-                    <Route path="sessions" element={<AdminSessions />} />
-                    <Route path="ai-monitor" element={<AdminAIMonitor />} />
-                    <Route path="logs" element={<AdminLogs />} />
-                    <Route path="users" element={<AdminUsers />} />
-                    <Route path="commissions" element={<AdminCommissions />} />
-                    <Route path="chat" element={<Chat />} />
-                </Route>
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminLayout />}>
+                        <Route index element={<Navigate to="overview" replace />} />
+                        <Route path="overview" element={
+                            <DashboardErrorBoundary>
+                                <AdminDashboard />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="sessions" element={
+                            <DashboardErrorBoundary>
+                                <AdminSessions />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="ai-monitor" element={
+                            <DashboardErrorBoundary>
+                                <AdminAIMonitor />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="logs" element={<AdminLogs />} />
+                        <Route path="users" element={<AdminUsers />} />
+                        <Route path="commissions" element={<AdminCommissions />} />
+                        <Route path="chat" element={<Chat />} />
+                    </Route>
 
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </Router>
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Router>
+        </ErrorBoundary>
     );
 }
 
