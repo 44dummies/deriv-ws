@@ -15,6 +15,10 @@ RUN npm install -g pnpm && pnpm install --frozen-lockfile
 WORKDIR /app/backend/quant-engine
 RUN pnpm run build
 
+# Remove devDependencies (Bloatware removal)
+WORKDIR /app
+RUN pnpm prune --prod
+
 # Production image
 FROM node:20-alpine AS runner
 

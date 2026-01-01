@@ -11,10 +11,6 @@ RUN npm install -g pnpm && pnpm install --frozen-lockfile
 WORKDIR /app/backend/api-gateway
 RUN pnpm run build
 
-# Remove devDependencies (Bloatware removal)
-WORKDIR /app
-RUN pnpm prune --prod
-
 FROM node:20-alpine AS runner
 WORKDIR /app
 

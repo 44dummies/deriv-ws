@@ -12,3 +12,13 @@ __pycache__
 # Exclude large models from build context
 backend/ai-layer/models/*.gguf
 **/*.gguf
+
+# Tests and Source Maps
+**/*.test.ts
+**/*.spec.ts
+**/*.map
+tests/
+__tests__/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
