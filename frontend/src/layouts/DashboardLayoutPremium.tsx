@@ -14,18 +14,18 @@ import {
     ChevronRight,
     BarChart3,
     BarChart2,
-    MessageSquare,
     Bell,
     Search,
-    Sparkles,
-    TrendingUp,
     Zap,
     User,
     HelpCircle,
     Command,
     Moon,
+    Wallet,
+    Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useDerivAccountInfo } from '../hooks/useDerivAccountInfo';
 import { cn } from '../lib/utils';
 
 // =============================================================================
@@ -164,8 +164,10 @@ function NavItem({ icon: Icon, label, path, isExpanded, badge, isNew }: NavItemP
 function CollapsibleSidebar() {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isHovered, setIsHovered] = useState(false);
-    const { user, signOut } = useAuthStore();
+    const { user, signOut, switchAccount } = useAuthStore();
+    const { fullname, balance, currency, isVirtual, loginid } = useDerivAccountInfo();
     const navigate = useNavigate();
+    const [showAccountMenu, setShowAccountMenu] = useState(false);
 
     const effectiveExpanded = isExpanded || isHovered;
 
@@ -174,11 +176,15 @@ function CollapsibleSidebar() {
         navigate('/');
     };
 
+    const handleSwitchAccount = (accountId: string) => {
+        switchAccount(accountId);
+        setShowAccountMenu(false);
+    };
+
     const mainNavItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/user/dashboard' },
         { icon: BarChart2, label: 'Sessions', path: '/user/sessions' },
         { icon: BarChart3, label: 'Statistics', path: '/user/stats' },
-        { icon: MessageSquare, label: 'Assistant', path: '/user/chat', isNew: true },
     ];
 
     const bottomNavItems = [
@@ -240,20 +246,35 @@ function CollapsibleSidebar() {
                 )}
             </div>
 
-            {/* User Quick Info */}
+            {/* User Quick Info with Account Switcher */}
             <div className={cn(
                 "p-4 border-b border-white/5",
                 effectiveExpanded ? "px-4" : "px-2"
             )}>
-                <div className={cn(
-                    "flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-white/5 to-transparent",
-                    !effectiveExpanded && "justify-center p-2"
-                )}>
+                <button
+                    onClick={() => effectiveExpanded && setShowAccountMenu(!showAccountMenu)}
+                    className={cn(
+                        "w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-white/5 to-transparent hover:from-white/10 transition-all",
+                        !effectiveExpanded && "justify-center p-2"
+                    )}
+                >
                     <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+                        <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            isVirtual 
+                                ? "bg-gradient-to-br from-orange-400 to-amber-500" 
+                                : "bg-gradient-to-br from-emerald-400 to-cyan-500"
+                        )}>
                             <span className="text-sm font-bold text-white">
-                                {user?.email?.charAt(0).toUpperCase() || 'T'}
+                                {fullname?.charAt(0).toUpperCase() || 'T'}
                             </span>
+                        </div>
+                        {/* Account type indicator */}
+                        <div className={cn(
+                            "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-gray-950 flex items-center justify-center text-[8px] font-bold",
+                            isVirtual ? "bg-orange-500 text-white" : "bg-emerald-500 text-white"
+                        )}>
+                            {isVirtual ? 'D' : 'R'}
                         </div>
                     </div>
                     <AnimatePresence>
@@ -262,19 +283,79 @@ function CollapsibleSidebar() {
                                 initial={{ opacity: 0, width: 0 }}
                                 animate={{ opacity: 1, width: 'auto' }}
                                 exit={{ opacity: 0, width: 0 }}
-                                className="flex-1 min-w-0 overflow-hidden"
+                                className="flex-1 min-w-0 overflow-hidden text-left"
                             >
                                 <p className="font-medium text-white truncate text-sm">
-                                    {user?.email?.split('@')[0] || 'Trader'}
+                                    {fullname || 'Trader'}
                                 </p>
-                                <p className="text-xs text-emerald-400 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                    Pro Account
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                        "text-xs flex items-center gap-1",
+                                        isVirtual ? "text-orange-400" : "text-emerald-400"
+                                    )}>
+                                        <span className={cn(
+                                            "w-1.5 h-1.5 rounded-full",
+                                            isVirtual ? "bg-orange-400" : "bg-emerald-400"
+                                        )} />
+                                        {isVirtual ? 'Demo' : 'Real'}
+                                    </span>
+                                    <span className="text-xs text-gray-500">•</span>
+                                    <span className="text-xs text-gray-400 font-mono">
+                                        {balance.toLocaleString()} {currency}
+                                    </span>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </div>
+                </button>
+
+                {/* Account Switcher Dropdown */}
+                <AnimatePresence>
+                    {showAccountMenu && effectiveExpanded && user?.deriv_accounts && user.deriv_accounts.length > 1 && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-2 bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden"
+                        >
+                            <div className="p-2 space-y-1">
+                                <p className="px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                    Switch Account
+                                </p>
+                                {user.deriv_accounts.map((acc) => (
+                                    <button
+                                        key={acc.loginid}
+                                        onClick={() => handleSwitchAccount(acc.loginid)}
+                                        className={cn(
+                                            "w-full flex items-center gap-3 p-2 rounded-lg transition-colors",
+                                            acc.loginid === loginid
+                                                ? "bg-white/10"
+                                                : "hover:bg-white/5"
+                                        )}
+                                    >
+                                        <div className={cn(
+                                            "w-2 h-2 rounded-full",
+                                            acc.is_virtual ? "bg-orange-500" : "bg-emerald-500"
+                                        )} />
+                                        <div className="flex-1 text-left">
+                                            <p className="text-sm text-white">{acc.is_virtual ? 'Demo' : 'Real'}</p>
+                                            <p className="text-xs text-gray-500">{acc.loginid}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm font-mono text-white">
+                                                {acc.balance?.toLocaleString() || '0'}
+                                            </p>
+                                            <p className="text-xs text-gray-500">{acc.currency}</p>
+                                        </div>
+                                        {acc.loginid === loginid && (
+                                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Main Navigation */}
@@ -299,7 +380,6 @@ function CollapsibleSidebar() {
                         label={item.label}
                         path={item.path}
                         isExpanded={effectiveExpanded}
-                        isNew={item.isNew}
                     />
                 ))}
             </nav>
@@ -376,6 +456,7 @@ function CollapsibleSidebar() {
 
 function TopBar() {
     const { user } = useAuthStore();
+    const { fullname, balance, currency, isVirtual } = useDerivAccountInfo();
     const [_searchOpen, setSearchOpen] = useState(false);
 
     return (
@@ -397,16 +478,29 @@ function TopBar() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-                {/* Quick Stats */}
+                {/* Balance Display */}
                 <div className="hidden lg:flex items-center gap-4 px-4 py-2 rounded-xl bg-white/5 border border-white/5">
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-xs text-gray-400">Market Open</span>
+                        <Wallet className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm font-mono font-medium text-white">
+                            {balance.toLocaleString()} {currency}
+                        </span>
                     </div>
                     <div className="w-px h-4 bg-white/10" />
-                    <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-emerald-400" />
-                        <span className="text-xs font-medium text-emerald-400">+12.4%</span>
+                    <div className={cn(
+                        "flex items-center gap-2 px-2 py-1 rounded-md",
+                        isVirtual ? "bg-orange-500/20" : "bg-emerald-500/20"
+                    )}>
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            isVirtual ? "bg-orange-500" : "bg-emerald-500 animate-pulse"
+                        )} />
+                        <span className={cn(
+                            "text-xs font-medium",
+                            isVirtual ? "text-orange-400" : "text-emerald-400"
+                        )}>
+                            {isVirtual ? 'Demo' : 'Real'}
+                        </span>
                     </div>
                 </div>
 
@@ -423,14 +517,19 @@ function TopBar() {
 
                 {/* Profile */}
                 <button className="flex items-center gap-3 pl-3 pr-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-white/5 hover:border-white/10 transition-all">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        isVirtual 
+                            ? "bg-gradient-to-br from-orange-500 to-amber-600"
+                            : "bg-gradient-to-br from-blue-500 to-purple-600"
+                    )}>
                         <span className="text-xs font-bold text-white">
-                            {user?.email?.charAt(0).toUpperCase() || 'T'}
+                            {fullname?.charAt(0).toUpperCase() || 'T'}
                         </span>
                     </div>
                     <div className="hidden sm:block text-left">
-                        <p className="text-sm font-medium text-white">{user?.email?.split('@')[0] || 'Trader'}</p>
-                        <p className="text-[10px] text-gray-500">Pro Plan</p>
+                        <p className="text-sm font-medium text-white">{fullname || 'Trader'}</p>
+                        <p className="text-[10px] text-gray-500">{user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id)?.loginid}</p>
                     </div>
                 </button>
             </div>
@@ -444,7 +543,8 @@ function TopBar() {
 
 function MobileNav() {
     const [isOpen, setIsOpen] = useState(false);
-    const { signOut } = useAuthStore();
+    const { signOut, user, switchAccount } = useAuthStore();
+    const { fullname, balance, currency, isVirtual, loginid } = useDerivAccountInfo();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -452,11 +552,15 @@ function MobileNav() {
         navigate('/');
     };
 
+    const handleSwitchAccount = (accountId: string) => {
+        switchAccount(accountId);
+        setIsOpen(false);
+    };
+
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/user/dashboard' },
         { icon: BarChart2, label: 'Sessions', path: '/user/sessions' },
         { icon: BarChart3, label: 'Statistics', path: '/user/stats' },
-        { icon: MessageSquare, label: 'Assistant', path: '/user/chat' },
         { icon: Settings, label: 'Settings', path: '/user/settings' },
     ];
 
@@ -504,9 +608,78 @@ function MobileNav() {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                            className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 rounded-t-3xl p-6 pb-8 md:hidden"
+                            className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 rounded-t-3xl p-6 pb-8 md:hidden max-h-[80vh] overflow-y-auto"
                         >
                             <div className="w-12 h-1 bg-gray-700 rounded-full mx-auto mb-6" />
+                            
+                            {/* User Info */}
+                            <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={cn(
+                                        "w-12 h-12 rounded-full flex items-center justify-center",
+                                        isVirtual 
+                                            ? "bg-gradient-to-br from-orange-400 to-amber-500"
+                                            : "bg-gradient-to-br from-emerald-400 to-cyan-500"
+                                    )}>
+                                        <span className="text-lg font-bold text-white">
+                                            {fullname?.charAt(0).toUpperCase() || 'T'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-white">{fullname || 'Trader'}</p>
+                                        <p className={cn(
+                                            "text-sm",
+                                            isVirtual ? "text-orange-400" : "text-emerald-400"
+                                        )}>
+                                            {isVirtual ? 'Demo Account' : 'Real Account'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                                    <span className="text-sm text-gray-400">Balance</span>
+                                    <span className="font-mono font-bold text-white">
+                                        {balance.toLocaleString()} {currency}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Account Switcher */}
+                            {user?.deriv_accounts && user.deriv_accounts.length > 1 && (
+                                <div className="mb-6">
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
+                                        Switch Account
+                                    </p>
+                                    <div className="space-y-2">
+                                        {user.deriv_accounts.map((acc) => (
+                                            <button
+                                                key={acc.loginid}
+                                                onClick={() => handleSwitchAccount(acc.loginid)}
+                                                className={cn(
+                                                    "w-full flex items-center gap-3 p-3 rounded-xl transition-colors",
+                                                    acc.loginid === loginid
+                                                        ? "bg-blue-500/20 border border-blue-500/30"
+                                                        : "bg-white/5 hover:bg-white/10"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-3 h-3 rounded-full",
+                                                    acc.is_virtual ? "bg-orange-500" : "bg-emerald-500"
+                                                )} />
+                                                <div className="flex-1 text-left">
+                                                    <p className="text-sm text-white">{acc.is_virtual ? 'Demo' : 'Real'}</p>
+                                                    <p className="text-xs text-gray-500">{acc.loginid}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-mono text-white">
+                                                        {acc.balance?.toLocaleString() || '0'} {acc.currency}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            
                             <nav className="space-y-2">
                                 {navItems.map((item) => (
                                     <NavLink

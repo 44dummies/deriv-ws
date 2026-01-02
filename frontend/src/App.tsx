@@ -8,7 +8,6 @@ import Landing from './pages/Landing';
 import Sessions from './pages/Sessions';
 import Statistics from './pages/Statistics';
 import Settings from './pages/Settings';
-import { Chat } from './pages/Chat';
 import { DerivCallback } from './features/auth/DerivCallback';
 import DashboardLayoutPremium from './layouts/DashboardLayoutPremium';
 import AdminLayout from './layouts/AdminLayout';
@@ -106,7 +105,6 @@ function App() {
                                 <Statistics />
                             </DashboardErrorBoundary>
                         } />
-                        <Route path="chat" element={<Chat />} />
                         <Route path="settings" element={<Settings />} />
 
                         {/* Trading session with specialized error boundary */}
@@ -138,7 +136,6 @@ function App() {
                         <Route path="logs" element={<AdminLogs />} />
                         <Route path="users" element={<AdminUsers />} />
                         <Route path="commissions" element={<AdminCommissions />} />
-                        <Route path="chat" element={<Chat />} />
                     </Route>
 
                     {/* Catch all */}

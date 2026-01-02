@@ -8,11 +8,14 @@ interface DerivAccount {
     loginid: string;
     token: string;
     is_virtual: boolean;
+    fullname?: string;
+    email?: string;
 }
 
 interface User {
     id: string;
     email: string;
+    fullname: string;
     role: string;
     deriv_accounts: DerivAccount[];
     active_account_id: string;
@@ -56,6 +59,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                     user: {
                         id: payload.userId,
                         email: payload.email,
+                        fullname: payload.fullname || payload.email?.split('@')[0] || 'Trader',
                         role: payload.role,
                         deriv_accounts: accounts,
                         active_account_id: accounts[0]?.loginid
@@ -119,10 +123,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 localStorage.setItem('auth_token', data.accessToken);
                 localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
 
+                // Extract fullname from deriv_account response if available
+                const fullname = data.user?.fullname || 
+                                 data.deriv_account?.fullname || 
+                                 data.user?.email?.split('@')[0] || 
+                                 'Trader';
+
                 set({
                     user: {
                         id: data.user.id,
                         email: data.user.email,
+                        fullname: fullname,
                         role: data.user.role,
                         deriv_accounts: accounts,
                         active_account_id: primaryAccount.loginid
