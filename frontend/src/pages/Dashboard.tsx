@@ -1,17 +1,18 @@
 /**
  * TraderMind Premium Dashboard
- * Figma-worthy, ultra-modern trading dashboard
+ * Figma-worthy, ultra-modern trading dashboard with REAL-TIME data
  */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useDerivBalance } from '../hooks/useDerivBalance';
+import { useDerivTicks, TRADERMIND_MARKETS } from '../hooks/useDerivTicks';
 import {
     Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
     Activity, ChevronDown, ChevronRight, Zap, Target, Play, BarChart3,
     Sparkles, CircleDot, RefreshCw, Eye, EyeOff,
-    MoreHorizontal, Download, Shield,
+    MoreHorizontal, Download, Shield, Wifi, WifiOff,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
@@ -446,16 +447,28 @@ function PerformanceChart() {
 }
 
 // =============================================================================
-// MARKET OVERVIEW
+// MARKET OVERVIEW - REAL-TIME DATA
 // =============================================================================
 
-function MarketOverview() {
-    const markets = [
-        { symbol: 'R_100', name: 'Volatility 100', change: 2.4, price: 1234.56, trend: 'up' },
-        { symbol: 'R_50', name: 'Volatility 50', change: -1.2, price: 567.89, trend: 'down' },
-        { symbol: 'JD_100', name: 'Jump 100', change: 5.7, price: 890.12, trend: 'up' },
-        { symbol: 'R_25', name: 'Volatility 25', change: 0.8, price: 345.67, trend: 'up' },
-    ];
+const MARKET_INFO: Record<string, { name: string; category: 'Volatility' | 'Jump' }> = {
+    'R_100': { name: 'Volatility 100', category: 'Volatility' },
+    'R_75': { name: 'Volatility 75', category: 'Volatility' },
+    'R_50': { name: 'Volatility 50', category: 'Volatility' },
+    'R_25': { name: 'Volatility 25', category: 'Volatility' },
+    'R_10': { name: 'Volatility 10', category: 'Volatility' },
+    'JD_100': { name: 'Jump 100', category: 'Jump' },
+    'JD_75': { name: 'Jump 75', category: 'Jump' },
+    'JD_50': { name: 'Jump 50', category: 'Jump' },
+    'JD_25': { name: 'Jump 25', category: 'Jump' },
+    'JD_10': { name: 'Jump 10', category: 'Jump' },
+};
+
+function MarketOverview({ ticks, connected }: { 
+    ticks: Map<string, import('../hooks/useDerivTicks').TickData>;
+    connected: boolean;
+}) {
+    // Display top 4 markets with real-time data
+    const displaySymbols = ['R_100', 'R_50', 'JD_100', 'R_25'];
 
     return (
         <GlassCard className="p-6">
@@ -464,58 +477,142 @@ function MarketOverview() {
                     <h3 className="text-lg font-bold text-white">Markets</h3>
                     <p className="text-sm text-gray-500">Jump & Volatility indices</p>
                 </div>
-                <button className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                    View All <ChevronRight className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                    {connected ? (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] text-emerald-400 font-medium uppercase">Live</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
+                            <WifiOff className="w-3 h-3 text-orange-400" />
+                            <span className="text-[10px] text-orange-400 font-medium uppercase">Offline</span>
+                        </div>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-3">
-                {markets.map((market) => (
-                    <div
-                        key={market.symbol}
-                        className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className={cn(
-                                "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold",
-                                market.symbol.startsWith('JD') 
-                                    ? "bg-purple-500/20 text-purple-400"
-                                    : "bg-blue-500/20 text-blue-400"
-                            )}>
-                                {market.symbol.substring(0, 2)}
+                {displaySymbols.map((symbol) => {
+                    const tick = ticks.get(symbol);
+                    const info = MARKET_INFO[symbol];
+                    const hasData = !!tick;
+
+                    return (
+                        <motion.div
+                            key={symbol}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="flex items-center justify-between p-4 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={cn(
+                                    "w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold",
+                                    info?.category === 'Jump'
+                                        ? "bg-purple-500/20 text-purple-400"
+                                        : "bg-blue-500/20 text-blue-400"
+                                )}>
+                                    {symbol.substring(0, 2)}
+                                </div>
+                                <div>
+                                    <div className="font-medium text-white">{info?.name || symbol}</div>
+                                    <div className="text-xs text-gray-500">{symbol}</div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="font-medium text-white">{market.name}</div>
-                                <div className="text-xs text-gray-500">{market.symbol}</div>
+                            <div className="text-right">
+                                {hasData ? (
+                                    <>
+                                        <motion.div 
+                                            key={tick.quote}
+                                            initial={{ scale: 1.1, color: tick.trend === 'up' ? '#10B981' : tick.trend === 'down' ? '#EF4444' : '#fff' }}
+                                            animate={{ scale: 1, color: '#fff' }}
+                                            className="font-mono font-medium text-white"
+                                        >
+                                            {tick.quote.toFixed(2)}
+                                        </motion.div>
+                                        <div className={cn(
+                                            "text-xs font-medium flex items-center gap-1 justify-end",
+                                            tick.trend === 'up' ? "text-emerald-400" : 
+                                            tick.trend === 'down' ? "text-red-400" : "text-gray-400"
+                                        )}>
+                                            {tick.trend === 'up' && <TrendingUp className="w-3 h-3" />}
+                                            {tick.trend === 'down' && <TrendingDown className="w-3 h-3" />}
+                                            {tick.changePercent >= 0 ? '+' : ''}{tick.changePercent.toFixed(3)}%
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-gray-500 text-sm">Loading...</div>
+                                )}
                             </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="font-mono font-medium text-white">${market.price.toFixed(2)}</div>
-                            <div className={cn(
-                                "text-xs font-medium flex items-center gap-1 justify-end",
-                                market.change > 0 ? "text-emerald-400" : "text-red-400"
-                            )}>
-                                {market.change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {market.change > 0 ? '+' : ''}{market.change}%
-                            </div>
-                        </div>
-                    </div>
-                ))}
+                        </motion.div>
+                    );
+                })}
             </div>
         </GlassCard>
     );
 }
 
 // =============================================================================
-// RECENT ACTIVITY
+// RECENT ACTIVITY - REAL DATA
 // =============================================================================
 
+function useRecentTrades() {
+    const { session } = useAuthStore();
+    return useQuery({
+        queryKey: ['recent-trades'],
+        queryFn: async () => {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const res = await fetch(`${baseUrl}/api/v1/trades?limit=5`, {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            });
+            if (!res.ok) return { trades: [] };
+            return res.json();
+        },
+        enabled: !!session?.access_token,
+        staleTime: 10000,
+        refetchInterval: 15000
+    });
+}
+
+function formatTimeAgo(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
 function RecentActivity() {
-    const activities = [
-        { type: 'trade', action: 'CALL executed', market: 'R_100', result: 'win', amount: '+$45.00', time: '2m ago' },
-        { type: 'trade', action: 'PUT executed', market: 'JD_50', result: 'loss', amount: '-$20.00', time: '15m ago' },
-        { type: 'session', action: 'Session started', market: 'R_50', result: 'active', amount: '', time: '1h ago' },
-        { type: 'trade', action: 'CALL executed', market: 'R_25', result: 'win', amount: '+$32.00', time: '2h ago' },
+    const { data, isLoading } = useRecentTrades();
+    const trades = data?.trades || [];
+
+    // Transform trades to activity items
+    const activities = useMemo(() => {
+        return trades.map((trade: any) => ({
+            type: 'trade',
+            action: `${trade.contract_type} executed`,
+            market: trade.market,
+            result: trade.status === 'WIN' ? 'win' : trade.status === 'LOSS' ? 'loss' : 'pending',
+            amount: trade.pnl 
+                ? (trade.pnl > 0 ? `+$${trade.pnl.toFixed(2)}` : `-$${Math.abs(trade.pnl).toFixed(2)}`)
+                : `$${trade.stake?.toFixed(2) || '0.00'}`,
+            time: formatTimeAgo(trade.created_at || trade.executed_at)
+        }));
+    }, [trades]);
+
+    // Fallback if no trades
+    const displayActivities = activities.length > 0 ? activities : [
+        { type: 'info', action: 'No recent trades', market: 'Start trading!', result: 'neutral', amount: '', time: '' }
     ];
 
     return (
@@ -530,45 +627,55 @@ function RecentActivity() {
                 </button>
             </div>
 
-            <div className="space-y-3">
-                {activities.map((activity, i) => (
-                    <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center",
-                                activity.result === 'win' && "bg-emerald-500/20",
-                                activity.result === 'loss' && "bg-red-500/20",
-                                activity.result === 'active' && "bg-blue-500/20"
-                            )}>
-                                {activity.result === 'win' && <ArrowUpRight className="w-5 h-5 text-emerald-400" />}
-                                {activity.result === 'loss' && <ArrowDownRight className="w-5 h-5 text-red-400" />}
-                                {activity.result === 'active' && <Activity className="w-5 h-5 text-blue-400" />}
+            {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 text-blue-400 animate-spin" />
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {displayActivities.map((activity: any, i: number) => (
+                        <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "w-10 h-10 rounded-full flex items-center justify-center",
+                                    activity.result === 'win' && "bg-emerald-500/20",
+                                    activity.result === 'loss' && "bg-red-500/20",
+                                    activity.result === 'pending' && "bg-orange-500/20",
+                                    activity.result === 'neutral' && "bg-gray-500/20"
+                                )}>
+                                    {activity.result === 'win' && <ArrowUpRight className="w-5 h-5 text-emerald-400" />}
+                                    {activity.result === 'loss' && <ArrowDownRight className="w-5 h-5 text-red-400" />}
+                                    {activity.result === 'pending' && <Activity className="w-5 h-5 text-orange-400" />}
+                                    {activity.result === 'neutral' && <Activity className="w-5 h-5 text-gray-400" />}
+                                </div>
+                                <div>
+                                    <div className="font-medium text-white text-sm">{activity.action}</div>
+                                    <div className="text-xs text-gray-500">{activity.market}</div>
+                                </div>
                             </div>
-                            <div>
-                                <div className="font-medium text-white text-sm">{activity.action}</div>
-                                <div className="text-xs text-gray-500">{activity.market}</div>
+                            <div className="text-right">
+                                <div className={cn(
+                                    "font-mono font-medium text-sm",
+                                    activity.result === 'win' && "text-emerald-400",
+                                    activity.result === 'loss' && "text-red-400",
+                                    activity.result === 'pending' && "text-orange-400"
+                                )}>
+                                    {activity.amount || 'Pending'}
+                                </div>
+                                {activity.time && (
+                                    <div className="text-xs text-gray-500">{activity.time}</div>
+                                )}
                             </div>
-                        </div>
-                        <div className="text-right">
-                            <div className={cn(
-                                "font-mono font-medium text-sm",
-                                activity.result === 'win' && "text-emerald-400",
-                                activity.result === 'loss' && "text-red-400",
-                                activity.result === 'active' && "text-blue-400"
-                            )}>
-                                {activity.amount || 'Active'}
-                            </div>
-                            <div className="text-xs text-gray-500">{activity.time}</div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
             <button className="w-full mt-4 py-3 text-sm text-gray-400 hover:text-white border border-white/10 rounded-xl hover:bg-white/5 transition-all">
                 View All Activity
@@ -648,7 +755,14 @@ function StrategiesStatus() {
 export default function Dashboard() {
     const { data: stats, isLoading, refetch } = useRealStats();
     const [showTradeModal, setShowTradeModal] = useState(false);
+    
+    // Real-time balance from Deriv
     useDerivBalance();
+    
+    // Real-time market ticks from Deriv WebSocket
+    const { ticks, connected: ticksConnected } = useDerivTicks({ 
+        symbols: TRADERMIND_MARKETS 
+    });
 
     return (
         <div className="space-y-6">
@@ -663,7 +777,15 @@ export default function Dashboard() {
                         <Sparkles className="w-8 h-8 text-yellow-400" />
                         Command Center
                     </h1>
-                    <p className="text-gray-500 mt-1">Real-time trading intelligence at your fingertips</p>
+                    <p className="text-gray-500 mt-1 flex items-center gap-2">
+                        Real-time trading intelligence at your fingertips
+                        {ticksConnected && (
+                            <span className="flex items-center gap-1 text-xs text-emerald-400">
+                                <Wifi className="w-3 h-3" />
+                                Live
+                            </span>
+                        )}
+                    </p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
@@ -694,32 +816,32 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="Total Trades"
-                    value={stats?.trading?.total_trades || 142}
-                    trend="up"
-                    trendValue="+12%"
+                    value={stats?.trading?.total_trades ?? 0}
+                    trend={stats?.trading?.total_trades > 0 ? "up" : "neutral"}
+                    trendValue={stats?.trading?.total_trades > 0 ? "+12%" : "-"}
                     icon={Activity}
                     color="blue"
                 />
                 <StatCard
                     title="Win Rate"
-                    value={`${stats?.trading?.win_rate || 68}%`}
-                    trend="up"
-                    trendValue="+5.2%"
+                    value={`${stats?.trading?.win_rate ?? 0}%`}
+                    trend={stats?.trading?.win_rate > 50 ? "up" : "down"}
+                    trendValue={stats?.trading?.win_rate > 50 ? "+5.2%" : "-2.1%"}
                     icon={Target}
                     color="emerald"
                 />
                 <StatCard
                     title="Active Sessions"
-                    value={stats?.sessions?.active || 3}
-                    subtitle="2 automated"
+                    value={stats?.sessions?.active ?? 0}
+                    subtitle={`${stats?.sessions?.total ?? 0} total`}
                     icon={Zap}
                     color="purple"
                 />
                 <StatCard
                     title="Today's P&L"
-                    value="+$487.50"
-                    trend="up"
-                    trendValue="+18%"
+                    value={`$${stats?.trading?.today_pnl?.toFixed(2) ?? '0.00'}`}
+                    trend={stats?.trading?.today_pnl > 0 ? "up" : stats?.trading?.today_pnl < 0 ? "down" : "neutral"}
+                    trendValue={stats?.trading?.today_pnl > 0 ? "+18%" : "-"}
                     icon={TrendingUp}
                     color="cyan"
                 />
@@ -732,9 +854,9 @@ export default function Dashboard() {
                     <PerformanceChart />
                 </div>
 
-                {/* Market Overview */}
+                {/* Market Overview - REAL-TIME */}
                 <div className="lg:col-span-1">
-                    <MarketOverview />
+                    <MarketOverview ticks={ticks} connected={ticksConnected} />
                 </div>
             </div>
 

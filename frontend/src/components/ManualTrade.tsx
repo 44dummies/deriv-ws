@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, X, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, X, Loader2, AlertTriangle, CheckCircle2, Wifi } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useDerivTicks } from '../hooks/useDerivTicks';
 
 interface ManualTradeProps {
     market?: string;
@@ -41,6 +42,13 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const [result, setResult] = useState<{ success: boolean; message: string; trade?: any } | null>(null);
 
     const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id);
+    
+    // Get all market symbols for live ticks
+    const marketSymbols = useMemo(() => MARKETS.map(m => m.symbol), []);
+    const { ticks, connected } = useDerivTicks({ symbols: marketSymbols });
+    
+    // Get current market tick
+    const currentTick = ticks.get(market);
 
     const handleExecute = async () => {
         setIsExecuting(true);
@@ -145,8 +153,37 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                 </option>
                             ))}
                         </select>
-                        <div className="text-xs text-gray-500 mt-1">
-                            Category: {selectedMarket?.category}
+                        
+                        {/* Live Price Display */}
+                        <div className="flex items-center justify-between mt-2">
+                            <div className="text-xs text-gray-500">
+                                Category: {selectedMarket?.category}
+                            </div>
+                            {connected && currentTick ? (
+                                <motion.div 
+                                    key={currentTick.quote}
+                                    initial={{ scale: 1.1 }}
+                                    animate={{ scale: 1 }}
+                                    className="flex items-center gap-2"
+                                >
+                                    <span className="flex items-center gap-1 text-xs text-emerald-400">
+                                        <Wifi className="w-3 h-3" />
+                                        Live
+                                    </span>
+                                    <span className={cn(
+                                        "font-mono font-bold text-sm",
+                                        currentTick.trend === 'up' && "text-emerald-400",
+                                        currentTick.trend === 'down' && "text-red-400",
+                                        currentTick.trend === 'neutral' && "text-white"
+                                    )}>
+                                        {currentTick.quote.toFixed(2)}
+                                        {currentTick.trend === 'up' && <TrendingUp className="w-3 h-3 inline ml-1" />}
+                                        {currentTick.trend === 'down' && <TrendingDown className="w-3 h-3 inline ml-1" />}
+                                    </span>
+                                </motion.div>
+                            ) : (
+                                <span className="text-xs text-gray-500">Connecting...</span>
+                            )}
                         </div>
                     </div>
 
