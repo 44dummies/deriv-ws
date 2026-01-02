@@ -16,7 +16,7 @@ const useRealStats = () => {
     return useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
-            const url = \`\${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats/summary\`;
+            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats/summary`;
             const res = await fetch(url);
             if (!res.ok) return null;
             return res.json();
@@ -346,8 +346,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard
                     title="Total Profit"
-                    value={\`\$\${(stats?.trading?.total_profit || 0).toLocaleString()}\`}
-                    subtitle={\`\${stats?.trading?.total_trades || 0} total trades\`}
+                    value={`$${(stats?.trading?.total_profit || 0).toLocaleString()}`}
+                    subtitle={`${stats?.trading?.total_trades || 0} total trades`}
                     icon={TrendingUp}
                     trend="up"
                     trendValue="+12.5%"
@@ -357,7 +357,7 @@ export default function Dashboard() {
                 <MetricCard
                     title="Active Sessions"
                     value={stats?.sessions?.active || 0}
-                    subtitle={\`\${stats?.users?.active || 0} traders online\`}
+                    subtitle={`${stats?.users?.active || 0} traders online`}
                     icon={Monitor}
                     color="purple"
                     delay={0.2}
@@ -425,7 +425,7 @@ export default function Dashboard() {
                                 </defs>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                                 <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => \`\$\${v}\`} />
+                                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
                                 <Tooltip
                                     contentStyle={{
                                         backgroundColor: 'rgba(17, 24, 39, 0.95)',
