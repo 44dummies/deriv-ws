@@ -67,18 +67,18 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         const { id } = req.params;
         const userId = req.user?.id;
 
+        // Build query with all filters before executing
         let query = getSupabase()
             .from('trades')
             .select('*')
-            .eq('id', id)
-            .single();
+            .eq('id', id);
 
         // Only allow user to see their own trades unless admin
         if (req.user?.role !== 'ADMIN') {
             query = query.eq('user_id', userId);
         }
 
-        const { data: trade, error } = await query;
+        const { data: trade, error } = await query.single();
 
         if (error || !trade) {
             res.status(404).json({ error: 'Trade not found' });

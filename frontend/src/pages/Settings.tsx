@@ -6,9 +6,10 @@ import {
     Palette, User, Shield, Check, Bell, Key, Cpu, 
     ChevronRight, Zap, Lock, ExternalLink, 
     AlertTriangle, HardDrive, RefreshCcw, Fingerprint,
-    Info, Sparkles
+    Info, Sparkles, Copy, CheckCircle2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { GlassCard, ScrollReveal, ShimmerText, Floating } from '../components/PremiumUI';
 
 const themes: { id: Theme; name: string; color: string; description: string }[] = [
     { id: 'default', name: 'Ocean Blue', color: 'from-blue-500 to-blue-600', description: 'Clean professional look' },
@@ -116,6 +117,7 @@ function LinkRow({ icon: Icon, label, value, onClick }: { icon: any; label: stri
 export default function Settings() {
     const { currentTheme, setTheme } = useThemeStore();
     const { user } = useAuthStore();
+    const [copiedId, setCopiedId] = useState(false);
     
     // Local settings state (would persist to localStorage/API in production)
     const [notifications, setNotifications] = useState({
@@ -130,6 +132,14 @@ export default function Settings() {
 
     const activeAccount = user?.deriv_accounts.find(a => a.loginid === user?.active_account_id);
 
+    const copyDerivId = async () => {
+        if (activeAccount?.loginid) {
+            await navigator.clipboard.writeText(activeAccount.loginid);
+            setCopiedId(true);
+            setTimeout(() => setCopiedId(false), 2000);
+        }
+    };
+
     return (
         <div className="space-y-8 pb-8">
             {/* Header */}
@@ -139,14 +149,14 @@ export default function Settings() {
                     animate={{ opacity: 1, x: 0 }}
                     className="flex items-center gap-3"
                 >
-                    <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600">
-                        <Sparkles className="w-6 h-6 text-white" />
-                    </div>
+                    <Floating>
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg shadow-purple-500/30">
+                            <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                    </Floating>
                     <div>
                         <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
-                            <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
-                                Settings
-                            </span>
+                            <ShimmerText>Settings</ShimmerText>
                         </h1>
                         <p className="text-gray-400">Customize your trading experience</p>
                     </div>
@@ -296,11 +306,31 @@ export default function Settings() {
                                 </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Account ID</span>
-                                    <span className="font-mono text-white">{activeAccount?.loginid || 'N/A'}</span>
+                            {/* Deriv Account ID - Prominent Display */}
+                            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mb-1">Deriv Account ID</div>
+                                        <div className="font-mono text-xl font-bold text-white">
+                                            {activeAccount?.loginid || 'Not Connected'}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={copyDerivId}
+                                        className={cn(
+                                            "p-2 rounded-lg transition-all duration-200",
+                                            copiedId 
+                                                ? "bg-emerald-500/20 text-emerald-400" 
+                                                : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                                        )}
+                                        title="Copy Account ID"
+                                    >
+                                        {copiedId ? <CheckCircle2 className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                    </button>
                                 </div>
+                            </div>
+
+                            <div className="space-y-2">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-500">Account Type</span>
                                     <span className={cn(

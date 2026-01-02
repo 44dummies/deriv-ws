@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { cn } from '../lib/utils';
+import { AnimatedGradientBackground } from '../components/PremiumUI';
 
 export default function DashboardLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -33,10 +34,12 @@ export default function DashboardLayout() {
     ];
 
     return (
-        <div className="min-h-screen bg-background text-white font-sans flex overflow-hidden">
+        <div className="min-h-screen bg-background text-white font-sans flex overflow-hidden relative">
+            {/* Premium Animated Background */}
+            <AnimatedGradientBackground />
 
             {/* Sidebar (Desktop) */}
-            <aside className="hidden md:flex w-64 flex-col border-r border-white/5 bg-surface/50 backdrop-blur-xl">
+            <aside className="hidden md:flex w-64 flex-col border-r border-white/5 bg-surface/80 backdrop-blur-2xl relative z-20">
                 <div className="p-6 flex items-center gap-3 border-b border-white/5">
                     <img src="/tradermind-logo.png" alt="TraderMind" className="w-8 h-8 rounded-lg shadow-lg shadow-primary/20" />
                     <span className="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
@@ -123,7 +126,7 @@ export default function DashboardLayout() {
             </AnimatePresence>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto pt-20 md:pt-0 bg-gradient-to-br from-background via-surface/10 to-background">
+            <main className="flex-1 overflow-y-auto pt-20 md:pt-0 relative z-10">
                 <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-full">
                     <Outlet />
                 </div>

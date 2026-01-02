@@ -10,6 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../lib/utils';
+import { GlassCard, ScrollReveal, AnimatedCounter, Floating, ShimmerText } from '../components/PremiumUI';
 
 // Fetch real stats from backend
 const useRealStats = () => {
@@ -180,13 +181,15 @@ export default function Dashboard() {
                         animate={{ opacity: 1, x: 0 }}
                         className="flex items-center gap-3"
                     >
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-                            <Brain className="w-6 h-6 text-white" />
-                        </div>
+                        <Floating>
+                            <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/30">
+                                <Brain className="w-6 h-6 text-white" />
+                            </div>
+                        </Floating>
                         <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">
-                            <span className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent">
+                            <ShimmerText>
                                 Command Center
-                            </span>
+                            </ShimmerText>
                         </h1>
                     </motion.div>
                     <motion.p 
@@ -213,10 +216,14 @@ export default function Dashboard() {
                         className={cn(
                             "p-2.5 rounded-xl border border-white/10 bg-white/5",
                             "hover:bg-white/10 transition-all duration-200",
-                            isLoading && "animate-spin"
+                            "disabled:opacity-50"
                         )}
+                        title="Refresh data"
                     >
-                        <RefreshCw className="w-4 h-4 text-gray-400" />
+                        <RefreshCw className={cn(
+                            "w-4 h-4 text-gray-400",
+                            isLoading && "animate-spin"
+                        )} />
                     </button>
 
                     {/* Account Switcher */}
@@ -384,103 +391,95 @@ export default function Dashboard() {
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Chart */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.35 }}
-                    className="lg:col-span-2 rounded-2xl bg-gray-900/50 border border-white/5 p-6"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h3 className="font-bold text-lg text-white">Performance Overview</h3>
-                            <p className="text-sm text-gray-500">Profit & loss over time</p>
+            <ScrollReveal>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Chart */}
+                    <GlassCard className="lg:col-span-2 p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="font-bold text-lg text-white">Performance Overview</h3>
+                                <p className="text-sm text-gray-500">Profit & loss over time</p>
+                            </div>
+                            <div className="flex gap-1 p-1 rounded-xl bg-white/5">
+                                {['24h', '7d', '30d', '90d'].map(range => (
+                                    <button
+                                        key={range}
+                                        onClick={() => setSelectedTimeRange(range)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                                            selectedTimeRange === range
+                                                ? "bg-blue-500 text-white"
+                                                : "text-gray-400 hover:text-white"
+                                        )}
+                                    >
+                                        {range}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                        <div className="flex gap-1 p-1 rounded-xl bg-white/5">
-                            {['24h', '7d', '30d', '90d'].map(range => (
-                                <button
-                                    key={range}
-                                    onClick={() => setSelectedTimeRange(range)}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                                        selectedTimeRange === range
-                                            ? "bg-blue-500 text-white"
-                                            : "text-gray-400 hover:text-white"
-                                    )}
-                                >
-                                    {range}
-                                </button>
-                            ))}
+
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={performanceData}>
+                                    <defs>
+                                        <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="profit"
+                                        stroke="#3b82f6"
+                                        strokeWidth={2.5}
+                                        fill="url(#profitGradient)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
                         </div>
-                    </div>
+                    </GlassCard>
 
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={performanceData}>
-                                <defs>
-                                    <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                        <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={v => `$${v}`} />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '12px',
-                                        boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
-                                    }}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="profit"
-                                    stroke="#3b82f6"
-                                    strokeWidth={2.5}
-                                    fill="url(#profitGradient)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </div>
-                </motion.div>
-
-                {/* Trade Activity */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="rounded-2xl bg-gray-900/50 border border-white/5 p-6"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h3 className="font-bold text-lg text-white">Trade Activity</h3>
-                            <p className="text-sm text-gray-500">Trades per day</p>
+                    {/* Trade Activity */}
+                    <GlassCard className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="font-bold text-lg text-white">Trade Activity</h3>
+                                <p className="text-sm text-gray-500">Trades per day</p>
+                            </div>
+                            <Activity className="w-5 h-5 text-gray-500" />
                         </div>
-                        <Activity className="w-5 h-5 text-gray-500" />
-                    </div>
 
-                    <div className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={performanceData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                                <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '12px'
-                                    }}
-                                />
-                                <Bar dataKey="trades" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </motion.div>
-            </div>
+                        <div className="h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={performanceData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '12px'
+                                        }}
+                                    />
+                                    <Bar dataKey="trades" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </GlassCard>
+                </div>
+            </ScrollReveal>
         </div>
     );
 }

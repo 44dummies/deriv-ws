@@ -46,6 +46,10 @@ export default {
                 'float': 'float 6s ease-in-out infinite',
                 'glow': 'glow 2s ease-in-out infinite alternate',
                 'ticker': 'ticker 30s linear infinite',
+                'shimmer': 'shimmer 2s linear infinite',
+                'gradient-x': 'gradient-x 15s ease infinite',
+                'gradient-y': 'gradient-y 15s ease infinite',
+                'spin-slow': 'spin 8s linear infinite',
             },
             keyframes: {
                 float: {
@@ -59,7 +63,19 @@ export default {
                 ticker: {
                     '0%': { transform: 'translateX(0)' },
                     '100%': { transform: 'translateX(-100%)' },
-                }
+                },
+                shimmer: {
+                    '0%': { backgroundPosition: '-200% 0' },
+                    '100%': { backgroundPosition: '200% 0' },
+                },
+                'gradient-x': {
+                    '0%, 100%': { backgroundPosition: '0% 50%' },
+                    '50%': { backgroundPosition: '100% 50%' },
+                },
+                'gradient-y': {
+                    '0%, 100%': { backgroundPosition: '50% 0%' },
+                    '50%': { backgroundPosition: '50% 100%' },
+                },
             },
             backgroundImage: {
                 'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

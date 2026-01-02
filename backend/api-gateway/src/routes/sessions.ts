@@ -91,11 +91,11 @@ router.post('/:id/leave', requireAuth, (req: AuthRequest, res: Response) => {
 });
 
 // =============================================================================
-// ADMIN ROUTES (RBAC)
+// ADMIN ROUTES (RBAC) - Now also allows authenticated users
 // =============================================================================
 
-// POST /sessions - Create new session
-router.post('/', requireAuth, requireAdmin, (req: AuthRequest, res: Response) => {
+// POST /sessions - Create new session (Now allows any authenticated user)
+router.post('/', requireAuth, (req: AuthRequest, res: Response) => {
     try {
         if (!req.user || !req.user.id) {
             res.status(401).json({ error: 'Unauthorized' });
@@ -108,7 +108,7 @@ router.post('/', requireAuth, requireAdmin, (req: AuthRequest, res: Response) =>
         const session = sessionRegistry.createSession({
             id: sessionId,
             config_json: config || {},
-            admin_id: req.user.id
+            admin_id: req.user.id  // Creator becomes the session admin
         });
 
         res.status(201).json({
@@ -121,15 +121,28 @@ router.post('/', requireAuth, requireAdmin, (req: AuthRequest, res: Response) =>
     }
 });
 
-// POST /sessions/:id/start - Admin starts session
-router.post('/:id/start', requireAuth, requireAdmin, (req: AuthRequest, res: Response) => {
+// POST /sessions/:id/start - Start session (owner or admin)
+router.post('/:id/start', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
+    
+    // Check if user is session owner or admin
+    const session = sessionRegistry.getSessionState(id);
+    if (!session) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+    }
+    
+    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
+        res.status(403).json({ error: 'Only session owner or admin can start this session' });
+        return;
+    }
+    
     try {
-        const session = sessionRegistry.updateSessionStatus(id, 'ACTIVE');
+        const updatedSession = sessionRegistry.updateSessionStatus(id, 'ACTIVE');
         res.json({
             success: true,
-            session,
+            session: updatedSession,
             message: 'Session started'
         });
     } catch (error: any) {
@@ -137,15 +150,27 @@ router.post('/:id/start', requireAuth, requireAdmin, (req: AuthRequest, res: Res
     }
 });
 
-// POST /sessions/:id/pause - Admin pauses session
-router.post('/:id/pause', requireAuth, requireAdmin, (req: AuthRequest, res: Response) => {
+// POST /sessions/:id/pause - Pause session (owner or admin)
+router.post('/:id/pause', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
+    
+    const session = sessionRegistry.getSessionState(id);
+    if (!session) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+    }
+    
+    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
+        res.status(403).json({ error: 'Only session owner or admin can pause this session' });
+        return;
+    }
+    
     try {
-        const session = sessionRegistry.updateSessionStatus(id, 'PAUSED');
+        const updatedSession = sessionRegistry.updateSessionStatus(id, 'PAUSED');
         res.json({
             success: true,
-            session,
+            session: updatedSession,
             message: 'Session paused'
         });
     } catch (error: any) {
@@ -153,15 +178,27 @@ router.post('/:id/pause', requireAuth, requireAdmin, (req: AuthRequest, res: Res
     }
 });
 
-// POST /sessions/:id/stop - Admin stops (completes) session
-router.post('/:id/stop', requireAuth, requireAdmin, (req: AuthRequest, res: Response) => {
+// POST /sessions/:id/stop - Stop session (owner or admin)
+router.post('/:id/stop', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
+    
+    const session = sessionRegistry.getSessionState(id);
+    if (!session) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+    }
+    
+    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
+        res.status(403).json({ error: 'Only session owner or admin can stop this session' });
+        return;
+    }
+    
     try {
-        const session = sessionRegistry.updateSessionStatus(id, 'COMPLETED');
+        const updatedSession = sessionRegistry.updateSessionStatus(id, 'COMPLETED');
         res.json({
             success: true,
-            session,
+            session: updatedSession,
             message: 'Session completed'
         });
     } catch (error: any) {
@@ -169,10 +206,22 @@ router.post('/:id/stop', requireAuth, requireAdmin, (req: AuthRequest, res: Resp
     }
 });
 
-// DELETE /sessions/:id - Admin deletes session
-router.delete('/:id', requireAuth, requireAdmin, (req: AuthRequest, res: Response) => {
+// DELETE /sessions/:id - Delete session (owner or admin)
+router.delete('/:id', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
+    
+    const session = sessionRegistry.getSessionState(id);
+    if (!session) {
+        res.status(404).json({ error: 'Session not found' });
+        return;
+    }
+    
+    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
+        res.status(403).json({ error: 'Only session owner or admin can delete this session' });
+        return;
+    }
+    
     try {
         const success = sessionRegistry.deleteSession(id);
         if (!success) {

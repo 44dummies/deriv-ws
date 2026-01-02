@@ -79,19 +79,17 @@ export default function Sessions() {
                 <div>
                     <h1 className="text-3xl font-bold mb-2">Sessions</h1>
                     <p className="text-gray-400">
-                        {isAdmin ? 'Manage and control trading sessions.' : 'View active sessions and history.'}
+                        Manage and control your trading sessions.
                     </p>
                 </div>
-                {isAdmin && (
-                    <button
-                        onClick={() => createSession.mutate()}
-                        disabled={createSession.isPending}
-                        className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-primary/20 hover:scale-105 disabled:opacity-50"
-                    >
-                        {createSession.isPending ? <Loader2 className="animate-spin" /> : <Play className="w-5 h-5" />}
-                        <span className="font-bold">Create New Session</span>
-                    </button>
-                )}
+                <button
+                    onClick={() => createSession.mutate()}
+                    disabled={createSession.isPending}
+                    className="px-6 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-primary/20 hover:scale-105 disabled:opacity-50"
+                >
+                    {createSession.isPending ? <Loader2 className="animate-spin" /> : <Play className="w-5 h-5" />}
+                    <span className="font-bold">Create New Session</span>
+                </button>
             </div>
 
             {/* Active Session Card */}
@@ -114,13 +112,21 @@ export default function Sessions() {
                             </p>
                         </div>
 
-                        {/* Controls */}
-                        {isAdmin ? (
+                        {/* Controls - Show if admin OR if user owns the session */}
+                        {(isAdmin || activeSession.admin_id === user?.id) ? (
                             <div className="flex gap-3">
-                                <button onClick={() => controlSession.mutate({ id: activeSession.id, action: 'pause' })} className="p-3 bg-surface hover:bg-yellow-500/10 border border-white/5 hover:border-yellow-500/50 rounded-xl text-yellow-500 transition-all">
+                                <button 
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'pause' })} 
+                                    className="p-3 bg-surface hover:bg-yellow-500/10 border border-white/5 hover:border-yellow-500/50 rounded-xl text-yellow-500 transition-all"
+                                    title="Pause Session"
+                                >
                                     <Pause className="w-5 h-5" />
                                 </button>
-                                <button onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })} className="p-3 bg-surface hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 rounded-xl text-red-500 transition-all">
+                                <button 
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })} 
+                                    className="p-3 bg-surface hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 rounded-xl text-red-500 transition-all"
+                                    title="Stop Session"
+                                >
                                     <Square className="w-5 h-5" />
                                 </button>
                             </div>
