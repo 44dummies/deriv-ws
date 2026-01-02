@@ -39,14 +39,18 @@ console.log('[Startup] Sentry monitoring initialized');
 // =============================================================================
 const REQUIRED_ENV = [
     'SUPABASE_URL',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'DERIV_TOKEN_KEY'
+    'SUPABASE_SERVICE_ROLE_KEY'
 ];
 
 const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
 if (missingEnv.length > 0) {
     console.error('[Startup] FATAL: Missing required environment variables:', missingEnv);
     process.exit(1); // Fail fast in production
+}
+
+// Warn about optional but important env vars
+if (!process.env.DERIV_TOKEN_KEY) {
+    console.warn('[Startup] WARNING: DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
 }
 
 if (!process.env.AI_LAYER_URL) {

@@ -2,17 +2,25 @@ import crypto from "crypto";
 
 const ALGO = "aes-256-gcm";
 
-// SECURITY: No fallback allowed - must be explicitly configured
-if (!process.env.DERIV_TOKEN_KEY) {
-    throw new Error('FATAL: DERIV_TOKEN_KEY environment variable is required. Generate with: openssl rand -hex 32');
+// Lazy-load key to allow server startup for healthchecks
+let KEY: Buffer | null = null;
+
+function getKey(): Buffer {
+    if (!KEY) {
+        const KEY_HEX = process.env.DERIV_TOKEN_KEY;
+        if (!KEY_HEX) {
+            throw new Error('FATAL: DERIV_TOKEN_KEY environment variable is required. Generate with: openssl rand -hex 32');
+        }
+        KEY = Buffer.from(KEY_HEX, "hex");
+    }
+    return KEY;
 }
-const KEY_HEX = process.env.DERIV_TOKEN_KEY;
-const KEY = Buffer.from(KEY_HEX, "hex");
 
 export function encrypt(text: string): string {
+    const key = getKey();
     const iv = crypto.randomBytes(12);
     // Explicitly cast to any or correct type to satisfy TS if environment types conflict
-    const cipher = crypto.createCipheriv(ALGO, KEY as any, iv as any);
+    const cipher = crypto.createCipheriv(ALGO, key as any, iv as any);
 
     // Concatenate encrypted content
     const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()] as any[]);
@@ -23,6 +31,7 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(payload: string): string {
+    const key = getKey();
     const buf = Buffer.from(payload, "base64");
 
     // Extract parts
@@ -30,7 +39,7 @@ export function decrypt(payload: string): string {
     const tag = buf.subarray(12, 28);
     const text = buf.subarray(28);
 
-    const decipher = crypto.createDecipheriv(ALGO, KEY as any, iv as any);
+    const decipher = crypto.createDecipheriv(ALGO, key as any, iv as any);
     decipher.setAuthTag(tag as any);
 
     // Decrypt
