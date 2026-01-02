@@ -23,8 +23,8 @@ services:
   # ==========================================================================
   api-gateway:
     build:
-      context: ./backend/api-gateway
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.api-gateway
     ports:
       - "3000:3000"
     environment:
@@ -46,8 +46,8 @@ services:
   # ==========================================================================
   quant-engine:
     build:
-      context: ./backend/quant-engine
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.quant-engine
     ports:
       - "3001:3001"
     environment:
@@ -69,8 +69,8 @@ services:
   # ==========================================================================
   ai-layer:
     build:
-      context: ./backend/ai-layer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.ai-layer
     ports:
       - "8001:8001"
     environment:
