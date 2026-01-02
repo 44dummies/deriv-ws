@@ -6,13 +6,13 @@
 import { createHash, randomBytes } from 'crypto';
 
 // Re-export trading core utilities (consolidated services)
-export * from './trading-core';
+export * from './trading-core.js';
 export {
     TechnicalIndicators,
     RiskValidator,
     RegimeDetector,
     IdempotencyHelper
-} from './trading-core';
+} from './trading-core.js';
 
 /**
  * Generate idempotency key for trade execution (SR-003)

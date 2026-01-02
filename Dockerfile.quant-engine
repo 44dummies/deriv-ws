@@ -10,7 +10,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 
 # 1. Build all shared packages first
-RUN pnpm run --filter "./packages/**" build
+RUN pnpm run --filter @tradermind/schemas --filter @tradermind/shared-utils --filter @tradermind/risk-rules build
 
 # 2. Build Quant Engine ONLY
 RUN pnpm run --filter @tradermind/quant-engine build
