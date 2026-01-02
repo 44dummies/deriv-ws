@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import sessionsRoutes from './routes/sessions.js';
 import usersRoutes from './routes/users.js';
 import tradesRoutes from './routes/trades.js';
+import executeRoutes from './routes/execute.js';
 import statsRoutes from './routes/stats.js';
 import chatRoutes from './routes/chat.js';
 import docsRoutes from './routes/docs.js';
@@ -150,6 +151,7 @@ app.use('/api/v1/auth', authRateLimiter, authRoutes);
 app.use('/api/v1/sessions', sessionsRoutes);
 app.use('/api/v1/users', usersRoutes);
 app.use('/api/v1/trades', tradesRoutes);
+app.use('/api/v1/trades', executeRoutes); // Manual trade execution
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/docs', docsRoutes); // OpenAPI/Swagger documentation

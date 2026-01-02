@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../lib/utils';
 import { GlassCard, ScrollReveal, Floating, ShimmerText } from '../components/PremiumUI';
+import ManualTrade from '../components/ManualTrade';
 
 // Fetch real stats from backend
 const useRealStats = () => {
@@ -128,7 +129,7 @@ function MetricCard({
 }
 
 // Quick action button component
-function QuickAction({ icon: Icon, label, color }: { icon: any; label: string; color: string }) {
+function QuickAction({ icon: Icon, label, color, onClick }: { icon: any; label: string; color: string; onClick?: () => void }) {
     const colorClasses: Record<string, string> = {
         blue: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20',
         purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/20',
@@ -136,12 +137,15 @@ function QuickAction({ icon: Icon, label, color }: { icon: any; label: string; c
     };
 
     return (
-        <button className={cn(
-            "flex items-center gap-2 px-4 py-2.5 rounded-xl",
-            "bg-gradient-to-r border transition-all duration-200",
-            "hover:scale-105 active:scale-95",
-            colorClasses[color] || colorClasses.blue
-        )}>
+        <button 
+            onClick={onClick}
+            className={cn(
+                "flex items-center gap-2 px-4 py-2.5 rounded-xl",
+                "bg-gradient-to-r border transition-all duration-200",
+                "hover:scale-105 active:scale-95",
+                colorClasses[color] || colorClasses.blue
+            )}
+        >
             <Icon className="w-4 h-4" />
             <span className="font-medium text-sm">{label}</span>
         </button>
@@ -154,6 +158,7 @@ export default function Dashboard() {
     const { data: stats, isLoading, refetch } = useRealStats();
     const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
     const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
+    const [showTradeModal, setShowTradeModal] = useState(false);
 
     const activeAccount = user?.deriv_accounts.find(a => a.loginid === user?.active_account_id) || user?.deriv_accounts[0];
     const isReal = !activeAccount?.is_virtual;
@@ -343,7 +348,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                        <QuickAction icon={Zap} label="Quick Trade" color="blue" />
+                        <QuickAction icon={Zap} label="Quick Trade" color="blue" onClick={() => setShowTradeModal(true)} />
                         <QuickAction icon={Target} label="Auto Pilot" color="purple" />
                         <QuickAction icon={BarChart3} label="Analytics" color="cyan" />
                     </div>
@@ -480,6 +485,20 @@ export default function Dashboard() {
                     </GlassCard>
                 </div>
             </ScrollReveal>
+
+            {/* Manual Trade Modal */}
+            <AnimatePresence>
+                {showTradeModal && (
+                    <ManualTrade
+                        onClose={() => setShowTradeModal(false)}
+                        onTradeExecuted={(trade) => {
+                            console.log('Trade executed:', trade);
+                            // Optionally refetch stats or update UI
+                            refetch();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
