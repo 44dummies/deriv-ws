@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useThemeStore, Theme } from '../stores/useThemeStore';
 import { useAuthStore } from '../stores/useAuthStore';
 import { 
-    Palette, User, Shield, Check, Bell, Key, Globe, Cpu, 
-    ChevronRight, Moon, Sun, Zap, Lock, ExternalLink, 
+    Palette, User, Shield, Check, Bell, Key, Cpu, 
+    ChevronRight, Zap, Lock, ExternalLink, 
     AlertTriangle, HardDrive, RefreshCcw, Fingerprint,
-    ToggleLeft, ToggleRight, Info, Sparkles
+    Info, Sparkles
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
