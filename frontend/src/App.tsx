@@ -8,6 +8,7 @@ import Landing from './pages/Landing';
 import Sessions from './pages/Sessions';
 import Statistics from './pages/Statistics';
 import Settings from './pages/Settings';
+import Analytics from './pages/Analytics';
 import { DerivCallback } from './features/auth/DerivCallback';
 import DashboardLayoutPremium from './layouts/DashboardLayoutPremium';
 import AdminLayout from './layouts/AdminLayout';
@@ -103,6 +104,11 @@ function App() {
                         <Route path="stats" element={
                             <DashboardErrorBoundary>
                                 <Statistics />
+                            </DashboardErrorBoundary>
+                        } />
+                        <Route path="analytics" element={
+                            <DashboardErrorBoundary>
+                                <Analytics />
                             </DashboardErrorBoundary>
                         } />
                         <Route path="settings" element={<Settings />} />

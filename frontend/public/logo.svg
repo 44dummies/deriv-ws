@@ -1,13 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <!-- Main gradient -->
-    <linearGradient id="mainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
       <stop offset="50%" style="stop-color:#8B5CF6;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
     </linearGradient>
-    
-    <!-- Glow effect -->
+    <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60A5FA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A78BFA;stop-opacity:1" />
+    </linearGradient>
     <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
       <feMerge>
@@ -15,80 +16,36 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    
-    <!-- Inner shadow -->
-    <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feOffset dx="0" dy="4"/>
-      <feGaussianBlur stdDeviation="4" result="offset-blur"/>
-      <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse"/>
-      <feFlood flood-color="black" flood-opacity="0.3" result="color"/>
-      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
-      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
-    </filter>
   </defs>
   
-  <!-- Background circle with gradient -->
-  <circle cx="256" cy="256" r="240" fill="url(#mainGradient)" filter="url(#glow)"/>
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#logoGradient)" filter="url(#glow)"/>
   
-  <!-- Inner dark circle -->
-  <circle cx="256" cy="256" r="200" fill="#0F172A" opacity="0.9"/>
+  <!-- Inner Circle -->
+  <circle cx="256" cy="256" r="200" fill="#0f172a"/>
   
-  <!-- Brain/Neural network pattern - representing AI -->
-  <g fill="none" stroke="url(#mainGradient)" stroke-width="3" stroke-linecap="round">
-    <!-- Left brain hemisphere curves -->
-    <path d="M180 200 Q160 230 170 270 Q180 310 200 330" opacity="0.8"/>
-    <path d="M150 220 Q130 260 150 300" opacity="0.6"/>
-    
-    <!-- Right brain hemisphere curves -->
-    <path d="M332 200 Q352 230 342 270 Q332 310 312 330" opacity="0.8"/>
-    <path d="M362 220 Q382 260 362 300" opacity="0.6"/>
-    
-    <!-- Center trading chart line -->
-    <path d="M160 280 L200 320 L240 260 L280 290 L320 220 L360 280" stroke-width="4" filter="url(#glow)"/>
-  </g>
+  <!-- Trading Chart Lines -->
+  <polyline 
+    points="100,300 160,280 200,320 256,200 300,260 340,180 400,220" 
+    fill="none" 
+    stroke="url(#innerGradient)" 
+    stroke-width="12" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+    opacity="0.6"
+  />
   
-  <!-- Neural nodes -->
-  <g fill="url(#mainGradient)">
-    <circle cx="180" cy="200" r="8"/>
-    <circle cx="170" cy="270" r="6"/>
-    <circle cx="200" cy="330" r="8"/>
-    <circle cx="150" cy="220" r="5"/>
-    <circle cx="150" cy="300" r="5"/>
-    
-    <circle cx="332" cy="200" r="8"/>
-    <circle cx="342" cy="270" r="6"/>
-    <circle cx="312" cy="330" r="8"/>
-    <circle cx="362" cy="220" r="5"/>
-    <circle cx="362" cy="300" r="5"/>
-    
-    <!-- Chart points -->
-    <circle cx="160" cy="280" r="6"/>
-    <circle cx="200" cy="320" r="8"/>
-    <circle cx="240" cy="260" r="6"/>
-    <circle cx="280" cy="290" r="8"/>
-    <circle cx="320" cy="220" r="8"/>
-    <circle cx="360" cy="280" r="6"/>
-  </g>
+  <!-- Main Arrow Up (Success/Profit indicator) -->
+  <path 
+    d="M256 120 L320 200 L285 200 L285 350 L227 350 L227 200 L192 200 Z" 
+    fill="url(#logoGradient)"
+    filter="url(#glow)"
+  />
   
-  <!-- Central "T" mark for TraderMind -->
-  <g fill="url(#mainGradient)" filter="url(#glow)">
-    <rect x="236" y="140" width="40" height="8" rx="4"/>
-    <rect x="252" y="140" width="8" height="60" rx="4"/>
-  </g>
+  <!-- Side accent lines -->
+  <line x1="150" y1="380" x2="200" y2="380" stroke="#3B82F6" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
+  <line x1="312" y1="380" x2="362" y2="380" stroke="#8B5CF6" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
   
-  <!-- Connection lines between nodes -->
-  <g stroke="url(#mainGradient)" stroke-width="1.5" opacity="0.4">
-    <line x1="180" y1="200" x2="200" y2="320"/>
-    <line x1="170" y1="270" x2="240" y2="260"/>
-    <line x1="332" y1="200" x2="312" y2="330"/>
-    <line x1="342" y1="270" x2="280" y2="290"/>
-    <line x1="200" y1="320" x2="312" y2="330"/>
-    <line x1="256" y1="170" x2="240" y2="260"/>
-    <line x1="256" y1="170" x2="280" y2="290"/>
-  </g>
-  
-  <!-- Text: TRADERMIND -->
-  <text x="256" y="420" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="700" letter-spacing="8">
-    TRADERMIND
-  </text>
+  <!-- Center dot accent -->
+  <circle cx="256" cy="370" r="8" fill="#EC4899"/>
 </svg>

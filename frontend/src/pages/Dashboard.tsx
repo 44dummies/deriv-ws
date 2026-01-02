@@ -4,15 +4,18 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useThemeStore } from '../stores/useThemeStore';
 import { useDerivBalance } from '../hooks/useDerivBalance';
 import { useDerivTicks, TRADERMIND_MARKETS } from '../hooks/useDerivTicks';
+import { useCreateSession } from '../hooks/useSessions';
 import {
     Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight,
     Activity, ChevronDown, ChevronRight, Zap, Target, Play, BarChart3,
     Sparkles, CircleDot, RefreshCw, Eye, EyeOff,
-    MoreHorizontal, Download, Shield, Wifi, WifiOff,
+    MoreHorizontal, Download, Shield, Wifi, WifiOff, X, Loader2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
@@ -49,6 +52,7 @@ function GlassCard({ children, className, gradient, hover = true }: {
     gradient?: string;
     hover?: boolean;
 }) {
+    const { isDarkMode } = useThemeStore();
     const hoverAnimation = hover ? { scale: 1.01, y: -2 } : {};
     return (
         <motion.div
@@ -56,9 +60,12 @@ function GlassCard({ children, className, gradient, hover = true }: {
             transition={{ duration: 0.2 }}
             className={cn(
                 "relative rounded-2xl overflow-hidden",
-                "bg-gray-900/40 backdrop-blur-xl border border-white/10",
-                "shadow-xl shadow-black/10",
-                hover && "hover:border-white/20 hover:shadow-2xl hover:shadow-black/20 transition-all duration-300",
+                isDarkMode 
+                    ? "bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-xl shadow-black/10"
+                    : "bg-white/80 backdrop-blur-xl border border-black/5 shadow-xl shadow-black/5",
+                hover && (isDarkMode 
+                    ? "hover:border-white/20 hover:shadow-2xl hover:shadow-black/20 transition-all duration-300"
+                    : "hover:border-black/10 hover:shadow-2xl transition-all duration-300"),
                 className
             )}
         >
@@ -312,12 +319,18 @@ function BalanceHeroCard() {
 // QUICK ACTIONS
 // =============================================================================
 
-function QuickActions({ onTrade }: { onTrade: () => void }) {
+function QuickActions({ onTrade, onNewSession, onAnalytics, onExport }: { 
+    onTrade: () => void;
+    onNewSession: () => void;
+    onAnalytics: () => void;
+    onExport: () => void;
+}) {
+    const { isDarkMode } = useThemeStore();
     const actions = [
         { icon: Play, label: 'Quick Trade', color: 'from-blue-500 to-cyan-500', onClick: onTrade },
-        { icon: Target, label: 'New Session', color: 'from-purple-500 to-pink-500', onClick: () => {} },
-        { icon: BarChart3, label: 'Analytics', color: 'from-emerald-500 to-teal-500', onClick: () => {} },
-        { icon: Download, label: 'Export', color: 'from-orange-500 to-amber-500', onClick: () => {} },
+        { icon: Target, label: 'New Session', color: 'from-purple-500 to-pink-500', onClick: onNewSession },
+        { icon: BarChart3, label: 'Analytics', color: 'from-emerald-500 to-teal-500', onClick: onAnalytics },
+        { icon: Download, label: 'Export', color: 'from-orange-500 to-amber-500', onClick: onExport },
     ];
 
     return (
@@ -331,8 +344,10 @@ function QuickActions({ onTrade }: { onTrade: () => void }) {
                     onClick={action.onClick}
                     className={cn(
                         "group relative flex items-center gap-3 p-4 rounded-2xl overflow-hidden",
-                        "bg-gray-900/40 backdrop-blur-xl border border-white/10",
-                        "hover:border-white/20 transition-all duration-300"
+                        "backdrop-blur-xl border transition-all duration-300",
+                        isDarkMode 
+                            ? "bg-gray-900/40 border-white/10 hover:border-white/20"
+                            : "bg-white/80 border-black/5 hover:border-black/10"
                     )}
                 >
                     {/* Gradient background on hover */}
@@ -347,8 +362,14 @@ function QuickActions({ onTrade }: { onTrade: () => void }) {
                     )}>
                         <action.icon className="w-5 h-5 text-white" />
                     </div>
-                    <span className="font-medium text-white">{action.label}</span>
-                    <ChevronRight className="w-4 h-4 text-gray-500 ml-auto group-hover:translate-x-1 transition-transform" />
+                    <span className={cn(
+                        "font-medium",
+                        isDarkMode ? "text-white" : "text-gray-900"
+                    )}>{action.label}</span>
+                    <ChevronRight className={cn(
+                        "w-4 h-4 ml-auto group-hover:translate-x-1 transition-transform",
+                        isDarkMode ? "text-gray-500" : "text-gray-400"
+                    )} />
                 </motion.button>
             ))}
         </div>
@@ -593,6 +614,7 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 function RecentActivity() {
+    const { isDarkMode } = useThemeStore();
     const { data, isLoading } = useRecentTrades();
     const trades = data?.trades || [];
 
@@ -677,7 +699,15 @@ function RecentActivity() {
                 </div>
             )}
 
-            <button className="w-full mt-4 py-3 text-sm text-gray-400 hover:text-white border border-white/10 rounded-xl hover:bg-white/5 transition-all">
+            <button 
+                onClick={() => window.location.href = '/user/sessions'}
+                className={cn(
+                    "w-full mt-4 py-3 text-sm border rounded-xl transition-all",
+                    isDarkMode 
+                        ? "text-gray-400 hover:text-white border-white/10 hover:bg-white/5"
+                        : "text-gray-500 hover:text-gray-900 border-black/10 hover:bg-gray-50"
+                )}
+            >
                 View All Activity
             </button>
         </GlassCard>
@@ -749,12 +779,130 @@ function StrategiesStatus() {
 }
 
 // =============================================================================
+// SESSION CREATION MODAL
+// =============================================================================
+
+function NewSessionModal({ onClose }: { onClose: () => void }) {
+    const { isDarkMode } = useThemeStore();
+    const { mutate: createSession, isPending } = useCreateSession();
+    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+
+    const handleCreate = () => {
+        createSession(undefined, {
+            onSuccess: () => {
+                onClose();
+                navigate('/user/sessions');
+            },
+            onError: (err) => {
+                setError(err.message || 'Failed to create session');
+            },
+        });
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={cn(
+                "w-full max-w-md rounded-2xl border p-6 relative",
+                isDarkMode 
+                    ? "bg-gray-900/95 backdrop-blur-xl border-white/10"
+                    : "bg-white border-black/10"
+            )}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <button
+                onClick={onClose}
+                className={cn(
+                    "absolute top-4 right-4 p-1.5 rounded-lg transition-colors",
+                    isDarkMode ? "hover:bg-white/10 text-gray-400" : "hover:bg-gray-100 text-gray-500"
+                )}
+            >
+                <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg">
+                    <Target className="w-6 h-6 text-white" />
+                </div>
+                <h2 className={cn(
+                    "text-xl font-bold",
+                    isDarkMode ? "text-white" : "text-gray-900"
+                )}>New Trading Session</h2>
+            </div>
+
+            {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm mb-4">
+                    {error}
+                </div>
+            )}
+
+            <p className={cn(
+                "mb-6",
+                isDarkMode ? "text-gray-400" : "text-gray-500"
+            )}>
+                Start a new trading session to track your trades, analyze performance, and activate quant strategies.
+            </p>
+
+            <div className={cn(
+                "p-4 rounded-xl border mb-6",
+                isDarkMode 
+                    ? "bg-blue-500/10 border-blue-500/20"
+                    : "bg-blue-50 border-blue-200"
+            )}>
+                <div className="flex items-center gap-2 text-blue-400 mb-2">
+                    <Zap className="w-5 h-5" />
+                    <span className="font-bold">What's included:</span>
+                </div>
+                <ul className={cn(
+                    "text-sm space-y-1",
+                    isDarkMode ? "text-gray-400" : "text-gray-600"
+                )}>
+                    <li>• Real-time trade tracking</li>
+                    <li>• Automated strategy signals</li>
+                    <li>• Performance analytics</li>
+                    <li>• Risk management alerts</li>
+                </ul>
+            </div>
+
+            <div className="flex gap-3">
+                <button
+                    onClick={onClose}
+                    className={cn(
+                        "flex-1 py-3 rounded-xl font-medium transition-colors",
+                        isDarkMode 
+                            ? "bg-white/5 text-gray-300 hover:bg-white/10"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    )}
+                >
+                    Cancel
+                </button>
+                <button
+                    onClick={handleCreate}
+                    disabled={isPending}
+                    className="flex-1 py-3 rounded-xl font-medium bg-gradient-to-r from-purple-500 to-pink-600 text-white hover:shadow-lg hover:shadow-purple-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                    {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Start Session
+                </button>
+            </div>
+        </motion.div>
+    );
+}
+
+// =============================================================================
 // MAIN DASHBOARD EXPORT
 // =============================================================================
 
 export default function Dashboard() {
     const { data: stats, isLoading, refetch } = useRealStats();
+    const { session } = useAuthStore();
+    const { isDarkMode } = useThemeStore();
+    const navigate = useNavigate();
     const [showTradeModal, setShowTradeModal] = useState(false);
+    const [showSessionModal, setShowSessionModal] = useState(false);
     
     // Real-time balance from Deriv
     useDerivBalance();
@@ -763,6 +911,52 @@ export default function Dashboard() {
     const { ticks, connected: ticksConnected } = useDerivTicks({ 
         symbols: TRADERMIND_MARKETS 
     });
+
+    // Export handler - downloads trades as CSV
+    const handleExport = async () => {
+        try {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const res = await fetch(`${baseUrl}/api/v1/trades?limit=1000`, {
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            });
+            const data = await res.json();
+            const trades = data?.trades || [];
+            
+            if (trades.length === 0) {
+                alert('No trades to export');
+                return;
+            }
+            
+            const headers = ['Date', 'Market', 'Type', 'Stake', 'P&L', 'Status'];
+            const csvRows = [headers.join(',')];
+            
+            trades.forEach((trade: any) => {
+                const row = [
+                    new Date(trade.created_at).toISOString(),
+                    trade.market || '',
+                    trade.contract_type || '',
+                    trade.stake?.toFixed(2) || '0',
+                    trade.pnl?.toFixed(2) || '0',
+                    trade.status || ''
+                ];
+                csvRows.push(row.join(','));
+            });
+            
+            const csvContent = csvRows.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tradermind-trades-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Export failed:', err);
+            alert('Export failed. Please try again.');
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -773,11 +967,17 @@ export default function Dashboard() {
                 className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
             >
                 <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                    <h1 className={cn(
+                        "text-3xl font-bold flex items-center gap-3",
+                        isDarkMode ? "text-white" : "text-gray-900"
+                    )}>
                         <Sparkles className="w-8 h-8 text-yellow-400" />
                         Command Center
                     </h1>
-                    <p className="text-gray-500 mt-1 flex items-center gap-2">
+                    <p className={cn(
+                        "mt-1 flex items-center gap-2",
+                        isDarkMode ? "text-gray-500" : "text-gray-400"
+                    )}>
                         Real-time trading intelligence at your fingertips
                         {ticksConnected && (
                             <span className="flex items-center gap-1 text-xs text-emerald-400">
@@ -791,7 +991,12 @@ export default function Dashboard() {
                     <button
                         onClick={() => refetch()}
                         disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+                        className={cn(
+                            "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all",
+                            isDarkMode 
+                                ? "bg-white/5 border-white/10 hover:bg-white/10"
+                                : "bg-gray-100 border-black/5 hover:bg-gray-200"
+                        )}
                     >
                         <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
                         <span className="text-sm font-medium">Refresh</span>
@@ -810,7 +1015,12 @@ export default function Dashboard() {
             <BalanceHeroCard />
 
             {/* Quick Actions */}
-            <QuickActions onTrade={() => setShowTradeModal(true)} />
+            <QuickActions 
+                onTrade={() => setShowTradeModal(true)}
+                onNewSession={() => setShowSessionModal(true)}
+                onAnalytics={() => navigate('/user/analytics')}
+                onExport={handleExport}
+            />
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -877,6 +1087,21 @@ export default function Dashboard() {
                         onClick={(e) => e.target === e.currentTarget && setShowTradeModal(false)}
                     >
                         <ManualTrade onClose={() => setShowTradeModal(false)} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* New Session Modal */}
+            <AnimatePresence>
+                {showSessionModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                        onClick={() => setShowSessionModal(false)}
+                    >
+                        <NewSessionModal onClose={() => setShowSessionModal(false)} />
                     </motion.div>
                 )}
             </AnimatePresence>
