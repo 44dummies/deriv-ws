@@ -10,7 +10,7 @@ import Statistics from './pages/Statistics';
 import Settings from './pages/Settings';
 import { Chat } from './pages/Chat';
 import { DerivCallback } from './features/auth/DerivCallback';
-import DashboardLayout from './layouts/DashboardLayout';
+import DashboardLayoutPremium from './layouts/DashboardLayoutPremium';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSessions from './pages/admin/AdminSessions';
@@ -88,7 +88,7 @@ function App() {
                     {/* Secure SPA Routes */}
                     <Route path="/user" element={
                         <ProtectedRoute>
-                            <DashboardLayout />
+                            <DashboardLayoutPremium />
                         </ProtectedRoute>
                     }>
                         <Route path="dashboard" element={
