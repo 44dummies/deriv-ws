@@ -6,7 +6,7 @@ import {
     LogOut,
     Menu,
     X,
-    BrainCircuit,
+    BarChart3,
     BarChart2,
     MessageSquare
 } from 'lucide-react';
@@ -28,8 +28,8 @@ export default function DashboardLayout() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
         { icon: BarChart2, label: 'Sessions', path: '/user/sessions' },
-        { icon: BrainCircuit, label: 'Stats & AI', path: '/user/stats' }, // Updated Icon
-        { icon: MessageSquare, label: 'Assistant', path: '/user/chat' }, // New Chat Item
+        { icon: BarChart3, label: 'Statistics', path: '/user/stats' },
+        { icon: MessageSquare, label: 'Assistant', path: '/user/chat' },
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 

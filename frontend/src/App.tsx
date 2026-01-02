@@ -17,7 +17,7 @@ import AdminSessions from './pages/admin/AdminSessions';
 import AdminCommissions from './pages/admin/AdminCommissions';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminUsers from './pages/admin/AdminUsers';
-import AdminAIMonitor from './pages/admin/AdminAIMonitor';
+import AdminQuantMonitor from './pages/admin/AdminQuantMonitor';
 import { Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'user' }) {
@@ -130,9 +130,9 @@ function App() {
                                 <AdminSessions />
                             </DashboardErrorBoundary>
                         } />
-                        <Route path="ai-monitor" element={
+                        <Route path="quant-monitor" element={
                             <DashboardErrorBoundary>
-                                <AdminAIMonitor />
+                                <AdminQuantMonitor />
                             </DashboardErrorBoundary>
                         } />
                         <Route path="logs" element={<AdminLogs />} />

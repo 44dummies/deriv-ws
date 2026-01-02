@@ -8,27 +8,28 @@ services:
     build:
       context: .
       dockerfile: backend/api-gateway/Dockerfile
-    # ports:
-    #   - "127.0.0.1:3000:3000" # DISABLED: Internal only. Access via Nginx.
     expose:
       - "3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379
-      - AI_LAYER_URL=http://ai-layer:8001
       - CORS_ORIGIN=${CORS_ORIGIN:-*} # Set this to your frontend URL in .env
     env_file:
       - .env
     depends_on:
       - redis
-      - ai-layer
     networks:
       - tradermind-prod
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==========================================================================
-  # QUANT ENGINE (Worker)
+  # QUANT ENGINE (Worker) - Pure Quantitative Trading
   # ==========================================================================
   quant-engine:
     build:
@@ -40,22 +41,6 @@ services:
       - .env
     depends_on:
       - redis
-      - ai-layer
-    networks:
-      - tradermind-prod
-    restart: unless-stopped
-
-  # ==========================================================================
-  # AI LAYER
-  # ==========================================================================
-  ai-layer:
-    build:
-      context: ./backend/ai-layer
-      dockerfile: Dockerfile
-    expose:
-      - "8001" # Internal only
-    environment:
-      - PORT=8001
     networks:
       - tradermind-prod
     restart: unless-stopped
@@ -71,6 +56,11 @@ services:
     networks:
       - tradermind-prod
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==========================================================================
   # NGINX (Reverse Proxy)

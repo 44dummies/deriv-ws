@@ -54,9 +54,7 @@ if (!process.env.DERIV_TOKEN_KEY) {
     console.warn('[Startup] WARNING: DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
 }
 
-if (!process.env.AI_LAYER_URL) {
-    console.warn('[Startup] WARNING: AI_LAYER_URL not set. Defaulting to http://localhost:8001. This may fail in containerized environments.');
-}
+// NOTE: AI Layer has been removed - pure quantitative trading engine active
 
 const app = express();
 const httpServer = createServer(app);

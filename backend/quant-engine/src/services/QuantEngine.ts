@@ -1,12 +1,28 @@
 /**
- * TraderMind QuantEngine
- * Signal generation with technical indicators
+ * TraderMind QuantEngine v2.0
+ * Pure quantitative signal generation - NO AI
+ * 
+ * Features:
+ * - 10 comprehensive trading strategies
+ * - Database learning from past trades
+ * - Jump and Volatility indices focused
+ * - Adaptive trading based on historical performance
  */
 
 import { EventEmitter } from 'eventemitter3';
 import { NormalizedTick } from './MarketDataService.js';
 import { FeatureBuilder } from './FeatureBuilder.js';
-import { AIServiceAdapter } from './AIServiceAdapter.js';
+import { 
+    StrategyManager, 
+    StrategySignal, 
+    IndicatorSet,
+    TradeHistory,
+    ALL_MARKETS,
+    VOLATILITY_INDICES,
+    JUMP_INDICES,
+    SupportedMarket,
+    getMarketType
+} from './Strategies.js';
 
 // =============================================================================
 // TYPES
@@ -15,24 +31,32 @@ import { AIServiceAdapter } from './AIServiceAdapter.js';
 export type SignalType = 'CALL' | 'PUT';
 
 export type SignalReason =
-    | 'RSI_OVERSOLD'
-    | 'RSI_OVERBOUGHT'
-    | 'EMA_CROSS_UP'
-    | 'EMA_CROSS_DOWN'
-    | 'MOMENTUM_SHIFT'
+    | 'RSI_DIVERGENCE'
+    | 'EMA_CROSS_MOMENTUM'
+    | 'BOLLINGER_SQUEEZE'
+    | 'MACD_HISTOGRAM'
+    | 'STOCHASTIC'
     | 'VOLATILITY_SPIKE'
+    | 'SUPPORT_RESISTANCE'
+    | 'ADX_TREND'
+    | 'MULTI_TIMEFRAME'
+    | 'ADAPTIVE'
     | 'NO_SIGNAL';
 
 export interface Signal {
     type: SignalType;
     confidence: number;
-    reason: SignalReason;
+    reason: SignalReason | string;
     market: string;
     timestamp: string;
+    strategy?: string;
+    suggested_duration?: number;
+    suggested_stake_multiplier?: number;
     metadata?: {
-        ai_confidence?: number;
-        market_regime?: string;
-        reason_tags?: string[];
+        indicators?: Partial<IndicatorSet>;
+        all_signals?: number;
+        strategy_details?: string;
+        win_rate?: number;
         [key: string]: any;
     };
 }
@@ -56,6 +80,7 @@ export interface IndicatorValues {
 type QuantEngineEvents = {
     signal: (signal: Signal) => void;
     indicators: (market: string, indicators: IndicatorValues) => void;
+    learning: (market: string, stats: any) => void;
 };
 
 // =============================================================================
@@ -65,8 +90,26 @@ type QuantEngineEvents = {
 const RSI_PERIOD = 14;
 const EMA_FAST_PERIOD = 9;
 const EMA_SLOW_PERIOD = 21;
-const RSI_OVERSOLD = 30;
-const RSI_OVERBOUGHT = 70;
+const MACD_FAST = 12;
+const MACD_SLOW = 26;
+const MACD_SIGNAL = 9;
+const BOLLINGER_PERIOD = 20;
+const ATR_PERIOD = 14;
+const STOCH_PERIOD = 14;
+const ADX_PERIOD = 14;
+
+// =============================================================================
+// DATABASE LEARNING ADAPTER
+// =============================================================================
+
+interface DatabaseAdapter {
+    getTradeHistory(market: string, limit?: number): Promise<TradeHistory[]>;
+    getMarketStats(market: string): Promise<{ win_rate: number; total_trades: number; avg_pnl: number }>;
+    logTrade(trade: Partial<TradeHistory>): Promise<void>;
+}
+
+// In-memory fallback for trade history (populated from DB)
+const tradeHistoryCache: Map<string, TradeHistory[]> = new Map();
 
 // =============================================================================
 // QUANT ENGINE
@@ -78,18 +121,120 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     private emaSlowValues: Map<string, number> = new Map();
     private prevEmaFast: Map<string, number> = new Map();
     private prevEmaSlow: Map<string, number> = new Map();
+    private prevRsi: Map<string, number> = new Map();
+    private macdValues: Map<string, { macd: number; signal: number; histogram: number }> = new Map();
+    private bollingerValues: Map<string, { upper: number; middle: number; lower: number; width: number }> = new Map();
+    private atrValues: Map<string, number> = new Map();
+    private adxValues: Map<string, number> = new Map();
+    private stochValues: Map<string, { k: number; d: number }> = new Map();
 
     private featureBuilder: FeatureBuilder;
-    private aiService: AIServiceAdapter;
+    private strategyManager: StrategyManager;
+    private dbAdapter: DatabaseAdapter | undefined;
 
-    private useAI: boolean = true;
+    // Learning stats
+    private marketWinRates: Map<string, number> = new Map();
+    private strategyWinRates: Map<string, Map<string, number>> = new Map();
 
-    constructor() {
+    constructor(dbAdapter?: DatabaseAdapter) {
         super();
         this.featureBuilder = new FeatureBuilder();
-        this.aiService = new AIServiceAdapter();
-        this.useAI = process.env.USE_AI !== 'false';
-        console.log(`[QuantEngine] Initialized with AI Layer integration (Enabled: ${this.useAI})`);
+        this.strategyManager = new StrategyManager();
+        this.dbAdapter = dbAdapter;
+        
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('[QuantEngine v2.0] Pure Quantitative Trading Engine Initialized');
+        console.log('[QuantEngine] Strategies Loaded:', this.strategyManager.getStrategies().map(s => s.name).join(', '));
+        console.log('[QuantEngine] Supported Markets:', ALL_MARKETS.join(', '));
+        console.log('[QuantEngine] Database Learning:', dbAdapter ? 'ENABLED' : 'DISABLED');
+        console.log('═══════════════════════════════════════════════════════════════');
+    }
+
+    // ---------------------------------------------------------------------------
+    // DATABASE LEARNING
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Load trade history from database for learning
+     */
+    async loadTradeHistory(markets: string[] = [...ALL_MARKETS]): Promise<void> {
+        if (!this.dbAdapter) {
+            console.log('[QuantEngine] No database adapter, skipping history load');
+            return;
+        }
+
+        for (const market of markets) {
+            try {
+                const history = await this.dbAdapter.getTradeHistory(market, 100);
+                tradeHistoryCache.set(market, history);
+                
+                // Calculate win rate
+                if (history.length > 0) {
+                    const wins = history.filter(h => h.result === 'WIN').length;
+                    this.marketWinRates.set(market, wins / history.length);
+                }
+
+                console.log(`[QuantEngine] Loaded ${history.length} trades for ${market}`);
+            } catch (error) {
+                console.error(`[QuantEngine] Failed to load history for ${market}:`, error);
+            }
+        }
+    }
+
+    /**
+     * Get trade history for a market
+     */
+    getTradeHistory(market: string): TradeHistory[] {
+        return tradeHistoryCache.get(market) || [];
+    }
+
+    /**
+     * Record a trade result for learning
+     */
+    async recordTradeResult(trade: Partial<TradeHistory>): Promise<void> {
+        const market = trade.market || '';
+        
+        // Update in-memory cache
+        const history = tradeHistoryCache.get(market) || [];
+        history.push(trade as TradeHistory);
+        if (history.length > 100) history.shift();
+        tradeHistoryCache.set(market, history);
+
+        // Update win rate
+        const wins = history.filter(h => h.result === 'WIN').length;
+        this.marketWinRates.set(market, wins / history.length);
+
+        // Log to DB if available
+        if (this.dbAdapter) {
+            try {
+                await this.dbAdapter.logTrade(trade);
+            } catch (error) {
+                console.error('[QuantEngine] Failed to log trade:', error);
+            }
+        }
+
+        this.emit('learning', market, {
+            win_rate: this.marketWinRates.get(market),
+            total_trades: history.length
+        });
+    }
+
+    // ---------------------------------------------------------------------------
+    // MARKET VALIDATION
+    // ---------------------------------------------------------------------------
+
+    /**
+     * Check if market is supported
+     */
+    isMarketSupported(market: string): boolean {
+        return ALL_MARKETS.includes(market as SupportedMarket);
+    }
+
+    /**
+     * Get market type
+     */
+    getMarketType(market: string) {
+        return getMarketType(market);
     }
 
     // ---------------------------------------------------------------------------
@@ -109,7 +254,13 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
         const market = latestTick.market;
 
-        // Check if market is allowed
+        // Validate market
+        if (!this.isMarketSupported(market)) {
+            console.warn(`[QuantEngine] Market ${market} not supported. Only Jump and Volatility indices allowed.`);
+            return null;
+        }
+
+        // Check if market is allowed by config
         if (config?.allowed_markets && !config.allowed_markets.includes(market)) {
             return null;
         }
@@ -117,23 +268,53 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         // Update price history
         this.updatePriceHistory(market, ticks);
 
-        // Calculate indicators
-        const indicators = this.calculateIndicators(market);
-        this.emit('indicators', market, indicators);
+        // Calculate all indicators
+        const indicators = this.calculateAllIndicators(market);
+        const simpleIndicators = this.getSimpleIndicators(market);
+        this.emit('indicators', market, simpleIndicators);
 
-        // Generate base rule-based signal
-        let signal = this.evaluateIndicators(market, indicators, config);
+        // Get trade history for learning
+        const history = this.getTradeHistory(market);
 
-        // Apply AI Overlay if signal exists
-        if (signal) {
-            const prices = this.priceHistory.get(market) ?? [];
-            signal = await this.overlayAI(signal, prices);
+        // Run all strategies
+        const prices = this.priceHistory.get(market) ?? [];
+        const strategySignal = this.strategyManager.runAll(prices, indicators, market, history);
+
+        if (!strategySignal) {
+            return null;
         }
 
-        if (signal) {
-            this.emit('signal', signal);
+        // Apply minimum confidence from config
+        const minConfidence = config?.min_confidence ?? 0.55;
+        if (strategySignal.confidence < minConfidence) {
+            return null;
         }
 
+        // Adjust confidence based on historical win rate
+        const marketWinRate = this.marketWinRates.get(market);
+        if (marketWinRate !== undefined && marketWinRate < 0.5) {
+            // Reduce confidence for poorly performing markets
+            strategySignal.confidence *= 0.85;
+        }
+
+        // Convert to our Signal format
+        const signal: Signal = {
+            type: strategySignal.type,
+            confidence: strategySignal.confidence,
+            reason: strategySignal.strategy as SignalReason,
+            market,
+            timestamp: strategySignal.timestamp,
+            strategy: strategySignal.strategy,
+            suggested_duration: strategySignal.suggested_duration,
+            suggested_stake_multiplier: strategySignal.suggested_stake_multiplier,
+            metadata: {
+                indicators: this.getIndicatorSnapshot(indicators),
+                strategy_details: strategySignal.reason,
+                win_rate: marketWinRate ?? 0,
+            }
+        };
+
+        this.emit('signal', signal);
         return signal;
     }
 
@@ -142,6 +323,11 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
      */
     async processTick(tick: NormalizedTick, config?: SessionConfig): Promise<Signal | null> {
         const market = tick.market;
+
+        // Validate market
+        if (!this.isMarketSupported(market)) {
+            return null;
+        }
 
         // Add to history
         const history = this.priceHistory.get(market) ?? [];
@@ -159,117 +345,55 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         }
 
         // Calculate indicators
-        const indicators = this.calculateIndicators(market);
-        this.emit('indicators', market, indicators);
+        const indicators = this.calculateAllIndicators(market);
+        const simpleIndicators = this.getSimpleIndicators(market);
+        this.emit('indicators', market, simpleIndicators);
 
-        // Evaluate for signal
-        let signal = this.evaluateIndicators(market, indicators, config);
+        // Get trade history for learning
+        const tradeHistory = this.getTradeHistory(market);
 
-        // Apply AI Overlay if signal exists
-        if (signal) {
-            // Use price history directly (FeatureBuilder now supports number[])
-            const prices = this.priceHistory.get(market) ?? [];
-            signal = await this.overlayAI(signal, prices);
+        // Run all strategies
+        const prices = this.priceHistory.get(market) ?? [];
+        const strategySignal = this.strategyManager.runAll(prices, indicators, market, tradeHistory);
+
+        if (!strategySignal) {
+            return null;
         }
 
-        if (signal) {
-            this.emit('signal', signal);
+        // Apply minimum confidence
+        const minConfidence = config?.min_confidence ?? 0.55;
+        if (strategySignal.confidence < minConfidence) {
+            return null;
         }
 
+        // Adjust for historical performance
+        const marketWinRate = this.marketWinRates.get(market);
+        if (marketWinRate !== undefined && marketWinRate < 0.5) {
+            strategySignal.confidence *= 0.85;
+        }
+
+        const signal: Signal = {
+            type: strategySignal.type,
+            confidence: strategySignal.confidence,
+            reason: strategySignal.strategy as SignalReason,
+            market,
+            timestamp: strategySignal.timestamp,
+            strategy: strategySignal.strategy,
+            suggested_duration: strategySignal.suggested_duration,
+            suggested_stake_multiplier: strategySignal.suggested_stake_multiplier,
+            metadata: {
+                indicators: this.getIndicatorSnapshot(indicators),
+                strategy_details: strategySignal.reason,
+                win_rate: marketWinRate ?? 0,
+            }
+        };
+
+        this.emit('signal', signal);
         return signal;
     }
 
     // ---------------------------------------------------------------------------
-    // AI OVERLAY
-    // ---------------------------------------------------------------------------
-
-    private async overlayAI(signal: Signal, prices: number[]): Promise<Signal | null> {
-        // Kill Switch Check
-        if (!this.useAI) {
-            console.log('[Audit] AI Disabled via USE_AI check. Returning rule-based signal.');
-            return signal;
-        }
-
-        try {
-            // 1. Build deterministic features
-            const features = this.featureBuilder.buildFeatures(prices);
-
-            // 2. Call AI Service (Safe fallback ensures null on failure)
-            const aiResult = await this.aiService.getInference(features);
-
-            if (!aiResult) {
-                console.warn('[QuantEngine] AI failed or unavailable. Falling back to rule-based signal.');
-                console.log('[Audit] Fallback triggered. Reason: AI Service Unresponsive.');
-                return signal;
-            }
-
-            // Initialize metadata if not present
-            if (!signal.metadata) {
-                signal.metadata = {};
-            }
-
-            const tags: string[] = [];
-
-            // 3. Apply Decision Logic & Generate Tags
-            const aiConf = aiResult.ai_confidence;
-            const regime = aiResult.market_regime;
-
-            signal.metadata.ai_confidence = aiConf;
-            signal.metadata.market_regime = regime;
-
-            // Audit Object
-            const auditLog = {
-                timestamp: new Date().toISOString(),
-                features,
-                aiResult,
-                baseSignal: signal,
-                decision: 'PENDING'
-            };
-
-            // Block Checks
-            if (aiConf < 0.4) {
-                console.log('[QuantEngine] Blocked by AI: Low Confidence');
-                auditLog.decision = 'BLOCKED_LOW_CONFIDENCE';
-                console.log(`[Audit] Decision: ${auditLog.decision}`, JSON.stringify(auditLog));
-                return null;
-            }
-
-            if (regime === 'VOLATILE' && signal.confidence < 0.8) {
-                console.log('[QuantEngine] Blocked by AI: Volatile Regime');
-                auditLog.decision = 'BLOCKED_VOLATILE';
-                console.log(`[Audit] Decision: ${auditLog.decision}`, JSON.stringify(auditLog));
-                return null;
-            }
-
-            // If we survive, we are either CONFIRMED or WEAK
-            if (aiConf >= 0.6) {
-                tags.push(`ML_CONFIRMED_${signal.type}`);
-            } else {
-                tags.push('ML_WEAK_CONFIDENCE');
-            }
-
-            // Adjust Confidence
-            signal.confidence = (signal.confidence + aiConf) / 2;
-            signal.confidence = Math.min(1, Math.max(0, signal.confidence));
-
-            // Store tags
-            signal.metadata.reason_tags = tags;
-
-            auditLog.decision = 'APPROVED';
-            // We log the final signal too
-            console.log(`[Audit] Decision: ${auditLog.decision}`, JSON.stringify({ ...auditLog, finalSignal: signal }));
-
-            return signal;
-
-        } catch (error) {
-            console.error('[QuantEngine] Error in AI Overlay:', error);
-            // Fallback
-            return signal;
-        }
-    }
-
-    // ---------------------------------------------------------------------------
-    // INDICATOR CALCULATIONS
+    // INDICATOR CALCULATIONS - COMPREHENSIVE
     // ---------------------------------------------------------------------------
 
     private updatePriceHistory(market: string, ticks: NormalizedTick[]): void {
@@ -287,27 +411,107 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         this.priceHistory.set(market, history);
     }
 
-    private calculateIndicators(market: string): IndicatorValues {
+    private calculateAllIndicators(market: string): IndicatorSet {
         const prices = this.priceHistory.get(market) ?? [];
 
+        // Basic indicators
         const rsi = this.calculateRSI(prices);
-        const emaFast = this.calculateEMA(prices, EMA_FAST_PERIOD);
-        const emaSlow = this.calculateEMA(prices, EMA_SLOW_PERIOD);
+        const rsi_prev = this.prevRsi.get(market) ?? rsi;
+        this.prevRsi.set(market, rsi);
+
+        const ema_fast = this.calculateEMA(prices, EMA_FAST_PERIOD);
+        const ema_slow = this.calculateEMA(prices, EMA_SLOW_PERIOD);
+
+        const prevFast = this.prevEmaFast.get(market) ?? ema_fast;
+        const prevSlow = this.prevEmaSlow.get(market) ?? ema_slow;
+
+        let ema_cross: 'BULLISH' | 'BEARISH' | 'NONE' = 'NONE';
+        if (prevFast <= prevSlow && ema_fast > ema_slow) ema_cross = 'BULLISH';
+        else if (prevFast >= prevSlow && ema_fast < ema_slow) ema_cross = 'BEARISH';
+
+        this.prevEmaFast.set(market, ema_fast);
+        this.prevEmaSlow.set(market, ema_slow);
+        this.emaFastValues.set(market, ema_fast);
+        this.emaSlowValues.set(market, ema_slow);
+
+        // MACD
+        const ema12 = this.calculateEMA(prices, MACD_FAST);
+        const ema26 = this.calculateEMA(prices, MACD_SLOW);
+        const macd = ema12 - ema26;
+        const macd_signal = this.calculateEMAFromValue(macd, MACD_SIGNAL, this.macdValues.get(market)?.signal ?? macd);
+        const macd_histogram = macd - macd_signal;
+        this.macdValues.set(market, { macd, signal: macd_signal, histogram: macd_histogram });
+
+        // Bollinger Bands
+        const bollinger = this.calculateBollingerBands(prices);
+        this.bollingerValues.set(market, bollinger);
+
+        // ATR
+        const atr = this.calculateATR(prices);
+        this.atrValues.set(market, atr);
+
+        // ADX
+        const adx = this.calculateADX(prices);
+        this.adxValues.set(market, adx);
+
+        // Stochastic
+        const stoch = this.calculateStochastic(prices);
+        this.stochValues.set(market, stoch);
+
+        // Momentum and volatility
         const momentum = this.calculateMomentum(prices);
         const volatility = this.calculateVolatility(prices);
 
-        // Store for crossover detection
-        this.prevEmaFast.set(market, this.emaFastValues.get(market) ?? emaFast);
-        this.prevEmaSlow.set(market, this.emaSlowValues.get(market) ?? emaSlow);
-        this.emaFastValues.set(market, emaFast);
-        this.emaSlowValues.set(market, emaSlow);
+        // Volume trend (approximated from price movements)
+        const volume_trend = this.approximateVolumeTrend(prices);
 
-        return { rsi, emaFast, emaSlow, momentum, volatility };
+        return {
+            rsi,
+            rsi_prev,
+            ema_fast,
+            ema_slow,
+            ema_cross,
+            macd,
+            macd_signal,
+            macd_histogram,
+            bollinger_upper: bollinger.upper,
+            bollinger_middle: bollinger.middle,
+            bollinger_lower: bollinger.lower,
+            bollinger_width: bollinger.width,
+            atr,
+            adx,
+            stochastic_k: stoch.k,
+            stochastic_d: stoch.d,
+            momentum: momentum * 100, // Convert to percentage
+            volatility: volatility * 100, // Convert to percentage
+            volume_trend,
+        };
+    }
+
+    private getSimpleIndicators(market: string): IndicatorValues {
+        const prices = this.priceHistory.get(market) ?? [];
+        return {
+            rsi: this.calculateRSI(prices),
+            emaFast: this.emaFastValues.get(market) ?? 0,
+            emaSlow: this.emaSlowValues.get(market) ?? 0,
+            momentum: this.calculateMomentum(prices),
+            volatility: this.calculateVolatility(prices),
+        };
+    }
+
+    private getIndicatorSnapshot(indicators: IndicatorSet): Partial<IndicatorSet> {
+        return {
+            rsi: indicators.rsi,
+            ema_cross: indicators.ema_cross,
+            macd_histogram: indicators.macd_histogram,
+            adx: indicators.adx,
+            momentum: indicators.momentum,
+        };
     }
 
     private calculateRSI(prices: number[]): number {
         if (prices.length < RSI_PERIOD + 1) {
-            return 50; // Neutral
+            return 50;
         }
 
         const changes: number[] = [];
@@ -344,26 +548,121 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
     private calculateEMA(prices: number[], period: number): number {
         if (prices.length < period) {
-            const price = prices[prices.length - 1];
-            return price ?? 0;
+            return prices[prices.length - 1] ?? 0;
         }
 
         const multiplier = 2 / (period + 1);
         let ema = 0;
 
-        // Initialize with SMA
         for (let i = 0; i < period; i++) {
             ema += prices[i] ?? 0;
         }
         ema /= period;
 
-        // Calculate EMA
         for (let i = period; i < prices.length; i++) {
             const price = prices[i] ?? 0;
             ema = (price - ema) * multiplier + ema;
         }
 
         return ema;
+    }
+
+    private calculateEMAFromValue(value: number, period: number, prevEma: number): number {
+        const multiplier = 2 / (period + 1);
+        return (value - prevEma) * multiplier + prevEma;
+    }
+
+    private calculateBollingerBands(prices: number[]): { upper: number; middle: number; lower: number; width: number } {
+        if (prices.length < BOLLINGER_PERIOD) {
+            const price = prices[prices.length - 1] ?? 0;
+            return { upper: price, middle: price, lower: price, width: 0 };
+        }
+
+        const recentPrices = prices.slice(-BOLLINGER_PERIOD);
+        const middle = recentPrices.reduce((a, b) => a + b, 0) / BOLLINGER_PERIOD;
+        
+        const variance = recentPrices.reduce((sum, p) => sum + Math.pow(p - middle, 2), 0) / BOLLINGER_PERIOD;
+        const stdDev = Math.sqrt(variance);
+
+        const upper = middle + 2 * stdDev;
+        const lower = middle - 2 * stdDev;
+        const width = (upper - lower) / middle;
+
+        return { upper, middle, lower, width };
+    }
+
+    private calculateATR(prices: number[]): number {
+        if (prices.length < ATR_PERIOD + 1) {
+            return 0;
+        }
+
+        const trueRanges: number[] = [];
+        for (let i = 1; i < prices.length; i++) {
+            const high = prices[i] ?? 0;
+            const low = prices[i] ?? 0;
+            const prevClose = prices[i - 1] ?? 0;
+            
+            // True Range = max(high - low, |high - prev close|, |low - prev close|)
+            // Without OHLC, we approximate
+            const range = Math.abs(high - prevClose);
+            trueRanges.push(range);
+        }
+
+        const recentTR = trueRanges.slice(-ATR_PERIOD);
+        return recentTR.reduce((a, b) => a + b, 0) / ATR_PERIOD;
+    }
+
+    private calculateADX(prices: number[]): number {
+        if (prices.length < ADX_PERIOD + 2) {
+            return 0;
+        }
+
+        // Simplified ADX calculation
+        let upMoves = 0;
+        let downMoves = 0;
+        let totalMoves = 0;
+
+        for (let i = 1; i < prices.length; i++) {
+            const move = (prices[i] ?? 0) - (prices[i - 1] ?? 0);
+            totalMoves += Math.abs(move);
+            if (move > 0) upMoves += move;
+            else downMoves += Math.abs(move);
+        }
+
+        if (totalMoves === 0) return 0;
+
+        // DI+ and DI-
+        const diPlus = (upMoves / totalMoves) * 100;
+        const diMinus = (downMoves / totalMoves) * 100;
+
+        // ADX = (DI+ - DI-) / (DI+ + DI-)
+        const sum = diPlus + diMinus;
+        if (sum === 0) return 0;
+
+        return Math.abs(diPlus - diMinus) / sum * 100;
+    }
+
+    private calculateStochastic(prices: number[]): { k: number; d: number } {
+        if (prices.length < STOCH_PERIOD) {
+            return { k: 50, d: 50 };
+        }
+
+        const recentPrices = prices.slice(-STOCH_PERIOD);
+        const high = Math.max(...recentPrices);
+        const low = Math.min(...recentPrices);
+        const close = recentPrices[recentPrices.length - 1] ?? 0;
+
+        if (high === low) {
+            return { k: 50, d: 50 };
+        }
+
+        const k = ((close - low) / (high - low)) * 100;
+        
+        // D is 3-period SMA of K (simplified)
+        const prevStoch = this.stochValues.get('temp') ?? { k: 50, d: 50 };
+        const d = (k + prevStoch.k + prevStoch.d) / 3;
+
+        return { k, d };
     }
 
     private calculateMomentum(prices: number[]): number {
@@ -386,73 +685,34 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         const mean = recentPrices.reduce((a, b) => a + b, 0) / recentPrices.length;
         const variance = recentPrices.reduce((sum, p) => sum + Math.pow(p - mean, 2), 0) / recentPrices.length;
 
-        return Math.sqrt(variance) / mean; // Coefficient of variation
+        return Math.sqrt(variance) / mean;
     }
 
-    // ---------------------------------------------------------------------------
-    // SIGNAL EVALUATION
-    // ---------------------------------------------------------------------------
+    private approximateVolumeTrend(prices: number[]): 'INCREASING' | 'DECREASING' | 'STABLE' {
+        if (prices.length < 20) return 'STABLE';
 
-    private evaluateIndicators(
-        market: string,
-        indicators: IndicatorValues,
-        config?: SessionConfig
-    ): Signal | null {
-        const { rsi, emaFast, emaSlow, momentum, volatility } = indicators;
-        const minConfidence = config?.min_confidence ?? 0.6;
+        // Approximate volume from price movement intensity
+        const recent10: number[] = [];
+        const prev10: number[] = [];
 
-        let type: SignalType | null = null;
-        let reason: SignalReason = 'NO_SIGNAL';
-        let confidence = 0;
-
-        // RSI signals
-        if (rsi < RSI_OVERSOLD) {
-            type = 'CALL';
-            reason = 'RSI_OVERSOLD';
-            confidence = (RSI_OVERSOLD - rsi) / RSI_OVERSOLD * 0.8 + 0.2;
-        } else if (rsi > RSI_OVERBOUGHT) {
-            type = 'PUT';
-            reason = 'RSI_OVERBOUGHT';
-            confidence = (rsi - RSI_OVERBOUGHT) / (100 - RSI_OVERBOUGHT) * 0.8 + 0.2;
+        for (let i = prices.length - 10; i < prices.length; i++) {
+            if (i > 0) {
+                recent10.push(Math.abs((prices[i] ?? 0) - (prices[i - 1] ?? 0)));
+            }
         }
 
-        // EMA crossover signals (stronger than RSI)
-        const prevFast = this.prevEmaFast.get(market) ?? emaFast;
-        const prevSlow = this.prevEmaSlow.get(market) ?? emaSlow;
-
-        // Bullish crossover: fast crosses above slow
-        if (prevFast <= prevSlow && emaFast > emaSlow) {
-            type = 'CALL';
-            reason = 'EMA_CROSS_UP';
-            confidence = Math.min(0.95, 0.7 + Math.abs(momentum) * 2);
-        }
-        // Bearish crossover: fast crosses below slow
-        else if (prevFast >= prevSlow && emaFast < emaSlow) {
-            type = 'PUT';
-            reason = 'EMA_CROSS_DOWN';
-            confidence = Math.min(0.95, 0.7 + Math.abs(momentum) * 2);
+        for (let i = prices.length - 20; i < prices.length - 10; i++) {
+            if (i > 0) {
+                prev10.push(Math.abs((prices[i] ?? 0) - (prices[i - 1] ?? 0)));
+            }
         }
 
-        // Adjust confidence based on volatility
-        if (volatility > 0.02) {
-            confidence *= 0.9; // High volatility = less confident
-        }
+        const recentAvg = recent10.reduce((a, b) => a + b, 0) / recent10.length;
+        const prevAvg = prev10.reduce((a, b) => a + b, 0) / prev10.length;
 
-        // Check minimum confidence
-        if (!type || confidence < minConfidence) {
-            return null;
-        }
-
-        // Clamp confidence
-        confidence = Math.min(1, Math.max(0, confidence));
-
-        return {
-            type,
-            confidence,
-            reason,
-            market,
-            timestamp: new Date().toISOString(),
-        };
+        if (recentAvg > prevAvg * 1.1) return 'INCREASING';
+        if (recentAvg < prevAvg * 0.9) return 'DECREASING';
+        return 'STABLE';
     }
 
     // ---------------------------------------------------------------------------
@@ -468,19 +728,60 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         this.emaSlowValues.delete(market);
         this.prevEmaFast.delete(market);
         this.prevEmaSlow.delete(market);
+        this.prevRsi.delete(market);
+        this.macdValues.delete(market);
+        this.bollingerValues.delete(market);
+        this.atrValues.delete(market);
+        this.adxValues.delete(market);
+        this.stochValues.delete(market);
+    }
+
+    /**
+     * Get supported markets
+     */
+    getSupportedMarkets(): string[] {
+        return [...ALL_MARKETS];
+    }
+
+    /**
+     * Get volatility indices
+     */
+    getVolatilityIndices(): string[] {
+        return [...VOLATILITY_INDICES];
+    }
+
+    /**
+     * Get jump indices
+     */
+    getJumpIndices(): string[] {
+        return [...JUMP_INDICES];
     }
 
     /**
      * Get stats
      */
-    getStats(): { markets: string[]; historySize: Record<string, number> } {
+    getStats(): { 
+        markets: string[]; 
+        historySize: Record<string, number>;
+        winRates: Record<string, number>;
+        strategies: string[];
+    } {
         const historySize: Record<string, number> = {};
+        const winRates: Record<string, number> = {};
+
         for (const [market, prices] of this.priceHistory) {
             historySize[market] = prices.length;
         }
+
+        for (const [market, rate] of this.marketWinRates) {
+            winRates[market] = rate;
+        }
+
         return {
             markets: Array.from(this.priceHistory.keys()),
             historySize,
+            winRates,
+            strategies: this.strategyManager.getStrategies().map(s => s.name),
         };
     }
 }

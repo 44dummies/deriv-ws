@@ -32,11 +32,11 @@ export default function AdminLayout() {
     const navItems = [
         { icon: LayoutDashboard, label: 'Overview', path: '/admin/overview' },
         { icon: Activity, label: 'Sessions', path: '/admin/sessions' },
-        { icon: ShieldAlert, label: 'AI Monitor', path: '/admin/ai-monitor' },
+        { icon: ShieldAlert, label: 'Quant Monitor', path: '/admin/quant-monitor' },
         { icon: Terminal, label: 'Quant Logs', path: '/admin/logs' },
         { icon: Users, label: 'Users', path: '/admin/users' },
         { icon: DollarSign, label: 'Commissions', path: '/admin/commissions' },
-        { icon: MessageSquare, label: 'AI Audit Chat', path: '/admin/chat' },
+        { icon: MessageSquare, label: 'Admin Chat', path: '/admin/chat' },
     ];
 
     return (

@@ -12,14 +12,20 @@ interface ManualTradeProps {
 
 type ContractType = 'CALL' | 'PUT' | 'DIGITOVER' | 'DIGITUNDER';
 
+// Supported Markets - Jump and Volatility Indices ONLY
 const MARKETS = [
-    { symbol: 'R_100', name: 'Volatility 100 Index', category: 'Synthetics' },
-    { symbol: 'R_50', name: 'Volatility 50 Index', category: 'Synthetics' },
-    { symbol: 'R_25', name: 'Volatility 25 Index', category: 'Synthetics' },
-    { symbol: 'R_10', name: 'Volatility 10 Index', category: 'Synthetics' },
-    { symbol: 'frxEURUSD', name: 'EUR/USD', category: 'Forex' },
-    { symbol: 'frxGBPUSD', name: 'GBP/USD', category: 'Forex' },
-    { symbol: 'frxAUDUSD', name: 'AUD/USD', category: 'Forex' },
+    // Volatility Indices
+    { symbol: 'R_100', name: 'Volatility 100 Index', category: 'Volatility' },
+    { symbol: 'R_75', name: 'Volatility 75 Index', category: 'Volatility' },
+    { symbol: 'R_50', name: 'Volatility 50 Index', category: 'Volatility' },
+    { symbol: 'R_25', name: 'Volatility 25 Index', category: 'Volatility' },
+    { symbol: 'R_10', name: 'Volatility 10 Index', category: 'Volatility' },
+    // Jump Indices
+    { symbol: 'JD_100', name: 'Jump 100 Index', category: 'Jump' },
+    { symbol: 'JD_75', name: 'Jump 75 Index', category: 'Jump' },
+    { symbol: 'JD_50', name: 'Jump 50 Index', category: 'Jump' },
+    { symbol: 'JD_25', name: 'Jump 25 Index', category: 'Jump' },
+    { symbol: 'JD_10', name: 'Jump 10 Index', category: 'Jump' },
 ];
 
 const PRESET_STAKES = [5, 10, 25, 50, 100];

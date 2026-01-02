@@ -12,8 +12,8 @@ const openApiSpec = {
     openapi: '3.0.3',
     info: {
         title: 'TraderMind API',
-        description: 'AI-enhanced trading intelligence platform API',
-        version: '1.0.0',
+        description: 'Professional quantitative trading platform API for Volatility and Jump indices',
+        version: '2.0.0',
         contact: {
             name: 'TraderMind Support',
             email: 'support@tradermind.io'
@@ -31,7 +31,7 @@ const openApiSpec = {
         { name: 'Users', description: 'User management' },
         { name: 'Trades', description: 'Trade operations' },
         { name: 'Stats', description: 'Statistics and analytics' },
-        { name: 'Chat', description: 'AI chat interface' }
+        { name: 'Markets', description: 'Market data and analysis' }
     ],
     paths: {
         '/auth/deriv/callback': {
