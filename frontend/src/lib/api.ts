@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 
-const API_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000/api';
+// Base URL for API Gateway (without trailing slash or /api prefix)
+const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000';
+
+// Ensure the base URL is clean
+const cleanBaseUrl = API_GATEWAY_URL.replace(/\/+$/, '');
+
+// Full API URL with /api/v1 prefix
+const API_URL = `${cleanBaseUrl}/api/v1`;
 
 export async function fetchWithAuth(endpoint: string, options: RequestInit = {}) {
     const { data: { session } } = await supabase.auth.getSession();
@@ -15,7 +22,10 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
         (headers as any)['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_URL}${endpoint}`, {
+    // Ensure endpoint starts with /
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    const res = await fetch(`${API_URL}${cleanEndpoint}`, {
         ...options,
         headers,
     });

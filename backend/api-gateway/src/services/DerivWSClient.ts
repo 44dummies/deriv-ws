@@ -205,24 +205,92 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.unsubscribe(market);
     }
 
-    async buyContract(parameters: any): Promise<any> {
-        // Strict contract: parameters must be object
+    /**
+     * Get a price proposal for a contract before buying
+     * Required by Deriv API before executing a buy
+     */
+    async getProposal(parameters: {
+        contract_type: string;
+        symbol: string;
+        amount: number;
+        basis: 'stake' | 'payout';
+        duration: number;
+        duration_unit: string;
+        currency: string;
+    }): Promise<{ proposal_id: string; ask_price: number; payout: number; longcode: string }> {
         if (!this.isConnected()) throw new Error('Not connected');
 
-        // Force buy: 1
-        const payload = { ...parameters, buy: 1 };
+        const payload = {
+            proposal: 1,
+            contract_type: parameters.contract_type,
+            symbol: parameters.symbol,
+            amount: parameters.amount,
+            basis: parameters.basis,
+            duration: parameters.duration,
+            duration_unit: parameters.duration_unit,
+            currency: parameters.currency
+        };
+
+        console.log('[DerivWSClient] Getting proposal:', JSON.stringify(payload));
 
         try {
             const response = await this.sendRequest(payload);
 
             if (response.error) {
-                // Map Error
+                const code = this.mapErrorCode(response.error.code);
+                console.error(`[DerivWSClient] Proposal failed: ${code} - ${response.error.message}`);
+                throw new Error(`${code}: ${response.error.message}`);
+            }
+
+            if (!response.proposal) {
+                throw new Error('Invalid Deriv response: missing "proposal" field');
+            }
+
+            return {
+                proposal_id: response.proposal.id,
+                ask_price: response.proposal.ask_price,
+                payout: response.proposal.payout,
+                longcode: response.proposal.longcode
+            };
+        } catch (err: any) {
+            throw new Error(err.message || 'Unknown Proposal Error');
+        }
+    }
+
+    /**
+     * Buy a contract using a proposal ID
+     * Must call getProposal() first to get the proposal_id
+     */
+    async buyContract(parameters: {
+        contract_type: string;
+        symbol: string;
+        amount: number;
+        basis: 'stake' | 'payout';
+        duration: number;
+        duration_unit: string;
+        currency: string;
+    }): Promise<any> {
+        if (!this.isConnected()) throw new Error('Not connected');
+
+        // Step 1: Get proposal first (required by Deriv API)
+        const proposal = await this.getProposal(parameters);
+        console.log(`[DerivWSClient] Got proposal: ${proposal.proposal_id} @ ${proposal.ask_price}`);
+
+        // Step 2: Buy using proposal_id
+        const buyPayload = {
+            buy: proposal.proposal_id,
+            price: parameters.amount  // Max price willing to pay
+        };
+
+        try {
+            const response = await this.sendRequest(buyPayload);
+
+            if (response.error) {
                 const code = this.mapErrorCode(response.error.code);
                 console.error(`[DerivWSClient] Buy failed: ${code} - ${response.error.message}`);
                 throw new Error(`${code}: ${response.error.message}`);
             }
 
-            // Lock: Normalize response
             if (!response.buy) {
                 throw new Error('Invalid Deriv response: missing "buy" field');
             }
@@ -235,7 +303,6 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
                 transaction_id: response.buy.transaction_id
             };
         } catch (err: any) {
-            // Ensure we don't leak raw objects if something weird happens
             throw new Error(err.message || 'Unknown Buy Error');
         }
     }

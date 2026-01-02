@@ -16,7 +16,8 @@ const useRealStats = () => {
     return useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
-            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/stats/summary`;
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const url = `${baseUrl}/api/v1/stats/summary`;
             const res = await fetch(url);
             if (!res.ok) return null;
             return res.json();

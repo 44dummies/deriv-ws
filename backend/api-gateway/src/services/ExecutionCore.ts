@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'eventemitter3';
 import { Redis } from 'ioredis';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { riskGuard, RiskCheck } from './RiskGuard.js';
 import { memoryService } from './MemoryService.js';
 import { UserService } from './UserService.js';
@@ -69,12 +70,101 @@ const DEFAULT_DURATION: DurationConfig = {
 
 export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     private redis: Redis;
+    private supabase: SupabaseClient | null = null;
 
     constructor() {
         super();
         this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+        this.initSupabase();
         this.initialize();
-        console.log('[ExecutionCore] Initialized with Redis Idempotency');
+        console.log('[ExecutionCore] Initialized with Redis Idempotency and DB persistence');
+    }
+
+    private initSupabase(): void {
+        const url = process.env.SUPABASE_URL;
+        const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (url && key) {
+            this.supabase = createClient(url, key);
+        } else {
+            console.warn('[ExecutionCore] Supabase not configured - trades will not be persisted');
+        }
+    }
+
+    /**
+     * Persist trade to database
+     */
+    private async persistTrade(params: {
+        userId: string;
+        sessionId: string;
+        market: string;
+        contractType: string;
+        stake: number;
+        status: string;
+        contractId?: string;
+        derivTransactionId?: string;
+        entryPrice?: number;
+        riskConfidence?: number;
+        signalReason?: string;
+        metadata?: Record<string, any>;
+    }): Promise<string | null> {
+        if (!this.supabase) return null;
+
+        try {
+            const { data, error } = await this.supabase
+                .from('trades')
+                .insert({
+                    user_id: params.userId,
+                    session_id: params.sessionId,
+                    market: params.market,
+                    contract_type: params.contractType,
+                    stake: params.stake,
+                    status: params.status,
+                    contract_id: params.contractId,
+                    deriv_transaction_id: params.derivTransactionId,
+                    entry_price: params.entryPrice,
+                    risk_confidence: params.riskConfidence,
+                    signal_reason: params.signalReason,
+                    metadata_json: params.metadata || {},
+                    executed_at: new Date().toISOString()
+                })
+                .select('id')
+                .single();
+
+            if (error) {
+                console.error('[ExecutionCore] DB insert error:', error);
+                return null;
+            }
+            return data?.id || null;
+        } catch (err) {
+            console.error('[ExecutionCore] DB persist error:', err);
+            return null;
+        }
+    }
+
+    /**
+     * Update trade status in database
+     */
+    private async updateTradeStatus(tradeId: string, updates: {
+        status: string;
+        pnl?: number;
+        exitPrice?: number;
+        settledAt?: string;
+    }): Promise<void> {
+        if (!this.supabase || !tradeId) return;
+
+        try {
+            await this.supabase
+                .from('trades')
+                .update({
+                    status: updates.status,
+                    pnl: updates.pnl,
+                    exit_price: updates.exitPrice,
+                    settled_at: updates.settledAt
+                })
+                .eq('id', tradeId);
+        } catch (err) {
+            console.error('[ExecutionCore] DB update error:', err);
+        }
     }
 
     private initialize(): void {
@@ -243,7 +333,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 contract_type: check.proposedTrade.type,
                 symbol: check.proposedTrade.market,
                 amount: stake,
-                basis: 'stake',
+                basis: 'stake' as const,
                 duration: duration.value,
                 duration_unit: duration.unit,
                 currency: 'USD'
@@ -252,9 +342,30 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             const buyResult = await client.buyContract(buyParams);
 
             // 5. Success Result
-            const tradeId = buyResult.transaction_id ? String(buyResult.transaction_id) : `trade_${Date.now()}`;
+            const derivTradeId = buyResult.transaction_id ? String(buyResult.transaction_id) : `trade_${Date.now()}`;
             const contractId = buyResult.contract_id;
             const entryPrice = buyResult.buy_price ?? 0;
+
+            // 5a. Persist to database
+            const dbTradeId = await this.persistTrade({
+                userId: check.userId,
+                sessionId: check.sessionId,
+                market: check.proposedTrade.market,
+                contractType: check.proposedTrade.type,
+                stake: stake,
+                status: 'OPEN',
+                contractId: String(contractId),
+                derivTransactionId: derivTradeId,
+                entryPrice: entryPrice,
+                riskConfidence: check.proposedTrade.confidence,
+                signalReason: check.proposedTrade.reason,
+                metadata: {
+                    duration: duration,
+                    ai_inference: check.proposedTrade.metadata?.ai_inference
+                }
+            });
+
+            const tradeId = dbTradeId || derivTradeId;
 
             const result: TradeResult = {
                 tradeId,
@@ -302,10 +413,19 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                             clearTimeout(timeout);
                             console.log(`[ExecutionCore] Settlement received: ${outcome} (${profit})`);
 
-                            if (check.memoryId) {
-                                const settledAt = new Date().toISOString();
-                                const resultIsWin = outcome === 'win';
+                            const settledAt = new Date().toISOString();
+                            const resultIsWin = outcome === 'win';
 
+                            // Update trade in database
+                            if (dbTradeId) {
+                                this.updateTradeStatus(dbTradeId, {
+                                    status: resultIsWin ? 'WON' : 'LOST',
+                                    pnl: profit,
+                                    settledAt: settledAt
+                                });
+                            }
+
+                            if (check.memoryId) {
                                 // 1. Operational Update (Mutable)
                                 memoryService.updateOutcome(check.memoryId, {
                                     trade_id: tradeId,
