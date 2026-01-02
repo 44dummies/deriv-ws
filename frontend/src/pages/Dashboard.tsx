@@ -10,7 +10,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '../lib/utils';
-import { GlassCard, ScrollReveal, AnimatedCounter, Floating, ShimmerText } from '../components/PremiumUI';
+import { GlassCard, ScrollReveal, Floating, ShimmerText } from '../components/PremiumUI';
 
 // Fetch real stats from backend
 const useRealStats = () => {

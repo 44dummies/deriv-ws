@@ -9,7 +9,7 @@ import {
     Info, Sparkles, Copy, CheckCircle2
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { GlassCard, ScrollReveal, ShimmerText, Floating } from '../components/PremiumUI';
+import { ShimmerText, Floating } from '../components/PremiumUI';
 
 const themes: { id: Theme; name: string; color: string; description: string }[] = [
     { id: 'default', name: 'Ocean Blue', color: 'from-blue-500 to-blue-600', description: 'Clean professional look' },
