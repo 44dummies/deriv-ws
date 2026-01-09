@@ -16,8 +16,8 @@ import {
     DollarSign, BarChart3, PieChart as PieChartIcon, Zap, RefreshCw,
     ArrowUpRight, ArrowDownRight, Clock
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 
 // =============================================================================
 // HOOKS
@@ -59,24 +59,7 @@ function useTradingHistory() {
 // COMPONENTS
 // =============================================================================
 
-function GlassCard({ children, className }: { children: React.ReactNode; className?: string }) {
-    const { isDarkMode } = useThemeStore();
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={cn(
-                "rounded-2xl border overflow-hidden",
-                isDarkMode
-                    ? "bg-gray-900/50 backdrop-blur-xl border-white/10"
-                    : "bg-white/80 backdrop-blur-xl border-black/5",
-                className
-            )}
-        >
-            {children}
-        </motion.div>
-    );
-}
+
 
 function StatCard({ title, value, subtitle, icon: Icon, trend, color }: {
     title: string;
@@ -100,29 +83,30 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color }: {
     const styles = colorStyles[color] ?? colorStyles.blue;
 
     return (
-        <GlassCard className="p-5">
+        <Card className="p-5">
             <div className="flex items-start justify-between">
-                <div className={cn("p-3 rounded-xl shadow-lg", styles?.icon ?? 'bg-blue-500')}>
-                    <Icon className="w-5 h-5 text-white" />
+                <div className={cn("p-3 rounded-xl shadow-sm border",
+                    styles?.icon === 'bg-blue-500' ? "bg-blue-100 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800" :
+                        styles?.icon === 'bg-emerald-500' ? "bg-emerald-100 text-emerald-600 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800" :
+                            styles?.icon === 'bg-purple-500' ? "bg-purple-100 text-purple-600 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800" :
+                                styles?.icon === 'bg-orange-500' ? "bg-orange-100 text-orange-600 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800" :
+                                    styles?.icon === 'bg-cyan-500' ? "bg-cyan-100 text-cyan-600 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-400 dark:border-cyan-800" :
+                                        "bg-pink-100 text-pink-600 border-pink-200 dark:bg-pink-900/30 dark:text-pink-400 dark:border-pink-800"
+                )}>
+                    <Icon className="w-5 h-5" />
                 </div>
                 {trend && trend !== 'neutral' && (
                     <div className={cn(
                         "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold",
-                        trend === 'up' ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                        trend === 'up' ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                     )}>
                         {trend === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                     </div>
                 )}
             </div>
             <div className="mt-4">
-                <p className={cn(
-                    "text-xs font-medium uppercase tracking-wider",
-                    isDarkMode ? "text-gray-500" : "text-gray-400"
-                )}>{title}</p>
-                <p className={cn(
-                    "text-3xl font-bold tracking-tight mt-1",
-                    isDarkMode ? "text-white" : "text-gray-900"
-                )}>{value}</p>
+                <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{title}</p>
+                <p className="text-3xl font-bold tracking-tight mt-1 text-foreground">{value}</p>
                 {subtitle && (
                     <p className={cn(
                         "text-xs mt-1",
@@ -130,7 +114,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color }: {
                     )}>{subtitle}</p>
                 )}
             </div>
-        </GlassCard>
+        </Card>
     );
 }
 
@@ -266,25 +250,19 @@ export default function Statistics() {
         <div className="space-y-8 pb-8">
             {/* Header */}
             <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                >
+                <div>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30">
-                            <BarChart3 className="w-6 h-6 text-white" />
+                        <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-sm">
+                            <BarChart3 className="w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className={cn(
-                                "text-3xl lg:text-4xl font-bold tracking-tight",
-                                isDarkMode ? "text-white" : "text-gray-900"
-                            )}>Performance Analytics</h1>
-                            <p className={isDarkMode ? "text-gray-400" : "text-gray-500"}>
+                            <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-foreground">Performance Analytics</h1>
+                            <p className="text-muted-foreground">
                                 Real-time trading statistics and insights
                             </p>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 <button
                     onClick={() => refetchStats()}
@@ -338,48 +316,52 @@ export default function Statistics() {
 
             {/* Secondary Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <GlassCard className="p-4">
-                    <div className={cn(
-                        "text-xs font-medium uppercase tracking-wider",
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
-                    )}>Avg Win</div>
-                    <div className="text-xl font-bold mt-1 text-emerald-400">
-                        ${metrics.avgWin.toFixed(2)}
-                    </div>
-                </GlassCard>
-                <GlassCard className="p-4">
-                    <div className={cn(
-                        "text-xs font-medium uppercase tracking-wider",
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
-                    )}>Avg Loss</div>
-                    <div className="text-xl font-bold mt-1 text-red-400">
-                        ${metrics.avgLoss.toFixed(2)}
-                    </div>
-                </GlassCard>
-                <GlassCard className="p-4">
-                    <div className={cn(
-                        "text-xs font-medium uppercase tracking-wider",
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
-                    )}>Best Trade</div>
-                    <div className="text-xl font-bold mt-1 text-emerald-400">
-                        +${metrics.bestTrade.toFixed(2)}
-                    </div>
-                </GlassCard>
-                <GlassCard className="p-4">
-                    <div className={cn(
-                        "text-xs font-medium uppercase tracking-wider",
-                        isDarkMode ? "text-gray-500" : "text-gray-400"
-                    )}>Max Drawdown</div>
-                    <div className="text-xl font-bold mt-1 text-orange-400">
-                        ${metrics.maxDrawdown.toFixed(2)}
-                    </div>
-                </GlassCard>
+                <Card className="p-4">
+                    <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Avg Win</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                            ${metrics.avgWin.toFixed(2)}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="p-4">
+                    <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Avg Loss</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                            ${metrics.avgLoss.toFixed(2)}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="p-4">
+                    <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Best Trade</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                            +${metrics.bestTrade.toFixed(2)}
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="p-4">
+                    <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Max Drawdown</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                            ${metrics.maxDrawdown.toFixed(2)}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Performance Chart */}
-                <GlassCard className="lg:col-span-2 p-6">
+                <Card className="lg:col-span-2 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <TrendingUp className="w-5 h-5 text-blue-400" />
@@ -455,10 +437,10 @@ export default function Statistics() {
                             </div>
                         </div>
                     )}
-                </GlassCard>
+                </Card>
 
                 {/* Market Distribution */}
-                <GlassCard className="p-6">
+                <Card className="p-6">
                     <div className="flex items-center gap-3 mb-6">
                         <PieChartIcon className="w-5 h-5 text-purple-400" />
                         <h3 className={cn(
@@ -526,11 +508,11 @@ export default function Statistics() {
                             </p>
                         </div>
                     )}
-                </GlassCard>
+                </Card>
             </div>
 
             {/* Recent Trades Table */}
-            <GlassCard className="p-6">
+            <Card className="p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <Zap className="w-5 h-5 text-orange-400" />
                     <h3 className={cn(
@@ -631,7 +613,7 @@ export default function Statistics() {
                         </p>
                     </div>
                 )}
-            </GlassCard>
+            </Card>
         </div>
     );
 }
