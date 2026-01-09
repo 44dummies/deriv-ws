@@ -20,7 +20,25 @@ const getSupabaseAdmin = () => {
 };
 
 export const UserService = {
-    async storeDerivToken({ userId, derivToken, accountId }: { userId: string, derivToken: string, accountId: string }) {
+    async storeDerivToken({
+        userId,
+        derivToken,
+        accountId,
+        currency,
+        isVirtual,
+        fullname,
+        email,
+        lastBalance
+    }: {
+        userId: string;
+        derivToken: string;
+        accountId: string;
+        currency?: string;
+        isVirtual?: boolean;
+        fullname?: string;
+        email?: string;
+        lastBalance?: number;
+    }) {
         const encrypted = encrypt(derivToken);
 
         const { error } = await getSupabaseAdmin()
@@ -30,6 +48,11 @@ export const UserService = {
                     user_id: userId,
                     encrypted_token: encrypted,
                     account_id: accountId,
+                    currency,
+                    is_virtual: isVirtual,
+                    fullname,
+                    email,
+                    last_balance: lastBalance,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 },
@@ -77,6 +100,48 @@ export const UserService = {
         }
 
         return decrypt(data.encrypted_token);
+    },
+
+    async listDerivAccounts(userId: string): Promise<Array<{
+        account_id: string;
+        currency?: string;
+        is_virtual?: boolean;
+        fullname?: string;
+        email?: string;
+        last_balance?: number;
+        updated_at?: string;
+    }>> {
+        const { data, error } = await getSupabaseAdmin()
+            .from('user_deriv_tokens')
+            .select('account_id, currency, is_virtual, fullname, email, last_balance, updated_at')
+            .eq('user_id', userId);
+
+        if (error || !data) {
+            return [];
+        }
+
+        return data;
+    },
+
+    async getActiveAccountId(userId: string): Promise<string | null> {
+        const { data, error } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+        if (error || !data?.user) {
+            return null;
+        }
+        return (data.user.user_metadata?.['active_account_id'] as string) || null;
+    },
+
+    async setActiveAccountId(userId: string, accountId: string): Promise<void> {
+        const { data } = await getSupabaseAdmin().auth.admin.getUserById(userId);
+        const existingMeta = data?.user?.user_metadata || {};
+
+        const { error } = await getSupabaseAdmin().auth.admin.updateUserById(userId, {
+            user_metadata: { ...existingMeta, active_account_id: accountId }
+        });
+        if (error) {
+            logger.error('[UserService] Failed to update active account', { error });
+            throw new Error(`Failed to update active account: ${error.message}`);
+        }
     },
 
     async findOrCreateUserFromDeriv(derivAccountId: string, email?: string): Promise<{ id: string; email: string; role: 'ADMIN' | 'USER' }> {

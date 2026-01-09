@@ -16,18 +16,20 @@ const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// GET /users - Fetch real users from database
+// GET /users - Fetch users from Supabase Auth
 router.get('/', async (_req: Request, res: Response) => {
     try {
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('id, email, role, created_at')
-            .order('created_at', { ascending: false })
-            .limit(100);
-
+        const { data, error } = await supabase.auth.admin.listUsers();
         if (error) throw error;
 
-        res.json(users || []);
+        const users = (data?.users || []).map((user) => ({
+            id: user.id,
+            email: user.email,
+            role: (user.user_metadata?.['role'] as string) || 'USER',
+            created_at: user.created_at
+        }));
+
+        res.json(users);
     } catch (error) {
         logger.error('Users fetch error', { error });
         res.status(500).json({ error: 'Failed to fetch users' });

@@ -302,7 +302,15 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
         try {
             // 1. Get Token securely (Server-side Only)
-            const token = await UserService.getDerivToken(check.userId);
+            const activeAccountId = await UserService.getActiveAccountId(check.userId);
+            const accounts = await UserService.listDerivAccounts(check.userId);
+            const activeAccount = activeAccountId
+                ? accounts.find(acc => acc.account_id === activeAccountId)
+                : accounts[0];
+            const token = activeAccount
+                ? await UserService.getDerivTokenForAccount(check.userId, activeAccount.account_id)
+                : await UserService.getDerivToken(check.userId);
+
             if (!token) {
                 throw new Error('USER_NOT_AUTHORIZED_FOR_TRADING: No Deriv token found.');
             }
@@ -337,7 +345,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 basis: 'stake' as const,
                 duration: duration.value,
                 duration_unit: duration.unit,
-                currency: 'USD'
+                currency: activeAccount?.currency || 'USD'
             };
 
             const buyResult = await client.buyContract(buyParams);

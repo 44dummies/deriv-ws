@@ -55,7 +55,7 @@ export function SessionCard({ session, isAdmin, onAction }: SessionCardProps) {
                         {(session.status === 'PAUSED' || session.status === 'CREATED') && (
                             <button
                                 onClick={() => onAction?.('resume')}
-                                className="p-2 hover:bg-muted/50 rounded-md text-emerald-600 transition-colors"
+                                className="p-2 hover:bg-muted/50 rounded-md text-primary transition-colors"
                             >
                                 <Play className="h-4 w-4" />
                             </button>
@@ -83,7 +83,7 @@ export function SessionCard({ session, isAdmin, onAction }: SessionCardProps) {
                     <Activity className="h-4 w-4" />
                     <span className={cn(
                         "font-mono",
-                        pnl > 0 ? "text-emerald-600" : pnl < 0 ? "text-red-600" : "text-muted-foreground"
+                        pnl > 0 ? "text-primary" : "text-muted-foreground"
                     )}>
                         PnL: {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}
                     </span>

@@ -92,21 +92,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             }
 
             return (
-                <div className="min-h-[200px] flex flex-col items-center justify-center p-8 bg-red-900/20 rounded-lg border border-red-500/30">
-                    <div className="text-red-400 text-xl mb-4">Something went wrong</div>
-                    <p className="text-gray-400 text-sm mb-4 text-center max-w-md">
+                <div className="min-h-[200px] flex flex-col items-center justify-center p-8 bg-card rounded-lg border border-destructive/20">
+                    <div className="text-destructive text-lg font-semibold mb-3">Something went wrong</div>
+                    <p className="text-muted-foreground text-sm mb-4 text-center max-w-md">
                         An unexpected error occurred. Please try refreshing the page.
                     </p>
                     <button
                         onClick={this.reset}
-                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md transition-colors"
+                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors duration-150 ease-out"
                     >
-                        Try Again
+                        Try again
                     </button>
                     {import.meta.env.DEV && this.state.error && (
-                        <details className="mt-4 text-xs text-gray-500 max-w-full overflow-auto">
-                            <summary className="cursor-pointer hover:text-gray-400">Error Details</summary>
-                            <pre className="mt-2 p-2 bg-black/50 rounded overflow-x-auto">
+                        <details className="mt-4 text-xs text-muted-foreground max-w-full overflow-auto">
+                            <summary className="cursor-pointer hover:text-foreground">Error details</summary>
+                            <pre className="mt-2 p-2 bg-muted/40 rounded overflow-x-auto">
                                 {this.state.error.toString()}
                                 {this.state.errorInfo?.componentStack}
                             </pre>
@@ -131,10 +131,10 @@ export function DashboardErrorBoundary({ children }: { children: ReactNode }) {
     return (
         <ErrorBoundary
             fallback={
-                <div className="p-6 bg-[#0d1421] rounded-xl border border-red-500/30">
-                    <h3 className="text-red-400 text-lg font-semibold mb-2">Dashboard Error</h3>
-                    <p className="text-gray-400 text-sm">
-                        Failed to load dashboard component. Please refresh the page.
+                <div className="p-6 bg-card rounded-xl border border-destructive/20">
+                    <h3 className="text-destructive text-lg font-semibold mb-2">Dashboard error</h3>
+                    <p className="text-muted-foreground text-sm">
+                        Failed to load the dashboard component. Please refresh the page.
                     </p>
                 </div>
             }
@@ -151,17 +151,16 @@ export function TradingErrorBoundary({ children }: { children: ReactNode }) {
     return (
         <ErrorBoundary
             fallback={
-                <div className="p-6 bg-red-900/30 rounded-xl border-2 border-red-500">
-                    <h3 className="text-red-400 text-lg font-bold mb-2">⚠️ Trading Component Error</h3>
-                    <p className="text-gray-300 text-sm mb-4">
-                        A critical error occurred in the trading interface. 
-                        Trading has been paused for safety.
+                <div className="p-6 bg-card rounded-xl border border-destructive/30">
+                    <h3 className="text-destructive text-lg font-semibold mb-2">Trading component error</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                        A critical error occurred in the trading interface. Trading has been paused.
                     </p>
                     <button
                         onClick={() => window.location.reload()}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors duration-150 ease-out"
                     >
-                        Reload Page
+                        Reload page
                     </button>
                 </div>
             }
@@ -183,10 +182,9 @@ export function ChartErrorBoundary({ children }: { children: ReactNode }) {
     return (
         <ErrorBoundary
             fallback={
-                <div className="h-[300px] flex items-center justify-center bg-[#0d1421] rounded-lg border border-gray-700">
+                <div className="h-[300px] flex items-center justify-center bg-card rounded-lg border border-border">
                     <div className="text-center">
-                        <div className="text-gray-400 mb-2">📊</div>
-                        <p className="text-gray-500 text-sm">Chart failed to load</p>
+                        <p className="text-muted-foreground text-sm">Chart failed to load</p>
                     </div>
                 </div>
             }
@@ -204,8 +202,8 @@ export function NavigationErrorBoundary({ children }: { children: ReactNode }) {
         <ErrorBoundary
             fallback={
                 <div className="p-4">
-                    <a href="/" className="text-blue-400 hover:underline">
-                        Return to Home
+                    <a href="/" className="text-primary hover:underline">
+                        Return to home
                     </a>
                 </div>
             }

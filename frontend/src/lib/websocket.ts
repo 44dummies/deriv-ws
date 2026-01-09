@@ -19,8 +19,6 @@ export function connectWebSocket(): Socket {
         return socket;
     }
 
-    const token = localStorage.getItem('sb-access-token'); // Retrieve Supabase token if available
-
     console.log(`Connecting to WebSocket: ${API_GATEWAY_URL}`);
 
     socket = io(API_GATEWAY_URL, {
@@ -28,9 +26,7 @@ export function connectWebSocket(): Socket {
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
-        auth: {
-            token,
-        },
+        withCredentials: true,
     });
 
     socket.on('connect', () => {
@@ -109,6 +105,7 @@ export async function testWebSocketHandshake(): Promise<boolean> {
         const testSocket = io(API_GATEWAY_URL, {
             transports: ['websocket'],
             timeout: 5000,
+            withCredentials: true,
         });
 
         const timeout = setTimeout(() => {

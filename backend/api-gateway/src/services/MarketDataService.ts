@@ -87,7 +87,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     private lastEpoch: Map<string, number> = new Map();
     private tickTimeoutTimers: Map<string, NodeJS.Timeout> = new Map();
     private activeSubscriptions: Set<string> = new Set();
-    private isRunning = false;
+    private _isRunning = false;
     private totalReceived = 0;
     private totalDuplicates = 0;
 
@@ -101,8 +101,8 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     // ---------------------------------------------------------------------------
 
     start(): void {
-        if (this.isRunning) return;
-        this.isRunning = true;
+        if (this._isRunning) return;
+        this._isRunning = true;
 
         derivWSClient.on('tick', (tick: Tick) => this.handleTick(tick));
         derivWSClient.on('heartbeat', () => this.handleHeartbeat());
@@ -124,8 +124,8 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     }
 
     stop(): void {
-        if (!this.isRunning) return;
-        this.isRunning = false;
+        if (!this._isRunning) return;
+        this._isRunning = false;
 
         for (const timer of this.tickTimeoutTimers.values()) {
             clearTimeout(timer);
@@ -463,7 +463,11 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     }
 
     isHealthy(): boolean {
-        return this.isRunning && derivWSClient.isConnected();
+        return this._isRunning && derivWSClient.isConnected();
+    }
+
+    getIsRunning(): boolean {
+        return this._isRunning;
     }
 }
 

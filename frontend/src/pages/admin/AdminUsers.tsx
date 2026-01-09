@@ -71,7 +71,7 @@ export default function AdminUsers() {
                                         <tr key={u.id} className="group hover:bg-muted/40 transition-colors">
                                             <td className="py-4 pl-4 font-medium text-foreground">{u.email}</td>
                                             <td className="py-4">
-                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${u.role === 'ADMIN' ? 'border-destructive/30 text-destructive' : 'border-primary/20 text-primary'}`}>
+                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${u.role === 'ADMIN' ? 'border-primary/30 text-primary' : 'border-border text-muted-foreground'}`}>
                                                     {u.role || 'USER'}
                                                 </span>
                                             </td>

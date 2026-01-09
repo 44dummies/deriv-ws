@@ -84,14 +84,19 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     const headerToken = req.headers[CSRF_HEADER_NAME] as string | undefined;
     const cookieToken = (req as any).cookies?.[CSRF_COOKIE_NAME];
     
-    // If no cookie set, allow request but set token for next time
+    // If no cookie set, reject but set token for next time
     if (!cookieToken) {
         ensureCsrfToken(res, secret);
-        return next();
+        res.status(403).json({ 
+            error: 'CSRF token missing',
+            message: 'Please fetch a CSRF token and retry'
+        });
+        return;
     }
     
     // Verify header token matches signed cookie
     if (!headerToken) {
+        ensureCsrfToken(res, secret);
         res.status(403).json({ 
             error: 'CSRF token missing',
             message: 'Please include X-CSRF-Token header'
@@ -117,6 +122,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     
     // Verify header matches token
     if (headerToken !== token) {
+        ensureCsrfToken(res, secret);
         res.status(403).json({ error: 'CSRF token mismatch' });
         return;
     }

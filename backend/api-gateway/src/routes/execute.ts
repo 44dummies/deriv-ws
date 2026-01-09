@@ -8,6 +8,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { createClient } from '@supabase/supabase-js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import { riskGuard } from '../services/RiskGuard.js';
+import { UserService } from '../services/UserService.js';
 import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
@@ -57,24 +58,29 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             return res.status(400).json({ error: 'Duration must be between 1 and 1440 minutes' });
         }
 
-        // Get user's active Deriv account
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('deriv_accounts, active_account_id')
-            .eq('id', userId)
-            .single();
-
-        if (userError || !userData) {
-            return res.status(404).json({ error: 'User not found' });
+        const accounts = await UserService.listDerivAccounts(userId);
+        if (accounts.length === 0) {
+            return res.status(400).json({
+                error: 'No linked Deriv accounts',
+                hint: 'Please reconnect your Deriv account'
+            });
         }
 
-        const activeAccount = userData.deriv_accounts?.find(
-            (acc: any) => acc.loginid === userData.active_account_id
-        );
+        const activeAccountId = await UserService.getActiveAccountId(userId);
+        const activeAccount = accounts.find(acc => acc.account_id === activeAccountId) || accounts[0];
 
-        if (!activeAccount || !activeAccount.token) {
-            return res.status(400).json({ 
-                error: 'No active Deriv account or token missing',
+        if (!activeAccount) {
+            return res.status(400).json({ error: 'No active Deriv account available' });
+        }
+
+        if (!activeAccountId) {
+            await UserService.setActiveAccountId(userId, activeAccount.account_id);
+        }
+
+        const derivToken = await UserService.getDerivTokenForAccount(userId, activeAccount.account_id);
+        if (!derivToken) {
+            return res.status(400).json({
+                error: 'Deriv token not found',
                 hint: 'Please reconnect your Deriv account'
             });
         }
@@ -100,7 +106,11 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
         derivClient.connect();
 
         try {
-            await derivClient.authorize(activeAccount.token);
+            await waitForConnection(derivClient);
+            const auth = await derivClient.authorize(derivToken);
+            if (!auth) {
+                throw new Error('Deriv authorization failed');
+            }
         } catch (authError) {
             derivClient.disconnect();
             return res.status(401).json({ 
@@ -133,10 +143,10 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
         }
 
         // Extract trade details
-        const contractId = buyResponse.buy?.contract_id;
-        const transactionId = buyResponse.buy?.transaction_id;
-        const buyPrice = buyResponse.buy?.buy_price;
-        const payout = buyResponse.buy?.payout;
+        const contractId = buyResponse.contract_id;
+        const transactionId = buyResponse.transaction_id;
+        const buyPrice = buyResponse.buy_price;
+        const payout = buyResponse.payout;
 
         if (!contractId) {
             derivClient.disconnect();
@@ -147,10 +157,10 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
         let sessionId: string | null = null;
         
         const { data: activeSessions } = await supabase
-            .from('trading_sessions')
+            .from('sessions')
             .select('id')
             .eq('admin_id', userId)
-            .eq('status', 'ACTIVE')
+            .in('status', ['ACTIVE', 'RUNNING'])
             .limit(1);
 
         if (activeSessions && activeSessions.length > 0 && activeSessions[0]) {
@@ -158,7 +168,7 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
         } else {
             // Create a manual trading session
             const { data: newSession } = await supabase
-                .from('trading_sessions')
+                .from('sessions')
                 .insert({
                     admin_id: userId,
                     status: 'ACTIVE',
@@ -238,31 +248,54 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
 
 /**
  * Monitor contract settlement and update DB when contract closes
+ * TODO: Add proper contract subscription method to DerivWSClient
  */
 async function monitorContractSettlement(
     derivClient: DerivWSClient, 
     contractId: number, 
     tradeId: string
 ): Promise<void> {
-    derivClient.once('settled', async (settledContractId, result, profit) => {
-        if (settledContractId === contractId) {
-            const status = result === 'win' ? 'WIN' : 'LOSS';
-            
-            await supabase
-                .from('trades')
-                .update({
-                    status,
-                    pnl: profit,
-                    settled_at: new Date().toISOString()
-                })
-                .eq('id', tradeId);
+    try {
+        // Listen for settlement event
+        // Note: DerivWSClient should emit 'settled' when contract closes
+        derivClient.once('settled', async (settledContractId, result, profit) => {
+            if (settledContractId === contractId) {
+                // FIX: Use WON/LOST to match DB constraint, not WIN/LOSS
+                const status = result === 'win' ? 'WON' : 'LOST';
+                
+                await supabase
+                    .from('trades')
+                    .update({
+                        status,
+                        pnl: profit,
+                        settled_at: new Date().toISOString()
+                    })
+                    .eq('id', tradeId);
 
-            logger.info('TradeExecution contract settled', { contractId, status, profit });
-            
-            // Disconnect after settlement
-            derivClient.disconnect();
-        }
-    });
+                logger.info('TradeExecution contract settled', { contractId, status, profit });
+                
+                // Disconnect after settlement
+                derivClient.disconnect();
+            }
+        });
+
+        await derivClient.monitorContract(contractId);
+    } catch (error) {
+        logger.error('TradeExecution settlement monitoring failed', { error, contractId });
+        derivClient.disconnect();
+    }
 }
 
 export default router;
+
+async function waitForConnection(client: DerivWSClient, timeoutMs = 5000): Promise<void> {
+    if (client.isConnected()) return;
+
+    await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Deriv connection timeout')), timeoutMs);
+        client.once('connected', () => {
+            clearTimeout(timeout);
+            resolve();
+        });
+    });
+}

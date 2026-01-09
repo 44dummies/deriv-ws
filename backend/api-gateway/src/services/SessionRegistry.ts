@@ -383,9 +383,13 @@ export class SessionRegistry {
      */
     serializeState(): string {
         const data = {
-            sessions: Array.from(this.sessions.entries()).map(([_id, session]) => ({
+            sessions: Array.from(this.sessions.entries()).map(([sessionId, session]) => ({
                 ...session,
-                participants: Array.from(session.participants.entries()),
+                id: sessionId,
+                participants: Array.from(session.participants.entries()).map(([userId, participant]) => ({
+                    userId,
+                    ...participant
+                })),
             })),
             timestamp: new Date().toISOString(),
         };

@@ -67,7 +67,7 @@ export default function LiveSession() {
                             <Activity className="w-5 h-5" />
                             <span>Total PnL</span>
                         </div>
-                        <div className={`text-2xl font-semibold ${totalPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        <div className={`text-2xl font-semibold ${totalPnL >= 0 ? 'text-primary' : 'text-muted-foreground'}`}>
                             {totalPnL >= 0 ? '+' : ''}{totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
                     </div>

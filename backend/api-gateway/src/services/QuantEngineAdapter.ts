@@ -43,7 +43,8 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     private tickQueue: NormalizedTick[] = [];
     private isProcessing = false;
     private processTimer: NodeJS.Timeout | null = null;
-    private isRunning = false;
+    private aiStatusTimer: NodeJS.Timeout | null = null;
+    private _isRunning = false;
     private activeConfig: SessionConfig | undefined;
 
     // Stats
@@ -63,8 +64,8 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     // ---------------------------------------------------------------------------
 
     start(config?: SessionConfig): void {
-        if (this.isRunning) return;
-        this.isRunning = true;
+        if (this._isRunning) return;
+        this._isRunning = true;
         this.activeConfig = config;
 
         // Subscribe to MarketDataService ticks
@@ -81,21 +82,30 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             this.processBatch();
         }, BATCH_PROCESS_INTERVAL);
 
-        // Start Status Poller (every 5 seconds)
-        setInterval(() => {
-            this.checkAIStatus();
-        }, 5000);
+        const aiEnabled = process.env.ENABLE_AI_LAYER === 'true';
+        if (aiEnabled) {
+            // Start Status Poller (every 5 seconds)
+            this.aiStatusTimer = setInterval(() => {
+                this.checkAIStatus();
+            }, 5000);
+        } else {
+            quantEngine.setAIEnabled(false);
+        }
 
         logger.info('Started', { service: 'QuantAdapter' });
     }
 
     stop(): void {
-        if (!this.isRunning) return;
-        this.isRunning = false;
+        if (!this._isRunning) return;
+        this._isRunning = false;
 
         if (this.processTimer) {
             clearInterval(this.processTimer);
             this.processTimer = null;
+        }
+        if (this.aiStatusTimer) {
+            clearInterval(this.aiStatusTimer);
+            this.aiStatusTimer = null;
         }
 
         this.tickQueue = [];
@@ -254,7 +264,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     }
 
     isHealthy(): boolean {
-        if (!this.isRunning) return false;
+        if (!this._isRunning) return false;
 
         // Check if we're receiving ticks
         if (this.lastTickTime && Date.now() - this.lastTickTime > 15000) {
@@ -267,6 +277,10 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         }
 
         return true;
+    }
+
+    isRunning(): boolean {
+        return this._isRunning;
     }
 }
 

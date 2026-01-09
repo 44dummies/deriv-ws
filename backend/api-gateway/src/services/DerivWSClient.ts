@@ -310,7 +310,8 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
                 longcode: response.buy.longcode,
                 buy_price: response.buy.buy_price,
                 start_time: response.buy.start_time,
-                transaction_id: response.buy.transaction_id
+                transaction_id: response.buy.transaction_id,
+                payout: proposal.payout
             };
         } catch (err: any) {
             throw new Error(err.message || 'Unknown Buy Error');

@@ -4,9 +4,7 @@ import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-
-// Constants
-const API_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000';
+import { fetchWithAuth } from '../lib/api';
 
 export default function Sessions() {
     const [filter, setFilter] = useState('ALL');
@@ -17,33 +15,28 @@ export default function Sessions() {
     const { data: sessionData, isLoading } = useQuery({
         queryKey: ['sessions'],
         queryFn: async () => {
-            const res = await fetch(`${API_URL}/api/v1/sessions`, {
-                credentials: 'include'
-            });
-            if (!res.ok) throw new Error('Failed to fetch sessions');
-            return res.json();
+            return fetchWithAuth('/sessions');
         },
         refetchInterval: 5000
     });
 
     const sessions = sessionData?.sessions || [];
     const activeSession = sessions.find((s: any) => s.status === 'ACTIVE' || s.status === 'RUNNING');
+    const getParticipantCount = (session: any) => Array.isArray(session?.participants)
+        ? session.participants.length
+        : Object.keys(session?.participants || {}).length;
+    const isParticipant = activeSession
+        ? Array.isArray(activeSession.participants)
+            ? activeSession.participants.some((p: any) => p.user_id === user?.id)
+            : Boolean(activeSession.participants?.[user?.id || ''])
+        : false;
 
     // Mutations
     const mutationFn = async ({ path, method = 'POST', body }: { path: string, method?: string, body?: any }) => {
-        const res = await fetch(`${API_URL}/api/v1/sessions/${path}`, {
+        return fetchWithAuth(`/sessions/${path}`, {
             method,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
             body: body ? JSON.stringify(body) : null
         });
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Action failed');
-        }
-        return res.json();
     };
 
     const createSession = useMutation({
@@ -126,7 +119,7 @@ export default function Sessions() {
                                 </button>
                             </div>
                         ) : (
-                            !activeSession.participants?.[user?.id || ''] ? (
+                            !isParticipant ? (
                                 <button
                                     onClick={() => joinSession.mutate(activeSession.id)}
                                     className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors duration-150 ease-out"
@@ -149,7 +142,7 @@ export default function Sessions() {
                         </div>
                         <div className="p-4 bg-muted/40 rounded-md border border-border">
                             <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Participants</div>
-                            <div className="font-medium text-sm">{Object.keys(activeSession.participants || {}).length}</div>
+                            <div className="font-medium text-sm">{getParticipantCount(activeSession)}</div>
                         </div>
                     </div>
                 </div>
@@ -200,13 +193,13 @@ export default function Sessions() {
                                         {session.config_json?.risk_profile || 'Standard'}
                                     </span>
                                 </td>
-                                <td className="p-5 text-muted-foreground font-mono">{Object.keys(session.participants || {}).length}</td>
+                                <td className="p-5 text-muted-foreground font-mono">{getParticipantCount(session)}</td>
                                 <td className="p-5">
                                     <span className={cn(
                                         "px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase border",
                                         session.status === 'COMPLETED' ? "bg-muted/40 text-muted-foreground border-border" :
                                             session.status === 'ACTIVE' || session.status === 'RUNNING' ? "bg-primary/10 text-primary border-primary/20" :
-                                                "bg-destructive/10 text-destructive border-destructive/20"
+                                                "bg-muted/40 text-muted-foreground border-border"
                                     )}>
                                         {session.status}
                                     </span>

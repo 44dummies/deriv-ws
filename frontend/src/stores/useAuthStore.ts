@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { fetchWithAuth } from '../lib/api';
 // import { supabase } from '../lib/supabase';
 
 /**
@@ -62,14 +63,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (response.ok) {
                 const data = await response.json();
                 if (data.user) {
+                    const accounts = data.user.deriv_accounts || [];
+                    const activeAccountId = data.user.active_account_id || accounts[0]?.loginid || '';
                     set({
                         user: {
                             id: data.user.id,
                             email: data.user.email,
                             fullname: data.user.fullname || data.user.email?.split('@')[0] || 'Trader',
                             role: data.user.role,
-                            deriv_accounts: data.user.deriv_accounts || [],
-                            active_account_id: data.user.active_account_id
+                            deriv_accounts: accounts,
+                            active_account_id: activeAccountId
                         },
                         isAuthenticated: true,
                         loading: false,
@@ -116,13 +119,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             
             // Collect all tokens to send to backend
-            const tokensPayload: { accountId: string; token: string }[] = [];
+            const tokensPayload: { accountId: string; token: string; currency?: string; is_virtual?: boolean }[] = [];
             i = 1;
             while (searchParams.get(`acct${i}`)) {
                 const accountId = searchParams.get(`acct${i}`)!;
                 const token = searchParams.get(`token${i}`)!;
+                const currencyValue = searchParams.get(`cur${i}`);
+                const is_virtual = accountId.startsWith('VR');
                 if (accountId && token) {
-                    tokensPayload.push({ accountId, token });
+                    const entry: { accountId: string; token: string; currency?: string; is_virtual?: boolean } = { 
+                        accountId, 
+                        token, 
+                        is_virtual 
+                    };
+                    if (currencyValue) {
+                        entry.currency = currencyValue;
+                    }
+                    tokensPayload.push(entry);
                 }
                 i++;
             }
@@ -183,17 +196,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!user) return;
 
         try {
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            const response = await fetch(`${baseUrl}/api/v1/auth/switch-account`, {
+            await fetchWithAuth('/auth/switch-account', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
                 body: JSON.stringify({ account_id: accountId })
             });
-
-            if (response.ok) {
-                set({ user: { ...user, active_account_id: accountId } });
-            }
+            set({ user: { ...user, active_account_id: accountId } });
         } catch (error) {
             console.error('Account switch failed:', error);
         }
@@ -212,10 +219,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     signIn: async () => { },
     signOut: async () => {
         try {
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            await fetch(`${baseUrl}/api/v1/auth/logout`, {
-                method: 'POST',
-                credentials: 'include'
+            await fetchWithAuth('/auth/logout', {
+                method: 'POST'
             });
         } catch (e) {
             console.error('Logout request failed:', e);

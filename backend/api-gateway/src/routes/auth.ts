@@ -43,6 +43,9 @@ router.get('/session', requireAuth, async (req: AuthRequest, res: Response) => {
         return;
     }
 
+    const accounts = await UserService.listDerivAccounts(req.user.id);
+    const activeAccountId = await UserService.getActiveAccountId(req.user.id);
+
     // Return user info without sensitive data
     res.json({
         authenticated: true,
@@ -50,7 +53,15 @@ router.get('/session', requireAuth, async (req: AuthRequest, res: Response) => {
             id: req.user.id,
             email: req.user.email,
             role: req.user.role,
-            // Account info would be fetched from DB here
+            deriv_accounts: accounts.map((acc) => ({
+                loginid: acc.account_id,
+                currency: acc.currency || 'USD',
+                is_virtual: Boolean(acc.is_virtual),
+                balance: Number(acc.last_balance || 0),
+                fullname: acc.fullname,
+                email: acc.email
+            })),
+            active_account_id: activeAccountId
         }
     });
 });
@@ -75,7 +86,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
     // Determine which format was used
     let primaryToken: string;
     let primaryAccountId: string;
-    let allAccounts: { accountId: string; token: string }[] = [];
+    let allAccounts: { accountId: string; token: string; currency?: string; is_virtual?: boolean; fullname?: string; email?: string }[] = [];
 
     if (accounts && Array.isArray(accounts) && accounts.length > 0) {
         // New secure format
@@ -133,12 +144,26 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
 
         // 3. Store ALL Deriv tokens securely (encrypted in DB)
         for (const acc of allAccounts) {
+            const isPrimaryAccount = acc.accountId === primaryAccountId;
+            const accountEmail = acc.email || userEmail;
+            const accountCurrency = acc.currency || (isPrimaryAccount ? derivAccount?.currency : undefined);
+            const accountIsVirtual = acc.is_virtual ?? (isPrimaryAccount ? derivAccount?.is_virtual : undefined);
+            const accountFullname = acc.fullname || (isPrimaryAccount ? derivAccount?.fullname : undefined);
+            const accountBalance = isPrimaryAccount ? Number(derivAccount?.balance || 0) : undefined;
+            
             await UserService.storeDerivToken({
                 userId: user.id,
                 derivToken: acc.token,
-                accountId: acc.accountId
+                accountId: acc.accountId,
+                ...(accountCurrency !== undefined ? { currency: accountCurrency } : {}),
+                ...(accountIsVirtual !== undefined ? { isVirtual: accountIsVirtual } : {}),
+                ...(accountFullname !== undefined ? { fullname: accountFullname } : {}),
+                ...(accountEmail !== undefined ? { email: accountEmail } : {}),
+                ...(accountBalance !== undefined ? { lastBalance: accountBalance } : {})
             });
         }
+
+        await UserService.setActiveAccountId(user.id, primaryAccountId);
 
         // 4. Generate Internal Session Token
         const sessionToken = await AuthService.generateSessionToken({
@@ -194,8 +219,8 @@ router.post('/switch-account', requireAuth, async (req: AuthRequest, res: Respon
             return;
         }
 
-        // Update user's active account in database (if tracking)
-        // For now, just verify and return success
+        await UserService.setActiveAccountId(userId, account_id);
+
         res.json({ success: true, active_account_id: account_id });
 
     } catch (error) {

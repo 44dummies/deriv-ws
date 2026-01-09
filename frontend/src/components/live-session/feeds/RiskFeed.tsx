@@ -13,14 +13,17 @@ export function RiskFeed() {
             isEmpty={riskEvents.length === 0}
         >
             {riskEvents.map((evt, idx) => (
-                <div key={`${evt.timestamp}-${idx}`} className={`p-4 rounded-md border ${evt.payload.checkPassed ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                <div
+                    key={`${evt.timestamp}-${idx}`}
+                    className={`p-4 rounded-md border ${evt.payload.checkPassed ? 'bg-primary/5 border-primary/20' : 'bg-destructive/5 border-destructive/20'}`}
+                >
                     <div className="flex items-center gap-2 mb-1">
                         {evt.payload.checkPassed ? (
-                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                            <ShieldCheck className="w-4 h-4 text-primary" />
                         ) : (
-                            <AlertCircle className="w-4 h-4 text-red-600" />
+                            <AlertCircle className="w-4 h-4 text-destructive" />
                         )}
-                        <span className={`font-medium ${evt.payload.checkPassed ? 'text-emerald-700' : 'text-red-700'}`}>
+                        <span className="font-medium text-foreground">
                             {evt.payload.checkPassed ? 'Approved' : 'Rejected'}
                         </span>
                     </div>

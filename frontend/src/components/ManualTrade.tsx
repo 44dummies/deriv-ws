@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, X, Loader2, AlertTriangle, CheckCircle2, Wifi } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
+import { fetchWithAuth } from '../lib/api';
 import { useDerivTicks } from '../hooks/useDerivTicks';
 
 interface ManualTradeProps {
@@ -54,13 +55,8 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
         setResult(null);
 
         try {
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            const response = await fetch(`${baseUrl}/api/v1/trades/execute`, {
+            const data = await fetchWithAuth('/trades/execute', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'include',
                 body: JSON.stringify({
                     market,
                     contractType,
@@ -70,15 +66,13 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                 })
             });
 
-            const data = await response.json();
-
-            if (response.ok && data.success) {
+            if (data?.success) {
                 setResult({ success: true, message: data.message, trade: data.trade });
                 if (onTradeExecuted) {
                     onTradeExecuted(data.trade);
                 }
             } else {
-                setResult({ success: false, message: data.error || 'Trade execution failed' });
+                setResult({ success: false, message: data?.error || 'Trade execution failed' });
             }
         } catch (error) {
             setResult({ success: false, message: error instanceof Error ? error.message : 'Network error' });
@@ -124,7 +118,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         </div>
                         <div className="text-right">
                             <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Balance</div>
-                            <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-1">
+                            <div className="font-mono text-foreground font-semibold mt-1 tabular-nums">
                                 {activeAccount?.balance?.toFixed(2) || '0.00'} {activeAccount?.currency || 'USD'}
                             </div>
                         </div>
@@ -152,18 +146,16 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                             </div>
                             {connected && currentTick ? (
                                 <div className="flex items-center gap-2">
-                                    <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                                    <span className="flex items-center gap-1 text-xs text-primary">
                                         <Wifi className="w-3 h-3" />
                                         Live
                                     </span>
                                     <span className={cn(
-                                        "font-mono font-bold text-sm flex items-center",
-                                        currentTick?.trend === 'up' && "text-emerald-600 dark:text-emerald-400",
-                                        currentTick?.trend === 'down' && "text-red-600 dark:text-red-400"
+                                        "font-mono font-semibold text-sm flex items-center tabular-nums text-foreground"
                                     )}>
                                         {currentTick?.quote.toFixed(2)}
-                                        {currentTick?.trend === 'up' && <TrendingUp className="w-3 h-3 ml-1" />}
-                                        {currentTick?.trend === 'down' && <TrendingDown className="w-3 h-3 ml-1" />}
+                                        {currentTick?.trend === 'up' && <TrendingUp className="w-3 h-3 ml-1 text-muted-foreground" />}
+                                        {currentTick?.trend === 'down' && <TrendingDown className="w-3 h-3 ml-1 text-muted-foreground" />}
                                     </span>
                                 </div>
                             ) : (
@@ -179,38 +171,38 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                             <button
                                 onClick={() => setContractType('CALL')}
                                 className={cn(
-                                    "p-4 rounded-xl border-2 transition-all",
+                                    "p-4 rounded-xl border-2 transition-colors duration-150 ease-out",
                                     contractType === 'CALL'
-                                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
-                                        : "border-muted hover:border-emerald-200 dark:hover:border-emerald-900 bg-background"
+                                        ? "border-primary/40 bg-primary/5"
+                                        : "border-border hover:border-primary/20 bg-background"
                                 )}
                             >
                                 <TrendingUp className={cn(
                                     "w-6 h-6 mx-auto mb-2",
-                                    contractType === 'CALL' ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                                    contractType === 'CALL' ? "text-primary" : "text-muted-foreground"
                                 )} />
                                 <div className={cn(
-                                    "font-bold",
-                                    contractType === 'CALL' ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+                                    "font-semibold",
+                                    contractType === 'CALL' ? "text-foreground" : "text-foreground"
                                 )}>Rise</div>
                                 <div className="text-xs text-muted-foreground mt-1">Call Option</div>
                             </button>
                             <button
                                 onClick={() => setContractType('PUT')}
                                 className={cn(
-                                    "p-4 rounded-xl border-2 transition-all",
+                                    "p-4 rounded-xl border-2 transition-colors duration-150 ease-out",
                                     contractType === 'PUT'
-                                        ? "border-red-500 bg-red-50 dark:bg-red-950/20"
-                                        : "border-muted hover:border-red-200 dark:hover:border-red-900 bg-background"
+                                        ? "border-primary/40 bg-primary/5"
+                                        : "border-border hover:border-primary/20 bg-background"
                                 )}
                             >
                                 <TrendingDown className={cn(
                                     "w-6 h-6 mx-auto mb-2",
-                                    contractType === 'PUT' ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+                                    contractType === 'PUT' ? "text-primary" : "text-muted-foreground"
                                 )} />
                                 <div className={cn(
-                                    "font-bold",
-                                    contractType === 'PUT' ? "text-red-600 dark:text-red-400" : "text-foreground"
+                                    "font-semibold",
+                                    contractType === 'PUT' ? "text-foreground" : "text-foreground"
                                 )}>Fall</div>
                                 <div className="text-xs text-muted-foreground mt-1">Put Option</div>
                             </button>
@@ -281,15 +273,15 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         </div>
                     </div>
 
-                    {/* Potential Payout */}
+                    {/* Indicative Payout */}
                     <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-muted-foreground">Potential Payout</span>
-                            <span className="text-xl font-bold">{potentialPayout.toFixed(2)}</span>
+                            <span className="text-sm text-muted-foreground">Indicative payout</span>
+                            <span className="text-xl font-semibold tabular-nums">{potentialPayout.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Potential Profit</span>
-                            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{potentialProfit.toFixed(2)}</span>
+                            <span className="text-sm text-muted-foreground">Indicative profit</span>
+                            <span className="text-lg font-semibold text-primary tabular-nums">+{potentialProfit.toFixed(2)}</span>
                         </div>
                     </div>
 
@@ -298,20 +290,17 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         <div className={cn(
                             "p-4 rounded-xl border flex items-start gap-3",
                             result.success
-                                ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-                                : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+                                ? "bg-primary/5 border-primary/20"
+                                : "bg-destructive/5 border-destructive/20"
                         )}>
                             {result.success ? (
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
                             ) : (
-                                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                                <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                             )}
                             <div className="flex-1">
-                                <div className={cn(
-                                    "font-bold text-sm",
-                                    result.success ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
-                                )}>
-                                    {result.success ? 'Trade Executed!' : 'Execution Failed'}
+                                <div className="font-semibold text-sm text-foreground">
+                                    {result.success ? 'Trade executed' : 'Execution failed'}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">{result.message}</div>
                                 {result.trade && (
@@ -327,14 +316,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                     <button
                         onClick={handleExecute}
                         disabled={isExecuting || !activeAccount}
-                        className={cn(
-                            "w-full py-4 rounded-xl font-bold text-white transition-colors duration-150 ease-out",
-                            "flex items-center justify-center gap-2",
-                            isRise
-                                ? "bg-emerald-600 hover:bg-emerald-700"
-                                : "bg-red-600 hover:bg-red-700",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
-                        )}
+                        className="w-full py-4 rounded-xl font-semibold bg-primary text-primary-foreground transition-colors duration-150 ease-out hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isExecuting ? (
                             <>

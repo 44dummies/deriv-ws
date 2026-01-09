@@ -12,8 +12,8 @@ export function TradeDetailCard({ trade }: TradeDetailCardProps) {
 
     const isProfit = payload.profit >= 0;
     const statusColor = {
-        SUCCESS: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-        FAILED: 'text-red-700 bg-red-50 border-red-200',
+        SUCCESS: 'text-primary bg-primary/10 border-primary/20',
+        FAILED: 'text-destructive bg-destructive/10 border-destructive/20',
         PARTIAL: 'text-muted-foreground bg-muted/50 border-border'
     }[payload.status];
 
@@ -47,7 +47,7 @@ export function TradeDetailCard({ trade }: TradeDetailCardProps) {
                 </div>
 
                 <div className="text-right flex flex-col items-end">
-                    <div className={`font-mono font-semibold ${isProfit ? 'text-emerald-600' : 'text-red-600'}`}>
+                    <div className={`font-mono font-semibold ${isProfit ? 'text-primary' : 'text-muted-foreground'}`}>
                         {payload.profit > 0 ? '+' : ''}{payload.profit.toFixed(2)} USD
                     </div>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground uppercase mt-1">

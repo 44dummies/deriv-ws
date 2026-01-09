@@ -16,12 +16,12 @@ export function SignalDetailCard({ signal }: SignalDetailCardProps) {
         <div className="p-4 rounded-md bg-card border border-border hover:border-primary/30 transition-colors duration-150 ease-out group">
             <div className="flex justify-between items-start mb-3">
                 <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-md ${isCall ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                    <div className={`p-2 rounded-md ${isCall ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground'}`}>
                         {isCall ? <ArrowUpCircle className="w-5 h-5" /> : <ArrowDownCircle className="w-5 h-5" />}
                     </div>
                     <div>
                         <h3 className="font-semibold text-foreground">{payload.market}</h3>
-                        <div className={`text-xs font-semibold px-1.5 py-0.5 rounded inline-block mt-1 ${isCall ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                        <div className={`text-xs font-semibold px-1.5 py-0.5 rounded inline-block mt-1 ${isCall ? 'bg-primary/10 text-primary' : 'bg-muted/50 text-muted-foreground'}`}>
                             {payload.type}
                         </div>
                     </div>
@@ -42,7 +42,7 @@ export function SignalDetailCard({ signal }: SignalDetailCardProps) {
                 {/* Progress Bar */}
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
-                        className={`h-full ${isCall ? 'bg-emerald-500' : 'bg-red-500'}`}
+                        className="h-full bg-primary"
                         style={{ width: `${payload.confidence * 100}%` }}
                     />
                 </div>

@@ -1,6 +1,6 @@
 # TraderMind Docker Compose
 # Development environment configuration
-# NOTE: AI Layer has been removed - Pure Quantitative Trading Engine
+# NOTE: AI layer is optional and not included in this compose file
 
 version: "3.9"
 

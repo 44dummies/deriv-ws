@@ -87,7 +87,9 @@ export default function Statistics() {
             .slice(0, 6);
     }, [trades]);
 
-    const palette = ['#1d4ed8', '#94a3b8', '#64748b', '#cbd5e1', '#e2e8f0', '#475569'];
+    const distributionOpacity = useMemo(() => (
+        distributionData.map((_, index) => Math.max(0.2, 0.85 - index * 0.12))
+    ), [distributionData]);
 
     return (
         <div className="space-y-8">
@@ -192,7 +194,11 @@ export default function Statistics() {
                                         dataKey="value"
                                     >
                                         {distributionData.map((entry, index) => (
-                                            <Cell key={entry.name} fill={palette[index % palette.length]} />
+                                            <Cell
+                                                key={entry.name}
+                                                fill="hsl(var(--primary))"
+                                                fillOpacity={distributionOpacity[index] ?? 0.2}
+                                            />
                                         ))}
                                     </Pie>
                                     <Tooltip

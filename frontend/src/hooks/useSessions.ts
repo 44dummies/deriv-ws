@@ -15,7 +15,16 @@ export function useSessions() {
 export function useActiveSession() {
     return useQuery<Session | null>({
         queryKey: ['session', 'active'],
-        queryFn: () => fetchWithAuth('/sessions/active'),
+        queryFn: async () => {
+            try {
+                return await fetchWithAuth('/sessions/active');
+            } catch (error: any) {
+                if (error?.message?.includes('Not Found') || error?.message?.includes('404')) {
+                    return null;
+                }
+                throw error;
+            }
+        },
         retry: false, // Don't retry if 404
     });
 }

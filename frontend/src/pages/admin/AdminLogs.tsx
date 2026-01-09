@@ -40,7 +40,7 @@ export default function AdminLogs() {
             case 'INFO': return 'text-primary';
             case 'WARN': return 'text-muted-foreground';
             case 'ERROR': return 'text-destructive';
-            case 'SUCCESS': return 'text-emerald-600';
+            case 'SUCCESS': return 'text-primary';
             default: return 'text-muted-foreground';
         }
     };

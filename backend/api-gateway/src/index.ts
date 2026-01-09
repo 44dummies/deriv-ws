@@ -28,6 +28,8 @@ import { csrfProtection, getCsrfToken } from './middleware/csrf.js';
 import { initWebSocketServer, getWebSocketServer } from './services/WebSocketServer.js';
 import { sessionRegistry } from './services/SessionRegistry.js';
 import { Monitoring } from './services/Monitoring.js';
+import { integrateWSWithSessions } from './services/WSIntegration.js';
+import { executionCore } from './services/ExecutionCore.js';
 import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
 // Utils
@@ -58,13 +60,15 @@ if (!process.env.DERIV_TOKEN_KEY) {
     logger.warn('DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
 }
 
-// NOTE: AI Layer has been removed - pure quantitative trading engine active
+// NOTE: AI layer is optional; enable with ENABLE_AI_LAYER=true
 
 const app = express();
 const httpServer = createServer(app);
 
 // Initialize WebSocket Server
 const wsServer = initWebSocketServer(httpServer);
+integrateWSWithSessions();
+void executionCore;
 
 // =============================================================================
 // CORS CONFIGURATION (Explicit, no wildcards in production)

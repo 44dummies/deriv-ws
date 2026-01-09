@@ -15,7 +15,7 @@ function useSummaryStats() {
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            const res = await fetch(`${baseUrl}/api/v1/stats/summary`, { credentials: 'include' });
+            const res = await fetch(`${baseUrl}/api/v1/stats/user-summary`, { credentials: 'include' });
             if (!res.ok) return null;
             return res.json();
         },
@@ -141,11 +141,11 @@ export default function Dashboard() {
                                         <div className="text-sm font-medium">{symbol}</div>
                                         <div className="flex items-center gap-3 text-sm">
                                             <span className="tabular-nums">{tick ? tick.quote.toFixed(2) : '—'}</span>
-                                            <span className={isUp ? 'text-emerald-600' : isDown ? 'text-red-600' : 'text-muted-foreground'}>
+                                            <span className={isUp ? 'text-primary' : 'text-muted-foreground'}>
                                                 {tick ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—'}
                                             </span>
-                                            {isUp && <TrendingUp className="w-4 h-4 text-emerald-600" />}
-                                            {isDown && <TrendingDown className="w-4 h-4 text-red-600" />}
+                                            {isUp && <TrendingUp className="w-4 h-4 text-primary" />}
+                                            {isDown && <TrendingDown className="w-4 h-4 text-muted-foreground" />}
                                         </div>
                                     </div>
                                 );

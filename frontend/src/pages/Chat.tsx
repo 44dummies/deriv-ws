@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
 import { Send, Bot, User as UserIcon, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
+import { fetchWithAuth } from '../lib/api';
 
 interface Message {
     id: string;
@@ -48,17 +49,14 @@ export function Chat() {
         try {
             const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user.active_account_id);
 
-            const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL}/api/v1/chat`, {
+            const data = await fetchWithAuth('/chat', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: userMsg.content,
                     role: user?.role === 'ADMIN' ? 'ADMIN' : 'USER',
                     context: `User ID: ${user?.id} | Balance: ${activeAccount?.balance || 0} ${activeAccount?.currency || 'USD'}`
                 })
             });
-
-            const data = await response.json();
 
             const botMsg: Message = {
                 id: (Date.now() + 1).toString(),

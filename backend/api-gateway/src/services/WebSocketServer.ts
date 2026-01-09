@@ -52,6 +52,7 @@ export class WebSocketServer {
             cors: {
                 origin: process.env['FRONTEND_URL'] ?? 'http://localhost:5173',
                 methods: ['GET', 'POST'],
+                credentials: true,
             },
         });
 
@@ -69,7 +70,10 @@ export class WebSocketServer {
         // Authentication middleware with proper JWT validation
         // SECURITY: No guest connections allowed - all clients must authenticate
         this.io.use(async (socket: AuthSocket, next) => {
-            const token = socket.handshake.auth['token'] as string | undefined;
+            const authToken = socket.handshake.auth['token'] as string | undefined;
+            const cookieHeader = socket.handshake.headers.cookie;
+            const cookieToken = cookieHeader ? parseCookie(cookieHeader)['session'] : undefined;
+            const token = authToken || cookieToken;
 
             if (!token) {
                 // SECURITY: Reject unauthenticated connections
@@ -368,6 +372,16 @@ export class WebSocketServer {
     getIO(): SocketIOServer {
         return this.io;
     }
+}
+
+function parseCookie(cookieHeader: string): Record<string, string> {
+    const cookies: Record<string, string> = {};
+    cookieHeader.split(';').forEach((cookie) => {
+        const [name, ...rest] = cookie.split('=');
+        if (!name) return;
+        cookies[name.trim()] = rest.join('=').trim();
+    });
+    return cookies;
 }
 
 // Singleton holder (initialized in index.ts)
