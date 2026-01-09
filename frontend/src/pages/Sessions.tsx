@@ -10,8 +10,7 @@ const API_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000';
 
 export default function Sessions() {
     const [filter, setFilter] = useState('ALL');
-    const { isAdmin, user, session } = useAuthStore();
-    const token = session?.access_token;
+    const { isAdmin, user } = useAuthStore();
     const queryClient = useQueryClient();
 
     // Fetch Sessions
@@ -19,12 +18,11 @@ export default function Sessions() {
         queryKey: ['sessions'],
         queryFn: async () => {
             const res = await fetch(`${API_URL}/api/v1/sessions`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                credentials: 'include'
             });
             if (!res.ok) throw new Error('Failed to fetch sessions');
             return res.json();
         },
-        enabled: !!token,
         refetchInterval: 5000
     });
 
@@ -36,9 +34,9 @@ export default function Sessions() {
         const res = await fetch(`${API_URL}/api/v1/sessions/${path}`, {
             method,
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: body ? JSON.stringify(body) : null
         });
         if (!res.ok) {
@@ -115,15 +113,15 @@ export default function Sessions() {
                         {/* Controls - Show if admin OR if user owns the session */}
                         {(isAdmin || activeSession.admin_id === user?.id) ? (
                             <div className="flex gap-3">
-                                <button 
-                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'pause' })} 
+                                <button
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'pause' })}
                                     className="p-3 bg-surface hover:bg-yellow-500/10 border border-white/5 hover:border-yellow-500/50 rounded-xl text-yellow-500 transition-all"
                                     title="Pause Session"
                                 >
                                     <Pause className="w-5 h-5" />
                                 </button>
-                                <button 
-                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })} 
+                                <button
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })}
                                     className="p-3 bg-surface hover:bg-red-500/10 border border-white/5 hover:border-red-500/50 rounded-xl text-red-500 transition-all"
                                     title="Stop Session"
                                 >

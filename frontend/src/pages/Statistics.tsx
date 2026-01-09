@@ -5,15 +5,15 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../stores/useAuthStore';
+
 import { useThemeStore } from '../stores/useThemeStore';
-import { 
+import {
     AreaChart, Area, PieChart, Pie, Cell,
-    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { 
-    TrendingUp, Target, Loader2, Activity, 
-    DollarSign, BarChart3, PieChart as PieChartIcon, Zap, RefreshCw, 
+import {
+    TrendingUp, Target, Loader2, Activity,
+    DollarSign, BarChart3, PieChart as PieChartIcon, Zap, RefreshCw,
     ArrowUpRight, ArrowDownRight, Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -24,42 +24,34 @@ import { cn } from '../lib/utils';
 // =============================================================================
 
 function useRealStats() {
-    const { session } = useAuthStore();
     return useQuery({
         queryKey: ['detailed-stats'],
         queryFn: async () => {
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             const res = await fetch(`${baseUrl}/api/v1/stats/summary`, {
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`
-                }
+                credentials: 'include'
             });
             if (!res.ok) return null;
             return res.json();
         },
         staleTime: 30000,
-        refetchInterval: 30000,
-        enabled: !!session?.access_token
+        refetchInterval: 30000
     });
 }
 
 function useTradingHistory() {
-    const { session } = useAuthStore();
     return useQuery({
         queryKey: ['trading-history'],
         queryFn: async () => {
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             const res = await fetch(`${baseUrl}/api/v1/trades?limit=100`, {
-                headers: {
-                    'Authorization': `Bearer ${session?.access_token}`
-                }
+                credentials: 'include'
             });
             if (!res.ok) return { trades: [] };
             return res.json();
         },
         staleTime: 15000,
-        refetchInterval: 15000,
-        enabled: !!session?.access_token
+        refetchInterval: 15000
     });
 }
 
@@ -75,7 +67,7 @@ function GlassCard({ children, className }: { children: React.ReactNode; classNa
             animate={{ opacity: 1, y: 0 }}
             className={cn(
                 "rounded-2xl border overflow-hidden",
-                isDarkMode 
+                isDarkMode
                     ? "bg-gray-900/50 backdrop-blur-xl border-white/10"
                     : "bg-white/80 backdrop-blur-xl border-black/5",
                 className
@@ -95,7 +87,7 @@ function StatCard({ title, value, subtitle, icon: Icon, trend, color }: {
     color: string;
 }) {
     const { isDarkMode } = useThemeStore();
-    
+
     const colorStyles: Record<string, { bg: string; icon: string; text: string }> = {
         blue: { bg: 'from-blue-500/20 to-blue-600/10', icon: 'bg-blue-500', text: 'text-blue-400' },
         emerald: { bg: 'from-emerald-500/20 to-emerald-600/10', icon: 'bg-emerald-500', text: 'text-emerald-400' },
@@ -150,7 +142,7 @@ export default function Statistics() {
     const { isDarkMode } = useThemeStore();
     const { refetch: refetchStats } = useRealStats();
     const { data: tradesData, isLoading: tradesLoading } = useTradingHistory();
-    
+
     const trades = tradesData?.trades || [];
     const isLoading = tradesLoading;
 
@@ -172,11 +164,11 @@ export default function Statistics() {
 
         const wins = trades.filter((t: any) => t.status === 'WIN' || (t.pnl && t.pnl > 0));
         const losses = trades.filter((t: any) => t.status === 'LOSS' || (t.pnl && t.pnl < 0));
-        
+
         const totalProfit = trades.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
         const totalWins = wins.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0);
         const totalLosses = Math.abs(losses.reduce((sum: number, t: any) => sum + (t.pnl || 0), 0));
-        
+
         const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
         const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
         const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
@@ -219,7 +211,7 @@ export default function Statistics() {
         // Group by day
         const grouped: Record<string, { profit: number; trades: number; wins: number }> = {};
         trades.forEach((trade: any) => {
-            const date = new Date(trade.created_at || trade.executed_at).toLocaleDateString('en-US', { 
+            const date = new Date(trade.created_at || trade.executed_at).toLocaleDateString('en-US', {
                 weekday: 'short'
             });
             if (!grouped[date]) {
@@ -298,7 +290,7 @@ export default function Statistics() {
                     onClick={() => refetchStats()}
                     className={cn(
                         "flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all",
-                        isDarkMode 
+                        isDarkMode
                             ? "bg-white/5 border-white/10 hover:bg-white/10"
                             : "bg-gray-100 border-black/5 hover:bg-gray-200"
                     )}
@@ -408,20 +400,20 @@ export default function Statistics() {
                                             <stop offset="100%" stopColor="#3B82F6" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid 
-                                        strokeDasharray="3 3" 
-                                        stroke={isDarkMode ? "#1F2937" : "#E5E7EB"} 
-                                        vertical={false} 
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        stroke={isDarkMode ? "#1F2937" : "#E5E7EB"}
+                                        vertical={false}
                                     />
-                                    <XAxis 
-                                        dataKey="day" 
-                                        stroke={isDarkMode ? "#6B7280" : "#9CA3AF"} 
+                                    <XAxis
+                                        dataKey="day"
+                                        stroke={isDarkMode ? "#6B7280" : "#9CA3AF"}
                                         fontSize={12}
                                         tickLine={false}
                                         axisLine={false}
                                     />
-                                    <YAxis 
-                                        stroke={isDarkMode ? "#6B7280" : "#9CA3AF"} 
+                                    <YAxis
+                                        stroke={isDarkMode ? "#6B7280" : "#9CA3AF"}
                                         fontSize={12}
                                         tickLine={false}
                                         axisLine={false}
@@ -507,8 +499,8 @@ export default function Statistics() {
                                 {marketDistribution.map((market) => (
                                     <div key={market.name} className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div 
-                                                className="w-3 h-3 rounded-full" 
+                                            <div
+                                                className="w-3 h-3 rounded-full"
                                                 style={{ backgroundColor: market.color }}
                                             />
                                             <span className={cn(
@@ -565,12 +557,12 @@ export default function Statistics() {
                             </thead>
                             <tbody>
                                 {trades.slice(0, 10).map((trade: any, idx: number) => (
-                                    <tr 
-                                        key={trade.id || idx} 
+                                    <tr
+                                        key={trade.id || idx}
                                         className={cn(
                                             "border-b transition-colors",
-                                            isDarkMode 
-                                                ? "border-white/5 hover:bg-white/5" 
+                                            isDarkMode
+                                                ? "border-white/5 hover:bg-white/5"
                                                 : "border-black/5 hover:bg-gray-50"
                                         )}
                                     >
@@ -611,7 +603,7 @@ export default function Statistics() {
                                         <td className="py-3 px-4 text-center">
                                             <span className={cn(
                                                 "px-2 py-1 rounded-full text-xs font-bold",
-                                                trade.status === 'WIN' 
+                                                trade.status === 'WIN'
                                                     ? "bg-emerald-500/20 text-emerald-400"
                                                     : trade.status === 'LOSS'
                                                         ? "bg-red-500/20 text-red-400"
