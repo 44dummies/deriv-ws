@@ -20,8 +20,8 @@ export default function AdminLogs() {
                 const data = await res.json();
                 setLogs(data);
             }
-        } catch (e) {
-            console.error("Log fetch failed");
+        } catch {
+            // Log fetch failed - handled silently to avoid console noise
         }
     };
 

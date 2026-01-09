@@ -2,6 +2,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { quantEngine } from "./QuantEngine.js";
 import { AIInferenceResponse } from "./AIServiceClient.js";
+import { logger } from '../utils/logger.js';
 
 // Initialize Admin Client (Bypass RLS for system logging)
 const getSupabaseAdmin = () => {
@@ -9,7 +10,7 @@ const getSupabaseAdmin = () => {
     const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
     if (!supabaseUrl || !supabaseServiceKey) {
-        console.warn('[ShadowLogger] Missing Supabase credentials. Shadow signals will NOT be persisted.');
+        logger.warn('[ShadowLogger] Missing Supabase credentials. Shadow signals will NOT be persisted.');
         return null;
     }
 
@@ -23,7 +24,7 @@ const getSupabaseAdmin = () => {
 
 export class ShadowLogger {
     constructor() {
-        console.log('[ShadowLogger] Initialized');
+        logger.info('[ShadowLogger] Initialized');
         this.setupListeners();
     }
 
@@ -56,10 +57,10 @@ export class ShadowLogger {
                 });
 
             if (error) {
-                console.error(`[ShadowLogger] Failed to log signal (${modelId}): ${error.message}`);
+                logger.error(`[ShadowLogger] Failed to log signal (${modelId}): ${error.message}`);
             }
         } catch (err) {
-            console.error('[ShadowLogger] Unexpected error:', err);
+            logger.error('[ShadowLogger] Unexpected error:', err);
         }
     }
 }

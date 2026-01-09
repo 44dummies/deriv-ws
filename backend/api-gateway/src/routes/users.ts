@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -26,7 +27,7 @@ router.get('/', async (_req: Request, res: Response) => {
 
         res.json(users || []);
     } catch (error) {
-        console.error('[Users] Fetch error:', error);
+        logger.error('Users fetch error', { error });
         res.status(500).json({ error: 'Failed to fetch users' });
     }
 });

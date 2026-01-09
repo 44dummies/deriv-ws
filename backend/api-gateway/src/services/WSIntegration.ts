@@ -8,6 +8,7 @@ import { EventEmitter } from 'eventemitter3';
 import { marketDataService } from './MarketDataService.js';
 import { sessionRegistry } from './SessionRegistry.js';
 import { derivWSClient } from './DerivWSClient.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -37,11 +38,11 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
         if (this.isIntegrated) return;
         this.isIntegrated = true;
 
-        console.log('[SafetyLayer] Initializing circuit breaker integration');
+        logger.info('Initializing circuit breaker integration', { service: 'SafetyLayer' });
 
         // Heartbeat failed → pause sessions
         marketDataService.on('heartbeat_failed', (market: string) => {
-            console.warn(`[SafetyLayer] ⚠️ Heartbeat failed for ${market}`);
+            logger.warn('Heartbeat failed', { service: 'SafetyLayer', market });
             const paused = sessionRegistry.pauseSessionsByMarket(market);
 
             for (const sessionId of paused) {
@@ -49,18 +50,18 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
             }
 
             if (paused.length > 0) {
-                console.log(`[SafetyLayer] Paused ${paused.length} sessions: ${paused.join(', ')}`);
+                logger.info('Paused sessions due to heartbeat failure', { service: 'SafetyLayer', count: paused.length, sessions: paused });
             }
         });
 
         // Market resumed → resume sessions (if circuit breaker not active)
         marketDataService.on('market_resumed', (market: string) => {
             if (this.circuitBreakerActive) {
-                console.log(`[SafetyLayer] Market ${market} resumed but circuit breaker active - not resuming sessions`);
+                logger.info('Market resumed but circuit breaker active - not resuming sessions', { service: 'SafetyLayer', market });
                 return;
             }
 
-            console.log(`[SafetyLayer] ✅ Market resumed: ${market}`);
+            logger.info('Market resumed', { service: 'SafetyLayer', market });
             const resumed = sessionRegistry.resumeSessionsByMarket(market);
 
             for (const sessionId of resumed) {
@@ -68,7 +69,7 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
             }
 
             if (resumed.length > 0) {
-                console.log(`[SafetyLayer] Resumed ${resumed.length} sessions: ${resumed.join(', ')}`);
+                logger.info('Resumed sessions after market resumed', { service: 'SafetyLayer', count: resumed.length, sessions: resumed });
             }
         });
 
@@ -79,7 +80,7 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
 
         // Connection restored after circuit breaker
         derivWSClient.on('connected', () => {
-            console.log('[SafetyLayer] ✅ WebSocket connected');
+            logger.info('WebSocket connected', { service: 'SafetyLayer' });
 
             // Check if we need to reset circuit breaker
             if (this.circuitBreakerActive && !derivWSClient.isCircuitOpen()) {
@@ -88,17 +89,17 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
         });
 
         derivWSClient.on('disconnected', (reason: string) => {
-            console.warn(`[SafetyLayer] ⚠️ WebSocket disconnected: ${reason}`);
+            logger.warn('WebSocket disconnected', { service: 'SafetyLayer', reason });
         });
 
-        console.log('[SafetyLayer] Integration complete');
+        logger.info('Integration complete', { service: 'SafetyLayer' });
     }
 
     private handleCircuitBreakerTriggered(reason: string): void {
         this.circuitBreakerActive = true;
         this.pausedByCircuitBreaker.clear();
 
-        console.error(`[SafetyLayer] 🔴 CIRCUIT BREAKER TRIGGERED: ${reason}`);
+        logger.error('CIRCUIT BREAKER TRIGGERED', { service: 'SafetyLayer', reason });
 
         const allSessions = sessionRegistry.listSessions();
         let pausedCount = 0;
@@ -111,19 +112,19 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
                     pausedCount++;
                     this.emit('session_paused', session.id, `circuit_breaker:${reason}`);
                 } catch (err) {
-                    console.error(`[SafetyLayer] Failed to pause session ${session.id}:`, err);
+                    logger.error('Failed to pause session', { service: 'SafetyLayer', sessionId: session.id }, err instanceof Error ? err : undefined);
                 }
             }
         }
 
-        console.warn(`[SafetyLayer] Paused ${pausedCount} sessions due to circuit breaker`);
+        logger.warn('Paused sessions due to circuit breaker', { service: 'SafetyLayer', count: pausedCount });
         this.emit('circuit_breaker_triggered', reason, pausedCount);
     }
 
     private handleCircuitBreakerReset(): void {
         if (!this.circuitBreakerActive) return;
 
-        console.log('[SafetyLayer] 🟢 CIRCUIT BREAKER RESET - attempting to resume sessions');
+        logger.info('CIRCUIT BREAKER RESET - attempting to resume sessions', { service: 'SafetyLayer' });
 
         let resumedCount = 0;
 
@@ -137,7 +138,7 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
                     resumedCount++;
                     this.emit('session_resumed', sessionId);
                 } catch (err) {
-                    console.error(`[SafetyLayer] Failed to resume session ${sessionId}:`, err);
+                    logger.error('Failed to resume session', { service: 'SafetyLayer', sessionId }, err instanceof Error ? err : undefined);
                 }
             }
         }
@@ -145,13 +146,13 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
         this.pausedByCircuitBreaker.clear();
         this.circuitBreakerActive = false;
 
-        console.log(`[SafetyLayer] Resumed ${resumedCount} sessions after circuit breaker reset`);
+        logger.info('Resumed sessions after circuit breaker reset', { service: 'SafetyLayer', count: resumedCount });
         this.emit('circuit_breaker_reset', resumedCount);
     }
 
     // Manual circuit breaker reset (for admin use)
     forceResetCircuitBreaker(): number {
-        console.log('[SafetyLayer] Manual circuit breaker reset requested');
+        logger.info('Manual circuit breaker reset requested', { service: 'SafetyLayer' });
         derivWSClient.resetCircuitBreaker();
         this.handleCircuitBreakerReset();
         return this.pausedByCircuitBreaker.size;

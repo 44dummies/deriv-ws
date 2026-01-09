@@ -3,6 +3,8 @@
  * In-memory session state management with type-safe immutable updates
  */
 
+import { logger } from '../utils/logger.js';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -78,7 +80,7 @@ export class SessionRegistry {
         };
 
         this.sessions.set(id, session);
-        console.log(`[SessionRegistry] Created session: ${id}`);
+        logger.info('Created session', { sessionId: id });
         return this.cloneSession(session);
     }
 
@@ -112,7 +114,7 @@ export class SessionRegistry {
         };
 
         this.sessions.set(sessionId, updated);
-        console.log(`[SessionRegistry] Session ${sessionId} status: ${session.status} -> ${status}`);
+        logger.info('Session status changed', { sessionId, from: session.status, to: status });
         return this.cloneSession(updated);
     }
 
@@ -151,7 +153,7 @@ export class SessionRegistry {
         }
 
         this.sessions.delete(sessionId);
-        console.log(`[SessionRegistry] Deleted session: ${sessionId}`);
+        logger.info('Deleted session', { sessionId });
         return true;
     }
 
@@ -200,7 +202,7 @@ export class SessionRegistry {
         }
         this.userSessions.get(userId)!.add(sessionId);
 
-        console.log(`[SessionRegistry] User ${userId} joined session ${sessionId}`);
+        logger.info('User joined session', { userId, sessionId });
         return { ...participant };
     }
 
@@ -229,7 +231,7 @@ export class SessionRegistry {
         // Update user's sessions
         this.userSessions.get(userId)?.delete(sessionId);
 
-        console.log(`[SessionRegistry] User ${userId} removed from session ${sessionId}`);
+        logger.info('User removed from session', { userId, sessionId });
         return true;
     }
 
@@ -292,13 +294,13 @@ export class SessionRegistry {
      * Recover state from database
      */
     async recoverStateFromDB(): Promise<number> {
-        console.log('[SessionRegistry] Recovering state from database...');
+        logger.info('Recovering state from database...');
 
         const supabaseUrl = process.env['SUPABASE_URL'];
         const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
         if (!supabaseUrl || !supabaseKey) {
-            console.warn('[SessionRegistry] Missing Supabase credentials. Skipping recovery.');
+            logger.warn('Missing Supabase credentials. Skipping recovery.');
             return 0;
         }
 
@@ -312,12 +314,12 @@ export class SessionRegistry {
             .in('status', ['ACTIVE', 'RUNNING', 'PAUSED']);
 
         if (error) {
-            console.error('[SessionRegistry] Failed to fetch active sessions:', error);
+            logger.error('Failed to fetch active sessions', { error });
             return 0;
         }
 
         if (!activeSessions || activeSessions.length === 0) {
-            console.log('[SessionRegistry] No active sessions found in DB.');
+            logger.info('No active sessions found in DB.');
             return 0;
         }
 
@@ -333,7 +335,7 @@ export class SessionRegistry {
                     .neq('status', 'REMOVED'); // Don't recover removed users
 
                 if (partError) {
-                    console.error(`[SessionRegistry] Failed to fetch participants for ${dbSession.id}`, partError);
+                    logger.error('Failed to fetch participants', { sessionId: dbSession.id, error: partError });
                     continue;
                 }
 
@@ -366,10 +368,10 @@ export class SessionRegistry {
 
                 this.sessions.set(dbSession.id, sessionState);
                 recoveredCount++;
-                console.log(`[SessionRegistry] Recovered session ${dbSession.id} with ${participantMap.size} participants.`);
+                logger.info('Recovered session', { sessionId: dbSession.id, participantCount: participantMap.size });
 
             } catch (err) {
-                console.error(`[SessionRegistry] Error recovering session ${dbSession.id}:`, err);
+                logger.error('Error recovering session', { sessionId: dbSession.id }, err instanceof Error ? err : undefined);
             }
         }
 
@@ -440,9 +442,9 @@ export class SessionRegistry {
                     try {
                         this.updateSessionStatus(sessionId, 'PAUSED');
                         pausedSessions.push(sessionId);
-                        console.log(`[SessionRegistry] Paused session ${sessionId} due to ${market} disconnect`);
+                        logger.info('Paused session due to market disconnect', { sessionId, market });
                     } catch (err) {
-                        console.error(`[SessionRegistry] Failed to pause session ${sessionId}:`, err);
+                        logger.error('Failed to pause session', { sessionId }, err instanceof Error ? err : undefined);
                     }
                 }
             }
@@ -467,9 +469,9 @@ export class SessionRegistry {
                 try {
                     this.updateSessionStatus(sessionId, 'RUNNING');
                     resumedSessions.push(sessionId);
-                    console.log(`[SessionRegistry] Resumed session ${sessionId} after ${market} reconnect`);
+                    logger.info('Resumed session after market reconnect', { sessionId, market });
                 } catch (err) {
-                    console.error(`[SessionRegistry] Failed to resume session ${sessionId}:`, err);
+                    logger.error('Failed to resume session', { sessionId }, err instanceof Error ? err : undefined);
                 }
             }
         }
@@ -510,7 +512,7 @@ export class SessionRegistry {
     clear(): void {
         this.sessions.clear();
         this.userSessions.clear();
-        console.log('[SessionRegistry] Cleared all sessions');
+        logger.info('Cleared all sessions');
     }
 }
 

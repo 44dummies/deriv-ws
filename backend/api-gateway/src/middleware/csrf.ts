@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { randomBytes, createHmac } from 'crypto';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -63,7 +64,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     const secret = process.env.SESSION_SECRET;
     
     if (!secret) {
-        console.error('[CSRF] SESSION_SECRET not configured, CSRF protection disabled');
+        logger.error('CSRF SESSION_SECRET not configured, CSRF protection disabled');
         return next();
     }
     

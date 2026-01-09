@@ -60,9 +60,9 @@ export function useDerivTicks({ symbols, enabled = true }: UseDerivTicksOptions)
 
             // Subscribe to each symbol
             symbols.forEach(symbol => {
-                ws.send(JSON.stringify({ 
-                    ticks: symbol, 
-                    subscribe: 1 
+                ws.send(JSON.stringify({
+                    ticks: symbol,
+                    subscribe: 1
                 }));
             });
 
@@ -158,5 +158,5 @@ export function useDerivTicks({ symbols, enabled = true }: UseDerivTicksOptions)
 // Default markets for TraderMind
 export const TRADERMIND_MARKETS = [
     'R_100', 'R_75', 'R_50', 'R_25', 'R_10',  // Volatility indices
-    'JD_100', 'JD_75', 'JD_50', 'JD_25', 'JD_10'  // Jump indices
+    'JD100', 'JD75', 'JD50', 'JD25', 'JD10'  // Jump indices
 ];

@@ -5,6 +5,7 @@
 
 import WebSocket from 'ws';
 import { EventEmitter } from 'eventemitter3';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -58,7 +59,16 @@ type DerivWSEvents = {
 // =============================================================================
 
 const DERIV_WS_URL = 'wss://ws.binaryws.com/websockets/v3';
-const DERIV_APP_ID = process.env['DERIV_APP_ID'] ?? '114042'; // Partner App ID
+
+// SECURITY: No fallback - App ID must be explicitly configured
+function getDerivAppId(): string {
+    const appId = process.env['DERIV_APP_ID'];
+    if (!appId) {
+        throw new Error('FATAL: DERIV_APP_ID environment variable is required. Get one from https://api.deriv.com/apps');
+    }
+    return appId;
+}
+
 const HEARTBEAT_INTERVAL = 10000;
 const HEARTBEAT_TIMEOUT = 15000;
 const RECONNECT_BASE_DELAY = 1000;
@@ -115,25 +125,25 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
 
     constructor() {
         super();
-        console.log('[DerivWSClient] Initialized');
+        logger.info('Initialized', { service: 'DerivWSClient' });
     }
 
     connect(): void {
         if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-            console.log('[DerivWSClient] Already connected or connecting');
+            logger.info('Already connected or connecting', { service: 'DerivWSClient' });
             return;
         }
 
         if (this.circuitOpen) {
-            console.log('[DerivWSClient] Circuit breaker is open, cannot connect');
+            logger.warn('Circuit breaker is open, cannot connect', { service: 'DerivWSClient' });
             return;
         }
 
         this.isConnecting = true;
         this.shouldReconnect = true;
-        const url = `${DERIV_WS_URL}?app_id=${DERIV_APP_ID}`;
+        const url = `${DERIV_WS_URL}?app_id=${getDerivAppId()}`;
 
-        console.log(`[DerivWSClient] Connecting to ${url}`);
+        logger.info('Connecting to Deriv WebSocket', { service: 'DerivWSClient', url });
         this.ws = new WebSocket(url);
 
         this.ws.on('open', () => this.handleOpen());
@@ -158,7 +168,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             req.reject(new Error('Disconnected'));
         });
         this.pendingRequests.clear();
-        console.log('[DerivWSClient] Disconnected');
+        logger.info('Disconnected', { service: 'DerivWSClient' });
     }
 
     // --- Settlement Monitoring ---
@@ -166,7 +176,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     async monitorContract(contractId: number | string): Promise<void> {
         if (!this.isConnected()) throw new Error('Not connected');
 
-        console.log(`[DerivWSClient] Monitoring contract: ${contractId}`);
+        logger.info('Monitoring contract', { service: 'DerivWSClient', contractId });
 
         // Subscribe to proposal_open_contract
         const payload = {
@@ -186,13 +196,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         try {
             const response = await this.sendRequest({ authorize: token });
             if (response.error) {
-                console.error('[DerivWSClient] Auth failed:', response.error);
+                logger.error('Auth failed', { service: 'DerivWSClient', error: response.error });
                 return null;
             }
-            console.log('[DerivWSClient] Authorized successfully');
+            logger.info('Authorized successfully', { service: 'DerivWSClient' });
             return response.authorize;
         } catch (err) {
-            console.error('[DerivWSClient] Auth error:', err);
+            logger.error('Auth error', { service: 'DerivWSClient' }, err instanceof Error ? err : undefined);
             return null;
         }
     }
@@ -231,14 +241,14 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             currency: parameters.currency
         };
 
-        console.log('[DerivWSClient] Getting proposal:', JSON.stringify(payload));
+        logger.info('Getting proposal', { service: 'DerivWSClient', payload });
 
         try {
             const response = await this.sendRequest(payload);
 
             if (response.error) {
                 const code = this.mapErrorCode(response.error.code);
-                console.error(`[DerivWSClient] Proposal failed: ${code} - ${response.error.message}`);
+                logger.error('Proposal failed', { service: 'DerivWSClient', code, message: response.error.message });
                 throw new Error(`${code}: ${response.error.message}`);
             }
 
@@ -274,7 +284,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
 
         // Step 1: Get proposal first (required by Deriv API)
         const proposal = await this.getProposal(parameters);
-        console.log(`[DerivWSClient] Got proposal: ${proposal.proposal_id} @ ${proposal.ask_price}`);
+        logger.info('Got proposal', { service: 'DerivWSClient', proposalId: proposal.proposal_id, askPrice: proposal.ask_price });
 
         // Step 2: Buy using proposal_id
         const buyPayload = {
@@ -287,7 +297,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
 
             if (response.error) {
                 const code = this.mapErrorCode(response.error.code);
-                console.error(`[DerivWSClient] Buy failed: ${code} - ${response.error.message}`);
+                logger.error('Buy failed', { service: 'DerivWSClient', code, message: response.error.message });
                 throw new Error(`${code}: ${response.error.message}`);
             }
 
@@ -311,13 +321,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         if (!this.isConnected()) throw new Error('Not connected');
 
         const payload = { sell: contractId, price };
-        console.log(`[DerivWSClient] Selling contract ${contractId} at ${price}`);
+        logger.info('Selling contract', { service: 'DerivWSClient', contractId, price });
 
         try {
             const response = await this.sendRequest(payload);
             if (response.error) {
                 const code = this.mapErrorCode(response.error.code);
-                console.error(`[DerivWSClient] Sell failed: ${code} - ${response.error.message}`);
+                logger.error('Sell failed', { service: 'DerivWSClient', code, message: response.error.message });
                 throw new Error(`${code}: ${response.error.message}`);
             }
             return response.sell;
@@ -330,13 +340,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         if (!this.isConnected()) throw new Error('Not connected');
 
         const payload = { cancel: contractId };
-        console.log(`[DerivWSClient] Cancelling contract ${contractId}`);
+        logger.info('Cancelling contract', { service: 'DerivWSClient', contractId });
 
         try {
             const response = await this.sendRequest(payload);
             if (response.error) {
                 const code = this.mapErrorCode(response.error.code);
-                console.error(`[DerivWSClient] Cancel failed: ${code} - ${response.error.message}`);
+                logger.error('Cancel failed', { service: 'DerivWSClient', code, message: response.error.message });
                 throw new Error(`${code}: ${response.error.message}`);
             }
             return response.cancel;
@@ -367,7 +377,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             this.pendingRequests.set(reqId, { resolve, reject, timeout });
             const logPayload = { ...request };
             if (logPayload.authorize) logPayload.authorize = '***';
-            console.log('[DerivWSClient] TX:', JSON.stringify(logPayload));
+            logger.debug('TX', { service: 'DerivWSClient', payload: logPayload });
             this.ws.send(JSON.stringify(request));
         });
     }
@@ -388,7 +398,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.isConnecting = false;
         this.reconnectAttempts = 0;
         this.failureTimestamps = [];
-        console.log('[DerivWSClient] Connected');
+        logger.info('Connected', { service: 'DerivWSClient' });
         this.emit('connected');
         this.startHeartbeat();
         // Resubscribe logic is handled by caller or we can iterate subscriptions here if needed, 
@@ -402,7 +412,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     private handleClose(code: number, reason: Buffer): void {
         this.isConnecting = false;
         this.stopHeartbeat();
-        console.log(`[DerivWSClient] Disconnected: ${code} ${reason.toString()}`);
+        logger.info('Disconnected', { service: 'DerivWSClient', code, reason: reason.toString() });
         this.emit('disconnected', reason.toString());
 
         // Reject all pending
@@ -419,7 +429,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     }
 
     private handleError(error: Error): void {
-        console.error('[DerivWSClient] WebSocket error:', error.message);
+        logger.error('WebSocket error', { service: 'DerivWSClient' }, error);
         this.emit('error', error);
     }
 
@@ -427,7 +437,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         if (this.circuitOpen) return;
         const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, this.reconnectAttempts), RECONNECT_MAX_DELAY);
         this.reconnectAttempts++;
-        console.log(`[DerivWSClient] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        logger.info('Reconnecting', { service: 'DerivWSClient', delay, attempt: this.reconnectAttempts });
         setTimeout(() => {
             if (this.shouldReconnect && !this.circuitOpen) this.connect();
         }, delay);
@@ -451,7 +461,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.lastPingSent = Date.now();
         this.ws.send(JSON.stringify({ ping: 1 }));
         this.heartbeatTimeoutTimer = setTimeout(() => {
-            console.log('[DerivWSClient] Heartbeat timeout, reconnecting');
+            logger.warn('Heartbeat timeout, reconnecting', { service: 'DerivWSClient' });
             this.ws?.close(4000, 'Heartbeat timeout');
         }, HEARTBEAT_TIMEOUT);
     }
@@ -472,7 +482,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.circuitOpen = true;
         this.shouldReconnect = false;
         const reason = `${CIRCUIT_BREAKER_THRESHOLD} failures in ${CIRCUIT_BREAKER_WINDOW / 1000}s`;
-        console.log(`[DerivWSClient] Circuit breaker tripped: ${reason}`);
+        logger.warn('Circuit breaker tripped', { service: 'DerivWSClient', reason });
         this.emit('circuitBreaker', reason);
         setTimeout(() => this.resetCircuitBreaker(), CIRCUIT_BREAKER_WINDOW);
     }
@@ -481,7 +491,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         this.circuitOpen = false;
         this.failureTimestamps = [];
         this.reconnectAttempts = 0;
-        console.log('[DerivWSClient] Circuit breaker reset');
+        logger.info('Circuit breaker reset', { service: 'DerivWSClient' });
     }
 
     isCircuitOpen(): boolean { return this.circuitOpen; }
@@ -490,12 +500,12 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         if (this.subscriptions.has(market) && this.subscriptions.get(market)?.isActive) return;
         this.subscriptions.set(market, { market, subscriptionId: null, isActive: false, lastTickEpoch: 0 });
         if (this.ws?.readyState !== WebSocket.OPEN) {
-            console.log(`[DerivWSClient] Queued subscription: ${market}`);
+            logger.info('Queued subscription', { service: 'DerivWSClient', market });
             return;
         }
         // Subscriptions usually don't need req_id correlation for ticks, but good practice.
         this.ws.send(JSON.stringify({ ticks: market, subscribe: 1 }));
-        console.log(`[DerivWSClient] Subscribing to: ${market}`);
+        logger.info('Subscribing to market', { service: 'DerivWSClient', market });
     }
 
     unsubscribe(market: string): void {
@@ -505,7 +515,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             this.ws.send(JSON.stringify({ forget: sub.subscriptionId }));
         }
         this.subscriptions.delete(market);
-        console.log(`[DerivWSClient] Unsubscribed from: ${market}`);
+        logger.info('Unsubscribed from market', { service: 'DerivWSClient', market });
         this.emit('unsubscribed', market);
     }
 
@@ -517,7 +527,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         try {
             const message = JSON.parse(raw) as any;
             if (message.error) {
-                console.error('[DerivWSClient] API Error:', JSON.stringify(message.error));
+                logger.error('API Error', { service: 'DerivWSClient', error: message.error });
             }
 
             // 1. Settlement Handling (proposal_open_contract)
@@ -526,7 +536,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
                 if (contract.is_sold) {
                     const profit = contract.profit;
                     const result = profit >= 0 ? 'win' : 'loss';
-                    console.log(`[DerivWSClient] Contract ${contract.contract_id} settled: ${result} (${profit})`);
+                    logger.info('Contract settled', { service: 'DerivWSClient', contractId: contract.contract_id, result, profit });
                     this.emit('settled', contract.contract_id, result, profit);
                 }
                 return;
@@ -554,13 +564,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
                 // If it had a req_id, it was handled above (resolve({error:...})).
                 // If NO req_id, it's a general stream error.
                 if (!message.req_id) {
-                    console.error(`[DerivWSClient] Stream error: ${message.error.message}`);
+                    logger.error('Stream error', { service: 'DerivWSClient', message: message.error.message });
                     this.emit('error', new Error(message.error.message));
                 }
             }
 
         } catch (err) {
-            console.error('[DerivWSClient] Failed to parse message:', err);
+            logger.error('Failed to parse message', { service: 'DerivWSClient' }, err instanceof Error ? err : undefined);
         }
     }
 
@@ -579,7 +589,7 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
             sub.isActive = true;
             if (message.subscription?.id) sub.subscriptionId = message.subscription.id;
             if (!sub.subscriptionId && message.subscription?.id) {
-                console.log(`[DerivWSClient] Subscribed to ${symbol}`);
+                logger.info('Subscribed to symbol', { service: 'DerivWSClient', symbol });
                 this.emit('subscribed', symbol);
             }
         }

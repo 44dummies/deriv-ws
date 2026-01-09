@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -40,7 +41,7 @@ async function initSentry(): Promise<void> {
     const dsn = process.env.SENTRY_DSN;
     
     if (!dsn) {
-        console.warn('[Monitoring] SENTRY_DSN not configured. Error tracking disabled.');
+        logger.warn('[Monitoring] SENTRY_DSN not configured. Error tracking disabled.');
         return;
     }
     
@@ -50,7 +51,7 @@ async function initSentry(): Promise<void> {
         Sentry = await import('@sentry/node').catch(() => null);
         
         if (!Sentry) {
-            console.warn('[Monitoring] @sentry/node not installed. Run: pnpm add @sentry/node');
+            logger.warn('[Monitoring] @sentry/node not installed. Run: pnpm add @sentry/node');
             return;
         }
         
@@ -92,10 +93,10 @@ async function initSentry(): Promise<void> {
         });
         
         isInitialized = true;
-        console.log('[Monitoring] Sentry initialized successfully');
+        logger.info('[Monitoring] Sentry initialized successfully');
         
     } catch (error) {
-        console.warn('[Monitoring] Failed to initialize Sentry:', error);
+        logger.warn('[Monitoring] Failed to initialize Sentry:', error);
     }
 }
 
@@ -107,8 +108,8 @@ initSentry();
 // =============================================================================
 
 export function captureException(error: Error, context?: ErrorContext): void {
-    // Always log to console
-    console.error('[Error]', error.message, context);
+    // Always log
+    logger.error('[Error]', error.message, context);
     
     if (!Sentry || !isInitialized) return;
     
@@ -125,7 +126,7 @@ export function captureException(error: Error, context?: ErrorContext): void {
 }
 
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
-    console.log(`[${level.toUpperCase()}]`, message);
+    logger.info(`[${level.toUpperCase()}]`, message);
     
     if (!Sentry || !isInitialized) return;
     
@@ -208,7 +209,7 @@ export function endSpan(spanId: string): void {
     
     // Log slow operations
     if (duration > 1000) {
-        console.warn(`[Performance] Slow operation: ${span.name} took ${duration}ms`);
+        logger.warn(`[Performance] Slow operation: ${span.name} took ${duration}ms`);
     }
     
     // Report to Sentry if available
@@ -261,7 +262,7 @@ setInterval(() => {
     if (metricsBuffer.length === 0) return;
     
     // In a real implementation, this would send to a metrics service
-    console.log(`[Metrics] Flushing ${metricsBuffer.length} metrics`);
+    logger.debug(`[Metrics] Flushing ${metricsBuffer.length} metrics`);
     
     // Clear buffer after flush
     metricsBuffer.length = 0;

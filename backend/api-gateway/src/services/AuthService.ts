@@ -1,10 +1,18 @@
 import { SignJWT, jwtVerify } from 'jose';
 
-// SECURITY: No fallback allowed - must be explicitly configured
-if (!process.env['SESSION_SECRET']) {
-    throw new Error('FATAL: SESSION_SECRET environment variable is required. Generate with: openssl rand -hex 32');
+// SECURITY: Lazy-load secret key to allow server startup for healthchecks
+let SECRET_KEY: Uint8Array | null = null;
+
+function getSecretKey(): Uint8Array {
+    if (!SECRET_KEY) {
+        const secret = process.env['SESSION_SECRET'];
+        if (!secret) {
+            throw new Error('FATAL: SESSION_SECRET environment variable is required. Generate with: openssl rand -hex 32');
+        }
+        SECRET_KEY = new TextEncoder().encode(secret);
+    }
+    return SECRET_KEY;
 }
-const SECRET_KEY = new TextEncoder().encode(process.env['SESSION_SECRET']);
 
 export const AuthService = {
     async generateSessionToken(payload: { userId: string, role: string, email: string }) {
@@ -12,12 +20,12 @@ export const AuthService = {
             .setProtectedHeader({ alg: 'HS256' })
             .setIssuedAt()
             .setExpirationTime('24h')
-            .sign(SECRET_KEY);
+            .sign(getSecretKey());
     },
 
     async verifySessionToken(token: string) {
         try {
-            const { payload } = await jwtVerify(token, SECRET_KEY);
+            const { payload } = await jwtVerify(token, getSecretKey());
             return payload as { userId: string, role: string, email: string };
         } catch (error) {
             return null;

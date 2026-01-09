@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { Redis } from 'ioredis';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -43,10 +44,10 @@ function getRedis(): Redis | null {
         try {
             redis = new Redis(process.env.REDIS_URL);
             redis.on('error', (err) => {
-                console.error('[RateLimiter] Redis error:', err);
+                logger.error('RateLimiter Redis error', { err });
             });
         } catch (err) {
-            console.warn('[RateLimiter] Redis connection failed, using in-memory fallback');
+            logger.warn('RateLimiter Redis connection failed, using in-memory fallback');
         }
     }
     return redis;
@@ -100,9 +101,14 @@ function createRateLimiter(config: RateLimitConfig = DEFAULT_CONFIG) {
             
             next();
         } catch (err) {
-            console.error('[RateLimiter] Error:', err);
-            // Fail open - allow request if rate limiter fails
-            next();
+            logger.error('RateLimiter error', { err });
+            // SECURITY: Fail closed - reject request if rate limiter fails
+            // This prevents abuse when Redis is unavailable
+            res.status(503).json({ 
+                error: 'Service temporarily unavailable',
+                retryAfter: 30
+            });
+            return;
         }
     };
 }

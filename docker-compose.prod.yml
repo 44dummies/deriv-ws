@@ -14,7 +14,8 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - REDIS_URL=redis://redis:6379
-      - CORS_ORIGIN=${CORS_ORIGIN:-*} # Set this to your frontend URL in .env
+      # SECURITY: CORS_ORIGIN must be explicitly set in .env - no default
+      # Example: CORS_ORIGIN=https://your-app.vercel.app
     env_file:
       - .env
     depends_on:
@@ -23,7 +24,7 @@ services:
       - tradermind-prod
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

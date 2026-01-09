@@ -6,6 +6,7 @@
 import { EventEmitter } from 'eventemitter3';
 import { marketDataService, NormalizedTick, NormalizedTickSchema } from './MarketDataService.js';
 import { quantEngine, Signal, SessionConfig } from './QuantEngine.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -54,7 +55,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
 
     constructor() {
         super();
-        console.log('[QuantAdapter] Initialized');
+        logger.info('Initialized', { service: 'QuantAdapter' });
     }
 
     // ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             this.checkAIStatus();
         }, 5000);
 
-        console.log('[QuantAdapter] Started');
+        logger.info('Started', { service: 'QuantAdapter' });
     }
 
     stop(): void {
@@ -98,12 +99,12 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         }
 
         this.tickQueue = [];
-        console.log('[QuantAdapter] Stopped');
+        logger.info('Stopped', { service: 'QuantAdapter' });
     }
 
     updateConfig(config: SessionConfig): void {
         this.activeConfig = config;
-        console.log('[QuantAdapter] Config updated');
+        logger.info('Config updated', { service: 'QuantAdapter' });
     }
 
     // ---------------------------------------------------------------------------
@@ -118,7 +119,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         const validation = NormalizedTickSchema.safeParse(tick);
         if (!validation.success) {
             this.ticksDropped++;
-            console.warn('[QuantAdapter] Tick dropped: validation failed', validation.error.issues);
+            logger.warn('Tick dropped: validation failed', { service: 'QuantAdapter', issues: validation.error.issues });
             this.emit('tick_dropped', tick, 'validation_failed');
             return;
         }
@@ -128,7 +129,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             // Drop oldest ticks
             const dropped = this.tickQueue.splice(0, 10);
             this.ticksDropped += dropped.length;
-            console.warn(`[QuantAdapter] Queue overflow, dropped ${dropped.length} old ticks`);
+            logger.warn('Queue overflow, dropped old ticks', { service: 'QuantAdapter', droppedCount: dropped.length });
             this.emit('queue_overflow', dropped.length);
         }
 
@@ -169,11 +170,11 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
 
             if (signal) {
                 // Signal is emitted by QuantEngine internally
-                console.log(`[QuantAdapter] Signal generated: ${signal.type} ${signal.market}`);
+                logger.info('Signal generated', { service: 'QuantAdapter', type: signal.type, market: signal.market });
             }
         } catch (err) {
             this.ticksDropped++;
-            console.error('[QuantAdapter] Error processing tick:', err);
+            logger.error('Error processing tick', { service: 'QuantAdapter' }, err instanceof Error ? err : undefined);
             this.emit('tick_dropped', tick, 'processing_error');
         }
     }
@@ -243,11 +244,11 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             } else {
                 // Service reachable but returned error? logic debatable. 
                 // We'll keep current state or maybe warn.
-                console.warn(`[QuantAdapter] AI Health Check failed: ${response.status}`);
+                logger.warn('AI Health Check failed', { service: 'QuantAdapter', status: response.status });
             }
         } catch (err) {
             // Network error implies AI is down
-            console.warn('[QuantAdapter] AI Layer unreachable, disabling AI scoring temporarily.');
+            logger.warn('AI Layer unreachable, disabling AI scoring temporarily', { service: 'QuantAdapter' });
             quantEngine.setAIEnabled(false);
         }
     }

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sessionRegistry } from '../services/SessionRegistry.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 const AI_LAYER_URL = process.env.AI_LAYER_URL || 'http://localhost:8001';
@@ -106,7 +107,7 @@ router.get('/summary', async (_req: Request, res: Response) => {
             system_time: new Date().toISOString()
         });
     } catch (error) {
-        console.error('[Stats] Summary Error:', error);
+        logger.error('Stats summary error', { error });
         res.status(500).json({ error: 'Failed to fetch summary' });
     }
 });

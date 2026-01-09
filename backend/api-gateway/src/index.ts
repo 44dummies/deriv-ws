@@ -17,6 +17,7 @@ import executeRoutes from './routes/execute.js';
 import statsRoutes from './routes/stats.js';
 import chatRoutes from './routes/chat.js';
 import docsRoutes from './routes/docs.js';
+import healthRoutes from './routes/health.js';
 
 // Middleware imports
 import { rateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
@@ -29,11 +30,14 @@ import { sessionRegistry } from './services/SessionRegistry.js';
 import { Monitoring } from './services/Monitoring.js';
 import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
+// Utils
+import { logger } from './utils/logger.js';
+
 // =============================================================================
 // INITIALIZE MONITORING (must be first)
 // =============================================================================
 Monitoring.init();
-console.log('[Startup] Sentry monitoring initialized');
+logger.info('Sentry monitoring initialized');
 
 // =============================================================================
 // CONFIG VALIDATION (Zero-Trust)
@@ -45,13 +49,13 @@ const REQUIRED_ENV = [
 
 const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
 if (missingEnv.length > 0) {
-    console.error('[Startup] FATAL: Missing required environment variables:', missingEnv);
+    logger.fatal('Missing required environment variables', { missingEnv });
     process.exit(1); // Fail fast in production
 }
 
 // Warn about optional but important env vars
 if (!process.env.DERIV_TOKEN_KEY) {
-    console.warn('[Startup] WARNING: DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
+    logger.warn('DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
 }
 
 // NOTE: AI Layer has been removed - pure quantitative trading engine active
@@ -67,10 +71,10 @@ const wsServer = initWebSocketServer(httpServer);
 // =============================================================================
 const allowedOrigins = process.env.CORS_ORIGIN 
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'];
+    : ['http://localhost:5173', 'http://localhost:3000', 'https://deriv-ws-frontend.vercel.app'];
 
 if (process.env.NODE_ENV === 'production' && (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === '*')) {
-    console.error('[Startup] FATAL: CORS_ORIGIN must be explicitly set in production (not *)');
+    logger.fatal('CORS_ORIGIN must be explicitly set in production (not *)');
     process.exit(1);
 }
 
@@ -101,7 +105,7 @@ app.use(cors({
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             callback(null, true);
         } else {
-            console.warn(`[CORS] Blocked origin: ${origin}`);
+            logger.warn('Blocked CORS origin', { origin });
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -154,22 +158,24 @@ app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/docs', docsRoutes); // OpenAPI/Swagger documentation
 
-// Legacy routes (without /api/v1 prefix for backward compatibility)
-app.use('/auth', authRateLimiter, authRoutes);
-app.use('/sessions', sessionsRoutes);
-app.use('/users', usersRoutes);
-app.use('/trades', tradesRoutes);
-app.use('/stats', statsRoutes);
+// SECURITY: Legacy routes removed - use /api/v1 prefix only
+// If legacy support is required, enable via ENABLE_LEGACY_ROUTES=true
+if (process.env.ENABLE_LEGACY_ROUTES === 'true') {
+    logger.warn('Legacy routes enabled - this doubles attack surface');
+    app.use('/auth', authRateLimiter, authRoutes);
+    app.use('/sessions', sessionsRoutes);
+    app.use('/users', usersRoutes);
+    app.use('/trades', tradesRoutes);
+    app.use('/stats', statsRoutes);
+}
 
 // API status
 app.get('/api/v1/status', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Health check endpoint (no rate limiting)
-app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'api-gateway' });
-});
+// Health check routes (no rate limiting)
+app.use('/health', healthRoutes);
 
 // Root healthcheck for deployment platforms (Railway/Render)
 app.get('/', (_req, res) => {
@@ -202,7 +208,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
     // Capture to Sentry
     Monitoring.captureError(err, { source: 'express-error-handler' });
     
-    console.error('Unhandled error:', err);
+    logger.error('Unhandled error', {}, err);
     
     // CORS errors
     if (err.message === 'Not allowed by CORS') {
@@ -222,24 +228,23 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // =============================================================================
 
 const PORT = process.env['PORT'] ?? 3000;
-console.log('[Startup] Initializing TraderMind API Gateway...');
-console.log(`[Startup] Environment: ${process.env['NODE_ENV']}`);
-console.log(`[Startup] CORS Origin Config: ${process.env['CORS_ORIGIN']}`);
+logger.info('Initializing TraderMind API Gateway...');
+logger.info('Environment configuration', { env: process.env['NODE_ENV'], corsOrigin: process.env['CORS_ORIGIN'] });
 
 // Start listening immediately to ensure health checks and CORS work
 httpServer.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`[Startup] API Gateway started on port ${PORT}`);
-    console.log(`[Startup] WebSocket server ready`);
-    console.log(`[Startup] Routes: /auth, /sessions, /users, /trades`);
+    logger.info('API Gateway started', { port: PORT });
+    logger.info('WebSocket server ready');
+    logger.info('Routes available', { routes: ['/auth', '/sessions', '/users', '/trades'] });
 
     // Log uncaught exceptions to Sentry and prevent silent crashes
     process.on('uncaughtException', (err) => {
-        console.error('[CRITICAL] Uncaught Exception:', err);
+        logger.fatal('Uncaught Exception', {}, err);
         Monitoring.captureError(err, { source: 'uncaught-exception', fatal: true });
     });
 
     process.on('unhandledRejection', (reason) => {
-        console.error('[CRITICAL] Unhandled Promise Rejection:', reason);
+        logger.fatal('Unhandled Promise Rejection', {}, reason instanceof Error ? reason : new Error(String(reason)));
         Monitoring.captureError(reason instanceof Error ? reason : new Error(String(reason)), {
             source: 'unhandled-rejection'
         });
@@ -248,9 +253,9 @@ httpServer.listen(Number(PORT), '0.0.0.0', () => {
 
 // Recover state in background - DO NOT BLOCK server startup
 sessionRegistry.recoverStateFromDB().then((count) => {
-    console.log(`[Startup] Recovered ${count} active sessions.`);
+    logger.info('Recovered active sessions', { count });
 }).catch(err => {
-    console.error('[Startup] Failed to recover state from DB (Non-fatal):', err);
+    logger.error('Failed to recover state from DB (Non-fatal)', {}, err instanceof Error ? err : undefined);
     // Do not exit, allow server to run for diagnostics
 });
 

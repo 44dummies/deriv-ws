@@ -3,7 +3,10 @@ FROM node:20-alpine
 WORKDIR /app
 RUN corepack enable
 
-ARG CACHEBUST=3
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+ARG CACHEBUST=5
 
 COPY . .
 
@@ -15,5 +18,21 @@ RUN pnpm run --filter @tradermind/schemas --filter @tradermind/shared-utils --fi
 # 2. Build Quant Engine ONLY
 RUN pnpm run --filter @tradermind/quant-engine build
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S tradermind -u 1001 -G nodejs && \
+    chown -R tradermind:nodejs /app
+
+USER tradermind
+
 WORKDIR /app/backend/quant-engine
+
+# Standardized port
+ENV PORT=3001
+EXPOSE 3001
+
+# HEALTHCHECK: Verify service is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
 CMD ["pnpm", "start"]

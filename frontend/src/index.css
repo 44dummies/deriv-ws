@@ -1,63 +1,88 @@
-/* Futuristic Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-    /* Deep Space Black Theme */
-    --color-background: 224 71% 2%; /* Almost pure black #020617 */
-    --color-surface: 222 47% 8%;   /* Dark Blue-Grey #0f172a */
-    
-    /* Neon Accents */
-    --color-primary: 217 91% 60%;      /* Electric Blue #3b82f6 */
-    --color-primary-glow: #60a5fa;     /* Lighter Blue for bloom */
-    --color-accent: 262 83% 58%;       /* Cyber Purple #8b5cf6 */
-    --color-accent-glow: #a78bfa;      /* Light Purple bloom */
-    
-    /* Status Colors */
-    --color-success: 142 71% 45%;      /* Neon Green #22c55e */
-    --color-danger: 0 84% 60%;         /* Neon Red #ef4444 */
-    --color-warning: 48 96% 53%;       /* Neon Amber #fbbf24 */
+@layer base {
+  :root {
+    /* Professional Fintech Theme - Light Mode Default */
+    --background: 210 40% 98%; /* Slate 50 */
+    --foreground: 222 47% 11%; /* Slate 900 */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+ 
+    --primary: 221 83% 53%; /* Blue 600 */
+    --primary-foreground: 210 40% 98%;
+ 
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+ 
+    --radius: 0.5rem;
+  }
+ 
+  .dark {
+    /* Professional Fintech Theme - Dark Mode */
+    --background: 222 47% 11%; /* Slate 900 */
+    --foreground: 210 40% 98%; /* Slate 50 */
+ 
+    --card: 217 33% 17%; /* Slate 800 */
+    --card-foreground: 210 40% 98%;
+ 
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+ 
+    --primary: 217 91% 60%; /* Blue 500 */
+    --primary-foreground: 222 47% 11%;
+ 
+    --secondary: 217 19% 27%;
+    --secondary-foreground: 210 40% 98%;
+ 
+    --muted: 217 19% 27%;
+    --muted-foreground: 215 20.2% 65.1%;
+ 
+    --accent: 217 19% 27%;
+    --accent-foreground: 210 40% 98%;
+ 
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+ 
+    --border: 217 19% 27%;
+    --input: 217 19% 27%;
+    --ring: 224 76% 48%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
 
-body {
-    background-color: #030712; /* Rich Black */
-    background-image: 
-        radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15), transparent 40%),
-        radial-gradient(circle at 80% 10%, rgba(139, 92, 246, 0.1), transparent 30%);
-    color: #f8fafc;            
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-}
-
-/* Custom Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { bg: transparent; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-muted-foreground/30 rounded-full; }
+::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/50; }
 
-@layer utilities {
-    /* Premium Glassmorphism */
-    .glass-panel {
-        @apply bg-[#0B1121]/60 backdrop-blur-2xl border border-white/5 shadow-2xl shadow-black/50;
-    }
-    
-    .glass-input {
-        @apply bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all outline-none placeholder:text-gray-600;
-    }
-
-    /* Cyberpunk Glows */
-    .text-glow { text-shadow: 0 0 20px rgba(56, 189, 248, 0.5); }
-    .border-glow { box-shadow: 0 0 15px -3px rgba(59, 130, 246, 0.3); }
-    
-    /* Animation Utilities */
-    .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-}
-
-/* Recharts Customization */
-.recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line {
-    stroke: rgba(255, 255, 255, 0.03) !important;
-}

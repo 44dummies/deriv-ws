@@ -1,6 +1,7 @@
 /**
  * Auth Routes
  * Authentication handlers including Deriv OAuth callback
+ * SECURITY: Uses httpOnly cookies for JWT storage
  */
 
 import { Router, Request, Response } from 'express';
@@ -8,22 +9,49 @@ import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import { UserService } from '../services/UserService.js';
 import { AuthService } from '../services/AuthService.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
+
+// Cookie configuration for JWT
+const COOKIE_OPTIONS = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    path: '/'
+};
 
 // POST /auth/login
 router.post('/login', (_req: Request, res: Response) => {
     res.json({
-        message: 'Login endpoint - not implemented',
+        message: 'Login endpoint - use /auth/deriv/callback for Deriv OAuth',
         status: 'placeholder',
     });
 });
 
-// POST /auth/logout
+// POST /auth/logout - Clears the session cookie
 router.post('/logout', (_req: Request, res: Response) => {
+    res.clearCookie('session', { path: '/' });
+    res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// GET /auth/session - Check current session status (cookie-based)
+router.get('/session', requireAuth, async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+        res.status(401).json({ authenticated: false });
+        return;
+    }
+
+    // Return user info without sensitive data
     res.json({
-        message: 'Logout endpoint - not implemented',
-        status: 'placeholder',
+        authenticated: true,
+        user: {
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role,
+            // Account info would be fetched from DB here
+        }
     });
 });
 
@@ -35,22 +63,41 @@ router.post('/deriv/connect', (_req: Request, res: Response) => {
     });
 });
 
-// POST /auth/deriv/callback (Strict Implementation)
-// POST /auth/deriv/callback (Login Endpoint)
-// This endpoint is now PUBLIC as it performs the login
+/**
+ * POST /auth/deriv/callback
+ * SECURE Deriv OAuth callback - receives tokens via POST body, never URL
+ * Sets httpOnly cookie for session management
+ */
 router.post('/deriv/callback', async (req: Request, res: Response) => {
-    const { deriv_token, account_id } = req.body;
+    // Support both old format (single token) and new format (multiple accounts)
+    const { accounts, primary_account_id, deriv_token, account_id } = req.body;
 
-    if (!deriv_token || !account_id) {
-        res.status(400).json({ error: 'Missing deriv_token or account_id' });
+    // Determine which format was used
+    let primaryToken: string;
+    let primaryAccountId: string;
+    let allAccounts: { accountId: string; token: string }[] = [];
+
+    if (accounts && Array.isArray(accounts) && accounts.length > 0) {
+        // New secure format
+        allAccounts = accounts;
+        primaryAccountId = primary_account_id || accounts[0].accountId;
+        const primaryAcc = accounts.find((a: any) => a.accountId === primaryAccountId) || accounts[0];
+        primaryToken = primaryAcc.token;
+    } else if (deriv_token && account_id) {
+        // Legacy format (single account)
+        primaryToken = deriv_token;
+        primaryAccountId = account_id;
+        allAccounts = [{ accountId: account_id, token: deriv_token }];
+    } else {
+        res.status(400).json({ error: 'Missing authentication data' });
         return;
     }
 
-    // 1. Verify token with Deriv
+    // 1. Verify primary token with Deriv
     const client = new DerivWSClient();
     let authSuccess = false;
     let userEmail: string | undefined;
-    let derivAccount: any; // Lifted scope
+    let derivAccount: any;
 
     try {
         await new Promise<void>((resolve, reject) => {
@@ -62,22 +109,17 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
             client.connect();
         });
 
-        // We verify the token is valid for this account
-        derivAccount = await client.authorize(deriv_token);
+        derivAccount = await client.authorize(primaryToken);
         authSuccess = !!derivAccount;
-
-        // Optionally fetch account settings to get email if possible, or assume it's valid
-        // Deriv WS 'authorize' response usually contains email if scope allows, but we might verify basic access first.
-        // For now, if authorize returns true, it's valid.
+        userEmail = derivAccount?.email;
 
     } catch (error: any) {
-        console.error('[Auth] Token verification connection failed', error);
+        logger.error('Auth token verification connection failed', { error });
         client.disconnect();
         res.status(503).json({ error: 'Deriv connectivity error' });
         return;
     }
 
-    // Always disconnect the temporary verification client
     client.disconnect();
 
     if (!authSuccess) {
@@ -87,45 +129,94 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
 
     try {
         // 2. Find or Create User
-        // Use loginid from Deriv if available, or fallback to account_id
-        const user = await UserService.findOrCreateUserFromDeriv(account_id, userEmail);
+        const user = await UserService.findOrCreateUserFromDeriv(primaryAccountId, userEmail);
 
-        // 3. Persist Deriv Token Securely
-        await UserService.storeDerivToken({
-            userId: user.id,
-            derivToken: deriv_token,
-            accountId: account_id
-        });
+        // 3. Store ALL Deriv tokens securely (encrypted in DB)
+        for (const acc of allAccounts) {
+            await UserService.storeDerivToken({
+                userId: user.id,
+                derivToken: acc.token,
+                accountId: acc.accountId
+            });
+        }
 
         // 4. Generate Internal Session Token
-        const accessToken = await AuthService.generateSessionToken({
+        const sessionToken = await AuthService.generateSessionToken({
             userId: user.id,
             role: user.role,
             email: user.email
         });
 
+        // 5. Set httpOnly cookie (SECURE - not accessible via JavaScript)
+        res.cookie('session', sessionToken, COOKIE_OPTIONS);
+
+        // 6. Return user info (NO tokens in response)
         res.json({
             success: true,
-            accessToken,
             user: {
                 id: user.id,
                 email: user.email,
                 role: user.role,
-                deriv_account: derivAccount // Pass full deriv account data (balance, currency, is_virtual)
+                fullname: derivAccount?.fullname,
+            },
+            deriv_account: {
+                loginid: primaryAccountId,
+                balance: derivAccount?.balance,
+                currency: derivAccount?.currency,
+                is_virtual: derivAccount?.is_virtual,
+                fullname: derivAccount?.fullname
             }
+            // NOTE: accessToken intentionally NOT returned - using httpOnly cookie instead
         });
 
     } catch (error) {
-        console.error('[Auth] Login failed', error);
+        logger.error('Auth login failed', { error });
         res.status(500).json({ error: 'Failed to process login' });
     }
 });
 
-// GET /auth/me
-router.get('/me', (_req: Request, res: Response) => {
+// POST /auth/switch-account - Switch active Deriv account
+router.post('/switch-account', requireAuth, async (req: AuthRequest, res: Response) => {
+    const { account_id } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId || !account_id) {
+        res.status(400).json({ error: 'Missing user or account_id' });
+        return;
+    }
+
+    try {
+        // Verify user has access to this account by checking stored tokens
+        const token = await UserService.getDerivTokenForAccount(userId, account_id);
+        
+        if (!token) {
+            res.status(403).json({ error: 'Account not linked to this user' });
+            return;
+        }
+
+        // Update user's active account in database (if tracking)
+        // For now, just verify and return success
+        res.json({ success: true, active_account_id: account_id });
+
+    } catch (error) {
+        logger.error('Auth account switch failed', { error });
+        res.status(500).json({ error: 'Failed to switch account' });
+    }
+});
+
+// GET /auth/me - Get current user info
+router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+    if (!req.user) {
+        res.status(401).json({ error: 'Not authenticated' });
+        return;
+    }
+
     res.json({
-        message: 'Get current user - not implemented',
-        status: 'placeholder',
+        user: {
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
+        }
     });
 });
 

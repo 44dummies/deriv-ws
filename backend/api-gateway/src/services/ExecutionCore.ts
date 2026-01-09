@@ -10,6 +10,7 @@ import { riskGuard, RiskCheck } from './RiskGuard.js';
 import { memoryService } from './MemoryService.js';
 import { UserService } from './UserService.js';
 import { DerivWSClient } from './DerivWSClient.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -77,7 +78,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
         this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
         this.initSupabase();
         this.initialize();
-        console.log('[ExecutionCore] Initialized with Redis Idempotency and DB persistence');
+        logger.info('ExecutionCore initialized with Redis Idempotency and DB persistence');
     }
 
     private initSupabase(): void {
@@ -86,7 +87,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
         if (url && key) {
             this.supabase = createClient(url, key);
         } else {
-            console.warn('[ExecutionCore] Supabase not configured - trades will not be persisted');
+            logger.warn('Supabase not configured - trades will not be persisted');
         }
     }
 
@@ -131,12 +132,12 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 .single();
 
             if (error) {
-                console.error('[ExecutionCore] DB insert error:', error);
+                logger.error('DB insert error', { error });
                 return null;
             }
             return data?.id || null;
         } catch (err) {
-            console.error('[ExecutionCore] DB persist error:', err);
+            logger.error('DB persist error', {}, err instanceof Error ? err : undefined);
             return null;
         }
     }
@@ -163,7 +164,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 })
                 .eq('id', tradeId);
         } catch (err) {
-            console.error('[ExecutionCore] DB update error:', err);
+            logger.error('DB update error', {}, err instanceof Error ? err : undefined);
         }
     }
 
@@ -173,7 +174,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             if (check.result === 'APPROVED') {
                 // Fire and forget, but handle promise rejection logging if needed
                 this.handleApprovedTrade(check).catch(err => {
-                    console.error('[ExecutionCore] Error handling trade:', err);
+                    logger.error('Error handling trade', {}, err instanceof Error ? err : undefined);
                 });
             }
         });
@@ -184,14 +185,14 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
         try {
             if (await this.isDuplicate(idempotencyKey)) {
-                console.warn(`[ExecutionCore] Duplicate trade skipped: ${idempotencyKey}`);
+                logger.warn('Duplicate trade skipped', { idempotencyKey });
                 return;
             }
 
             await this.executeTrade(check, idempotencyKey);
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`[ExecutionCore] EXECUTION_FAILED: ${idempotencyKey} - ${errorMessage}`);
+            logger.error('EXECUTION_FAILED', { idempotencyKey, errorMessage }, error instanceof Error ? error : undefined);
 
             // Emit failed trade result
             const failedResult: TradeResult = {
@@ -295,7 +296,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
      * Execute specific trade (REAL IMPLEMENTATION)
      */
     private async executeTrade(check: RiskCheck, idempotencyKey: string): Promise<void> {
-        console.log(`[ExecutionCore] Executing trade for User ${check.userId}: ${check.proposedTrade.market} ${check.proposedTrade.type}`);
+        logger.info('Executing trade', { userId: check.userId, market: check.proposedTrade.market, type: check.proposedTrade.type });
 
         let client: DerivWSClient | null = null;
 
@@ -383,7 +384,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 }
             };
 
-            console.log(`[ExecutionCore] TRADE_EXECUTED: ${tradeId} @ ${entryPrice}`);
+            logger.info('TRADE_EXECUTED', { tradeId, entryPrice });
             this.emit('TRADE_EXECUTED', result);
 
             if (check.memoryId) {
@@ -399,19 +400,19 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             // 6. Monitor for Settlement (Async but locally blocking this worker connection)
             // We keep the connection open to monitor this specific trade
             if (contractId) {
-                console.log(`[ExecutionCore] Waiting for settlement: ${contractId}`);
+                logger.info('Waiting for settlement', { contractId });
                 await client.monitorContract(contractId);
 
                 await new Promise<void>((resolve) => {
                     const timeout = setTimeout(() => {
-                        console.warn(`[ExecutionCore] Settlement timeout for ${contractId}`);
+                        logger.warn('Settlement timeout', { contractId });
                         resolve();
                     }, 60000 * 5); // 5 min timeout 
 
                     client!.once('settled', (cId, outcome, profit) => {
                         if (cId === contractId) {
                             clearTimeout(timeout);
-                            console.log(`[ExecutionCore] Settlement received: ${outcome} (${profit})`);
+                            logger.info('Settlement received', { outcome, profit });
 
                             const settledAt = new Date().toISOString();
                             const resultIsWin = outcome === 'win';
@@ -451,7 +452,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                                         pnl: profit
                                     });
                                 } catch (captureErr) {
-                                    console.error('[ExecutionCore] Memory capture failed (Ignored):', captureErr);
+                                    logger.error('Memory capture failed (Ignored)', {}, captureErr instanceof Error ? captureErr : undefined);
                                 }
                             }
                             resolve();

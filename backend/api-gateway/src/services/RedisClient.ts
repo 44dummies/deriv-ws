@@ -4,6 +4,8 @@
  * Uses in-memory storage as fallback when Redis unavailable
  */
 
+import { logger } from '../utils/logger.js';
+
 // =============================================================================
 // IN-MEMORY STORAGE (Fallback)
 // =============================================================================
@@ -96,7 +98,7 @@ export async function saveSessionToRedis(session: RedisSession): Promise<void> {
         completed_at: session.completed_at ?? '',
     });
     await sadd(REDIS_KEYS.sessions(), session.id);
-    console.log(`[Redis] Saved session: ${session.id}`);
+    logger.info(`[Redis] Saved session: ${session.id}`);
 }
 
 export async function getSessionFromRedis(sessionId: string): Promise<RedisSession | null> {
@@ -118,7 +120,7 @@ export async function getSessionFromRedis(sessionId: string): Promise<RedisSessi
 export async function deleteSessionFromRedis(sessionId: string): Promise<void> {
     await del(REDIS_KEYS.session(sessionId));
     await srem(REDIS_KEYS.sessions(), sessionId);
-    console.log(`[Redis] Deleted session: ${sessionId}`);
+    logger.info(`[Redis] Deleted session: ${sessionId}`);
 }
 
 export async function getAllSessionsFromRedis(): Promise<RedisSession[]> {
@@ -179,7 +181,7 @@ export async function getParticipantFromRedis(
 export function clearMemoryStore(): void {
     memoryStore.clear();
     memorySets.clear();
-    console.log('[Redis] Memory store cleared');
+    logger.info('[Redis] Memory store cleared');
 }
 
 export function getMemoryStats(): { keys: number; sets: number } {

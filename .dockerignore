@@ -1,24 +1,87 @@
+# =============================================================================
+# TraderMind Docker Ignore
+# SECURITY: Prevents sensitive files from being copied to Docker images
+# =============================================================================
+
+# Dependencies
 node_modules
+**/node_modules
+
+# Git
 .git
+.gitignore
+.gitattributes
+
+# Environment files - CRITICAL: Never include in images
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+*.env
+
+# Python virtual environments
 .venv
 venv
-dist
-.env
-.DS_Store
-coverage
-.pytest_cache
 __pycache__
+.pytest_cache
 
-# Exclude large models from build context
-backend/ai-layer/models/*.gguf
-**/*.gguf
+# Build outputs
+dist
+**/dist
 
-# Tests and Source Maps
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and coverage
+coverage
+**/coverage
+.nyc_output
 **/*.test.ts
 **/*.spec.ts
-**/*.map
+**/__tests__
 tests/
-__tests__/
+cypress/screenshots
+cypress/videos
+
+# Source maps (not needed in production)
+**/*.map
+
+# Large model files
+backend/ai-layer/models/*.gguf
+**/*.gguf
+**/*.bin
+**/*.safetensors
+models/
+
+# Logs
+logs
+*.log
 npm-debug.log
 yarn-error.log
 pnpm-debug.log
+
+# IDE
+.idea
+.vscode
+
+# Documentation (reduce image size)
+docs/
+*.md
+!README.md
+
+# Secrets and certificates
+*.pem
+*.key
+*.crt
+certs/
+secrets/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Temporary
+tmp
+temp
+*.tmp

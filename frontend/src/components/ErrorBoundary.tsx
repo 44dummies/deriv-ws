@@ -44,6 +44,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         this.setState({ errorInfo });
         
         // Log to console in development
+        // eslint-disable-next-line no-console
         console.error('[ErrorBoundary] Caught error:', error, errorInfo);
         
         // Call custom error handler if provided
@@ -72,8 +73,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         try {
             // In production, integrate with Sentry:
             // Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+            // eslint-disable-next-line no-console
             console.error('[ErrorBoundary] Error reported:', error.message, errorInfo.componentStack);
         } catch (e) {
+            // eslint-disable-next-line no-console
             console.error('[ErrorBoundary] Failed to report error:', e);
         }
     }
@@ -164,6 +167,7 @@ export function TradingErrorBoundary({ children }: { children: ReactNode }) {
             }
             onError={(error) => {
                 // For trading errors, we might want to pause the session
+                // eslint-disable-next-line no-console
                 console.error('[CRITICAL] Trading component error:', error);
             }}
         >
@@ -217,6 +221,7 @@ export function NavigationErrorBoundary({ children }: { children: ReactNode }) {
 
 export function useErrorHandler() {
     const handleError = React.useCallback((error: Error) => {
+        // eslint-disable-next-line no-console
         console.error('[useErrorHandler]', error);
         
         // Could trigger global error state or notification

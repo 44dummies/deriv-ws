@@ -6,6 +6,7 @@
 import { EventEmitter } from 'eventemitter3';
 import { z } from 'zod';
 import { derivWSClient, Tick } from './DerivWSClient.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // ZOD SCHEMAS
@@ -92,7 +93,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
     constructor() {
         super();
-        console.log('[MarketDataService] Initialized');
+        logger.info('Initialized', { service: 'MarketDataService' });
     }
 
     // ---------------------------------------------------------------------------
@@ -110,16 +111,16 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         derivWSClient.on('subscribed', (market: string) => {
             this.activeSubscriptions.add(market);
             this.emit('subscribed', market);
-            console.log(`[MarketDataService] Subscribed to: ${market}`);
+            logger.info('Subscribed to market', { service: 'MarketDataService', market });
         });
         derivWSClient.on('unsubscribed', (market: string) => {
             this.activeSubscriptions.delete(market);
             this.emit('unsubscribed', market);
-            console.log(`[MarketDataService] Unsubscribed from: ${market}`);
+            logger.info('Unsubscribed from market', { service: 'MarketDataService', market });
         });
 
         derivWSClient.connect();
-        console.log('[MarketDataService] Started');
+        logger.info('Started', { service: 'MarketDataService' });
     }
 
     stop(): void {
@@ -133,7 +134,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         this.activeSubscriptions.clear();
 
         derivWSClient.disconnect();
-        console.log('[MarketDataService] Stopped');
+        logger.info('Stopped', { service: 'MarketDataService' });
     }
 
     // ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
     subscribe(market: string): void {
         if (this.activeSubscriptions.has(market)) {
-            console.log(`[MarketDataService] Already subscribed to: ${market}`);
+            logger.info('Already subscribed to market', { service: 'MarketDataService', market });
             return;
         }
         derivWSClient.subscribe(market);
@@ -150,7 +151,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
     unsubscribe(market: string): void {
         if (!this.activeSubscriptions.has(market)) {
-            console.log(`[MarketDataService] Not subscribed to: ${market}`);
+            logger.info('Not subscribed to market', { service: 'MarketDataService', market });
             return;
         }
 
@@ -390,7 +391,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         const lastTick = this.lastTickTime.get(market);
         const now = Date.now();
         if (lastTick && now - lastTick > TICK_TIMEOUT_MS) {
-            console.log(`[MarketDataService] Market ${market} resumed after timeout`);
+            logger.info('Market resumed after timeout', { service: 'MarketDataService', market });
             this.emit('market_resumed', market);
         }
 
@@ -410,7 +411,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     private handleHeartbeat(): void { }
 
     private handleCircuitBreaker(reason: string): void {
-        console.error(`[MarketDataService] Circuit breaker: ${reason}`);
+        logger.error('Circuit breaker triggered', { service: 'MarketDataService', reason });
         this.logAnomaly('circuit_breaker', { reason });
         for (const market of this.activeSubscriptions) {
             this.emit('heartbeat_failed', market);
@@ -418,11 +419,11 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     }
 
     private handleDisconnect(reason: string): void {
-        console.log(`[MarketDataService] Disconnected: ${reason}`);
+        logger.info('Disconnected', { service: 'MarketDataService', reason });
     }
 
     private logAnomaly(type: string, details: Record<string, unknown>): void {
-        console.warn(`[MarketDataService] ANOMALY: ${type}`, details);
+        logger.warn('Anomaly detected', { service: 'MarketDataService', type, ...details });
         this.emit('anomaly', type, details);
     }
 

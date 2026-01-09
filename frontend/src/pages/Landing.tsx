@@ -23,7 +23,6 @@ const useTicker = () => {
         wsParams.current.active = true;
 
         ws.onopen = () => {
-            console.log('[Ticker] Connected to Deriv WS');
             // Subscribe to volatility indices for real-time data
             const symbols = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100', '1HZ100V'];
             symbols.forEach(symbol => {

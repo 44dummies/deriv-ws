@@ -5,6 +5,7 @@
  */
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -50,9 +51,9 @@ export class MemoryService {
                 auth: { persistSession: false, autoRefreshToken: false }
             });
             this.enabled = true;
-            console.log('[MemoryService] Initialized (Supabase connected)');
+            logger.info('[MemoryService] Initialized (Supabase connected)');
         } else {
-            console.warn('[MemoryService] Disabled (Missing Supabase credentials)');
+            logger.warn('[MemoryService] Disabled (Missing Supabase credentials)');
         }
     }
 
@@ -72,13 +73,13 @@ export class MemoryService {
                 .single();
 
             if (error) {
-                console.error('[MemoryService] Failed to record memory:', error.message);
+                logger.error('[MemoryService] Failed to record memory:', error.message);
                 return null;
             }
 
             return data?.id || null;
         } catch (err) {
-            console.error('[MemoryService] Unexpected error recording memory:', err);
+            logger.error('[MemoryService] Unexpected error recording memory:', err);
             return null;
         }
     }
@@ -121,10 +122,10 @@ export class MemoryService {
                 .eq('id', memoryId);
 
             if (error) {
-                console.error(`[MemoryService] Failed to update outcome for memory ${memoryId}:`, error.message);
+                logger.error(`[MemoryService] Failed to update outcome for memory ${memoryId}:`, error.message);
             }
         } catch (err) {
-            console.error(`[MemoryService] Error updating outcome ${memoryId}:`, err);
+            logger.error(`[MemoryService] Error updating outcome ${memoryId}:`, err);
         }
     }
 
@@ -142,12 +143,12 @@ export class MemoryService {
                 .insert(data);
 
             if (error) {
-                console.error('[MemoryService] Failed to finalize immutable event:', error.message);
+                logger.error('[MemoryService] Failed to finalize immutable event:', error.message);
             } else {
-                console.log(`[MemoryService] Immutable event finalized for ${data.market} (${data.result})`);
+                logger.info(`[MemoryService] Immutable event finalized for ${data.market} (${data.result})`);
             }
         } catch (err) {
-            console.error('[MemoryService] Error finalizing immutable event:', err);
+            logger.error('[MemoryService] Error finalizing immutable event:', err);
         }
     }
 
@@ -159,7 +160,7 @@ export class MemoryService {
     capture(data: ImmutableMemoryEvent): void {
         // Execute async without awaiting to be non-blocking
         this.finalizeEvent(data).catch(err => {
-            console.error('[MemoryService] Critical Capture Failure (Safe Handled):', err);
+            logger.error('[MemoryService] Critical Capture Failure (Safe Handled):', err);
         });
     }
 }

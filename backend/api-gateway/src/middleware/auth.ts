@@ -1,6 +1,7 @@
 /**
  * TraderMind JWT Authentication Middleware
- * Validates JWT tokens and enforces roles
+ * Validates JWT tokens from httpOnly cookies or Authorization header
+ * SECURITY: Cookies are preferred for browser clients
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -31,6 +32,30 @@ const supabaseKey = process.env['SUPABASE_ANON_KEY'] ?? '';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Extract token from request (cookie first, then Authorization header)
+ * SECURITY: Cookie is preferred as it's httpOnly
+ */
+function extractToken(req: Request): string | null {
+    // 1. Check httpOnly cookie first (most secure)
+    const cookieToken = (req as any).cookies?.session;
+    if (cookieToken) {
+        return cookieToken;
+    }
+
+    // 2. Fallback to Authorization header (for API clients)
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+        return authHeader.slice(7);
+    }
+
+    return null;
+}
+
+// =============================================================================
 // MIDDLEWARE
 // =============================================================================
 
@@ -38,14 +63,12 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  * Require authentication
  */
 export function requireAuth(req: AuthRequest, res: Response, next: NextFunction): void {
-    const authHeader = req.headers.authorization;
+    const token = extractToken(req);
 
-    if (!authHeader?.startsWith('Bearer ')) {
-        res.status(401).json({ error: 'Missing or invalid authorization header' });
+    if (!token) {
+        res.status(401).json({ error: 'Authentication required' });
         return;
     }
-
-    const token = authHeader.slice(7);
 
     // 1. Try to verify as Internal Session Token
     AuthService.verifySessionToken(token).then((payload) => {

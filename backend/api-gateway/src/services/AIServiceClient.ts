@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'eventemitter3';
 import { IndicatorValues, Signal, SignalType, SignalReason } from './QuantEngine.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -69,7 +70,7 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
         this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
         this.enabled = config.enabled ?? false;
 
-        console.log(`[AIServiceClient] Initialized (enabled: ${this.enabled}, url: ${this.baseUrl})`);
+        logger.info(`[AIServiceClient] Initialized (enabled: ${this.enabled}, url: ${this.baseUrl})`);
     }
 
     // ---------------------------------------------------------------------------
@@ -78,7 +79,7 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
 
     setEnabled(enabled: boolean): void {
         this.enabled = enabled;
-        console.log(`[AIServiceClient] ${enabled ? 'Enabled' : 'Disabled'}`);
+        logger.info(`[AIServiceClient] ${enabled ? 'Enabled' : 'Disabled'}`);
     }
 
     isEnabled(): boolean {
@@ -157,7 +158,7 @@ export class AIServiceClient extends EventEmitter<AIClientEvents> {
         this.failureCount++;
         this.lastFailure = Date.now();
 
-        console.warn(`[AIServiceClient] Inference failed: ${error.message}`);
+        logger.warn(`[AIServiceClient] Inference failed: ${error.message}`);
         this.emit('inference_error', error);
         this.emit('fallback_triggered', error.message);
     }

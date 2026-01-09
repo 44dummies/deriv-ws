@@ -27,8 +27,8 @@ export default function AdminDashboard() {
                     admin_balance_real: data.admin_balance.real,
                     admin_balance_demo: data.admin_balance.demo
                 });
-            } catch (e) {
-                console.error("Failed to fetch admin stats");
+            } catch {
+                // Failed to fetch admin stats - handled silently
             }
         };
 

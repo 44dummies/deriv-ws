@@ -7,6 +7,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { sessionRegistry, SessionState, Participant } from './SessionRegistry.js';
 import { AuthService } from './AuthService.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -57,7 +58,7 @@ export class WebSocketServer {
         this.setupMiddleware();
         this.setupEventHandlers();
 
-        console.log('[WebSocketServer] Initialized');
+        logger.info('WebSocketServer initialized');
     }
 
     // ---------------------------------------------------------------------------
@@ -66,15 +67,14 @@ export class WebSocketServer {
 
     private setupMiddleware(): void {
         // Authentication middleware with proper JWT validation
+        // SECURITY: No guest connections allowed - all clients must authenticate
         this.io.use(async (socket: AuthSocket, next) => {
             const token = socket.handshake.auth['token'] as string | undefined;
 
             if (!token) {
-                // Allow guest connections for public data streams
-                socket.userId = 'guest';
-                socket.isAuthenticated = false;
-                console.log(`[WebSocketServer] Guest connection: ${socket.id}`);
-                return next();
+                // SECURITY: Reject unauthenticated connections
+                logger.warn('Rejected unauthenticated connection', { socketId: socket.id });
+                return next(new Error('Authentication required'));
             }
 
             try {
@@ -86,21 +86,17 @@ export class WebSocketServer {
                     socket.userEmail = payload.email;
                     socket.userRole = payload.role as 'ADMIN' | 'USER';
                     socket.isAuthenticated = true;
-                    console.log(`[WebSocketServer] Authenticated: ${socket.userId} (${socket.userRole})`);
+                    logger.info('Client authenticated', { userId: socket.userId, role: socket.userRole });
                     return next();
                 }
 
                 // Token verification failed
-                console.warn(`[WebSocketServer] Invalid token for socket: ${socket.id}`);
-                socket.userId = 'guest';
-                socket.isAuthenticated = false;
-                return next();
+                logger.warn('Invalid token for socket', { socketId: socket.id });
+                return next(new Error('Invalid or expired token'));
                 
             } catch (error) {
-                console.error(`[WebSocketServer] Auth error:`, error);
-                socket.userId = 'guest';
-                socket.isAuthenticated = false;
-                return next();
+                logger.error('Auth error', { socketId: socket.id }, error instanceof Error ? error : undefined);
+                return next(new Error('Authentication failed'));
             }
         });
     }
@@ -130,7 +126,7 @@ export class WebSocketServer {
             this.userSockets.get(socket.userId)!.add(socket.id);
         }
 
-        console.log(`[WebSocketServer] Client connected: ${socket.id} (user: ${socket.userId})`);
+        logger.info('Client connected', { socketId: socket.id, userId: socket.userId });
 
         // Send connection ack
         socket.emit('connected', {
@@ -147,7 +143,7 @@ export class WebSocketServer {
             this.userSockets.get(socket.userId)?.delete(socket.id);
         }
 
-        console.log(`[WebSocketServer] Client disconnected: ${socket.id}`);
+        logger.info('Client disconnected', { socketId: socket.id });
     }
 
     private handleSessionJoin(socket: AuthSocket, data: { sessionId: string }): void {
@@ -161,7 +157,7 @@ export class WebSocketServer {
 
             // Join Socket.IO room
             void socket.join(`session:${sessionId}`);
-            console.log(`[WebSocketServer] ${socket.userId} joined session ${sessionId}`);
+            logger.info('User joined session', { userId: socket.userId, sessionId });
 
             // Emit to room
             this.emitToSession(sessionId, 'SESSION_JOINED', {
@@ -188,7 +184,7 @@ export class WebSocketServer {
 
             // Leave Socket.IO room
             void socket.leave(`session:${sessionId}`);
-            console.log(`[WebSocketServer] ${socket.userId} left session ${sessionId}`);
+            logger.info('User left session', { userId: socket.userId, sessionId });
 
             // Emit to room
             this.emitToSession(sessionId, 'SESSION_LEFT', {
@@ -222,7 +218,7 @@ export class WebSocketServer {
             // Broadcast to all connected clients
             this.emitToAll('SESSION_CREATED', { session: this.serializeSession(session) });
 
-            console.log(`[WebSocketServer] Session created: ${sessionId} by ${socket.userId}`);
+            logger.info('Session created', { sessionId, userId: socket.userId });
         } catch (err) {
             socket.emit('error', { message: (err as Error).message });
         }
@@ -242,7 +238,7 @@ export class WebSocketServer {
             timestamp: new Date().toISOString(),
         };
         this.io.to(`session:${sessionId}`).emit(type.toLowerCase(), event);
-        console.log(`[WebSocketServer] Emitted ${type} to session ${sessionId}`);
+        logger.debug('Emitted event to session', { type, sessionId });
     }
 
     /**

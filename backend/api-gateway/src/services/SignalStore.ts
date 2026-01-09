@@ -6,6 +6,7 @@
 import { EventEmitter } from 'eventemitter3';
 import { Signal } from './QuantEngine.js';
 import { sessionRegistry, SessionStatus } from './SessionRegistry.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -55,7 +56,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
 
     constructor() {
         super();
-        console.log('[SignalStore] Initialized');
+        logger.info('Initialized', { service: 'SignalStore' });
     }
 
     // ---------------------------------------------------------------------------
@@ -69,7 +70,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
             this.cleanupExpiredSignals();
         }, CLEANUP_INTERVAL_MS);
 
-        console.log('[SignalStore] Started cleanup timer');
+        logger.info('Started cleanup timer', { service: 'SignalStore' });
     }
 
     stop(): void {
@@ -77,7 +78,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
             clearInterval(this.cleanupTimer);
             this.cleanupTimer = null;
         }
-        console.log('[SignalStore] Stopped');
+        logger.info('Stopped', { service: 'SignalStore' });
     }
 
     // ---------------------------------------------------------------------------
@@ -87,14 +88,14 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
     addSignal(sessionId: string, signal: Signal, ttlMs = DEFAULT_SIGNAL_TTL_MS): StoredSignal | null {
         // Check if session is paused
         if (this.isSessionPaused(sessionId)) {
-            console.log(`[SignalStore] Session ${sessionId} is paused, skipping signal`);
+            logger.info('Session is paused, skipping signal', { service: 'SignalStore', sessionId });
             return null;
         }
 
         // Check session state
         const session = sessionRegistry.getSessionState(sessionId);
         if (!session || (session.status !== 'RUNNING' && session.status !== 'ACTIVE')) {
-            console.log(`[SignalStore] Session ${sessionId} not active, skipping signal`);
+            logger.info('Session not active, skipping signal', { service: 'SignalStore', sessionId });
             return null;
         }
 
@@ -118,7 +119,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         }
         this.sessionSignals.get(sessionId)!.add(id);
 
-        console.log(`[SignalStore] Added signal ${id} for session ${sessionId} (expires in ${ttlMs}ms)`);
+        logger.info('Added signal', { service: 'SignalStore', signalId: id, sessionId, expiresIn: ttlMs });
         this.emit('signal_added', storedSignal);
 
         return storedSignal;
@@ -151,7 +152,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         if (!signal || signal.status !== 'ACTIVE') return false;
 
         signal.status = 'EXECUTED';
-        console.log(`[SignalStore] Signal ${signalId} marked as executed`);
+        logger.info('Signal marked as executed', { service: 'SignalStore', signalId });
         this.emit('signal_executed', signalId);
         return true;
     }
@@ -161,7 +162,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         if (!signal || signal.status !== 'ACTIVE') return false;
 
         signal.status = 'CANCELLED';
-        console.log(`[SignalStore] Signal ${signalId} cancelled`);
+        logger.info('Signal cancelled', { service: 'SignalStore', signalId });
         return true;
     }
 
@@ -173,7 +174,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         if (this.pausedSessions.has(sessionId)) return;
 
         this.pausedSessions.add(sessionId);
-        console.log(`[SignalStore] Session ${sessionId} paused - signals skipped`);
+        logger.info('Session paused - signals skipped', { service: 'SignalStore', sessionId });
         this.emit('session_paused', sessionId);
 
         // Cancel all active signals for this session
@@ -192,7 +193,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         if (!this.pausedSessions.has(sessionId)) return;
 
         this.pausedSessions.delete(sessionId);
-        console.log(`[SignalStore] Session ${sessionId} resumed`);
+        logger.info('Session resumed', { service: 'SignalStore', sessionId });
         this.emit('session_resumed', sessionId);
     }
 
@@ -224,7 +225,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         }
 
         if (expiredCount > 0) {
-            console.log(`[SignalStore] Expired ${expiredCount} signals`);
+            logger.info('Expired signals', { service: 'SignalStore', count: expiredCount });
         }
 
         // Prune old signals (keep last hour)
@@ -247,7 +248,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
             this.sessionSignals.delete(sessionId);
         }
         this.pausedSessions.delete(sessionId);
-        console.log(`[SignalStore] Cleared all signals for session ${sessionId}`);
+        logger.info('Cleared all signals for session', { service: 'SignalStore', sessionId });
     }
 
     // ---------------------------------------------------------------------------

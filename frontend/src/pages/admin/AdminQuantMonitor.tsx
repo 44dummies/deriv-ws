@@ -5,11 +5,11 @@ import { motion } from 'framer-motion';
 
 // Supported Markets
 const VOLATILITY_INDICES = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100'];
-const JUMP_INDICES = ['JD_10', 'JD_25', 'JD_50', 'JD_75', 'JD_100'];
+const JUMP_INDICES = ['JD10', 'JD25', 'JD50', 'JD75', 'JD100'];
 
 const STRATEGIES = [
     'RSI_DIVERGENCE',
-    'EMA_CROSS_MOMENTUM', 
+    'EMA_CROSS_MOMENTUM',
     'BOLLINGER_SQUEEZE',
     'MACD_HISTOGRAM',
     'STOCHASTIC',
@@ -104,11 +104,10 @@ export default function AdminQuantMonitor() {
                             key={i}
                             initial={{ height: 0 }}
                             animate={{ height: `${val * 100}%` }}
-                            className={`flex-1 rounded-t sm:min-w-[10px] ${
-                                val >= 0.7 ? 'bg-green-500/30 border-t border-green-500' :
-                                val >= 0.6 ? 'bg-accent/30 border-t border-accent' :
-                                'bg-yellow-500/30 border-t border-yellow-500'
-                            }`}
+                            className={`flex-1 rounded-t sm:min-w-[10px] ${val >= 0.7 ? 'bg-green-500/30 border-t border-green-500' :
+                                    val >= 0.6 ? 'bg-accent/30 border-t border-accent' :
+                                        'bg-yellow-500/30 border-t border-yellow-500'
+                                }`}
                             style={{ opacity: 0.3 + (i / 30) * 0.7 }}
                         />
                     ))}
@@ -132,7 +131,7 @@ export default function AdminQuantMonitor() {
                                 <span className="text-slate-300 font-mono text-sm">{market}</span>
                                 <div className="flex items-center gap-2">
                                     <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
-                                        <motion.div 
+                                        <motion.div
                                             className="h-full bg-blue-500"
                                             initial={{ width: 0 }}
                                             animate={{ width: `${(marketStats[market] || 0) * 5}%` }}
@@ -156,7 +155,7 @@ export default function AdminQuantMonitor() {
                                 <span className="text-slate-300 font-mono text-sm">{market}</span>
                                 <div className="flex items-center gap-2">
                                     <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
-                                        <motion.div 
+                                        <motion.div
                                             className="h-full bg-yellow-500"
                                             initial={{ width: 0 }}
                                             animate={{ width: `${(marketStats[market] || 0) * 5}%` }}
@@ -177,7 +176,7 @@ export default function AdminQuantMonitor() {
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {STRATEGIES.map(strategy => (
-                        <div 
+                        <div
                             key={strategy}
                             className="bg-slate-800/50 rounded-lg p-3 border border-slate-700"
                         >
@@ -197,9 +196,9 @@ export default function AdminQuantMonitor() {
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                     {[
                         { market: 'R_100', type: 'CALL', strategy: 'RSI_DIVERGENCE', confidence: 0.78, time: '2s ago' },
-                        { market: 'JD_50', type: 'PUT', strategy: 'BOLLINGER_SQUEEZE', confidence: 0.82, time: '8s ago' },
+                        { market: 'JD50', type: 'PUT', strategy: 'BOLLINGER_SQUEEZE', confidence: 0.82, time: '8s ago' },
                         { market: 'R_50', type: 'CALL', strategy: 'EMA_CROSS_MOMENTUM', confidence: 0.71, time: '15s ago' },
-                        { market: 'JD_100', type: 'PUT', strategy: 'MACD_HISTOGRAM', confidence: 0.68, time: '23s ago' },
+                        { market: 'JD100', type: 'PUT', strategy: 'MACD_HISTOGRAM', confidence: 0.68, time: '23s ago' },
                         { market: 'R_25', type: 'CALL', strategy: 'MULTI_TIMEFRAME', confidence: 0.85, time: '31s ago' },
                     ].map((signal, i) => (
                         <div key={i} className="flex items-center justify-between p-2 bg-slate-800/30 rounded">
@@ -213,9 +212,8 @@ export default function AdminQuantMonitor() {
                                 <span className="text-xs text-slate-500">{signal.strategy}</span>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className={`text-sm font-mono ${
-                                    signal.confidence >= 0.75 ? 'text-green-400' : 'text-yellow-400'
-                                }`}>
+                                <span className={`text-sm font-mono ${signal.confidence >= 0.75 ? 'text-green-400' : 'text-yellow-400'
+                                    }`}>
                                     {(signal.confidence * 100).toFixed(0)}%
                                 </span>
                                 <span className="text-xs text-slate-600">{signal.time}</span>

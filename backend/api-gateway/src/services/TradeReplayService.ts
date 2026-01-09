@@ -5,6 +5,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { logger } from '../utils/logger.js';
 
 export interface ReplayEvent {
     timestamp: string;
@@ -20,7 +21,7 @@ export class TradeReplayService {
         const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
         if (!supabaseUrl || !supabaseKey) {
-            console.warn('[TradeReplayService] Missing Supabase credentials. Replay unavailable.');
+            logger.warn('[TradeReplayService] Missing Supabase credentials. Replay unavailable.');
         } else {
             this.supabase = createClient(supabaseUrl, supabaseKey, {
                 auth: { persistSession: false, autoRefreshToken: false }

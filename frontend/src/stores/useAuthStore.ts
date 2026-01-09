@@ -2,14 +2,21 @@ import { create } from 'zustand';
 import { Session } from '@supabase/supabase-js';
 // import { supabase } from '../lib/supabase';
 
-interface DerivAccount {
+/**
+ * SECURITY: Deriv tokens are NEVER stored client-side
+ * - JWT is managed via httpOnly cookies (set by backend)
+ * - Frontend only tracks authentication state, not tokens
+ * - Deriv account info (without tokens) is stored in memory only
+ */
+
+interface DerivAccountInfo {
     balance: number;
     currency: string;
     loginid: string;
-    token: string;
     is_virtual: boolean;
     fullname?: string;
     email?: string;
+    // NOTE: 'token' field removed - tokens stay server-side only
 }
 
 interface User {
@@ -17,26 +24,26 @@ interface User {
     email: string;
     fullname: string;
     role: string;
-    deriv_accounts: DerivAccount[];
+    deriv_accounts: DerivAccountInfo[];
     active_account_id: string;
 }
 
 interface AuthState {
     user: User | null;
-    session: Session | null;
+    isAuthenticated: boolean;
     loading: boolean;
     isAdmin: boolean;
     initialize: () => Promise<void>;
     signIn: () => Promise<void>;
     signOut: () => Promise<void>;
     loginWithDeriv: (queryString: string) => Promise<void>;
-    switchAccount: (accountId: string) => void;
+    switchAccount: (accountId: string) => Promise<void>;
     updateBalance: (balance: number, currency: string) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
-    session: null,
+    isAuthenticated: false,
     loading: true,
     isAdmin: false,
     initialize: async () => {
@@ -44,56 +51,56 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return;
         }
 
-        const token = localStorage.getItem('auth_token');
-        const storedAccounts = localStorage.getItem('deriv_accounts');
+        try {
+            // Check authentication status via backend (cookie-based)
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const response = await fetch(`${baseUrl}/api/v1/auth/session`, {
+                method: 'GET',
+                credentials: 'include', // Include httpOnly cookies
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-        if (token) {
-            try {
-                const parts = token.split('.');
-                if (parts.length < 2) throw new Error("Invalid token format");
-
-                const payload = JSON.parse(atob(parts[1] as string));
-                const accounts = storedAccounts ? JSON.parse(storedAccounts) : [];
-
-                set({
-                    user: {
-                        id: payload.userId,
-                        email: payload.email,
-                        fullname: payload.fullname || payload.email?.split('@')[0] || 'Trader',
-                        role: payload.role,
-                        deriv_accounts: accounts,
-                        active_account_id: accounts[0]?.loginid
-                    },
-                    session: { access_token: token } as any,
-                    loading: false,
-                    isAdmin: payload.role === 'ADMIN'
-                });
-            } catch (e) {
-                console.error("Invalid stored token");
-                localStorage.removeItem('auth_token');
-                set({ loading: false });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.user) {
+                    set({
+                        user: {
+                            id: data.user.id,
+                            email: data.user.email,
+                            fullname: data.user.fullname || data.user.email?.split('@')[0] || 'Trader',
+                            role: data.user.role,
+                            deriv_accounts: data.user.deriv_accounts || [],
+                            active_account_id: data.user.active_account_id
+                        },
+                        isAuthenticated: true,
+                        loading: false,
+                        isAdmin: data.user.role === 'ADMIN'
+                    });
+                    return;
+                }
             }
-        } else {
-            set({ loading: false });
+            // Not authenticated or error
+            set({ loading: false, isAuthenticated: false });
+        } catch (e) {
+            console.error("Session check failed:", e);
+            set({ loading: false, isAuthenticated: false });
         }
     },
     loginWithDeriv: async (queryString: string) => {
         try {
             set({ loading: true });
 
-            // 1. Parse all accounts from query string
+            // 1. Parse accounts from query string (for display only - no tokens stored)
             const searchParams = new URLSearchParams(queryString);
-            const accounts: DerivAccount[] = [];
+            const accountInfos: DerivAccountInfo[] = [];
             let i = 1;
             while (searchParams.get(`acct${i}`)) {
                 const loginid = searchParams.get(`acct${i}`)!;
-                const token = searchParams.get(`token${i}`)!;
                 const currency = searchParams.get(`cur${i}`) || 'USD';
                 const is_virtual = loginid.startsWith('VR');
 
-                accounts.push({
+                accountInfos.push({
                     loginid,
-                    token,
                     currency,
                     is_virtual,
                     balance: 0 // Will be updated by WS
@@ -101,59 +108,95 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 i++;
             }
 
-            if (accounts.length === 0) throw new Error("No accounts found");
+            if (accountInfos.length === 0) throw new Error("No accounts found");
 
-            // 2. Authenticate with backend using the first (primary) account
-            const primaryAccount = accounts[0];
+            // 2. Send tokens to backend via POST (tokens never stored client-side)
+            const primaryAccount = accountInfos[0];
             if (!primaryAccount) throw new Error("Primary account not found");
-            const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/auth/deriv/callback`, {
+            
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            
+            // Collect all tokens to send to backend
+            const tokensPayload: { accountId: string; token: string }[] = [];
+            i = 1;
+            while (searchParams.get(`acct${i}`)) {
+                const accountId = searchParams.get(`acct${i}`)!;
+                const token = searchParams.get(`token${i}`)!;
+                if (accountId && token) {
+                    tokensPayload.push({ accountId, token });
+                }
+                i++;
+            }
+
+            const response = await fetch(`${baseUrl}/api/v1/auth/deriv/callback`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // Receive httpOnly cookie
                 body: JSON.stringify({
-                    deriv_token: primaryAccount.token,
-                    account_id: primaryAccount.loginid
+                    accounts: tokensPayload,
+                    primary_account_id: primaryAccount.loginid
                 })
             });
 
-            if (!response.ok) throw new Error('Backend login failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Backend login failed');
+            }
 
             const data = await response.json();
 
-            if (data.accessToken) {
-                localStorage.setItem('auth_token', data.accessToken);
-                localStorage.setItem('deriv_accounts', JSON.stringify(accounts));
+            // Backend sets httpOnly cookie - we just update local state (no tokens!)
+            const fullname = data.user?.fullname || 
+                             data.deriv_account?.fullname || 
+                             data.user?.email?.split('@')[0] || 
+                             'Trader';
 
-                // Extract fullname from deriv_account response if available
-                const fullname = data.user?.fullname || 
-                                 data.deriv_account?.fullname || 
-                                 data.user?.email?.split('@')[0] || 
-                                 'Trader';
+            // Merge backend account data with our parsed info
+            const mergedAccounts = accountInfos.map(info => ({
+                ...info,
+                balance: data.deriv_account?.loginid === info.loginid 
+                    ? data.deriv_account?.balance || 0 
+                    : 0
+            }));
 
-                set({
-                    user: {
-                        id: data.user.id,
-                        email: data.user.email,
-                        fullname: fullname,
-                        role: data.user.role,
-                        deriv_accounts: accounts,
-                        active_account_id: primaryAccount.loginid
-                    },
-                    session: { access_token: data.accessToken } as any,
-                    isAdmin: data.user.role === 'ADMIN',
-                    loading: false
-                });
-            }
+            set({
+                user: {
+                    id: data.user.id,
+                    email: data.user.email,
+                    fullname: fullname,
+                    role: data.user.role,
+                    deriv_accounts: mergedAccounts,
+                    active_account_id: primaryAccount.loginid
+                },
+                isAuthenticated: true,
+                isAdmin: data.user.role === 'ADMIN',
+                loading: false
+            });
 
         } catch (error) {
             console.error('Deriv Login Error:', error);
-            set({ loading: false, user: null });
+            set({ loading: false, user: null, isAuthenticated: false });
             throw error;
         }
     },
-    switchAccount: (accountId: string) => {
+    switchAccount: async (accountId: string) => {
         const { user } = get();
-        if (user) {
-            set({ user: { ...user, active_account_id: accountId } });
+        if (!user) return;
+
+        try {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const response = await fetch(`${baseUrl}/api/v1/auth/switch-account`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ account_id: accountId })
+            });
+
+            if (response.ok) {
+                set({ user: { ...user, active_account_id: accountId } });
+            }
+        } catch (error) {
+            console.error('Account switch failed:', error);
         }
     },
     updateBalance: (balance: number, currency: string) => {
@@ -169,9 +212,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
     signIn: async () => { },
     signOut: async () => {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('deriv_accounts');
-        set({ user: null, session: null, isAdmin: false });
+        try {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            await fetch(`${baseUrl}/api/v1/auth/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (e) {
+            console.error('Logout request failed:', e);
+        }
+        // Clear local state regardless of request success
+        set({ user: null, isAuthenticated: false, isAdmin: false });
     }
 }));
 

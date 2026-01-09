@@ -50,7 +50,16 @@ type MarketDataEvents = {
 // =============================================================================
 
 const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3';
-const DERIV_APP_ID = process.env['DERIV_APP_ID'] ?? '1089'; // Demo app ID
+
+// SECURITY: No fallback - App ID must be explicitly configured
+function getDerivAppId(): string {
+    const appId = process.env['DERIV_APP_ID'];
+    if (!appId) {
+        throw new Error('FATAL: DERIV_APP_ID environment variable is required. Get one from https://api.deriv.com/apps');
+    }
+    return appId;
+}
+
 const RECONNECT_DELAY_BASE = 1000;
 const RECONNECT_MAX_DELAY = 30000;
 const VOLATILITY_WINDOW = 20; // Number of ticks for volatility calculation
@@ -87,7 +96,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
         this.isConnecting = true;
         this.shouldReconnect = true;
-        const url = `${DERIV_WS_URL}?app_id=${DERIV_APP_ID}`;
+        const url = `${DERIV_WS_URL}?app_id=${getDerivAppId()}`;
 
         console.log(`[MarketDataService] Connecting to ${url}`);
 

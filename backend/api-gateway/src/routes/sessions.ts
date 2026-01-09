@@ -7,6 +7,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth.js';
 import { sessionRegistry } from '../services/SessionRegistry.js';
 import { randomUUID } from 'crypto';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get('/', requireAuth, (_req: AuthRequest, res: Response) => {
             message: 'Sessions retrieved successfully',
         });
     } catch (error) {
-        console.error('[Sessions] List error:', error);
+        logger.error('Sessions list error', { error });
         res.status(500).json({ error: 'Failed to list sessions' });
     }
 });

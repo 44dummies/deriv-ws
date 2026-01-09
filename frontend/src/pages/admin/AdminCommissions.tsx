@@ -24,8 +24,8 @@ export default function AdminCommissions() {
                     const json = await res.json();
                     setData(json);
                 }
-            } catch (error) {
-                console.error("Failed to fetch commissions");
+            } catch {
+                // Failed to fetch commissions - handled silently
             } finally {
                 setLoading(false);
             }

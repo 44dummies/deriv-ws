@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, X, Loader2, AlertTriangle, CheckCircle2, Wifi } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
@@ -22,18 +21,18 @@ const MARKETS = [
     { symbol: 'R_25', name: 'Volatility 25 Index', category: 'Volatility' },
     { symbol: 'R_10', name: 'Volatility 10 Index', category: 'Volatility' },
     // Jump Indices
-    { symbol: 'JD_100', name: 'Jump 100 Index', category: 'Jump' },
-    { symbol: 'JD_75', name: 'Jump 75 Index', category: 'Jump' },
-    { symbol: 'JD_50', name: 'Jump 50 Index', category: 'Jump' },
-    { symbol: 'JD_25', name: 'Jump 25 Index', category: 'Jump' },
-    { symbol: 'JD_10', name: 'Jump 10 Index', category: 'Jump' },
+    { symbol: 'JD100', name: 'Jump 100 Index', category: 'Jump' },
+    { symbol: 'JD75', name: 'Jump 75 Index', category: 'Jump' },
+    { symbol: 'JD50', name: 'Jump 50 Index', category: 'Jump' },
+    { symbol: 'JD25', name: 'Jump 25 Index', category: 'Jump' },
+    { symbol: 'JD10', name: 'Jump 10 Index', category: 'Jump' },
 ];
 
 const PRESET_STAKES = [5, 10, 25, 50, 100];
 const PRESET_DURATIONS = [1, 3, 5, 10, 15];
 
 export default function ManualTrade({ market: initialMarket, onClose, onTradeExecuted }: ManualTradeProps) {
-    const { session, user } = useAuthStore();
+    const { user } = useAuthStore();
     const [market, setMarket] = useState(initialMarket || 'R_100');
     const [contractType, setContractType] = useState<ContractType>('CALL');
     const [stake, setStake] = useState(10);
@@ -42,11 +41,11 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const [result, setResult] = useState<{ success: boolean; message: string; trade?: any } | null>(null);
 
     const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id);
-    
+
     // Get all market symbols for live ticks
     const marketSymbols = useMemo(() => MARKETS.map(m => m.symbol), []);
     const { ticks, connected } = useDerivTicks({ symbols: marketSymbols });
-    
+
     // Get current market tick
     const currentTick = ticks.get(market);
 
@@ -55,12 +54,13 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
         setResult(null);
 
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000'}/api/v1/trades/execute`, {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const response = await fetch(`${baseUrl}/api/v1/trades/execute`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
+                    'Content-Type': 'application/json'
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     market,
                     contractType,
@@ -93,32 +93,23 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const potentialProfit = potentialPayout - stake;
 
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-        >
-            <motion.div
-                initial={{ scale: 0.9, y: 20 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.9, y: 20 }}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div
+                className="w-full max-w-lg rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-lg bg-gray-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
             >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-b border-white/10 p-6">
+                <div className="border-b p-6 bg-muted/40">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-bold text-white">Quick Trade</h2>
-                            <p className="text-sm text-gray-400 mt-1">Execute a manual trade</p>
+                            <h2 className="text-2xl font-bold">Quick Trade</h2>
+                            <p className="text-sm text-muted-foreground mt-1">Execute a manual trade</p>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                            className="p-2 rounded-lg hover:bg-muted transition-colors"
                         >
-                            <X className="w-5 h-5 text-gray-400" />
+                            <X className="w-5 h-5 text-muted-foreground" />
                         </button>
                     </div>
                 </div>
@@ -126,14 +117,14 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                 {/* Body */}
                 <div className="p-6 space-y-6">
                     {/* Account Info */}
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border">
                         <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wider">Trading Account</div>
-                            <div className="font-mono text-white font-bold mt-1">{activeAccount?.loginid || 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Trading Account</div>
+                            <div className="font-mono font-bold mt-1">{activeAccount?.loginid || 'N/A'}</div>
                         </div>
                         <div className="text-right">
-                            <div className="text-xs text-gray-500 uppercase tracking-wider">Balance</div>
-                            <div className="font-mono text-emerald-400 font-bold mt-1">
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Balance</div>
+                            <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold mt-1">
                                 {activeAccount?.balance?.toFixed(2) || '0.00'} {activeAccount?.currency || 'USD'}
                             </div>
                         </div>
@@ -141,100 +132,94 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
 
                     {/* Market Selection */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Market</label>
+                        <label className="block text-sm font-medium mb-2">Market</label>
                         <select
                             value={market}
                             onChange={(e) => setMarket(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            className="w-full bg-background border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                         >
                             {MARKETS.map((m) => (
-                                <option key={m.symbol} value={m.symbol} className="bg-gray-900">
+                                <option key={m.symbol} value={m.symbol}>
                                     {m.name} ({m.symbol})
                                 </option>
                             ))}
                         </select>
-                        
+
                         {/* Live Price Display */}
                         <div className="flex items-center justify-between mt-2">
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-muted-foreground">
                                 Category: {selectedMarket?.category}
                             </div>
                             {connected && currentTick ? (
-                                <motion.div 
-                                    key={currentTick.quote}
-                                    initial={{ scale: 1.1 }}
-                                    animate={{ scale: 1 }}
-                                    className="flex items-center gap-2"
-                                >
-                                    <span className="flex items-center gap-1 text-xs text-emerald-400">
+                                <div className="flex items-center gap-2">
+                                    <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                                         <Wifi className="w-3 h-3" />
                                         Live
                                     </span>
                                     <span className={cn(
-                                        "font-mono font-bold text-sm",
-                                        currentTick.trend === 'up' && "text-emerald-400",
-                                        currentTick.trend === 'down' && "text-red-400",
-                                        currentTick.trend === 'neutral' && "text-white"
+                                        "font-mono font-bold text-sm flex items-center",
+                                        currentTick?.trend === 'up' && "text-emerald-600 dark:text-emerald-400",
+                                        currentTick?.trend === 'down' && "text-red-600 dark:text-red-400"
                                     )}>
-                                        {currentTick.quote.toFixed(2)}
-                                        {currentTick.trend === 'up' && <TrendingUp className="w-3 h-3 inline ml-1" />}
-                                        {currentTick.trend === 'down' && <TrendingDown className="w-3 h-3 inline ml-1" />}
+                                        {currentTick?.quote.toFixed(2)}
+                                        {currentTick?.trend === 'up' && <TrendingUp className="w-3 h-3 ml-1" />}
+                                        {currentTick?.trend === 'down' && <TrendingDown className="w-3 h-3 ml-1" />}
                                     </span>
-                                </motion.div>
+                                </div>
                             ) : (
-                                <span className="text-xs text-gray-500">Connecting...</span>
+                                <span className="text-xs text-muted-foreground">Connecting...</span>
                             )}
                         </div>
                     </div>
 
                     {/* Contract Type */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Direction</label>
+                        <label className="block text-sm font-medium mb-2">Direction</label>
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={() => setContractType('CALL')}
                                 className={cn(
                                     "p-4 rounded-xl border-2 transition-all",
                                     contractType === 'CALL'
-                                        ? "border-emerald-500 bg-emerald-500/10"
-                                        : "border-white/10 hover:border-white/20 bg-white/5"
+                                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/20"
+                                        : "border-muted hover:border-emerald-200 dark:hover:border-emerald-900 bg-background"
                                 )}
                             >
                                 <TrendingUp className={cn(
                                     "w-6 h-6 mx-auto mb-2",
-                                    contractType === 'CALL' ? "text-emerald-400" : "text-gray-400"
+                                    contractType === 'CALL' ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
                                 )} />
                                 <div className={cn(
                                     "font-bold",
-                                    contractType === 'CALL' ? "text-emerald-400" : "text-white"
+                                    contractType === 'CALL' ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
                                 )}>Rise</div>
-                                <div className="text-xs text-gray-500 mt-1">Call Option</div>
+                                <div className="text-xs text-muted-foreground mt-1">Call Option</div>
                             </button>
                             <button
                                 onClick={() => setContractType('PUT')}
                                 className={cn(
                                     "p-4 rounded-xl border-2 transition-all",
                                     contractType === 'PUT'
-                                        ? "border-red-500 bg-red-500/10"
-                                        : "border-white/10 hover:border-white/20 bg-white/5"
+                                        ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+                                        : "border-muted hover:border-red-200 dark:hover:border-red-900 bg-background"
                                 )}
                             >
                                 <TrendingDown className={cn(
                                     "w-6 h-6 mx-auto mb-2",
-                                    contractType === 'PUT' ? "text-red-400" : "text-gray-400"
+                                    contractType === 'PUT' ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
                                 )} />
                                 <div className={cn(
                                     "font-bold",
-                                    contractType === 'PUT' ? "text-red-400" : "text-white"
+                                    contractType === 'PUT' ? "text-red-600 dark:text-red-400" : "text-foreground"
                                 )}>Fall</div>
-                                <div className="text-xs text-gray-500 mt-1">Put Option</div>
+                                <div className="text-xs text-muted-foreground mt-1">Put Option</div>
                             </button>
                         </div>
                     </div>
 
                     {/* Stake */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Stake Amount</label>
+                        <label className="block text-sm font-medium mb-2">Stake Amount</label>
                         <div className="flex items-center gap-3">
                             <input
                                 type="number"
@@ -242,9 +227,9 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                 onChange={(e) => setStake(Number(e.target.value))}
                                 min={1}
                                 max={10000}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                className="flex-1 bg-background border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                             />
-                            <span className="text-gray-400">{activeAccount?.currency || 'USD'}</span>
+                            <span className="text-muted-foreground font-medium">{activeAccount?.currency || 'USD'}</span>
                         </div>
                         <div className="flex gap-2 mt-2">
                             {PRESET_STAKES.map((amount) => (
@@ -252,10 +237,10 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                     key={amount}
                                     onClick={() => setStake(amount)}
                                     className={cn(
-                                        "px-3 py-1 rounded-lg text-xs font-medium transition-colors",
+                                        "px-3 py-1 rounded-lg text-xs font-medium transition-colors border",
                                         stake === amount
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-white/5 text-gray-400 hover:bg-white/10"
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "bg-background hover:bg-muted text-muted-foreground"
                                     )}
                                 >
                                     {amount}
@@ -266,7 +251,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
 
                     {/* Duration */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-400 mb-2">Duration (minutes)</label>
+                        <label className="block text-sm font-medium mb-2">Duration (minutes)</label>
                         <div className="flex items-center gap-3">
                             <input
                                 type="number"
@@ -274,9 +259,9 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                 onChange={(e) => setDuration(Number(e.target.value))}
                                 min={1}
                                 max={1440}
-                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                className="flex-1 bg-background border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                             />
-                            <span className="text-gray-400">min</span>
+                            <span className="text-muted-foreground font-medium">min</span>
                         </div>
                         <div className="flex gap-2 mt-2">
                             {PRESET_DURATIONS.map((dur) => (
@@ -284,10 +269,10 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                     key={dur}
                                     onClick={() => setDuration(dur)}
                                     className={cn(
-                                        "px-3 py-1 rounded-lg text-xs font-medium transition-colors",
+                                        "px-3 py-1 rounded-lg text-xs font-medium transition-colors border",
                                         duration === dur
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-white/5 text-gray-400 hover:bg-white/10"
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "bg-background hover:bg-muted text-muted-foreground"
                                     )}
                                 >
                                     {dur}m
@@ -297,66 +282,59 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                     </div>
 
                     {/* Potential Payout */}
-                    <div className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
+                    <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-gray-400">Potential Payout</span>
-                            <span className="text-xl font-bold text-white">{potentialPayout.toFixed(2)}</span>
+                            <span className="text-sm text-muted-foreground">Potential Payout</span>
+                            <span className="text-xl font-bold">{potentialPayout.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-400">Potential Profit</span>
-                            <span className="text-lg font-bold text-emerald-400">+{potentialProfit.toFixed(2)}</span>
+                            <span className="text-sm text-muted-foreground">Potential Profit</span>
+                            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">+{potentialProfit.toFixed(2)}</span>
                         </div>
                     </div>
 
                     {/* Result Message */}
-                    <AnimatePresence>
-                        {result && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className={cn(
-                                    "p-4 rounded-xl border flex items-start gap-3",
-                                    result.success
-                                        ? "bg-emerald-500/10 border-emerald-500/30"
-                                        : "bg-red-500/10 border-red-500/30"
-                                )}
-                            >
-                                {result.success ? (
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                                ) : (
-                                    <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                )}
-                                <div className="flex-1">
-                                    <div className={cn(
-                                        "font-bold text-sm",
-                                        result.success ? "text-emerald-400" : "text-red-400"
-                                    )}>
-                                        {result.success ? 'Trade Executed!' : 'Execution Failed'}
-                                    </div>
-                                    <div className="text-xs text-gray-400 mt-1">{result.message}</div>
-                                    {result.trade && (
-                                        <div className="text-xs text-gray-500 mt-2 font-mono">
-                                            Contract ID: {result.trade.contract_id}
-                                        </div>
-                                    )}
+                    {result && (
+                        <div className={cn(
+                            "p-4 rounded-xl border flex items-start gap-3 animate-in slide-in-from-top-2 duration-200",
+                            result.success
+                                ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
+                                : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
+                        )}>
+                            {result.success ? (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                            ) : (
+                                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                                <div className={cn(
+                                    "font-bold text-sm",
+                                    result.success ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                                )}>
+                                    {result.success ? 'Trade Executed!' : 'Execution Failed'}
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                <div className="text-xs text-muted-foreground mt-1">{result.message}</div>
+                                {result.trade && (
+                                    <div className="text-xs text-muted-foreground mt-2 font-mono">
+                                        Contract ID: {result.trade.contract_id}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Execute Button */}
                     <button
                         onClick={handleExecute}
                         disabled={isExecuting || !activeAccount}
                         className={cn(
-                            "w-full py-4 rounded-xl font-bold text-white transition-all",
+                            "w-full py-4 rounded-xl font-bold text-white transition-all shadow-md",
                             "flex items-center justify-center gap-2",
                             isRise
-                                ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-                                : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
+                                ? "bg-emerald-600 hover:bg-emerald-700"
+                                : "bg-red-600 hover:bg-red-700",
                             "disabled:opacity-50 disabled:cursor-not-allowed",
-                            "shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                            "hover:scale-[1.01] active:scale-[0.99]"
                         )}
                     >
                         {isExecuting ? (
@@ -372,7 +350,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         )}
                     </button>
                 </div>
-            </motion.div>
-        </motion.div>
+            </div>
+        </div>
     );
 }

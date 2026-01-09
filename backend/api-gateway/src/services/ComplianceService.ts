@@ -5,6 +5,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { logger } from '../utils/logger.js';
 
 export interface ComplianceReport {
     generatedAt: string;
@@ -23,7 +24,7 @@ export class ComplianceService {
         const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
         if (!supabaseUrl || !supabaseKey) {
-            console.warn('[ComplianceService] Missing Supabase credentials.');
+            logger.warn('[ComplianceService] Missing Supabase credentials.');
         } else {
             this.supabase = createClient(supabaseUrl, supabaseKey);
         }

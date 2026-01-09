@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
 
 const router = Router();
 
@@ -44,7 +45,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
         const { data: trades, count, error } = await query;
 
         if (error) {
-            console.error('[Trades] List error:', error);
+            logger.error('Trades list error', { error });
             res.status(500).json({ error: 'Failed to fetch trades' });
             return;
         }
@@ -56,7 +57,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
             offset: Number(offset)
         });
     } catch (error) {
-        console.error('[Trades] List error:', error);
+        logger.error('Trades list error', { error });
         res.status(500).json({ error: 'Failed to fetch trades' });
     }
 });
@@ -87,7 +88,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 
         res.json(trade);
     } catch (error) {
-        console.error('[Trades] Get error:', error);
+        logger.error('Trades get error', { error });
         res.status(500).json({ error: 'Failed to fetch trade' });
     }
 });
@@ -104,7 +105,7 @@ router.get('/session/:sessionId', requireAuth, async (req: AuthRequest, res: Res
             .order('created_at', { ascending: false });
 
         if (error) {
-            console.error('[Trades] Session trades error:', error);
+            logger.error('Trades session trades error', { error, sessionId });
             res.status(500).json({ error: 'Failed to fetch session trades' });
             return;
         }
@@ -115,7 +116,7 @@ router.get('/session/:sessionId', requireAuth, async (req: AuthRequest, res: Res
             total: trades?.length || 0
         });
     } catch (error) {
-        console.error('[Trades] Session trades error:', error);
+        logger.error('Trades session trades error', { error });
         res.status(500).json({ error: 'Failed to fetch session trades' });
     }
 });
@@ -167,7 +168,7 @@ router.get('/stats/summary', requireAuth, async (req: AuthRequest, res: Response
 
         res.json(stats);
     } catch (error) {
-        console.error('[Trades] Stats error:', error);
+        logger.error('Trades stats error', { error });
         res.status(500).json({ error: 'Failed to fetch trade stats' });
     }
 });

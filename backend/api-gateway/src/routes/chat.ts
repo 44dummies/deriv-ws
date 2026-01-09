@@ -1,5 +1,5 @@
 import express from 'express';
-
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
         const data = await response.json();
         res.json(data);
     } catch (error) {
-        console.error('Chat Proxy Error:', error);
+        logger.error('Chat Proxy Error', { error });
         res.status(503).json({
             response: "Connection to TraderMind AI (Ollama) is currently unavailable."
         });

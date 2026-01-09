@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { encrypt, decrypt } from "../utils/crypto.js";
+import { logger } from '../utils/logger.js';
 
 // Initialize Admin Client for Secure Operations (Bypass RLS)
 const getSupabaseAdmin = () => {
@@ -35,11 +36,11 @@ export const UserService = {
             );
 
         if (error) {
-            console.error('[UserService] Failed to store token:', error);
+            logger.error('[UserService] Failed to store token:', error);
             throw new Error(`Database Error: ${error.message}`);
         }
 
-        console.log(`[UserService] Stored secure token for user ${userId} (${accountId})`);
+        logger.info(`[UserService] Stored secure token for user ${userId} (${accountId})`);
     },
 
     async getDerivToken(userId: string): Promise<string | null> {
@@ -51,6 +52,24 @@ export const UserService = {
 
         if (error || !data) {
             // It's common to not find a token if user hasn't linked account
+            return null;
+        }
+
+        return decrypt(data.encrypted_token);
+    },
+
+    /**
+     * Get Deriv token for a specific account (for multi-account support)
+     */
+    async getDerivTokenForAccount(userId: string, accountId: string): Promise<string | null> {
+        const { data, error } = await getSupabaseAdmin()
+            .from('user_deriv_tokens')
+            .select('encrypted_token')
+            .eq('user_id', userId)
+            .eq('account_id', accountId)
+            .single();
+
+        if (error || !data) {
             return null;
         }
 

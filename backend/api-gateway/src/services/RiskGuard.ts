@@ -3,6 +3,7 @@ import { Signal, quantEngine } from './QuantEngine.js';
 import { sessionRegistry } from './SessionRegistry.js';
 import { memoryService } from './MemoryService.js';
 import { randomUUID } from 'crypto';
+import { logger } from '../utils/logger.js';
 
 export interface RiskCheck {
     userId: string;
@@ -39,7 +40,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
     constructor() {
         super();
         this.initialize();
-        console.log('[RiskGuard] Initialized');
+        logger.info('RiskGuard initialized');
     }
 
     private initialize(): void {
@@ -91,25 +92,26 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         const lossThreshold = session.config_json.global_loss_threshold ?? 1000;
         if (totalPnL <= -lossThreshold) {
             const participants = Array.from(session.participants.keys());
+            // SECURITY: Never use stub users - skip if no real participants
             if (participants.length === 0) {
-                this.rejectTrade('stub-user-id', sessionId, signal, `Session Global Loss Limit Hit: ${totalPnL}`);
-            } else {
-                for (const userId of participants) {
-                    this.rejectTrade(userId, sessionId, signal, `Session Global Loss Limit Hit: ${totalPnL}`);
-                }
+                logger.warn('Session has no participants, skipping signal', { sessionId });
+                return;
+            }
+            for (const userId of participants) {
+                this.rejectTrade(userId, sessionId, signal, `Session Global Loss Limit Hit: ${totalPnL}`);
             }
             return;
         }
 
-        // 2. User Level Check (Iterate participants or stub)
+        // 2. User Level Check (Iterate participants only - no stubs)
         const participants = Array.from(session.participants.keys());
         if (participants.length === 0) {
-            // For testing if no participants joined yet, use stub
-            this.evaluateUserRisk('stub-user-id', sessionId, signal);
-        } else {
-            for (const userId of participants) {
-                this.evaluateUserRisk(userId, sessionId, signal);
-            }
+            // No participants = no trades to evaluate
+            logger.warn('Session has no participants, skipping signal', { sessionId });
+            return;
+        }
+        for (const userId of participants) {
+            this.evaluateUserRisk(userId, sessionId, signal);
         }
     }
 
@@ -199,7 +201,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
 
         this.emit('risk_check_completed', check);
         if (check.result === 'REJECTED') {
-            console.warn(`[RiskGuard] REJECTED (User: ${check.userId}): ${check.reason}`);
+            logger.warn('Trade REJECTED', { userId: check.userId, reason: check.reason });
 
             if (check.memoryId) {
                 // 1. Update Operational Memory (Mutable)
@@ -226,7 +228,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
                 });
             }
         } else {
-            console.log(`[RiskGuard] APPROVED (User: ${check.userId}): ${check.proposedTrade.market} ${check.proposedTrade.type}`);
+            logger.info('Trade APPROVED', { userId: check.userId, market: check.proposedTrade.market, type: check.proposedTrade.type });
         }
     }
 

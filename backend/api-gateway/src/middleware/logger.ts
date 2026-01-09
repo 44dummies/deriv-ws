@@ -67,9 +67,9 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
     
     // Log request body for non-sensitive paths (debug level)
     if (process.env.LOG_LEVEL === 'debug' && !isSensitivePath(req.path)) {
-        console.log(`[Request] ${JSON.stringify(logEntry)}`);
+        process.stdout.write(`[Request] ${JSON.stringify(logEntry)}\n`);
         if (req.body && Object.keys(req.body).length > 0) {
-            console.log(`[Request Body] ${requestId}: ${JSON.stringify(maskSensitiveData(req.body))}`);
+            process.stdout.write(`[Request Body] ${requestId}: ${JSON.stringify(maskSensitiveData(req.body))}\n`);
         }
     }
     
@@ -85,11 +85,11 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
         
         // Log based on status code
         if (res.statusCode >= 500) {
-            console.error(`[Response ERROR] ${JSON.stringify(logEntry)}`);
+            process.stderr.write(`[Response ERROR] ${JSON.stringify(logEntry)}\n`);
         } else if (res.statusCode >= 400) {
-            console.warn(`[Response WARN] ${JSON.stringify(logEntry)}`);
+            process.stderr.write(`[Response WARN] ${JSON.stringify(logEntry)}\n`);
         } else {
-            console.log(`[Response] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`);
+            process.stdout.write(`[Response] ${req.method} ${req.path} ${res.statusCode} ${duration}ms\n`);
         }
         
         // Call original send
@@ -106,13 +106,13 @@ export function requestLogger(req: Request, res: Response, next: NextFunction): 
 export function errorLogger(err: Error, req: Request, res: Response, next: NextFunction): void {
     const requestId = (req as any).requestId ?? 'unknown';
     
-    console.error(`[Error] ${requestId}:`, {
+    process.stderr.write(`[Error] ${requestId}: ${JSON.stringify({
         error: err.message,
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
         path: req.path,
         method: req.method,
         userId: (req as any).user?.id
-    });
+    })}\n`);
     
     next(err);
 }
@@ -169,5 +169,5 @@ export function auditLog(action: string, details: Record<string, any>): void {
     };
     
     // In production, this would go to a separate audit log stream
-    console.log(`[AUDIT] ${JSON.stringify(entry)}`);
+    process.stdout.write(`[AUDIT] ${JSON.stringify(entry)}\n`);
 }

@@ -6,6 +6,20 @@
 import { z } from 'zod';
 
 // ============================================================
+// ENUMS (Shared across the system)
+// ============================================================
+
+export const RiskLevelSchema = z.enum(['LOW', 'MEDIUM', 'HIGH']);
+export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+
+// TypeScript enum for use in code
+export enum RiskLevelEnum {
+    LOW = 'LOW',
+    MEDIUM = 'MEDIUM',
+    HIGH = 'HIGH'
+}
+
+// ============================================================
 // USER
 // {id, email, role, deriv_token_encrypted}
 // ============================================================

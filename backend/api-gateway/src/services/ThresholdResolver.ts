@@ -1,4 +1,6 @@
 
+import { logger } from '../utils/logger.js';
+
 // ThresholdResolver.ts
 // Decouples numeric thresholds from execution logic.
 
@@ -40,7 +42,7 @@ export class ThresholdResolver {
     };
 
     constructor() {
-        console.log('[ThresholdResolver] Initialized');
+        logger.info('[ThresholdResolver] Initialized');
     }
 
     /**

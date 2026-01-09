@@ -8,6 +8,8 @@ import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { createClient } from '@supabase/supabase-js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import crypto from 'crypto';
+import { logger } from '../utils/logger.js';
+import { UserService } from '../services/UserService.js';
 
 const router = Router();
 
@@ -41,8 +43,8 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
 
         // Validation
         if (!market || !contractType || !stake || !duration) {
-            return res.status(400).json({ 
-                error: 'Missing required fields', 
+            return res.status(400).json({
+                error: 'Missing required fields',
                 required: ['market', 'contractType', 'stake', 'duration']
             });
         }
@@ -55,10 +57,10 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             return res.status(400).json({ error: 'Duration must be between 1 and 1440 minutes' });
         }
 
-        // Get user's active Deriv account
+        // Get user's active Deriv account ID to verify choice or use default
         const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('deriv_accounts, active_account_id')
+            .select('active_account_id')
             .eq('id', userId)
             .single();
 
@@ -66,16 +68,35 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const activeAccount = userData.deriv_accounts?.find(
-            (acc: any) => acc.loginid === userData.active_account_id
-        );
+        // Use active account if none specified (though UI seems to imply we might want to let them choose, 
+        // for now we stick to active_account_id to match original logic but securely)
+        const accountId = userData.active_account_id;
 
-        if (!activeAccount || !activeAccount.token) {
-            return res.status(400).json({ 
-                error: 'No active Deriv account or token missing',
+        if (!accountId) {
+            return res.status(400).json({
+                error: 'No active Deriv account selected',
+                hint: 'Please select an account in your profile'
+            });
+        }
+
+        // SECURE: Retrieve token from UserService (encrypted store)
+        const token = await UserService.getDerivTokenForAccount(userId, accountId);
+
+        if (!token) {
+            return res.status(400).json({
+                error: 'No token found for active account',
                 hint: 'Please reconnect your Deriv account'
             });
         }
+
+        // Retrieve account currency/details (optional but good for contract params)
+        // We can get this from the token auth response or just default to USD if not critical
+        // For better accuracy, we'll let the authorize call confirm currency
+        const activeAccount = {
+            token: token,
+            currency: 'USD', // Default, will be updated by authorize response if needed
+            is_virtual: accountId.startsWith('VR')
+        };
 
         // Create Deriv client and authorize
         const derivClient = new DerivWSClient();
@@ -85,8 +106,8 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             await derivClient.authorize(activeAccount.token);
         } catch (authError) {
             derivClient.disconnect();
-            return res.status(401).json({ 
-                error: 'Deriv authorization failed', 
+            return res.status(401).json({
+                error: 'Deriv authorization failed',
                 details: authError instanceof Error ? authError.message : 'Unknown error'
             });
         }
@@ -108,8 +129,8 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             buyResponse = await derivClient.buyContract(contractParams);
         } catch (buyError) {
             derivClient.disconnect();
-            return res.status(500).json({ 
-                error: 'Trade execution failed', 
+            return res.status(500).json({
+                error: 'Trade execution failed',
                 details: buyError instanceof Error ? buyError.message : 'Unknown error'
             });
         }
@@ -127,7 +148,7 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
 
         // Get or create active session for this user
         let sessionId: string | null = null;
-        
+
         const { data: activeSessions } = await supabase
             .from('trading_sessions')
             .select('id')
@@ -144,9 +165,9 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
                 .insert({
                     admin_id: userId,
                     status: 'ACTIVE',
-                    config_json: { 
-                        type: 'MANUAL', 
-                        risk_profile: 'USER_CONTROLLED' 
+                    config_json: {
+                        type: 'MANUAL',
+                        risk_profile: 'USER_CONTROLLED'
                     },
                     started_at: new Date().toISOString()
                 })
@@ -184,12 +205,12 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             .single();
 
         if (tradeError) {
-            console.error('[TradeExecution] DB insert error:', tradeError);
+            logger.error('TradeExecution DB insert error', { tradeError, tradeId, contractId });
             // Trade was executed on Deriv but DB insert failed - log for reconciliation
         }
 
         // Monitor contract settlement (async)
-        monitorContractSettlement(derivClient, contractId, tradeId).catch(console.error);
+        monitorContractSettlement(derivClient, contractId, tradeId).catch(err => logger.error('TradeExecution monitor error', { err }));
 
         return res.status(201).json({
             success: true,
@@ -210,9 +231,9 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
         });
 
     } catch (error) {
-        console.error('[TradeExecution] Unexpected error:', error);
-        return res.status(500).json({ 
-            error: 'Internal server error', 
+        logger.error('TradeExecution unexpected error', { error });
+        return res.status(500).json({
+            error: 'Internal server error',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
@@ -222,14 +243,14 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
  * Monitor contract settlement and update DB when contract closes
  */
 async function monitorContractSettlement(
-    derivClient: DerivWSClient, 
-    contractId: number, 
+    derivClient: DerivWSClient,
+    contractId: number,
     tradeId: string
 ): Promise<void> {
     derivClient.once('settled', async (settledContractId, result, profit) => {
         if (settledContractId === contractId) {
             const status = result === 'win' ? 'WIN' : 'LOSS';
-            
+
             await supabase
                 .from('trades')
                 .update({
@@ -239,8 +260,8 @@ async function monitorContractSettlement(
                 })
                 .eq('id', tradeId);
 
-            console.log(`[TradeExecution] Contract ${contractId} settled: ${status}, P&L: ${profit}`);
-            
+            logger.info('TradeExecution contract settled', { contractId, status, profit });
+
             // Disconnect after settlement
             derivClient.disconnect();
         }

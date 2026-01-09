@@ -8,6 +8,7 @@ import { createHash } from 'crypto';
 import { NormalizedTick } from './MarketDataService.js';
 import { aiServiceClient, AIInferenceResponse } from './AIServiceClient.js';
 import { thresholdResolver } from './ThresholdResolver.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -105,7 +106,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
     constructor() {
         super();
-        console.log('[QuantEngine] Initialized');
+        logger.info('Initialized', { service: 'QuantEngine' });
     }
 
     /**
@@ -114,7 +115,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
      */
     setAIEnabled(enabled: boolean): void {
         this.aiEnabled = enabled;
-        console.warn(`[QuantEngine] AI Enabled Status: ${enabled}`);
+        logger.warn('AI Enabled Status changed', { service: 'QuantEngine', enabled });
         if (!enabled) {
             this.emit('ai_fallback', 'AI_DISABLED_BY_ADMIN_OR_GUARD');
         }
@@ -189,7 +190,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         if (config?.useAI) {
             // Processing async but not waiting to block tick loop
             this.processTickWithAI(tick, indicators, config).catch(err => {
-                console.error('[QuantEngine] AI processing error:', err);
+                logger.error('AI processing error', { service: 'QuantEngine' }, err instanceof Error ? err : undefined);
             });
         }
 
@@ -246,7 +247,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
                     // >>> SHADOW MODE INJECTION <<<
                     // Run candidates asynchronously without blocking main thread
                     this.executeShadowModels(tick, indicators, sessionId, inputHash).catch(err => {
-                        console.error('[QuantEngine] Shadow execution error:', err);
+                        logger.error('Shadow execution error', { service: 'QuantEngine' }, err instanceof Error ? err : undefined);
                     });
 
                     // Check minimum confidence
@@ -288,19 +289,19 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
                 if (shadowResponse) {
                     // Check if it's actually in Shadow Mode (Backend confirms)
                     if (shadowResponse.mode === 'SHADOW') {
-                        console.log(`[QuantEngine] 👻 SHADOW SIGNAL (${modelId}): ${shadowResponse.signal_bias} Conf: ${shadowResponse.confidence}`);
+                        logger.info('Shadow signal generated', { service: 'QuantEngine', modelId, signalBias: shadowResponse.signal_bias, confidence: shadowResponse.confidence });
 
                         // Emit event for persistence
                         this.emit('shadow_signal', modelId, shadowResponse, inputHash, tick.market, sessionId, tick.quote);
 
                         // Log hash for parity check
                         if (shadowResponse.request_hash && shadowResponse.request_hash !== inputHash && shadowResponse.request_hash !== 'hash_placeholder') {
-                            console.warn(`[QuantEngine] ⚠️ PARITY MISMATCH: Sent ${inputHash.substring(0, 8)}, Recv ${shadowResponse.request_hash.substring(0, 8)}`);
+                            logger.warn('Parity mismatch detected', { service: 'QuantEngine', sentHash: inputHash.substring(0, 8), recvHash: shadowResponse.request_hash.substring(0, 8) });
                         }
                     }
                 }
             } catch (err) {
-                console.warn(`[QuantEngine] Shadow execution failed for ${modelId}`, err);
+                logger.warn('Shadow execution failed', { service: 'QuantEngine', modelId }, err instanceof Error ? err : undefined);
             }
         });
 

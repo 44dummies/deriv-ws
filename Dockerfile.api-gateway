@@ -3,8 +3,11 @@ FROM node:20-alpine
 WORKDIR /app
 RUN corepack enable
 
-# FORCE NEW BUILD LAYER - v5
-ARG CACHEBUST=5
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
+# FORCE NEW BUILD LAYER - v7
+ARG CACHEBUST=7
 
 COPY . .
 
@@ -17,10 +20,21 @@ RUN pnpm run --filter @tradermind/schemas --filter @tradermind/shared-utils --fi
 # 2. Build API Gateway ONLY
 RUN pnpm run --filter @tradermind/api-gateway build
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S tradermind -u 1001 -G nodejs && \
+    chown -R tradermind:nodejs /app
+
+USER tradermind
+
 WORKDIR /app/backend/api-gateway
 
 # Standardized port configuration - matches docker-compose and index.ts
 ENV PORT=3000
 EXPOSE 3000
+
+# HEALTHCHECK: Verify service is responding
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
 
 CMD ["pnpm", "start"]
