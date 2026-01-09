@@ -8,6 +8,7 @@ RUN apk add --no-cache curl
 
 ARG CACHEBUST=5
 
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY . .
 
 RUN pnpm install --frozen-lockfile

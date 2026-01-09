@@ -69,7 +69,7 @@ const wsServer = initWebSocketServer(httpServer);
 // =============================================================================
 // CORS CONFIGURATION (Explicit, no wildcards in production)
 // =============================================================================
-const allowedOrigins = process.env.CORS_ORIGIN 
+const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : ['http://localhost:5173', 'http://localhost:3000', 'https://deriv-ws-frontend.vercel.app'];
 
@@ -97,11 +97,11 @@ app.use(helmet({
 }));
 
 // CORS with explicit origins
-app.use(cors({
-    origin: (origin, callback) => {
+const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
             callback(null, true);
         } else {
@@ -112,7 +112,13 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-ID']
-}));
+};
+
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
+
+// CORS with explicit origins
+app.use(cors(corsOptions));
 
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
@@ -207,15 +213,15 @@ app.use((_req, res) => {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     // Capture to Sentry
     Monitoring.captureError(err, { source: 'express-error-handler' });
-    
+
     logger.error('Unhandled error', {}, err);
-    
+
     // CORS errors
     if (err.message === 'Not allowed by CORS') {
         res.status(403).json({ error: 'CORS policy violation' });
         return;
     }
-    
+
     res.status(500).json({ error: 'Internal server error' });
 });
 

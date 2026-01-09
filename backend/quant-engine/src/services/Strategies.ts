@@ -62,16 +62,17 @@ export interface IndicatorSet {
 // SUPPORTED MARKETS
 // =============================================================================
 
+// JUMP Indices (JD_*) are deprecated/invalid. Consolidating to Volatility.
 export const VOLATILITY_INDICES = ['R_10', 'R_25', 'R_50', 'R_75', 'R_100'] as const;
-export const JUMP_INDICES = ['JD_10', 'JD_25', 'JD_50', 'JD_75', 'JD_100'] as const;
-export const ALL_MARKETS = [...VOLATILITY_INDICES, ...JUMP_INDICES] as const;
+export const JUMP_INDICES = [] as const; // Removed invalid symbols
+export const ALL_MARKETS = [...VOLATILITY_INDICES] as const;
 
 export type VolatilityIndex = typeof VOLATILITY_INDICES[number];
-export type JumpIndex = typeof JUMP_INDICES[number];
+export type JumpIndex = never;
 export type SupportedMarket = typeof ALL_MARKETS[number];
 
 export function getMarketType(market: string): MarketType {
-    if (JUMP_INDICES.includes(market as JumpIndex)) return 'JUMP';
+    // Treat everything as VOLATILITY since Jump is removed
     return 'VOLATILITY';
 }
 
@@ -167,7 +168,7 @@ export class RSIDivergenceStrategy extends TradingStrategy {
 export class EMACrossMomentumStrategy extends TradingStrategy {
     name = 'EMA_CROSS_MOMENTUM';
     description = 'EMA crossover confirmed by momentum';
-    suitableMarkets: MarketType[] = ['VOLATILITY', 'JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.60;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string): StrategySignal | null {
@@ -197,7 +198,7 @@ export class EMACrossMomentumStrategy extends TradingStrategy {
 export class BollingerSqueezeStrategy extends TradingStrategy {
     name = 'BOLLINGER_SQUEEZE';
     description = 'Detects Bollinger Band squeeze for volatility breakouts';
-    suitableMarkets: MarketType[] = ['JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.70;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string): StrategySignal | null {
@@ -230,7 +231,7 @@ export class BollingerSqueezeStrategy extends TradingStrategy {
 export class MACDHistogramStrategy extends TradingStrategy {
     name = 'MACD_HISTOGRAM';
     description = 'MACD histogram reversal detection';
-    suitableMarkets: MarketType[] = ['VOLATILITY', 'JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.55;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string): StrategySignal | null {
@@ -288,12 +289,12 @@ export class StochasticStrategy extends TradingStrategy {
 export class VolatilitySpikeStrategy extends TradingStrategy {
     name = 'VOLATILITY_SPIKE';
     description = 'Detects sudden volatility spikes for quick trades';
-    suitableMarkets: MarketType[] = ['JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.70;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string): StrategySignal | null {
         const { atr, volatility, momentum } = indicators;
-        
+
         // High volatility spike
         if (volatility > 25 && atr > 1.5) {
             if (momentum > 30) {
@@ -315,7 +316,7 @@ export class VolatilitySpikeStrategy extends TradingStrategy {
 export class SupportResistanceStrategy extends TradingStrategy {
     name = 'SUPPORT_RESISTANCE';
     description = 'Trades bounces off support and resistance levels';
-    suitableMarkets: MarketType[] = ['VOLATILITY', 'JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.65;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string, history?: TradeHistory[]): StrategySignal | null {
@@ -346,7 +347,7 @@ export class SupportResistanceStrategy extends TradingStrategy {
 export class ADXTrendStrategy extends TradingStrategy {
     name = 'ADX_TREND';
     description = 'Strong trend following using ADX';
-    suitableMarkets: MarketType[] = ['VOLATILITY', 'JUMP'];
+    suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.70;
 
     analyze(prices: number[], indicators: IndicatorSet, market: string): StrategySignal | null {
@@ -384,7 +385,7 @@ export class MultiTimeframeStrategy extends TradingStrategy {
         const { rsi, ema_cross, macd_histogram, stochastic_k, adx } = indicators;
 
         // All indicators align bullish
-        const bullishScore = 
+        const bullishScore =
             (rsi < 50 ? 1 : 0) +
             (ema_cross === 'BULLISH' ? 1 : 0) +
             (macd_histogram > 0 ? 1 : 0) +
@@ -455,7 +456,7 @@ export class AdaptiveStrategy extends TradingStrategy {
             const putWins = similarTrades.filter(h => h.signal_type === 'PUT' && h.result === 'WIN').length;
 
             if (callWins > putWins && momentum > 0) {
-                return this.createSignal('CALL', 0.65 + similarWinRate * 0.1, 
+                return this.createSignal('CALL', 0.65 + similarWinRate * 0.1,
                     `Adaptive strategy - ${Math.round(similarWinRate * 100)}% win rate in similar conditions`, market, 3);
             } else if (putWins > callWins && momentum < 0) {
                 return this.createSignal('PUT', 0.65 + similarWinRate * 0.1,
