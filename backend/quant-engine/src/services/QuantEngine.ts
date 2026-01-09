@@ -14,7 +14,7 @@ import { NormalizedTick } from './MarketDataService.js';
 import { FeatureBuilder } from './FeatureBuilder.js';
 import { 
     StrategyManager, 
-    StrategySignal, 
+    StrategySignal as _StrategySignal, 
     IndicatorSet,
     TradeHistory,
     ALL_MARKETS,
@@ -599,7 +599,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         const trueRanges: number[] = [];
         for (let i = 1; i < prices.length; i++) {
             const high = prices[i] ?? 0;
-            const low = prices[i] ?? 0;
+            const _low = prices[i] ?? 0;
             const prevClose = prices[i - 1] ?? 0;
             
             // True Range = max(high - low, |high - prev close|, |low - prev close|)

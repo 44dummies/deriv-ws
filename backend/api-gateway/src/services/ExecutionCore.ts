@@ -295,7 +295,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     /**
      * Execute specific trade (REAL IMPLEMENTATION)
      */
-    private async executeTrade(check: RiskCheck, idempotencyKey: string): Promise<void> {
+    private async executeTrade(check: RiskCheck, _idempotencyKey: string): Promise<void> {
         logger.info('Executing trade', { userId: check.userId, market: check.proposedTrade.market, type: check.proposedTrade.type });
 
         let client: DerivWSClient | null = null;

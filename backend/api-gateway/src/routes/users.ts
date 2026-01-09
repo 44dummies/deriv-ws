@@ -5,9 +5,11 @@
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
+router.use(requireAuth, requireAdmin);
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL!;

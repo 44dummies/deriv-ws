@@ -96,7 +96,7 @@ async function initSentry(): Promise<void> {
         logger.info('[Monitoring] Sentry initialized successfully');
         
     } catch (error) {
-        logger.warn('[Monitoring] Failed to initialize Sentry:', error);
+        logger.warn('[Monitoring] Failed to initialize Sentry', undefined, error instanceof Error ? error : new Error(String(error)));
     }
 }
 
@@ -109,7 +109,7 @@ initSentry();
 
 export function captureException(error: Error, context?: ErrorContext): void {
     // Always log
-    logger.error('[Error]', error.message, context);
+    logger.error('[Error]', context as Record<string, unknown>, error);
     
     if (!Sentry || !isInitialized) return;
     
@@ -126,7 +126,7 @@ export function captureException(error: Error, context?: ErrorContext): void {
 }
 
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
-    logger.info(`[${level.toUpperCase()}]`, message);
+    logger.info(`[${level.toUpperCase()}]`, { message });
     
     if (!Sentry || !isInitialized) return;
     

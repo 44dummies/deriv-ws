@@ -124,7 +124,7 @@ function write(level: LogLevel, message: string, context?: LogContext, error?: E
         : formatForDevelopment(entry);
 
     // Use appropriate console method (this is intentional, not caught by ESLint)
-    // eslint-disable-next-line no-console
+     
     switch (level) {
         case 'debug':
         case 'info':

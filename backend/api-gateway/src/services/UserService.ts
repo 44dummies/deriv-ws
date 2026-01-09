@@ -30,13 +30,14 @@ export const UserService = {
                     user_id: userId,
                     encrypted_token: encrypted,
                     account_id: accountId,
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
                 },
-                { onConflict: 'user_id' }
+                { onConflict: 'user_id,account_id' }
             );
 
         if (error) {
-            logger.error('[UserService] Failed to store token:', error);
+            logger.error('[UserService] Failed to store token', { errorCode: error.code, errorMessage: error.message });
             throw new Error(`Database Error: ${error.message}`);
         }
 
@@ -48,6 +49,8 @@ export const UserService = {
             .from('user_deriv_tokens')
             .select('encrypted_token')
             .eq('user_id', userId)
+            .order('updated_at', { ascending: false })
+            .limit(1)
             .single();
 
         if (error || !data) {

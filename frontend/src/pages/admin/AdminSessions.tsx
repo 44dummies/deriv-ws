@@ -15,7 +15,7 @@ export default function AdminSessions() {
         switch (action) {
             case 'resume': status = 'ACTIVE'; break;
             case 'pause': status = 'PAUSED'; break;
-            case 'stop': status = 'TERMINATED'; break;
+            case 'stop': status = 'COMPLETED'; break;
         }
         updateStatus({ id: sessionId, status });
     };

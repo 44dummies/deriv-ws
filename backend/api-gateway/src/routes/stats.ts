@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { sessionRegistry } from '../services/SessionRegistry.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
+router.use(requireAuth, requireAdmin);
 const AI_LAYER_URL = process.env.AI_LAYER_URL || 'http://localhost:8001';
 
 // Initialize Supabase Client
@@ -81,7 +83,7 @@ router.get('/summary', async (_req: Request, res: Response) => {
                     latency: Date.now() - start
                 };
             }
-        } catch (e) { /* ignore offline */ }
+        } catch (_e) { /* ignore offline */ }
 
         res.json({
             users: {
@@ -135,7 +137,7 @@ router.get('/commissions', async (req: Request, res: Response) => {
             currency: 'USD',
             breakdown: []
         });
-    } catch (error) {
+    } catch (_error) {
         res.status(500).json({ error: 'Commission calc failed' });
     }
 });

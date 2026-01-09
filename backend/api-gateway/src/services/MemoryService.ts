@@ -73,13 +73,13 @@ export class MemoryService {
                 .single();
 
             if (error) {
-                logger.error('[MemoryService] Failed to record memory:', error.message);
+                logger.error('[MemoryService] Failed to record memory', { errorMessage: error.message });
                 return null;
             }
 
             return data?.id || null;
         } catch (err) {
-            logger.error('[MemoryService] Unexpected error recording memory:', err);
+            logger.error('[MemoryService] Unexpected error recording memory', undefined, err instanceof Error ? err : new Error(String(err)));
             return null;
         }
     }
@@ -122,10 +122,10 @@ export class MemoryService {
                 .eq('id', memoryId);
 
             if (error) {
-                logger.error(`[MemoryService] Failed to update outcome for memory ${memoryId}:`, error.message);
+                logger.error(`[MemoryService] Failed to update outcome for memory ${memoryId}`, { errorMessage: error.message });
             }
         } catch (err) {
-            logger.error(`[MemoryService] Error updating outcome ${memoryId}:`, err);
+            logger.error(`[MemoryService] Error updating outcome ${memoryId}`, undefined, err instanceof Error ? err : new Error(String(err)));
         }
     }
 
@@ -143,12 +143,12 @@ export class MemoryService {
                 .insert(data);
 
             if (error) {
-                logger.error('[MemoryService] Failed to finalize immutable event:', error.message);
+                logger.error('[MemoryService] Failed to finalize immutable event', { errorMessage: error.message });
             } else {
                 logger.info(`[MemoryService] Immutable event finalized for ${data.market} (${data.result})`);
             }
         } catch (err) {
-            logger.error('[MemoryService] Error finalizing immutable event:', err);
+            logger.error('[MemoryService] Error finalizing immutable event', undefined, err instanceof Error ? err : new Error(String(err)));
         }
     }
 
@@ -160,7 +160,7 @@ export class MemoryService {
     capture(data: ImmutableMemoryEvent): void {
         // Execute async without awaiting to be non-blocking
         this.finalizeEvent(data).catch(err => {
-            logger.error('[MemoryService] Critical Capture Failure (Safe Handled):', err);
+            logger.error('[MemoryService] Critical Capture Failure (Safe Handled)', undefined, err instanceof Error ? err : new Error(String(err)));
         });
     }
 }

@@ -4,8 +4,7 @@ export type SessionStatus =
     | 'ACTIVE'
     | 'RUNNING'
     | 'PAUSED'
-    | 'COMPLETED'
-    | 'TERMINATED';
+    | 'COMPLETED';
 
 export interface Session {
     id: string;

@@ -383,7 +383,7 @@ export class SessionRegistry {
      */
     serializeState(): string {
         const data = {
-            sessions: Array.from(this.sessions.entries()).map(([id, session]) => ({
+            sessions: Array.from(this.sessions.entries()).map(([_id, session]) => ({
                 ...session,
                 participants: Array.from(session.participants.entries()),
             })),

@@ -49,7 +49,7 @@ export class ThresholdResolver {
      * Resolve thresholds for a specific market context.
      * Currently returns defaults, but designed to switch based on inputs.
      */
-    public resolve(market: string, regime?: string, strategyVersion: string = 'v1'): ThresholdConfig {
+    public resolve(market: string, regime?: string, _strategyVersion: string = 'v1'): ThresholdConfig {
         // FUTURE: Load overrides from DB or Config Map based on regime
         // e.g., if (regime === 'HIGH_VOLATILITY') return { ...this.defaults, confidence: { ...min: 0.7 } }
 

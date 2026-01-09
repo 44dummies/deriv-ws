@@ -115,7 +115,36 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         }
     }
 
+    public evaluateManualTrade(input: {
+        userId: string;
+        sessionId: string;
+        market: string;
+        contractType: 'CALL' | 'PUT' | 'DIGITOVER' | 'DIGITUNDER';
+        duration: number;
+        durationUnit?: 'm' | 's' | 'h' | 'd' | 't';
+    }): RiskCheck {
+        const now = new Date();
+        const durationMs = this.durationToMs(input.duration, input.durationUnit ?? 'm');
+        const signalType = input.contractType === 'PUT' || input.contractType === 'DIGITUNDER' ? 'PUT' : 'CALL';
+
+        const signal: Signal = {
+            type: signalType,
+            confidence: 1,
+            reason: 'NO_SIGNAL',
+            market: input.market,
+            timestamp: now.toISOString(),
+            expiry: new Date(now.getTime() + durationMs).toISOString()
+        };
+
+        return this.evaluateUserRiskInternal(input.userId, input.sessionId, signal);
+    }
+
     private evaluateUserRisk(userId: string, sessionId: string, signal: Signal): void {
+        const check = this.evaluateUserRiskInternal(userId, sessionId, signal);
+        this.emitRiskResult(check);
+    }
+
+    private evaluateUserRiskInternal(userId: string, sessionId: string, signal: Signal): RiskCheck {
         const check: RiskCheck = {
             userId,
             sessionId,
@@ -135,28 +164,25 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         if (userState.currentDrawdown >= userState.maxDrawdown) {
             check.result = 'REJECTED';
             check.reason = `User Max Drawdown Exceeded: ${userState.currentDrawdown}% >= ${userState.maxDrawdown}%`;
-            this.emitRiskResult(check);
-            return;
+            return check;
         }
 
         // Daily Loss Check
         if (userState.dailyLoss >= userState.maxDailyLoss) {
             check.result = 'REJECTED';
             check.reason = `User Daily Loss Limit Exceeded: ${userState.dailyLoss} >= ${userState.maxDailyLoss}`;
-            this.emitRiskResult(check);
-            return;
+            return check;
         }
 
         // Max Trades Check
         if (userState.tradesToday >= userState.maxTradesPerDay) {
             check.result = 'REJECTED';
             check.reason = `User Max Trades Limit Reached: ${userState.tradesToday}`;
-            this.emitRiskResult(check);
-            return;
+            return check;
         }
 
         // Approved
-        this.emitRiskResult(check);
+        return check;
     }
 
     private rejectTrade(userId: string, sessionId: string, proposedTrade: Signal, reason: string): void {
@@ -229,6 +255,22 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
             }
         } else {
             logger.info('Trade APPROVED', { userId: check.userId, market: check.proposedTrade.market, type: check.proposedTrade.type });
+        }
+    }
+
+    private durationToMs(duration: number, unit: 'm' | 's' | 'h' | 'd' | 't'): number {
+        switch (unit) {
+            case 's':
+                return duration * 1000;
+            case 'h':
+                return duration * 60 * 60 * 1000;
+            case 'd':
+                return duration * 24 * 60 * 60 * 1000;
+            case 't':
+                return 0;
+            case 'm':
+            default:
+                return duration * 60 * 1000;
         }
     }
 

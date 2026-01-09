@@ -7,6 +7,7 @@ import { Router, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { createClient } from '@supabase/supabase-js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
+import { riskGuard } from '../services/RiskGuard.js';
 import crypto from 'crypto';
 import { logger } from '../utils/logger.js';
 
@@ -75,6 +76,22 @@ router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => 
             return res.status(400).json({ 
                 error: 'No active Deriv account or token missing',
                 hint: 'Please reconnect your Deriv account'
+            });
+        }
+
+        const riskCheck = riskGuard.evaluateManualTrade({
+            userId,
+            sessionId: `manual:${userId}`,
+            market,
+            contractType,
+            duration,
+            durationUnit
+        });
+
+        if (riskCheck.result === 'REJECTED') {
+            return res.status(403).json({
+                error: 'Trade blocked by risk guard',
+                reason: riskCheck.reason || 'Risk limits exceeded'
             });
         }
 

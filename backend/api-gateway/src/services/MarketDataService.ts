@@ -72,7 +72,7 @@ const TICK_BUFFER_SIZE = 100;
 const TICK_TIMEOUT_MS = 10000;
 const MIN_VALID_PRICE = 0.0001;
 const MAX_SPREAD_RATIO = 0.1;
-const DEDUPE_WINDOW_MS = 1000; // 1 second dedup window
+const _DEDUPE_WINDOW_MS = 1000; // 1 second dedup window (unused currently)
 
 // =============================================================================
 // MARKET DATA SERVICE
@@ -269,7 +269,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         return `${tick.market}:${tick.epoch}:${tick.quote.toFixed(5)}`;
     }
 
-    private cleanOldHashes(market: string, currentTime: number): void {
+    private cleanOldHashes(market: string, _currentTime: number): void {
         const hashes = this.seenTickHashes.get(market);
         if (!hashes || hashes.size < 100) return;
 

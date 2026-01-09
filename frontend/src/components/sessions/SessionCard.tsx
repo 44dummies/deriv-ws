@@ -15,7 +15,6 @@ const statusColors = {
     RUNNING: 'bg-primary/10 text-primary border-primary/20',
     PAUSED: 'bg-muted/50 text-muted-foreground border-border',
     COMPLETED: 'bg-muted/50 text-muted-foreground border-border',
-    TERMINATED: 'bg-destructive/10 text-destructive border-destructive/20',
 };
 
 export function SessionCard({ session, isAdmin, onAction }: SessionCardProps) {
@@ -43,7 +42,7 @@ export function SessionCard({ session, isAdmin, onAction }: SessionCardProps) {
                         </a>
                     </div>
                 </div>
-                {isAdmin && session.status !== 'TERMINATED' && (
+                {isAdmin && session.status !== 'COMPLETED' && (
                     <div className="flex gap-2">
                         {session.status === 'ACTIVE' && (
                             <button

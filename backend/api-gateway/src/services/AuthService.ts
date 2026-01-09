@@ -27,7 +27,7 @@ export const AuthService = {
         try {
             const { payload } = await jwtVerify(token, getSecretKey());
             return payload as { userId: string, role: string, email: string };
-        } catch (error) {
+        } catch (_error) {
             return null;
         }
     }

@@ -175,7 +175,6 @@ export default function Sessions() {
                         >
                             <option value="ALL">All Sessions</option>
                             <option value="COMPLETED">Completed</option>
-                            <option value="STOPPED">Stopped</option>
                         </select>
                     </div>
                 </div>

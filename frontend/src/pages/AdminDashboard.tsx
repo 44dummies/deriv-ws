@@ -17,7 +17,10 @@ export default function AdminDashboard() {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL}/api/v1/stats/summary`);
+                const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+                const res = await fetch(`${baseUrl}/api/v1/stats/summary`, {
+                    credentials: 'include'
+                });
                 const data = await res.json();
                 setStats({
                     active_users: data.users.active,

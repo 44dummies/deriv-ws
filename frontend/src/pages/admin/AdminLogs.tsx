@@ -15,7 +15,10 @@ export default function AdminLogs() {
 
     const fetchLogs = async () => {
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL}/api/v1/stats/logs`);
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const res = await fetch(`${baseUrl}/api/v1/stats/logs`, {
+                credentials: 'include'
+            });
             if (res.ok) {
                 const data = await res.json();
                 setLogs(data);

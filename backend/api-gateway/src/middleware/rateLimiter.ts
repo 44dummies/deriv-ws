@@ -46,7 +46,7 @@ function getRedis(): Redis | null {
             redis.on('error', (err) => {
                 logger.error('RateLimiter Redis error', { err });
             });
-        } catch (err) {
+        } catch (_err) {
             logger.warn('RateLimiter Redis connection failed, using in-memory fallback');
         }
     }

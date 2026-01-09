@@ -37,7 +37,7 @@ export function useUpdateSessionStatus() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: ({ id, status }: { id: string; status: SessionStatus }) => {
-            const action = status === 'PAUSED' ? 'pause' : status === 'TERMINATED' ? 'stop' : 'start';
+            const action = status === 'PAUSED' ? 'pause' : status === 'COMPLETED' ? 'stop' : 'start';
             return fetchWithAuth(`/sessions/${id}/${action}`, {
                 method: 'POST',
             });

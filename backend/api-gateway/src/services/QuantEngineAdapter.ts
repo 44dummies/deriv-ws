@@ -246,7 +246,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
                 // We'll keep current state or maybe warn.
                 logger.warn('AI Health Check failed', { service: 'QuantAdapter', status: response.status });
             }
-        } catch (err) {
+        } catch (_err) {
             // Network error implies AI is down
             logger.warn('AI Layer unreachable, disabling AI scoring temporarily', { service: 'QuantAdapter' });
             quantEngine.setAIEnabled(false);

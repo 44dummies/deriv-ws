@@ -3,8 +3,8 @@
  * Real session management integrated with SessionRegistry
  */
 
-import { Router, Request, Response } from 'express';
-import { requireAuth, requireAdmin, AuthRequest } from '../middleware/auth.js';
+import { Router, Response } from 'express';
+import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { sessionRegistry } from '../services/SessionRegistry.js';
 import { randomUUID } from 'crypto';
 import { logger } from '../utils/logger.js';
@@ -42,7 +42,7 @@ router.get('/:id', requireAuth, (req: AuthRequest, res: Response) => {
             return;
         }
         res.json(session);
-    } catch (error) {
+    } catch (_error) {
         res.status(500).json({ error: 'Failed to retrieve session' });
     }
 });

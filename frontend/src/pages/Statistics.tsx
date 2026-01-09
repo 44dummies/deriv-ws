@@ -46,17 +46,17 @@ export default function Statistics() {
         }
 
         const pnlValues = trades.map((t: any) => Number(t.pnl || 0));
-        const wins = pnlValues.filter((p) => p > 0);
-        const losses = pnlValues.filter((p) => p < 0);
-        const totalProfit = pnlValues.reduce((sum, p) => sum + p, 0);
+        const wins = pnlValues.filter((p: number) => p > 0);
+        const losses = pnlValues.filter((p: number) => p < 0);
+        const totalProfit = pnlValues.reduce((sum: number, p: number) => sum + p, 0);
         const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
 
         return {
             totalTrades: trades.length,
             winRate,
             totalProfit,
-            avgWin: wins.length > 0 ? wins.reduce((sum, p) => sum + p, 0) / wins.length : 0,
-            avgLoss: losses.length > 0 ? Math.abs(losses.reduce((sum, p) => sum + p, 0) / losses.length) : 0
+            avgWin: wins.length > 0 ? wins.reduce((sum: number, p: number) => sum + p, 0) / wins.length : 0,
+            avgLoss: losses.length > 0 ? Math.abs(losses.reduce((sum: number, p: number) => sum + p, 0) / losses.length) : 0
         };
     }, [trades]);
 

@@ -5,7 +5,7 @@
 
 import { EventEmitter } from 'eventemitter3';
 import { Signal } from './QuantEngine.js';
-import { sessionRegistry, SessionStatus } from './SessionRegistry.js';
+import { sessionRegistry } from './SessionRegistry.js';
 import { logger } from '../utils/logger.js';
 
 // =============================================================================
@@ -216,7 +216,7 @@ export class SignalStore extends EventEmitter<SignalStoreEvents> {
         const now = Date.now();
         let expiredCount = 0;
 
-        for (const [id, signal] of this.signals) {
+        for (const [_id, signal] of this.signals) {
             if (signal.status === 'ACTIVE' && signal.expiresAt <= now) {
                 signal.status = 'EXPIRED';
                 expiredCount++;

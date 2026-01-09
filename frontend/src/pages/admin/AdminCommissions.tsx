@@ -18,7 +18,10 @@ export default function AdminCommissions() {
         const fetchEarnings = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`${import.meta.env.VITE_API_GATEWAY_URL}/api/v1/stats/commissions?filter=${filter}`);
+                const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+                const res = await fetch(`${baseUrl}/api/v1/stats/commissions?filter=${filter}`, {
+                    credentials: 'include'
+                });
                 if (res.ok) {
                     const json = await res.json();
                     setData(json);

@@ -3,7 +3,7 @@
  * Real trade operations with Supabase integration
  */
 
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';

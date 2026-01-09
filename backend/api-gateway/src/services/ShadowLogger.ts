@@ -57,10 +57,10 @@ export class ShadowLogger {
                 });
 
             if (error) {
-                logger.error(`[ShadowLogger] Failed to log signal (${modelId}): ${error.message}`);
+                logger.error(`[ShadowLogger] Failed to log signal (${modelId})`, { errorMessage: error.message });
             }
         } catch (err) {
-            logger.error('[ShadowLogger] Unexpected error:', err);
+            logger.error('[ShadowLogger] Unexpected error', undefined, err instanceof Error ? err : new Error(String(err)));
         }
     }
 }

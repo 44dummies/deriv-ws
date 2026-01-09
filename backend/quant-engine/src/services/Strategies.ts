@@ -71,7 +71,7 @@ export type VolatilityIndex = typeof VOLATILITY_INDICES[number];
 export type JumpIndex = never;
 export type SupportedMarket = typeof ALL_MARKETS[number];
 
-export function getMarketType(market: string): MarketType {
+export function getMarketType(_market: string): MarketType {
     // Treat everything as VOLATILITY since Jump is removed
     return 'VOLATILITY';
 }
@@ -319,8 +319,8 @@ export class SupportResistanceStrategy extends TradingStrategy {
     suitableMarkets: MarketType[] = ['VOLATILITY'];
     minConfidence = 0.65;
 
-    analyze(prices: number[], indicators: IndicatorSet, market: string, history?: TradeHistory[]): StrategySignal | null {
-        const { bollinger_upper, bollinger_lower, rsi, momentum } = indicators;
+    analyze(prices: number[], indicators: IndicatorSet, market: string, _history?: TradeHistory[]): StrategySignal | null {
+        const { bollinger_upper, bollinger_lower, rsi, momentum: _momentum } = indicators;
         const currentPrice = prices[prices.length - 1] || 0;
         const tolerance = 0.001; // 0.1%
 
@@ -438,7 +438,7 @@ export class AdaptiveStrategy extends TradingStrategy {
         // Only trade if we have > 60% win rate historically
         if (winRate < 0.6) return null;
 
-        const { rsi, momentum, adx } = indicators;
+        const { rsi, momentum, adx: _adx } = indicators;
 
         // Find similar past conditions
         const similarTrades = marketHistory.filter(h => {
