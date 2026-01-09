@@ -1,11 +1,22 @@
-export type SessionStatus = 'CREATED' | 'ACTIVE' | 'PAUSED' | 'TERMINATED';
+export type SessionStatus =
+    | 'CREATED'
+    | 'PENDING'
+    | 'ACTIVE'
+    | 'RUNNING'
+    | 'PAUSED'
+    | 'COMPLETED'
+    | 'TERMINATED';
 
 export interface Session {
     id: string;
-    startTime: string;
-    endTime?: string;
     status: SessionStatus;
-    participants: string[]; // User IDs
-    pnl: number;
+    startTime?: string;
+    endTime?: string;
+    created_at?: string;
+    started_at?: string | null;
+    completed_at?: string | null;
+    participants?: string[] | Record<string, any>;
+    pnl?: number;
     config?: Record<string, any>;
+    config_json?: Record<string, any>;
 }

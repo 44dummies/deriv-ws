@@ -10,7 +10,7 @@ export function TradesFeed() {
         <FeedList
             title="Executed Trades"
             icon={Activity}
-            iconColor="text-blue-400"
+            iconColor="text-primary"
             isEmpty={trades.length === 0}
         >
             {trades.map((trade, idx) => (

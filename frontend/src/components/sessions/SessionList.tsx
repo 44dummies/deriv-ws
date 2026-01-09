@@ -13,23 +13,23 @@ export function SessionList({ isAdmin, onAction }: SessionListProps) {
     if (isLoading) {
         return (
             <div className="flex justify-center p-12">
-                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="text-center p-12 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-red-400">Failed to load sessions</p>
+            <div className="text-center p-12 bg-destructive/10 border border-destructive/20 rounded-md">
+                <p className="text-destructive">Failed to load sessions</p>
             </div>
         );
     }
 
     if (!sessions?.length) {
         return (
-            <div className="text-center p-12 bg-white/5 border border-white/10 rounded-xl">
-                <p className="text-gray-400">No active sessions found</p>
+            <div className="text-center p-12 bg-muted/40 border border-border rounded-md">
+                <p className="text-muted-foreground">No active sessions found</p>
             </div>
         );
     }

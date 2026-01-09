@@ -33,18 +33,16 @@ export default function LiveSession() {
     }, [pruneExpiredData]);
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-6 font-sans">
+        <div className="min-h-screen bg-background text-foreground p-6 font-sans">
             {/* Header */}
             <header className="mb-8 flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-rose-400">
-                        Live Session Monitor
-                    </h1>
-                    <p className="text-gray-400 mt-1">ID: <span className="font-mono text-sm bg-gray-800 px-2 py-1 rounded">{safeSessionId}</span></p>
+                    <h1 className="text-2xl font-semibold">Live session monitor</h1>
+                    <p className="text-sm text-muted-foreground mt-1">ID: <span className="font-mono text-xs bg-muted/50 px-2 py-1 rounded">{safeSessionId}</span></p>
                 </div>
 
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${isConnected ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                    <Radio className={`w-4 h-4 ${isConnected ? 'animate-pulse' : ''}`} />
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${isConnected ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-destructive/10 border-destructive/20 text-destructive'}`}>
+                    <Radio className="w-4 h-4" />
                     <span className="font-medium text-sm">{isConnected ? 'Live' : 'Disconnected'}</span>
                 </div>
             </header>
@@ -55,21 +53,21 @@ export default function LiveSession() {
                     <PerformanceChart data={history} />
                 </div>
                 <div className="space-y-6">
-                    <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-xl">
-                        <div className="flex items-center gap-2 text-gray-400 mb-2">
+                    <div className="p-5 rounded-lg border border-border bg-card">
+                        <div className="flex items-center gap-2 text-muted-foreground mb-2 text-sm">
                             <TrendingUp className="w-5 h-5" />
                             <span>Current Balance</span>
                         </div>
-                        <div className="text-3xl font-bold text-white">
+                        <div className="text-2xl font-semibold">
                             ${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
                     </div>
-                    <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-xl">
-                        <div className="flex items-center gap-2 text-gray-400 mb-2">
+                    <div className="p-5 rounded-lg border border-border bg-card">
+                        <div className="flex items-center gap-2 text-muted-foreground mb-2 text-sm">
                             <Activity className="w-5 h-5" />
                             <span>Total PnL</span>
                         </div>
-                        <div className={`text-3xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <div className={`text-2xl font-semibold ${totalPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {totalPnL >= 0 ? '+' : ''}{totalPnL.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
                     </div>
@@ -78,19 +76,19 @@ export default function LiveSession() {
 
             {/* Session Status Overlay */}
             {sessionStatus !== 'ACTIVE' && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="bg-gray-900 border border-white/10 p-8 rounded-2xl text-center max-w-md shadow-2xl">
-                        <h2 className="text-3xl font-bold text-white mb-2">Session {sessionStatus === 'PAUSED' ? 'Paused' : 'Completed'}</h2>
-                        <p className="text-gray-400 mb-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-background border border-border p-8 rounded-lg text-center max-w-md">
+                        <h2 className="text-2xl font-semibold mb-2">Session {sessionStatus === 'PAUSED' ? 'paused' : 'completed'}</h2>
+                        <p className="text-sm text-muted-foreground mb-6">
                             {sessionStatus === 'PAUSED'
                                 ? 'Trading is currently paused correctly. Please wait for the admin to resume.'
                                 : 'This trading session has ended. Thank you for participating.'}
                         </p>
                         <button
-                            onClick={() => navigate('/dashboard')}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                            onClick={() => navigate('/user/dashboard')}
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-md font-medium transition-colors duration-150 ease-out"
                         >
-                            Return to Dashboard
+                            Return to dashboard
                         </button>
                     </div>
                 </div>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, TrendingUp, Download } from 'lucide-react';
+import { DollarSign, Download } from 'lucide-react';
 import { GlassCard } from '../../components/ui/GlassCard';
-import { motion } from 'framer-motion';
 
 interface CommissionData {
     total_earned: number;
@@ -38,23 +37,23 @@ export default function AdminCommissions() {
         <div className="space-y-6">
             <header className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-                        <DollarSign className="h-8 w-8 text-success" />
-                        Commission & Revenue
+                    <h1 className="text-2xl font-semibold flex items-center gap-2">
+                        <DollarSign className="h-6 w-6 text-primary" />
+                        Commission and revenue
                     </h1>
-                    <p className="text-slate-400 mt-1">Track 3% earnings from Deriv partnership trades.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Track partner earnings from executed trades.</p>
                 </div>
 
-                <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
+                <div className="flex bg-muted/40 rounded-md p-1 border border-border">
                     <button
                         onClick={() => setFilter('today')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${filter === 'today' ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filter === 'today' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         Today
                     </button>
                     <button
                         onClick={() => setFilter('month')}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${filter === 'month' ? 'bg-primary text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${filter === 'month' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                     >
                         This Month
                     </button>
@@ -64,25 +63,18 @@ export default function AdminCommissions() {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <GlassCard className="p-8 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                        <DollarSign className="h-32 w-32" />
-                    </div>
-                    <div className="text-sm text-slate-400 uppercase tracking-wider mb-2">Total Earned ({filter})</div>
-                    <div className="text-5xl font-bold text-success-glow font-mono">
-                        {loading ? '...' : `$${data?.total_earned.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-success text-sm bg-success/10 w-fit px-3 py-1 rounded-full border border-success/20">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>Target on track</span>
+                    <div className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Total earned ({filter})</div>
+                    <div className="text-4xl font-semibold">
+                        {loading ? '...' : `$${data?.total_earned !== undefined ? data.total_earned.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}`}
                     </div>
                 </GlassCard>
 
                 <GlassCard className="p-8">
-                    <div className="text-sm text-slate-400 uppercase tracking-wider mb-2">Pending Payout</div>
-                    <div className="text-5xl font-bold text-white font-mono">
-                        {loading ? '...' : `$${data?.pending_payout.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+                    <div className="text-sm text-muted-foreground uppercase tracking-wider mb-2">Pending payout</div>
+                    <div className="text-4xl font-semibold">
+                        {loading ? '...' : `$${data?.pending_payout !== undefined ? data.pending_payout.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}`}
                     </div>
-                    <div className="mt-4 text-slate-500 text-sm">
+                    <div className="mt-4 text-muted-foreground text-sm">
                         Payouts processed every Monday.
                     </div>
                 </GlassCard>
@@ -90,19 +82,18 @@ export default function AdminCommissions() {
 
             {/* Breakdown Chart (Visual) */}
             <GlassCard className="p-6">
-                <h3 className="font-bold text-lg mb-6">Revenue Sources</h3>
+                <h3 className="font-semibold text-sm mb-6">Revenue sources</h3>
                 <div className="space-y-4">
                     {data?.breakdown.map((item, i) => (
                         <div key={item.source}>
                             <div className="flex justify-between text-sm mb-1">
-                                <span className="text-slate-300">{item.source}</span>
-                                <span className="font-mono text-white">${item.amount.toLocaleString()}</span>
+                                <span className="text-muted-foreground">{item.source}</span>
+                                <span className="font-mono text-foreground">${item.amount.toLocaleString()}</span>
                             </div>
-                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${(item.amount / (data?.total_earned || 1)) * 100}%` }}
-                                    className={`h-full ${i === 0 ? 'bg-primary' : 'bg-purple-500'}`}
+                            <div className="h-2 bg-muted/40 rounded-full overflow-hidden">
+                                <div
+                                    className={`h-full ${i === 0 ? 'bg-primary' : 'bg-border'}`}
+                                    style={{ width: `${(item.amount / (data?.total_earned || 1)) * 100}%` }}
                                 />
                             </div>
                         </div>
@@ -110,7 +101,7 @@ export default function AdminCommissions() {
                 </div>
             </GlassCard>
 
-            <button className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors mx-auto">
+            <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground text-sm transition-colors mx-auto">
                 <Download className="h-4 w-4" /> Export Report (CSV)
             </button>
         </div>

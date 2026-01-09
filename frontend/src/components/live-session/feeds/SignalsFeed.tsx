@@ -10,7 +10,7 @@ export function SignalsFeed() {
         <FeedList
             title="Signals Generated"
             icon={Zap}
-            iconColor="text-pink-400"
+            iconColor="text-primary"
             isEmpty={signals.length === 0}
         >
             {signals.map((sig, idx) => (

@@ -23,41 +23,41 @@ export function CreateSessionModal({ onClose }: CreateSessionModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-[#0f172a] border border-white/10 p-6 rounded-xl w-full max-w-md shadow-2xl relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-card border border-border p-6 rounded-lg w-full max-w-md relative">
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                    className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
                 >
                     <X className="h-5 w-5" />
                 </button>
 
-                <h2 className="text-xl font-bold text-white mb-4">Create New Session</h2>
+                <h2 className="text-lg font-semibold mb-4">Create new session</h2>
 
                 {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm mb-4">
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm mb-4">
                         {error}
                     </div>
                 )}
 
-                <p className="text-gray-400 mb-6">
-                    This will initialize a new trading session. Participants can join immediately once created.
+                <p className="text-sm text-muted-foreground mb-6">
+                    This creates a new session. Participants can join once it is active.
                 </p>
 
                 <div className="flex justify-end gap-3">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                        className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
                         disabled={isPending}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center gap-2 transition-colors disabled:opacity-50"
                     >
                         {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                        Create Session
+                        Create session
                     </button>
                 </div>
             </div>

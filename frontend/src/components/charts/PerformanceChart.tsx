@@ -16,42 +16,32 @@ interface PerformanceChartProps {
 export function PerformanceChart({ data }: PerformanceChartProps) {
     if (!data || data.length === 0) {
         return (
-            <div className="h-[300px] flex items-center justify-center text-gray-500 bg-white/5 rounded-xl border border-white/10">
+            <div className="h-[300px] flex items-center justify-center text-muted-foreground bg-card rounded-md border border-border">
                 Waiting for data...
             </div>
         );
     }
 
     return (
-        <div className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-xl">
-            <h2 className="text-xl font-semibold text-white mb-4">Performance Live</h2>
+        <div className="p-6 rounded-lg border border-border bg-card">
+            <h2 className="text-sm font-medium text-muted-foreground mb-4">Performance</h2>
             <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                         data={data}
                         margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                     >
-                        <defs>
-                            <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                            </linearGradient>
-                            <linearGradient id="colorPnL" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                         <XAxis
                             dataKey="time"
-                            stroke="#9ca3af"
+                            stroke="hsl(var(--muted-foreground))"
                             fontSize={12}
                             tickLine={false}
                             axisLine={false}
                             minTickGap={30}
                         />
                         <YAxis
-                            stroke="#9ca3af"
+                            stroke="hsl(var(--muted-foreground))"
                             fontSize={12}
                             tickLine={false}
                             axisLine={false}
@@ -60,29 +50,29 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
                         />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: '#1f2937',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
-                                color: '#fff'
+                                backgroundColor: 'hsl(var(--card))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '6px',
+                                color: 'hsl(var(--foreground))'
                             }}
-                            itemStyle={{ color: '#fff' }}
+                            itemStyle={{ color: 'hsl(var(--foreground))' }}
                         />
                         <Area
                             type="monotone"
                             dataKey="balance"
-                            stroke="#10b981"
+                            stroke="hsl(var(--primary))"
                             strokeWidth={2}
-                            fillOpacity={1}
-                            fill="url(#colorBalance)"
+                            fill="hsl(var(--primary))"
+                            fillOpacity={0.1}
                             name="Balance"
                         />
                         <Area
                             type="monotone"
                             dataKey="pnl"
-                            stroke="#ec4899"
+                            stroke="hsl(var(--foreground))"
                             strokeWidth={2}
-                            fillOpacity={1}
-                            fill="url(#colorPnL)"
+                            fill="hsl(var(--foreground))"
+                            fillOpacity={0.05}
                             name="Total PnL"
                         />
                     </AreaChart>

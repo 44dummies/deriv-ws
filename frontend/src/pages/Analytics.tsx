@@ -140,8 +140,8 @@ export default function Analytics() {
         const todayPnl = stats?.trading?.today_pnl || 0;
 
         // Calculate from trades if available
-        const wins = trades.filter((t: any) => t.profit > 0).length;
-        const losses = trades.filter((t: any) => t.profit < 0).length;
+        const wins = trades.filter((t: any) => Number(t.pnl || 0) > 0).length;
+        const losses = trades.filter((t: any) => Number(t.pnl || 0) < 0).length;
 
         return {
             totalTrades,
@@ -150,31 +150,43 @@ export default function Analytics() {
             todayPnl,
             wins,
             losses,
-            avgWin: trades.filter((t: any) => t.profit > 0).reduce((acc: number, t: any) => acc + t.profit, 0) / (wins || 1),
-            avgLoss: Math.abs(trades.filter((t: any) => t.profit < 0).reduce((acc: number, t: any) => acc + t.profit, 0) / (losses || 1)),
-            profitFactor: losses > 0 ? (trades.filter((t: any) => t.profit > 0).reduce((acc: number, t: any) => acc + t.profit, 0) /
-                Math.abs(trades.filter((t: any) => t.profit < 0).reduce((acc: number, t: any) => acc + t.profit, 0) || 1)).toFixed(2) : '∞',
+            avgWin: trades.filter((t: any) => Number(t.pnl || 0) > 0).reduce((acc: number, t: any) => acc + Number(t.pnl || 0), 0) / (wins || 1),
+            avgLoss: Math.abs(trades.filter((t: any) => Number(t.pnl || 0) < 0).reduce((acc: number, t: any) => acc + Number(t.pnl || 0), 0) / (losses || 1)),
+            profitFactor: losses > 0 ? (trades.filter((t: any) => Number(t.pnl || 0) > 0).reduce((acc: number, t: any) => acc + Number(t.pnl || 0), 0) /
+                Math.abs(trades.filter((t: any) => Number(t.pnl || 0) < 0).reduce((acc: number, t: any) => acc + Number(t.pnl || 0), 0) || 1)).toFixed(2) : '∞',
         };
     }, [stats, history]);
 
     // Chart data
     const performanceData = useMemo(() => {
-        // Generate sample data based on actual metrics or mock for visualization
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        return days.map((day) => ({
-            name: day,
-            profit: Math.random() * 200 - 50,
-            trades: Math.floor(Math.random() * 15) + 5,
-            winRate: Math.floor(Math.random() * 30) + 50,
+        const trades = history?.trades || [];
+        const grouped = new Map<string, { profit: number; trades: number; wins: number }>();
+
+        trades.forEach((trade: any) => {
+            const date = new Date(trade.created_at || trade.executed_at || Date.now());
+            const key = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            const entry = grouped.get(key) || { profit: 0, trades: 0, wins: 0 };
+            const pnl = Number(trade.pnl || 0);
+            entry.profit += pnl;
+            entry.trades += 1;
+            if (pnl > 0) entry.wins += 1;
+            grouped.set(key, entry);
+        });
+
+        return Array.from(grouped.entries()).slice(-7).map(([name, data]) => ({
+            name,
+            profit: Number(data.profit.toFixed(2)),
+            trades: data.trades,
+            winRate: data.trades > 0 ? Math.round((data.wins / data.trades) * 100) : 0,
         }));
-    }, []);
+    }, [history]);
 
     const distributionData = [
-        { name: 'R_100', value: 35, color: '#3b82f6' }, // blue-500
-        { name: 'R_50', value: 25, color: '#64748b' },  // slate-500
-        { name: 'JD100', value: 20, color: '#0f172a' }, // slate-900 (dark) or standard black
-        { name: 'R_25', value: 12, color: '#94a3b8' },  // slate-400
-        { name: 'Other', value: 8, color: '#cbd5e1' },   // slate-300
+        { name: 'R_100', value: 35, color: '#1d4ed8' },
+        { name: 'R_50', value: 25, color: '#475569' },
+        { name: 'JD100', value: 20, color: '#334155' },
+        { name: 'R_25', value: 12, color: '#94a3b8' },
+        { name: 'Other', value: 8, color: '#cbd5e1' },
     ];
 
     const strategyData = [
@@ -232,9 +244,9 @@ export default function Analytics() {
                                 key={range}
                                 onClick={() => setTimeRange(range)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                                    "px-3 py-1.5 rounded-md text-xs font-medium transition-colors duration-150 ease-out",
                                     timeRange === range
-                                        ? "bg-white text-foreground shadow-sm"
+                                        ? "bg-background text-foreground"
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
@@ -310,24 +322,18 @@ export default function Analytics() {
                         <div className="h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={performanceData}>
-                                    <defs>
-                                        <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.1} />
-                                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v}`} />
                                     <Tooltip
                                         contentStyle={{
-                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                            backgroundColor: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: '6px',
+                                            color: 'hsl(var(--foreground))'
                                         }}
                                     />
-                                    <Area type="monotone" dataKey="profit" stroke="#3b82f6" strokeWidth={2} fill="url(#profitGradient)" />
+                                    <Area type="monotone" dataKey="profit" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.1} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
@@ -389,7 +395,7 @@ export default function Analytics() {
                         <CardTitle>Strategy Performance</CardTitle>
                         <CardDescription>Win rate benchmarks</CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                    <div className="flex items-center gap-2 bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-xs font-medium">
                         <Zap className="w-4 h-4" />
                         <span>5 Active</span>
                     </div>
@@ -398,17 +404,17 @@ export default function Analytics() {
                     <div className="h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={strategyData} layout="vertical">
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                                <XAxis type="number" stroke="#64748b" fontSize={12} />
-                                <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={12} width={120} />
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" />
+                                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                                <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px',
+                                        backgroundColor: 'hsl(var(--card))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: '6px',
                                     }}
                                 />
-                                <Bar dataKey="winRate" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
+                                <Bar dataKey="winRate" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -444,7 +450,7 @@ export default function Analytics() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-3 mb-2">
-                            <Clock className="w-5 h-5 text-blue-600" />
+                            <Clock className="w-5 h-5 text-primary" />
                             <span className="text-sm font-medium text-muted-foreground">Sessions</span>
                         </div>
                         <p className="text-2xl font-bold tracking-tight">
@@ -456,7 +462,7 @@ export default function Analytics() {
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center gap-3 mb-2">
-                            <AlertTriangle className="w-5 h-5 text-amber-500" />
+                            <AlertTriangle className="w-5 h-5 text-muted-foreground" />
                             <span className="text-sm font-medium text-muted-foreground">Risk Score</span>
                         </div>
                         <p className="text-2xl font-bold tracking-tight">

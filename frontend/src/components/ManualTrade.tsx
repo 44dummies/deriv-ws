@@ -93,9 +93,9 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const potentialProfit = potentialPayout - stake;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div
-                className="w-full max-w-lg rounded-xl border bg-card text-card-foreground shadow-lg overflow-hidden animate-in zoom-in-95 duration-200"
+                className="w-full max-w-lg rounded-xl border bg-card text-card-foreground overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -296,7 +296,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                     {/* Result Message */}
                     {result && (
                         <div className={cn(
-                            "p-4 rounded-xl border flex items-start gap-3 animate-in slide-in-from-top-2 duration-200",
+                            "p-4 rounded-xl border flex items-start gap-3",
                             result.success
                                 ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
                                 : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
@@ -328,13 +328,12 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         onClick={handleExecute}
                         disabled={isExecuting || !activeAccount}
                         className={cn(
-                            "w-full py-4 rounded-xl font-bold text-white transition-all shadow-md",
+                            "w-full py-4 rounded-xl font-bold text-white transition-colors duration-150 ease-out",
                             "flex items-center justify-center gap-2",
                             isRise
                                 ? "bg-emerald-600 hover:bg-emerald-700"
                                 : "bg-red-600 hover:bg-red-700",
-                            "disabled:opacity-50 disabled:cursor-not-allowed",
-                            "hover:scale-[1.01] active:scale-[0.99]"
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                     >
                         {isExecuting ? (

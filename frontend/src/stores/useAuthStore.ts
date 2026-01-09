@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Session } from '@supabase/supabase-js';
 // import { supabase } from '../lib/supabase';
 
 /**
@@ -52,7 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         try {
             // Check authentication status via backend (cookie-based)
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             const response = await fetch(`${baseUrl}/api/v1/auth/session`, {
                 method: 'GET',
                 credentials: 'include', // Include httpOnly cookies
@@ -112,9 +113,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // 2. Send tokens to backend via POST (tokens never stored client-side)
             const primaryAccount = accountInfos[0];
             if (!primaryAccount) throw new Error("Primary account not found");
-
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
-
+            
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            
             // Collect all tokens to send to backend
             const tokensPayload: { accountId: string; token: string }[] = [];
             i = 1;
@@ -145,16 +146,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const data = await response.json();
 
             // Backend sets httpOnly cookie - we just update local state (no tokens!)
-            const fullname = data.user?.fullname ||
-                data.deriv_account?.fullname ||
-                data.user?.email?.split('@')[0] ||
-                'Trader';
+            const fullname = data.user?.fullname || 
+                             data.deriv_account?.fullname || 
+                             data.user?.email?.split('@')[0] || 
+                             'Trader';
 
             // Merge backend account data with our parsed info
             const mergedAccounts = accountInfos.map(info => ({
                 ...info,
-                balance: data.deriv_account?.loginid === info.loginid
-                    ? data.deriv_account?.balance || 0
+                balance: data.deriv_account?.loginid === info.loginid 
+                    ? data.deriv_account?.balance || 0 
                     : 0
             }));
 
@@ -183,7 +184,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!user) return;
 
         try {
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             const response = await fetch(`${baseUrl}/api/v1/auth/switch-account`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -212,7 +213,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     signIn: async () => { },
     signOut: async () => {
         try {
-            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
             await fetch(`${baseUrl}/api/v1/auth/logout`, {
                 method: 'POST',
                 credentials: 'include'

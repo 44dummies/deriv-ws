@@ -8,10 +8,9 @@ const useUsers = () => {
     return useQuery({
         queryKey: ['admin-users'],
         queryFn: async () => {
-            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:4000'}/api/v1/users`;
-            const token = localStorage.getItem('auth_token');
+            const url = `${import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000'}/api/v1/users`;
             const res = await fetch(url, {
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                credentials: 'include'
             });
             if (!res.ok) return [];
             return res.json();
@@ -30,11 +29,11 @@ export default function AdminUsers() {
         <div className="space-y-6">
             <header className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <h1 className="text-2xl font-semibold flex items-center gap-2">
                         <Users className="h-6 w-6 text-primary" />
-                        User Directory
+                        User directory
                     </h1>
-                    <p className="text-slate-500 text-sm">Monitor online presence and account health.</p>
+                    <p className="text-sm text-muted-foreground">Monitor user access and roles.</p>
                 </div>
             </header>
 
@@ -46,12 +45,12 @@ export default function AdminUsers() {
                 )}
                 {!isLoading && (
                     <>
-                        <div className="flex items-center gap-3 bg-black/20 p-2 rounded-lg border border-white/5 w-full max-w-md mb-6">
-                            <Search className="h-4 w-4 text-slate-500" />
+                        <div className="flex items-center gap-3 bg-muted/40 p-2 rounded-md border border-border w-full max-w-md mb-6">
+                            <Search className="h-4 w-4 text-muted-foreground" />
                             <input
                                 type="text"
                                 placeholder="Search users by email..."
-                                className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-slate-600"
+                                className="bg-transparent border-none outline-none text-sm text-foreground w-full placeholder:text-muted-foreground"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -60,27 +59,27 @@ export default function AdminUsers() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="text-slate-500 border-b border-white/5 text-left">
+                                    <tr className="text-muted-foreground border-b border-border text-left">
                                         <th className="pb-3 pl-4">User</th>
                                         <th className="pb-3">Role</th>
                                         <th className="pb-3">Joined</th>
                                         <th className="pb-3 text-right pr-4">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/5">
+                                <tbody className="divide-y divide-border">
                                     {filteredUsers.map((u: { id: string; email: string; role: string; created_at: string }) => (
-                                        <tr key={u.id} className="group hover:bg-white/5 transition-colors">
-                                            <td className="py-4 pl-4 font-medium text-white">{u.email}</td>
+                                        <tr key={u.id} className="group hover:bg-muted/40 transition-colors">
+                                            <td className="py-4 pl-4 font-medium text-foreground">{u.email}</td>
                                             <td className="py-4">
-                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'ADMIN' ? 'bg-danger/10 text-danger' : 'bg-primary/10 text-primary'}`}>
+                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${u.role === 'ADMIN' ? 'border-destructive/30 text-destructive' : 'border-primary/20 text-primary'}`}>
                                                     {u.role || 'USER'}
                                                 </span>
                                             </td>
-                                            <td className="py-4 text-slate-500">
+                                            <td className="py-4 text-muted-foreground">
                                                 {new Date(u.created_at).toLocaleDateString()}
                                             </td>
                                             <td className="py-4 text-right pr-4">
-                                                <button className="text-blue-400 hover:text-white text-xs underline opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button className="text-primary hover:text-foreground text-xs underline opacity-0 group-hover:opacity-100 transition-opacity">
                                                     View Profile
                                                 </button>
                                             </td>

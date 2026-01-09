@@ -45,19 +45,19 @@ export const DerivCallback = () => {
     }, [searchParams, loginWithDeriv, navigate]);
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
             <div className="text-center">
                 {error ? (
                     <>
-                        <h2 className="text-2xl font-bold mb-4 text-red-400">Authentication Error</h2>
-                        <p className="text-gray-400">{error}</p>
-                        <p className="text-gray-500 text-sm mt-2">Redirecting...</p>
+                        <h2 className="text-2xl font-semibold mb-4 text-destructive">Authentication error</h2>
+                        <p className="text-sm text-muted-foreground">{error}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Redirecting...</p>
                     </>
                 ) : (
                     <>
-                        <h2 className="text-2xl font-bold mb-4">Authenticating with Deriv...</h2>
-                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                        <p className="text-gray-400 text-sm mt-4">Securely connecting your account</p>
+                        <h2 className="text-2xl font-semibold mb-4">Authenticating with Deriv...</h2>
+                        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                        <p className="text-sm text-muted-foreground mt-4">Securely connecting your account</p>
                     </>
                 )}
             </div>

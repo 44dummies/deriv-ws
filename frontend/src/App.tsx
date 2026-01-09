@@ -10,7 +10,7 @@ import Statistics from './pages/Statistics';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import { DerivCallback } from './features/auth/DerivCallback';
-import DashboardLayoutPremium from './layouts/DashboardLayoutPremium';
+import DashboardLayout from './layouts/DashboardLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminSessions from './pages/admin/AdminSessions';
@@ -26,8 +26,8 @@ function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0a0f1c] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
         );
     }
@@ -48,8 +48,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#0a0f1c] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-6 w-6 text-primary animate-spin" />
             </div>
         );
     }
@@ -88,7 +88,7 @@ function App() {
                     {/* Secure SPA Routes */}
                     <Route path="/user" element={
                         <ProtectedRoute>
-                            <DashboardLayoutPremium />
+                            <DashboardLayout />
                         </ProtectedRoute>
                     }>
                         <Route path="dashboard" element={

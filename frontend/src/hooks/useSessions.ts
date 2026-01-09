@@ -5,7 +5,10 @@ import { Session, SessionStatus } from '../types/session';
 export function useSessions() {
     return useQuery<Session[]>({
         queryKey: ['sessions'],
-        queryFn: () => fetchWithAuth('/sessions'),
+        queryFn: async () => {
+            const data = await fetchWithAuth('/sessions');
+            return data?.sessions || [];
+        },
     });
 }
 
@@ -22,7 +25,7 @@ export function useCreateSession() {
     return useMutation({
         mutationFn: () => fetchWithAuth('/sessions', {
             method: 'POST',
-            body: JSON.stringify({ startTime: new Date().toISOString() }),
+            body: JSON.stringify({ config: { risk_profile: 'MEDIUM' } }),
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
@@ -33,11 +36,12 @@ export function useCreateSession() {
 export function useUpdateSessionStatus() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, status }: { id: string; status: SessionStatus }) =>
-            fetchWithAuth(`/sessions/${id}/status`, {
-                method: 'PATCH',
-                body: JSON.stringify({ status }),
-            }),
+        mutationFn: ({ id, status }: { id: string; status: SessionStatus }) => {
+            const action = status === 'PAUSED' ? 'pause' : status === 'TERMINATED' ? 'stop' : 'start';
+            return fetchWithAuth(`/sessions/${id}/${action}`, {
+                method: 'POST',
+            });
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
             queryClient.invalidateQueries({ queryKey: ['session', 'active'] });

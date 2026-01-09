@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
-import { Send, Bot, User as UserIcon, Loader2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Send, Bot, User as UserIcon, Loader2, AlertTriangle, MessageSquare } from 'lucide-react';
 
 interface Message {
     id: string;
@@ -15,7 +15,7 @@ export function Chat() {
         {
             id: 'welcome',
             role: 'assistant',
-            content: `Hello ${user?.email || 'Trader'}! I am TraderMind AI.\n\nI can help you analyze market conditions, explain risks, or answer platform questions.\n\n*Note: I do not execute trades.*`,
+            content: `Hello ${user?.email || 'Trader'}.\n\nThis channel is for operational questions and platform guidance.\n\nResponses are informational only and do not execute trades.`,
             timestamp: Date.now()
         }
     ]);
@@ -63,7 +63,7 @@ export function Chat() {
             const botMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: data.response || "I'm having trouble connecting to my neural network. Please check if the Ollama server is running.",
+                content: data.response || 'Service is unavailable. Please try again shortly.',
                 timestamp: Date.now()
             };
 
@@ -72,7 +72,7 @@ export function Chat() {
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: "Network Error: Unable to reach TraderMind AI.",
+                content: 'Network error: unable to reach the service.',
                 timestamp: Date.now()
             };
             setMessages(prev => [...prev, errorMsg]);
@@ -84,18 +84,13 @@ export function Chat() {
     return (
         <div className="flex flex-col h-[calc(100vh-6rem)] max-w-4xl mx-auto p-4">
             {/* Header */}
-            <div className="flex items-center gap-3 mb-6 p-4 glass-panel rounded-xl border border-primary/20 bg-primary/5">
-                <div className="p-3 rounded-full bg-primary/20 border border-primary/30 shadow-[0_0_15px_rgba(var(--color-primary),0.3)]">
-                    <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+            <div className="flex items-center gap-3 mb-6 p-4 rounded-lg border border-border bg-card">
+                <div className="p-2 rounded-md bg-muted/50 border border-border">
+                    <MessageSquare className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-                        TraderMind AI Chat
-                    </h1>
-                    <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        Active Model: Llama-3-8B (Ollama)
-                    </p>
+                    <h1 className="text-2xl font-semibold">Support chat</h1>
+                    <p className="text-sm text-muted-foreground">Operational guidance and platform questions.</p>
                 </div>
             </div>
 
@@ -114,10 +109,10 @@ export function Chat() {
                         </div>
 
                         <div className={`
-              max-w-[80%] p-4 rounded-2xl backdrop-blur-md border shadow-lg
+              max-w-[80%] p-4 rounded-lg border
               ${msg.role === 'user'
-                                ? 'bg-accent/10 border-accent/20 text-foreground rounded-tr-none'
-                                : 'bg-surface/60 border-white/10 text-foreground rounded-tl-none'
+                                ? 'bg-muted/40 border-border text-foreground rounded-tr-none'
+                                : 'bg-card border-border text-foreground rounded-tl-none'
                             }
             `}>
                             <div className="whitespace-pre-wrap leading-relaxed">
@@ -132,7 +127,7 @@ export function Chat() {
                         <div className="p-2 rounded-full bg-primary/20 text-primary border border-primary/30">
                             <Bot size={20} />
                         </div>
-                        <div className="p-4 rounded-2xl bg-surface/40 border border-white/5 rounded-tl-none">
+                        <div className="p-4 rounded-lg bg-card border border-border rounded-tl-none">
                             <Loader2 className="w-5 h-5 animate-spin text-primary" />
                         </div>
                     </div>
@@ -141,7 +136,7 @@ export function Chat() {
             </div>
 
             {/* Input */}
-            <div className="relative glass-panel rounded-xl p-2 border border-white/10 flex items-center gap-2">
+            <div className="relative rounded-lg p-2 border border-border bg-card flex items-center gap-2">
                 <input
                     type="text"
                     value={input}
@@ -154,7 +149,7 @@ export function Chat() {
                 <button
                     onClick={handleSend}
                     disabled={isLoading || !input.trim()}
-                    className="p-3 rounded-lg bg-primary text-black font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_15px_rgba(var(--color-primary),0.3)] hover:shadow-[0_0_25px_rgba(var(--color-primary),0.5)]"
+                    className="p-3 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150 ease-out"
                 >
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
@@ -162,7 +157,7 @@ export function Chat() {
 
             <div className="mt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground/60">
                 <AlertTriangle className="w-3 h-3" />
-                TraderMind AI can make mistakes. Consider checking important information.
+                Responses are informational and not trading advice.
             </div>
         </div>
     );
