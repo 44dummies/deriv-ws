@@ -15,10 +15,11 @@ import { logger } from '../utils/logger.js';
 const router = Router();
 
 // Cookie configuration for JWT
+// NOTE: sameSite 'none' required for cross-origin (Vercel frontend -> Railway backend)
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
+    sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     path: '/'
 };

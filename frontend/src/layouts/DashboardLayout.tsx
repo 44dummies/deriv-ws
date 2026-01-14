@@ -8,15 +8,20 @@ import {
     X,
     BarChart3,
     BarChart2,
-    Activity
+    Activity,
+    Moon,
+    Sun
 } from 'lucide-react';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useThemeStore } from '../stores/useThemeStore';
 import { cn } from '../lib/utils';
 
 export default function DashboardLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { signOut, user } = useAuthStore();
+    const { theme, setTheme, resolvedTheme } = useThemeStore();
     const navigate = useNavigate();
+    const isProduction = import.meta.env.PROD;
 
     const handleLogout = async () => {
         await signOut();
@@ -64,6 +69,13 @@ export default function DashboardLayout() {
                         Signed in as
                         <div className="text-sm text-foreground font-medium truncate">{user?.email || '—'}</div>
                     </div>
+                    <button
+                        onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                        className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors duration-150 ease-out"
+                    >
+                        {resolvedTheme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                        <span className="font-medium">{resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                    </button>
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 w-full px-3 py-2 text-sm text-destructive hover:bg-muted/60 rounded-md transition-colors duration-150 ease-out"
@@ -120,7 +132,8 @@ export default function DashboardLayout() {
             <main className="flex-1 overflow-y-auto pt-20 md:pt-0">
                 <div className="border-b border-border bg-background/95 sticky top-0 z-10">
                     <div className="px-6 md:px-10 py-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <div>Environment: {import.meta.env.MODE}</div>
+                        {!isProduction && <div>Environment: {import.meta.env.MODE}</div>}
+                        <div className={isProduction ? '' : ''}>{isProduction ? '' : null}</div>
                         <div>Account: {user?.active_account_id || '—'}</div>
                     </div>
                 </div>
