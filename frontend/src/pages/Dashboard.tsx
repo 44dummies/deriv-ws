@@ -16,7 +16,7 @@ function useSummaryStats() {
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            const res = await fetch(\`\${baseUrl}/api/v1/stats/user-summary\`, { credentials: 'include' });
+            const res = await fetch(`${baseUrl}/api/v1/stats/user-summary`, { credentials: 'include' });
             if (!res.ok) return null;
             return res.json();
         },
@@ -30,7 +30,7 @@ function useRecentTrades() {
         queryKey: ['recent-trades'],
         queryFn: async () => {
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            const res = await fetch(\`\${baseUrl}/api/v1/trades?limit=5\`, { credentials: 'include' });
+            const res = await fetch(`${baseUrl}/api/v1/trades?limit=5`, { credentials: 'include' });
             if (!res.ok) return { trades: [] };
             return res.json();
         },
@@ -61,8 +61,8 @@ export default function Dashboard() {
         return [
             { label: 'Active sessions', value: activeSessions },
             { label: 'Total trades', value: totalTrades },
-            { label: 'Total PnL', value: \`\${totalProfit.toFixed(2)} \${currency}\` },
-            { label: 'Win rate', value: \`\${Number(winRate).toFixed(1)}%\` },
+            { label: 'Total PnL', value: `${totalProfit.toFixed(2)} ${currency}` },
+            { label: 'Win rate', value: `${Number(winRate).toFixed(1)}%` },
         ];
     }, [summary, currency]);
 
@@ -97,7 +97,11 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <Card className="border-border/50 hover:border-primary/50 transition-colors">
                         <CardHeader className="pb-2">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Account balance</CardTitle>
@@ -118,7 +122,12 @@ export default function Dashboard() {
                     </Card>
                 </motion.div>
                 {kpis.map((item, i) => (
-                    <motion.div key={item.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.1 }}>
+                    <motion.div
+                        key={item.label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: i * 0.1 }}
+                    >
                         <Card className="border-border/50 hover:border-primary/50 transition-all hover:shadow-lg">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm font-medium text-muted-foreground">{item.label}</CardTitle>
@@ -132,7 +141,11 @@ export default function Dashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+                <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4 }}
+                >
                     <Card className="border-border/50">
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
@@ -141,7 +154,7 @@ export default function Dashboard() {
                                     Market watch
                                 </CardTitle>
                                 <div className="flex items-center gap-2">
-                                    <span className={\`w-2 h-2 rounded-full \${connected ? 'bg-green-500 animate-pulse' : 'bg-muted'}\`} />
+                                    <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500 animate-pulse' : 'bg-muted'}`} />
                                     <span className="text-xs text-muted-foreground">
                                         {connected ? 'Live' : 'Connecting...'}
                                     </span>
@@ -167,9 +180,9 @@ export default function Dashboard() {
                                             <div className="font-medium">{symbol}</div>
                                             <div className="flex items-center gap-4">
                                                 <span className="tabular-nums font-semibold">{tick ? tick.quote.toFixed(2) : '—'}</span>
-                                                <div className={\`flex items-center gap-1.5 min-w-[80px] justify-end \${isUp ? 'text-green-500' : isDown ? 'text-red-500' : 'text-muted-foreground'}\`}>
+                                                <div className={`flex items-center gap-1.5 min-w-[80px] justify-end ${isUp ? 'text-green-500' : isDown ? 'text-red-500' : 'text-muted-foreground'}`}>
                                                     <span className="text-sm tabular-nums">
-                                                        {tick ? \`\${change >= 0 ? '+' : ''}\${change.toFixed(2)}%\` : '—'}
+                                                        {tick ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—'}
                                                     </span>
                                                     {isUp && <TrendingUp className="w-4 h-4" />}
                                                     {isDown && <TrendingDown className="w-4 h-4" />}
@@ -183,7 +196,11 @@ export default function Dashboard() {
                     </Card>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.4 }}
+                >
                     <Card className="border-border/50">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-semibold">Recent trades</CardTitle>
@@ -193,26 +210,30 @@ export default function Dashboard() {
                                 {(recentTrades?.trades || []).length === 0 && (
                                     <div className="text-sm text-muted-foreground py-8 text-center">No trades yet</div>
                                 )}
-                                {(recentTrades?.trades || []).map((trade: any, i: number) => (
-                                    <motion.div
-                                        key={trade.id}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.3, delay: i * 0.05 }}
-                                        className="flex items-center justify-between border border-border/50 rounded-lg px-4 py-3 hover:border-primary/50 transition-colors"
-                                    >
-                                        <div>
-                                            <div className="font-medium">{trade.market}</div>
-                                            <div className="text-xs text-muted-foreground mt-0.5">{trade.contract_type}</div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className={\`font-semibold tabular-nums \${Number(trade.pnl || 0) > 0 ? 'text-green-500' : Number(trade.pnl || 0) < 0 ? 'text-red-500' : ''}\`}>
-                                                {Number(trade.pnl || 0) > 0 ? '+' : ''}{Number(trade.pnl || 0).toFixed(2)}
+                                {(recentTrades?.trades || []).map((trade: any, i: number) => {
+                                    const pnl = Number(trade.pnl || 0);
+                                    const pnlColor = pnl > 0 ? 'text-green-500' : pnl < 0 ? 'text-red-500' : '';
+                                    return (
+                                        <motion.div
+                                            key={trade.id}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ duration: 0.3, delay: i * 0.05 }}
+                                            className="flex items-center justify-between border border-border/50 rounded-lg px-4 py-3 hover:border-primary/50 transition-colors"
+                                        >
+                                            <div>
+                                                <div className="font-medium">{trade.market}</div>
+                                                <div className="text-xs text-muted-foreground mt-0.5">{trade.contract_type}</div>
                                             </div>
-                                            <div className="text-xs text-muted-foreground mt-0.5">{trade.status}</div>
-                                        </div>
-                                    </motion.div>
-                                ))}
+                                            <div className="text-right">
+                                                <div className={`font-semibold tabular-nums ${pnlColor}`}>
+                                                    {pnl > 0 ? '+' : ''}{pnl.toFixed(2)}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-0.5">{trade.status}</div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
                         </CardContent>
                     </Card>
