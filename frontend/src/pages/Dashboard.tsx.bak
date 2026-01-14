@@ -1,0 +1,189 @@
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Activity, TrendingUp, TrendingDown, Wallet, Plus, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuthStore } from '../stores/useAuthStore';
+import { useDerivBalance } from '../hooks/useDerivBalance';
+import { useDerivTicks } from '../hooks/useDerivTicks';
+import { useCreateSession } from '../hooks/useSessions';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import ManualTrade from '../components/ManualTrade';
+
+const watchlist = ['R_100', 'R_50', 'R_25', 'JD100', 'JD50', 'JD25'];
+
+function useSummaryStats() {
+    return useQuery({
+        queryKey: ['dashboard-stats'],
+        queryFn: async () => {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const res = await fetch(`${baseUrl}/api/v1/stats/user-summary`, { credentials: 'include' });
+            if (!res.ok) return null;
+            return res.json();
+        },
+        staleTime: 30000,
+        refetchInterval: 30000
+    });
+}
+
+function useRecentTrades() {
+    return useQuery({
+        queryKey: ['recent-trades'],
+        queryFn: async () => {
+            const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
+            const res = await fetch(`${baseUrl}/api/v1/trades?limit=5`, { credentials: 'include' });
+            if (!res.ok) return { trades: [] };
+            return res.json();
+        },
+        staleTime: 15000,
+    });
+}
+
+export default function Dashboard() {
+    const { user } = useAuthStore();
+    const { data: summary } = useSummaryStats();
+    const { data: recentTrades } = useRecentTrades();
+    const { mutate: createSession, isPending } = useCreateSession();
+    const { ticks, connected } = useDerivTicks({ symbols: watchlist });
+    const [showTrade, setShowTrade] = useState(false);
+
+    useDerivBalance();
+
+    const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id);
+    const balance = activeAccount?.balance ?? 0;
+    const currency = activeAccount?.currency ?? 'USD';
+
+    const kpis = useMemo(() => {
+        const totalProfit = summary?.trading?.total_profit ?? 0;
+        const winRate = summary?.trading?.win_rate ?? 0;
+        const totalTrades = summary?.trading?.total_trades ?? 0;
+        const activeSessions = summary?.sessions?.active ?? 0;
+
+        return [
+            { label: 'Active sessions', value: activeSessions },
+            { label: 'Total trades', value: totalTrades },
+            { label: 'Total PnL', value: `${totalProfit.toFixed(2)} ${currency}` },
+            { label: 'Win rate', value: `${Number(winRate).toFixed(1)}%` },
+        ];
+    }, [summary, currency]);
+
+    return (
+        <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold">Dashboard</h1>
+                    <p className="text-sm text-muted-foreground">Session overview and live monitoring.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowTrade(true)}
+                        className="px-3 py-2 rounded-md border border-border text-sm hover:bg-muted/60 transition-colors duration-150 ease-out"
+                    >
+                        Manual trade
+                    </button>
+                    <button
+                        onClick={() => createSession()}
+                        disabled={isPending}
+                        className="px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium transition-colors duration-150 ease-out hover:bg-primary/90 disabled:opacity-60"
+                    >
+                        {isPending ? 'Creating...' : 'Create session'}
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Account balance</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-md bg-muted/50">
+                                <Wallet className="w-4 h-4 text-primary" />
+                            </div>
+                            <div className="text-xl font-semibold">{balance.toFixed(2)} {currency}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-2">
+                            {activeAccount?.is_virtual ? 'Demo account' : 'Real account'}
+                        </div>
+                    </CardContent>
+                </Card>
+                {kpis.map((item) => (
+                    <Card key={item.label}>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{item.label}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-xl font-semibold">{item.value}</div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-primary" />
+                            Market watch
+                        </CardTitle>
+                        <div className="text-xs text-muted-foreground">
+                            {connected ? 'Live feed connected' : 'Connecting...'}
+                        </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        <div className="grid grid-cols-1 gap-3">
+                            {watchlist.map((symbol) => {
+                                const tick = ticks.get(symbol);
+                                const change = tick?.changePercent ?? 0;
+                                const isUp = change > 0;
+                                const isDown = change < 0;
+                                return (
+                                    <div key={symbol} className="flex items-center justify-between border border-border rounded-md px-3 py-2">
+                                        <div className="text-sm font-medium">{symbol}</div>
+                                        <div className="flex items-center gap-3 text-sm">
+                                            <span className="tabular-nums">{tick ? tick.quote.toFixed(2) : '—'}</span>
+                                            <span className={isUp ? 'text-primary' : 'text-muted-foreground'}>
+                                                {tick ? `${change >= 0 ? '+' : ''}${change.toFixed(2)}%` : '—'}
+                                            </span>
+                                            {isUp && <TrendingUp className="w-4 h-4 text-primary" />}
+                                            {isDown && <TrendingDown className="w-4 h-4 text-muted-foreground" />}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Recent trades</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        <div className="space-y-3">
+                            {(recentTrades?.trades || []).length === 0 && (
+                                <div className="text-sm text-muted-foreground">No trades recorded.</div>
+                            )}
+                            {(recentTrades?.trades || []).map((trade: any) => (
+                                <div key={trade.id} className="flex items-center justify-between border border-border rounded-md px-3 py-2 text-sm">
+                                    <div>
+                                        <div className="font-medium">{trade.market}</div>
+                                        <div className="text-xs text-muted-foreground">{trade.contract_type}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="tabular-nums">{Number(trade.pnl || 0).toFixed(2)}</div>
+                                        <div className="text-xs text-muted-foreground">{trade.status}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {showTrade && (
+                <ManualTrade onClose={() => setShowTrade(false)} />
+            )}
+        </div>
+    );
+}
