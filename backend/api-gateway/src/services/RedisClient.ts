@@ -1,10 +1,48 @@
 /**
  * TraderMind Redis Client
  * Session state mirror and recovery
- * Uses in-memory storage as fallback when Redis unavailable
+ * Connects to real Redis if REDIS_URL is set, otherwise uses in-memory fallback
  */
 
+import { Redis } from 'ioredis';
 import { logger } from '../utils/logger.js';
+
+// =============================================================================
+// REDIS CLIENT INITIALIZATION
+// =============================================================================
+
+let redisClient: Redis | null = null;
+const REDIS_URL = process.env.REDIS_URL;
+
+// Try to connect to Redis if URL is provided
+if (REDIS_URL) {
+    try {
+        const client = new Redis(REDIS_URL, {
+            maxRetriesPerRequest: 3,
+            retryStrategy(times: number): number | void | null {
+                const delay = Math.min(times * 50, 2000);
+                return delay;
+            },
+            lazyConnect: false,
+        });
+
+        client.on('connect', () => {
+            logger.info('[Redis] Connected successfully', { url: REDIS_URL.replace(/:[^:]*@/, ':***@') });
+        });
+
+        client.on('error', (err: Error) => {
+            logger.error('[Redis] Connection error, falling back to memory', { error: err.message });
+            redisClient = null; // Fallback to memory on error
+        });
+        
+        redisClient = client;
+    } catch (err) {
+        logger.warn('[Redis] Failed to initialize, using in-memory fallback', { error: err instanceof Error ? err.message : String(err) });
+        redisClient = null;
+    }
+} else {
+    logger.warn('[Redis] REDIS_URL not set, using in-memory storage (not suitable for production)');
+}
 
 // =============================================================================
 // IN-MEMORY STORAGE (Fallback)
@@ -30,6 +68,16 @@ export const REDIS_KEYS = {
 // =============================================================================
 
 export async function hset(key: string, data: Record<string, string>): Promise<void> {
+    if (redisClient) {
+        try {
+            await redisClient.hset(key, data);
+            return;
+        } catch (err) {
+            logger.warn('[Redis] hset failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     if (!memoryStore.has(key)) {
         memoryStore.set(key, new Map());
     }
@@ -40,6 +88,15 @@ export async function hset(key: string, data: Record<string, string>): Promise<v
 }
 
 export async function hgetall(key: string): Promise<Record<string, string>> {
+    if (redisClient) {
+        try {
+            return await redisClient.hgetall(key);
+        } catch (err) {
+            logger.warn('[Redis] hgetall failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     const hash = memoryStore.get(key);
     if (!hash) return {};
     const result: Record<string, string> = {};
@@ -50,6 +107,16 @@ export async function hgetall(key: string): Promise<Record<string, string>> {
 }
 
 export async function del(key: string): Promise<void> {
+    if (redisClient) {
+        try {
+            await redisClient.del(key);
+            return;
+        } catch (err) {
+            logger.warn('[Redis] del failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     memoryStore.delete(key);
 }
 
@@ -58,6 +125,16 @@ export async function del(key: string): Promise<void> {
 // =============================================================================
 
 export async function sadd(key: string, member: string): Promise<void> {
+    if (redisClient) {
+        try {
+            await redisClient.sadd(key, member);
+            return;
+        } catch (err) {
+            logger.warn('[Redis] sadd failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     if (!memorySets.has(key)) {
         memorySets.set(key, new Set());
     }
@@ -65,10 +142,29 @@ export async function sadd(key: string, member: string): Promise<void> {
 }
 
 export async function srem(key: string, member: string): Promise<void> {
+    if (redisClient) {
+        try {
+            await redisClient.srem(key, member);
+            return;
+        } catch (err) {
+            logger.warn('[Redis] srem failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     memorySets.get(key)?.delete(member);
 }
 
 export async function smembers(key: string): Promise<string[]> {
+    if (redisClient) {
+        try {
+            return await redisClient.smembers(key);
+        } catch (err) {
+            logger.warn('[Redis] smembers failed, using memory', { key, error: err instanceof Error ? err.message : String(err) });
+        }
+    }
+    
+    // Fallback to memory
     return Array.from(memorySets.get(key) ?? []);
 }
 

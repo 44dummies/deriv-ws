@@ -6,6 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { validateAccountSwitch } from '../middleware/validation.js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import { UserService } from '../services/UserService.js';
 import { AuthService } from '../services/AuthService.js';
@@ -201,7 +202,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
 });
 
 // POST /auth/switch-account - Switch active Deriv account
-router.post('/switch-account', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/switch-account', requireAuth, validateAccountSwitch, async (req: AuthRequest, res: Response) => {
     const { account_id } = req.body;
     const userId = req.user?.id;
 

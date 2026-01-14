@@ -82,15 +82,8 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             this.processBatch();
         }, BATCH_PROCESS_INTERVAL);
 
-        const aiEnabled = process.env.ENABLE_AI_LAYER === 'true';
-        if (aiEnabled) {
-            // Start Status Poller (every 5 seconds)
-            this.aiStatusTimer = setInterval(() => {
-                this.checkAIStatus();
-            }, 5000);
-        } else {
-            quantEngine.setAIEnabled(false);
-        }
+        // AI layer has been removed from this codebase
+        quantEngine.setAIEnabled(false);
 
         logger.info('Started', { service: 'QuantAdapter' });
     }

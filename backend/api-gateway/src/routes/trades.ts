@@ -6,6 +6,7 @@
 import { Router, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { validatePagination } from '../middleware/validation.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -21,7 +22,7 @@ const getSupabase = () => {
 };
 
 // GET /trades - List all trades for current user
-router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, validatePagination, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         const { limit = 50, offset = 0, session_id } = req.query;

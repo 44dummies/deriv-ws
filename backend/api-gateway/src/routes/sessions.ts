@@ -6,6 +6,7 @@
 import { Router, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { validateSessionCreation, validateSessionUpdate, validatePagination } from '../middleware/validation.js';
 import { sessionRegistry, SessionState } from '../services/SessionRegistry.js';
 import { marketDataService } from '../services/MarketDataService.js';
 import { quantAdapter } from '../services/QuantEngineAdapter.js';
@@ -124,7 +125,7 @@ function maybeStopPipeline(): void {
 
 // GET /sessions - List all visible sessions
 // Protected: Only authenticated users needed
-router.get('/', requireAuth, (_req: AuthRequest, res: Response) => {
+router.get('/', requireAuth, validatePagination, (_req: AuthRequest, res: Response) => {
     try {
         const sessions = sessionRegistry.listSessions().map(serializeSession);
         res.json({
@@ -235,7 +236,7 @@ router.post('/:id/leave', requireAuth, (req: AuthRequest, res: Response) => {
 // =============================================================================
 
 // POST /sessions - Create new session (Now allows any authenticated user)
-router.post('/', requireAuth, (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, validateSessionCreation, (req: AuthRequest, res: Response) => {
     try {
         if (!req.user || !req.user.id) {
             res.status(401).json({ error: 'Unauthorized' });

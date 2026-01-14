@@ -70,15 +70,37 @@ const DEFAULT_DURATION: DurationConfig = {
 // =============================================================================
 
 export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
-    private redis: Redis;
+    private redis: Redis | null = null;
     private supabase: SupabaseClient | null = null;
+    private memoryIdempotency: Map<string, number> = new Map(); // Fallback when no Redis
 
     constructor() {
         super();
-        this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+        this.initRedis();
         this.initSupabase();
         this.initialize();
-        logger.info('ExecutionCore initialized with Redis Idempotency and DB persistence');
+        logger.info('ExecutionCore initialized', { 
+            redis: !!this.redis, 
+            supabase: !!this.supabase 
+        });
+    }
+
+    private initRedis(): void {
+        const redisUrl = process.env.REDIS_URL;
+        if (redisUrl && redisUrl !== 'redis://localhost:6379') {
+            try {
+                this.redis = new Redis(redisUrl);
+                this.redis.on('error', (err) => {
+                    logger.warn('ExecutionCore Redis error, falling back to memory', { err: err.message });
+                    this.redis = null;
+                });
+            } catch (err) {
+                logger.warn('ExecutionCore Redis connection failed, using memory fallback');
+                this.redis = null;
+            }
+        } else {
+            logger.info('ExecutionCore: No Redis URL configured, using in-memory idempotency');
+        }
     }
 
     private initSupabase(): void {
@@ -223,10 +245,34 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
     private async isDuplicate(key: string): Promise<boolean> {
         const redisKey = `tradermind:exec:idempotency:${key}`;
-        // SET NX EX 3600 (1 hour)
-        // Returns 'OK' if set, null if already exists (which means duplicate)
-        const result = await this.redis.set(redisKey, '1', 'EX', 3600, 'NX');
-        return result === null;
+        
+        // Use Redis if available
+        if (this.redis) {
+            try {
+                // SET NX EX 3600 (1 hour)
+                // Returns 'OK' if set, null if already exists (which means duplicate)
+                const result = await this.redis.set(redisKey, '1', 'EX', 3600, 'NX');
+                return result === null;
+            } catch (err) {
+                logger.warn('Redis isDuplicate failed, using memory fallback');
+            }
+        }
+        
+        // Fallback to in-memory check
+        const now = Date.now();
+        const expiresAt = this.memoryIdempotency.get(redisKey);
+        if (expiresAt && expiresAt > now) {
+            return true; // Duplicate
+        }
+        // Set with 1 hour expiry
+        this.memoryIdempotency.set(redisKey, now + 3600000);
+        // Cleanup old entries periodically
+        if (this.memoryIdempotency.size > 1000) {
+            for (const [k, v] of this.memoryIdempotency) {
+                if (v < now) this.memoryIdempotency.delete(k);
+            }
+        }
+        return false;
     }
 
     /**

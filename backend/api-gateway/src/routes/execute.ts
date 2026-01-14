@@ -5,6 +5,8 @@
 
 import { Router, Response } from 'express';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
+import { validateTradeExecution } from '../middleware/validation.js';
+import { tradeRateLimiter } from '../middleware/rateLimiter.js';
 import { createClient } from '@supabase/supabase-js';
 import { DerivWSClient } from '../services/DerivWSClient.js';
 import { riskGuard } from '../services/RiskGuard.js';
@@ -32,31 +34,17 @@ interface ManualTradeRequest {
 /**
  * POST /api/v1/trades/execute
  * Execute a manual trade
+ * Rate limited: 5 trades per minute per user
  */
-router.post('/execute', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         if (!userId) {
             return res.status(401).json({ error: 'User not authenticated' });
         }
 
+        // Request body already validated by Zod middleware
         const { market, contractType, stake, duration, durationUnit = 'm' }: ManualTradeRequest = req.body;
-
-        // Validation
-        if (!market || !contractType || !stake || !duration) {
-            return res.status(400).json({ 
-                error: 'Missing required fields', 
-                required: ['market', 'contractType', 'stake', 'duration']
-            });
-        }
-
-        if (stake < 1 || stake > 10000) {
-            return res.status(400).json({ error: 'Stake must be between 1 and 10000' });
-        }
-
-        if (duration < 1 || duration > 1440) {
-            return res.status(400).json({ error: 'Duration must be between 1 and 1440 minutes' });
-        }
 
         const accounts = await UserService.listDerivAccounts(userId);
         if (accounts.length === 0) {

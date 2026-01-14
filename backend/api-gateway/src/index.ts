@@ -3,6 +3,9 @@
  * Express + Socket.IO server with structured routes and WebSocket
  */
 
+// Load environment variables FIRST (before any other imports)
+import 'dotenv/config';
+
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -91,13 +94,25 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // Remove unsafe-inline in production after refactoring
             styleSrc: ["'self'", "'unsafe-inline'"],
             imgSrc: ["'self'", "data:", "https:"],
-            connectSrc: ["'self'", ...allowedOrigins],
+            connectSrc: ["'self'", ...allowedOrigins, "wss:", "https:"], // Allow WebSocket connections
+            fontSrc: ["'self'", "data:"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+            upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
         },
     },
     crossOriginEmbedderPolicy: false, // Allow embedding for WebSocket
+    hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true
+    },
+    noSniff: true,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
 // CORS with explicit origins

@@ -37,35 +37,75 @@ router.get('/', async (_req: Request, res: Response) => {
 });
 
 // GET /users/:id
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
-    res.json({
-        id,
-        email: 'placeholder@example.com',
-        role: 'user',
-        created_at: new Date().toISOString(),
-        message: 'Get user - placeholder',
-    });
+    if (!id) {
+        res.status(400).json({ error: 'User ID required' });
+        return;
+    }
+    try {
+        const { data: user, error } = await supabase.auth.admin.getUserById(id);
+        if (error) throw error;
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
+
+        res.json({
+            id: user.user.id,
+            email: user.user.email,
+            role: (user.user.user_metadata?.['role'] as string) || 'USER',
+            created_at: user.user.created_at
+        });
+    } catch (error) {
+        logger.error('Get user error', { error });
+        res.status(500).json({ error: 'Failed to fetch user' });
+    }
 });
 
 // GET /users/:id/sessions
-router.get('/:id/sessions', (req: Request, res: Response) => {
+router.get('/:id/sessions', async (req: Request, res: Response) => {
     const { id } = req.params;
-    res.json({
-        user_id: id,
-        sessions: [],
-        message: 'Get user sessions - placeholder',
-    });
+    try {
+        const { data: participants, error } = await supabase
+            .from('participants')
+            .select('session_id, status, pnl, joined_at')
+            .eq('user_id', id)
+            .order('joined_at', { ascending: false });
+
+        if (error) throw error;
+
+        res.json({
+            user_id: id,
+            sessions: participants || []
+        });
+    } catch (error) {
+        logger.error('Get user sessions error', { error });
+        res.status(500).json({ error: 'Failed to fetch user sessions' });
+    }
 });
 
 // GET /users/:id/trades
-router.get('/:id/trades', (req: Request, res: Response) => {
+router.get('/:id/trades', async (req: Request, res: Response) => {
     const { id } = req.params;
-    res.json({
-        user_id: id,
-        trades: [],
-        message: 'Get user trades - placeholder',
-    });
+    try {
+        const { data: trades, error } = await supabase
+            .from('trades')
+            .select('*')
+            .eq('user_id', id)
+            .order('executed_at', { ascending: false })
+            .limit(100);
+
+        if (error) throw error;
+
+        res.json({
+            user_id: id,
+            trades: trades || []
+        });
+    } catch (error) {
+        logger.error('Get user trades error', { error });
+        res.status(500).json({ error: 'Failed to fetch user trades' });
+    }
 });
 
 export default router;

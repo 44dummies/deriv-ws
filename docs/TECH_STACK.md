@@ -36,18 +36,6 @@
 | eventemitter3 | 5.0.1 | Internal Events |
 | uuid | 9.0.0 | ID Generation |
 
-### AI Layer (`apps/ai-layer`)
-| Package | Version | Purpose |
-|---------|---------|---------|
-| fastapi | 0.109.0 | REST API |
-| uvicorn | 0.27.0 | ASGI Server |
-| pydantic | 2.5.3 | Validation |
-| scikit-learn | 1.4.0 | ML Base |
-| xgboost | 2.0.3 | Gradient Boosting |
-| lightgbm | 4.3.0 | Gradient Boosting |
-| numpy | 1.26.3 | Numeric |
-| scipy | 1.12.0 | Scientific |
-
 ### Shared Packages
 | Package | Version | Purpose |
 |---------|---------|---------|
@@ -56,5 +44,4 @@
 
 ## Engine Requirements
 - Node.js: ≥20.0.0 LTS
-- Python: ≥3.11
 - pnpm: ≥8.0.0

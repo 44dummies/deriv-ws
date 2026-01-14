@@ -33,6 +33,14 @@ const AUTH_CONFIG: RateLimitConfig = {
     keyPrefix: 'tradermind:ratelimit:auth:'
 };
 
+// Rate limit for trade execution (prevent rapid-fire trades)
+const TRADE_CONFIG: RateLimitConfig = {
+    windowMs: 60 * 1000,           // 1 minute
+    maxRequests: 5,                // Max 5 trades per minute per user
+    message: 'Trade limit exceeded. Maximum 5 trades per minute.',
+    keyPrefix: 'tradermind:ratelimit:trade:'
+};
+
 // =============================================================================
 // REDIS CLIENT
 // =============================================================================
@@ -215,5 +223,6 @@ setInterval(() => {
 
 export const rateLimiter = createRateLimiter(DEFAULT_CONFIG);
 export const authRateLimiter = createRateLimiter(AUTH_CONFIG);
+export const tradeRateLimiter = createRateLimiter(TRADE_CONFIG);
 export { createRateLimiter };
 export type { RateLimitConfig };

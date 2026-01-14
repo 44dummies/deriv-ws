@@ -15,21 +15,10 @@ console.log('  TraderMind QuantEngine v1.0');
 console.log('  MarketData → QuantEngine → RiskGuard → Events');
 console.log('═══════════════════════════════════════════════\n');
 
-// Create dummy session with participants
-console.log('[Main] Creating demo session...');
-const session = tradingPipeline.createDummySession('demo_session_001', {
-    risk_profile: 'MEDIUM',
-    min_confidence: 0.5, // Lower for demo
-    allowed_markets: ['R_100', 'R_50'],
-}, [
-    { userId: 'trader_alice', config: { max_drawdown: 200 } },
-    { userId: 'trader_bob', config: { max_drawdown: 150, current_drawdown: 50 } },
-]);
-
-console.log(`[Main] Session: ${session.id}`);
-console.log(`[Main] Participants: ${Array.from(session.participants.keys()).join(', ')}`);
-console.log(`[Main] Markets: ${session.config.allowed_markets.join(', ')}`);
-console.log(`[Main] Risk Profile: ${session.config.risk_profile}\n`);
+// PRODUCTION READY: No auto-start
+// Sessions and pipeline start are managed via API endpoints
+console.log('[Main] QuantEngine ready. Use /start endpoint to begin trading.');
+console.log('[Main] Production mode: Auto-start disabled.\n');
 
 // =============================================================================
 // EVENT LISTENERS
@@ -78,12 +67,7 @@ const PORT = process.env['PORT'] ?? 3001;
 server.listen(PORT, () => {
     console.log(`[Main] QuantEngine HTTP server on port ${PORT}`);
     console.log('[Main] Endpoints: /health, /stats, /start, /stop');
-    console.log('\n[Main] Starting trading pipeline in 2 seconds...\n');
-
-    // Auto-start pipeline after 2 seconds
-    setTimeout(() => {
-        tradingPipeline.start();
-    }, 2000);
+    console.log('[Main] Ready for connections. Pipeline must be started manually via /start\n');
 });
 
 // =============================================================================

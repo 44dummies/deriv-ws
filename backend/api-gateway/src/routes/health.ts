@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 
 const router = Router();
 
@@ -120,7 +121,7 @@ async function checkDerivAPI(): Promise<void> {
             reject(new Error('Deriv API connection timeout'));
         }, 5000);
 
-        const ws = new (require('ws'))(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
+        const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${appId}`);
 
         ws.on('open', () => {
             // Send ping to verify API is responsive

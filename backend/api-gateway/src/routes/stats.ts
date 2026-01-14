@@ -5,8 +5,7 @@ import { requireAdmin, requireAuth, AuthRequest } from '../middleware/auth.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
-const AI_LAYER_URL = process.env.AI_LAYER_URL || 'http://localhost:8001';
-const AI_LAYER_ENABLED = process.env.ENABLE_AI_LAYER === 'true';
+// AI layer has been removed from this codebase
 
 // Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -135,23 +134,8 @@ router.get('/summary', requireAuth, requireAdmin, async (_req: Request, res: Res
     try {
         const stats = await getRealStats();
 
-        // AI Status Check
-        let aiStatus = { status: 'disabled', model: 'unknown', latency: 0 };
-        if (AI_LAYER_ENABLED) {
-            aiStatus = { status: 'offline', model: 'unknown', latency: 0 };
-            const start = Date.now();
-            try {
-                const aiRes = await fetch(`${AI_LAYER_URL}/model/info`, { signal: AbortSignal.timeout(1000) });
-                if (aiRes.ok) {
-                    const data = await aiRes.json() as any;
-                    aiStatus = {
-                        status: 'online',
-                        model: data.model_alias || 'EMJ',
-                        latency: Date.now() - start
-                    };
-                }
-            } catch (_e) { /* ignore offline */ }
-        }
+        // AI layer has been removed - always return disabled status
+        const aiStatus = { status: 'removed', model: 'n/a', latency: 0 };
 
         res.json({
             users: {
