@@ -19,7 +19,7 @@ import { cn } from '../lib/utils';
 export default function DashboardLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { signOut, user } = useAuthStore();
-    const { theme, setTheme, resolvedTheme } = useThemeStore();
+    const { setTheme, resolvedTheme } = useThemeStore();
     const navigate = useNavigate();
     const isProduction = import.meta.env.PROD;
 

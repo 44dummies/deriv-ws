@@ -29,7 +29,7 @@ function applyTheme(theme: Theme) {
 
 export const useThemeStore = create<ThemeState>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             theme: 'dark' as Theme, // Default to dark
             resolvedTheme: 'dark' as 'light' | 'dark',
             setTheme: (theme: Theme) => {
