@@ -172,8 +172,6 @@ function createRateLimiter(config: RateLimitConfig = DEFAULT_CONFIG) {
         }
     };
 }
-    };
-}
 
 // =============================================================================
 // HELPERS
