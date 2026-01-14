@@ -16,12 +16,15 @@ const router = Router();
 
 // Cookie configuration for JWT
 // NOTE: sameSite 'none' required for cross-origin (Vercel frontend -> Railway backend)
+// SECURITY: Always use secure + sameSite=none in Railway/Vercel deployment (cross-origin)
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Must be true for sameSite: 'none'
-    sameSite: (process.env.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
+    secure: IS_PRODUCTION, // Must be true for sameSite: 'none'
+    sameSite: (IS_PRODUCTION ? 'none' : 'lax') as 'none' | 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    path: '/'
+    path: '/',
+    // Domain omitted to allow cookies to work across subdomains
 };
 
 // POST /auth/login

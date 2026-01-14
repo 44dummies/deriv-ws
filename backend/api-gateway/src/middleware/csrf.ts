@@ -136,11 +136,14 @@ function ensureCsrfToken(res: Response, secret: string): void {
     const signature = signToken(token, secret);
     const cookieValue = `${token}:${signature}`;
     
+    const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+    
     // Set cookie with security flags
+    // SECURITY: Use 'lax' instead of 'strict' to allow cross-origin preflight (Vercel → Railway)
     res.cookie(CSRF_COOKIE_NAME, cookieValue, {
         httpOnly: false, // Must be readable by JavaScript to include in header
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' required for cross-origin
         maxAge: TOKEN_EXPIRY_MS,
         path: '/'
     });
@@ -165,10 +168,12 @@ export function getCsrfToken(req: Request, res: Response): void {
     const signature = signToken(token, secret);
     const cookieValue = `${token}:${signature}`;
     
+    const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
+    
     res.cookie(CSRF_COOKIE_NAME, cookieValue, {
         httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: IS_PRODUCTION,
+        sameSite: IS_PRODUCTION ? 'none' : 'lax', // 'none' required for cross-origin
         maxAge: TOKEN_EXPIRY_MS,
         path: '/'
     });
