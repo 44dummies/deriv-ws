@@ -80,6 +80,31 @@ const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : ['http://localhost:5173', 'http://localhost:3000'];
 
+// Vercel preview URL patterns (e.g., project-xyz123-user.vercel.app)
+const VERCEL_PREVIEW_PATTERN = /^https:\/\/[\w-]+-[\w-]+-[\w-]+\.vercel\.app$/;
+const VERCEL_PRODUCTION_PATTERN = /^https:\/\/deriv-ws-frontend[\w-]*\.vercel\.app$/;
+
+/**
+ * Check if origin is allowed (exact match or Vercel pattern)
+ */
+function isOriginAllowed(origin: string): boolean {
+    // Exact match in allowed list
+    if (allowedOrigins.includes(origin)) return true;
+    
+    // Wildcard (only for development)
+    if (allowedOrigins.includes('*')) return true;
+    
+    // Vercel production domain pattern
+    if (VERCEL_PRODUCTION_PATTERN.test(origin)) return true;
+    
+    // Vercel preview deployments (only if explicitly enabled)
+    if (process.env.ALLOW_VERCEL_PREVIEWS === 'true' && VERCEL_PREVIEW_PATTERN.test(origin)) {
+        return true;
+    }
+    
+    return false;
+}
+
 if (process.env.NODE_ENV === 'production' && (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === '*')) {
     logger.fatal('CORS_ORIGIN must be explicitly set in production (not *)');
     process.exit(1);
@@ -121,7 +146,7 @@ app.use(cors({
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
         
-        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (isOriginAllowed(origin)) {
             callback(null, true);
         } else {
             logger.warn('Blocked CORS origin', { origin });
