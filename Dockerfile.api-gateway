@@ -6,8 +6,8 @@ RUN corepack enable
 # Install curl for healthcheck
 RUN apk add --no-cache curl
 
-# FORCE NEW BUILD LAYER - v7
-ARG CACHEBUST=7
+# FORCE NEW BUILD LAYER - v8 (2026-01-14: Force rebuild after cookie fixes)
+ARG CACHEBUST=8
 
 COPY . .
 
