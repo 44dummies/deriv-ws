@@ -52,9 +52,8 @@ export const UserService = {
                     is_virtual: isVirtual,
                     fullname,
                     email,
-                    last_balance: lastBalance,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
+                    last_balance: lastBalance
+                    // Note: created_at and updated_at handled by database defaults/triggers
                 },
                 { onConflict: 'user_id,account_id' }
             );
