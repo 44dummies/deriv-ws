@@ -24,10 +24,23 @@ TraderMind is a trading operations console for the Deriv platform. It provides s
 - Node.js 20+
 - pnpm 9+
 - Supabase project
+- Redis (optional for local dev, required for production)
 
 ### 1. Configure environment
 
 Copy `.env.example` to `.env` and fill in required values.
+
+**Required:**
+```bash
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
+```
+
+**Optional (Production):**
+```bash
+REDIS_URL=redis://localhost:6379  # For global rate limiting
+```
 
 ### 2. Install dependencies
 
@@ -41,6 +54,15 @@ pnpm install
 pnpm -r run build
 pnpm -r run dev
 ```
+
+### 4. Production Deployment (Railway)
+
+See [RAILWAY_REDIS_SETUP.md](RAILWAY_REDIS_SETUP.md) for adding Redis to Railway.
+
+**Quick setup:**
+1. Railway Dashboard → New → Database → Add Redis
+2. Redeploy api-gateway service
+3. Verify logs show "RateLimiter Redis connected"
 
 ## Security Notes
 

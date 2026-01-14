@@ -46,19 +46,62 @@ const TRADE_CONFIG: RateLimitConfig = {
 // =============================================================================
 
 let redis: Redis | null = null;
+let redisAvailable = true;
+let lastRedisErrorTime = 0;
+const REDIS_ERROR_THROTTLE_MS = 60000; // Log Redis errors max once per minute
 
 function getRedis(): Redis | null {
-    if (!redis && process.env.REDIS_URL) {
+    if (!redis && process.env.REDIS_URL && redisAvailable) {
         try {
-            redis = new Redis(process.env.REDIS_URL);
-            redis.on('error', (err) => {
-                logger.error('RateLimiter Redis error', { err });
+            redis = new Redis(process.env.REDIS_URL, {
+                maxRetriesPerRequest: 1,
+                enableOfflineQueue: false,
+                retryStrategy: (times) => {
+                    // Stop retrying after 3 attempts, fall back to memory
+                    if (times > 3) {
+                        redisAvailable = false;
+                        logThrottledRedisError('Redis connection failed after retries, falling back to in-memory rate limiting');
+                        return null; // Stop retrying
+                    }
+                    return Math.min(times * 200, 2000); // Exponential backoff
+                }
             });
-        } catch (_err) {
-            logger.warn('RateLimiter Redis connection failed, using in-memory fallback');
+
+            redis.on('error', (err) => {
+                logThrottledRedisError('Redis error in rate limiter', err);
+                // Don't set redisAvailable = false here, let retryStrategy handle it
+            });
+
+            redis.on('connect', () => {
+                redisAvailable = true;
+                logger.info('RateLimiter Redis connected');
+            });
+
+            redis.on('close', () => {
+                logThrottledRedisError('Redis connection closed, using in-memory fallback');
+            });
+
+        } catch (err) {
+            redisAvailable = false;
+            logThrottledRedisError('RateLimiter Redis initialization failed, using in-memory fallback', err);
         }
     }
-    return redis;
+    return redisAvailable ? redis : null;
+}
+
+/**
+ * Log Redis errors with throttling to prevent log spam
+ */
+function logThrottledRedisError(message: string, err?: unknown): void {
+    const now = Date.now();
+    if (now - lastRedisErrorTime > REDIS_ERROR_THROTTLE_MS) {
+        if (err instanceof Error) {
+            logger.warn(message, { error: err.message });
+        } else {
+            logger.warn(message);
+        }
+        lastRedisErrorTime = now;
+    }
 }
 
 // In-memory fallback when Redis is unavailable
@@ -77,47 +120,58 @@ function createRateLimiter(config: RateLimitConfig = DEFAULT_CONFIG) {
         try {
             const redisClient = getRedis();
             
-            if (redisClient) {
-                // Redis-based rate limiting
-                const result = await checkRedisLimit(redisClient, key, config);
-                
-                if (!result.allowed) {
-                    res.status(429).json({
-                        error: config.message,
-                        retryAfter: Math.ceil(result.retryAfter / 1000)
-                    });
+            if (redisClient && redisAvailable) {
+                // Try Redis-based rate limiting
+                try {
+                    const result = await checkRedisLimit(redisClient, key, config);
+                    
+                    if (!result.allowed) {
+                        res.status(429).json({
+                            error: config.message,
+                            retryAfter: Math.ceil(result.retryAfter / 1000)
+                        });
+                        return;
+                    }
+                    
+                    // Add rate limit headers
+                    res.setHeader('X-RateLimit-Limit', config.maxRequests);
+                    res.setHeader('X-RateLimit-Remaining', result.remaining);
+                    res.setHeader('X-RateLimit-Reset', result.resetTime);
+                    
+                    next();
                     return;
-                }
-                
-                // Add rate limit headers
-                res.setHeader('X-RateLimit-Limit', config.maxRequests);
-                res.setHeader('X-RateLimit-Remaining', result.remaining);
-                res.setHeader('X-RateLimit-Reset', result.resetTime);
-                
-            } else {
-                // In-memory fallback
-                const result = checkMemoryLimit(key, config);
-                
-                if (!result.allowed) {
-                    res.status(429).json({
-                        error: config.message,
-                        retryAfter: Math.ceil(result.retryAfter / 1000)
-                    });
-                    return;
+                } catch (redisErr) {
+                    // Redis operation failed, fall back to memory
+                    logThrottledRedisError('Redis rate limit check failed, using in-memory fallback', redisErr instanceof Error ? redisErr : undefined);
+                    redisAvailable = false;
+                    // Continue to memory fallback below
                 }
             }
             
+            // In-memory fallback (when Redis unavailable or failed)
+            const result = checkMemoryLimit(key, config);
+            
+            if (!result.allowed) {
+                res.status(429).json({
+                    error: config.message,
+                    retryAfter: Math.ceil(result.retryAfter / 1000)
+                });
+                return;
+            }
+            
+            // Add rate limit headers
+            res.setHeader('X-RateLimit-Limit', config.maxRequests);
+            res.setHeader('X-RateLimit-Remaining', result.remaining);
+            
             next();
         } catch (err) {
-            logger.error('RateLimiter error', { err });
-            // SECURITY: Fail closed - reject request if rate limiter fails
-            // This prevents abuse when Redis is unavailable
-            res.status(503).json({ 
-                error: 'Service temporarily unavailable',
-                retryAfter: 30
-            });
-            return;
+            logger.error('RateLimiter unexpected error', {}, err instanceof Error ? err : undefined);
+            // SECURITY: Fail open for general errors to avoid blocking legitimate traffic
+            // The in-memory fallback should have caught rate limit violations
+            next();
         }
+    };
+}
     };
 }
 

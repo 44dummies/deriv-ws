@@ -5,3 +5,7 @@ builder = "dockerfile"
 [service.quant-engine]
 dockerfilePath = "Dockerfile.quant-engine"
 builder = "dockerfile"
+
+# Redis is added via Railway Dashboard: New → Database → Add Redis
+# Railway automatically injects REDIS_URL into all services
+# No additional configuration needed here
