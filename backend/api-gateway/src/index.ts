@@ -192,7 +192,13 @@ app.get('/api/v1/csrf-token', getCsrfToken);
 // API ROUTES
 // =============================================================================
 
-// Auth routes with stricter rate limiting
+// Auth session check - uses lighter rate limiting (called frequently for auth state)
+// Must be registered BEFORE the general auth routes to take precedence
+import { sessionCheckRateLimiter } from './middleware/rateLimiter.js';
+app.get('/api/v1/auth/session', sessionCheckRateLimiter, authRoutes);
+app.get('/api/v1/auth/me', sessionCheckRateLimiter, authRoutes);
+
+// Auth routes (login, callback, etc) with stricter rate limiting
 app.use('/api/v1/auth', authRateLimiter, authRoutes);
 app.use('/api/v1/sessions', sessionsRoutes);
 app.use('/api/v1/users', usersRoutes);
