@@ -40,6 +40,8 @@ export const createSessionSchema = z.object({
     config: z.object({
         risk_profile: z.enum(['CONSERVATIVE', 'MODERATE', 'AGGRESSIVE']).optional(),
         max_stake: z.number().min(1).max(10000).optional(),
+        stop_loss: z.number().min(1).max(100000).optional(),
+        take_profit: z.number().min(1).max(100000).optional(),
         max_trades_per_hour: z.number().int().min(1).max(100).optional(),
         allowed_markets: z.array(z.string()).optional()
     }).optional()
@@ -100,9 +102,9 @@ export function validateRequest<T extends z.ZodTypeAny>(
     return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
         try {
             // Get the data to validate
-            const data = source === 'body' ? req.body 
-                       : source === 'query' ? req.query
-                       : req.params;
+            const data = source === 'body' ? req.body
+                : source === 'query' ? req.query
+                    : req.params;
 
             // Validate and parse
             const parsed = await schema.parseAsync(data);
