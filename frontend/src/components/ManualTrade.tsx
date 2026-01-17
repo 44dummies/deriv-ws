@@ -108,8 +108,15 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
 
     const selectedMarket = MARKETS.find(m => m.symbol === market);
     const isRise = contractType === 'CALL' || contractType === 'DIGITOVER';
-    const potentialPayout = stake * 1.95; // Example payout (varies by market)
-    const potentialProfit = potentialPayout - stake;
+
+    // Estimated payout before execution (approx 1.95x for synthetics)
+    // After execution, we show actual payout from Deriv
+    const estimatedPayout = stake * 1.95;
+    const estimatedProfit = estimatedPayout - stake;
+
+    // Actual payout from trade result (if executed)
+    const actualPayout = result?.trade?.payout;
+    const actualBuyPrice = result?.trade?.buy_price;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -298,16 +305,38 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         </div>
                     </div>
 
-                    {/* Indicative Payout */}
+                    {/* Payout Display */}
                     <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                        <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm text-muted-foreground">Indicative payout</span>
-                            <span className="text-xl font-semibold tabular-nums">{potentialPayout.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">Indicative profit</span>
-                            <span className="text-lg font-semibold text-primary tabular-nums">+{potentialProfit.toFixed(2)}</span>
-                        </div>
+                        {result?.success && actualPayout ? (
+                            <>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-muted-foreground">Actual payout</span>
+                                    <span className="text-xl font-semibold tabular-nums text-primary">{actualPayout.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Buy price</span>
+                                    <span className="text-lg font-semibold tabular-nums">{actualBuyPrice?.toFixed(2) || stake.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center mt-1">
+                                    <span className="text-sm text-muted-foreground">Potential profit</span>
+                                    <span className="text-base font-semibold text-green-500 tabular-nums">+{(actualPayout - (actualBuyPrice || stake)).toFixed(2)}</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-muted-foreground">Estimated payout</span>
+                                    <span className="text-xl font-semibold tabular-nums">{estimatedPayout.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-sm text-muted-foreground">Estimated profit</span>
+                                    <span className="text-lg font-semibold text-muted-foreground tabular-nums">~+{estimatedProfit.toFixed(2)}</span>
+                                </div>
+                                <div className="text-xs text-muted-foreground/70 mt-2 text-center">
+                                    Actual payout shown after execution
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Result Message */}

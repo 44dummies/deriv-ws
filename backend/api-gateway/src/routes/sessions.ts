@@ -1,6 +1,6 @@
 /**
- * Sessions Routes
- * Real session management integrated with SessionRegistry
+ * Sessions Routes (SIMPLIFIED)
+ * Each user creates and owns their own session. No participants concept.
  */
 
 import { Router, Response } from 'express';
@@ -20,6 +20,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+// Simplified session serialization - no participants
 function serializeSession(session: SessionState) {
     return {
         id: session.id,
@@ -28,9 +29,7 @@ function serializeSession(session: SessionState) {
         created_at: session.created_at,
         started_at: session.started_at,
         completed_at: session.completed_at,
-        participants: Array.from(session.participants.values()),
-        participant_count: session.participants.size,
-        admin_id: session.admin_id
+        owner_id: session.admin_id
     };
 }
 
@@ -51,37 +50,6 @@ async function upsertSession(session: SessionState): Promise<void> {
 
     if (error) {
         logger.error('Sessions DB upsert failed', { error, sessionId: session.id });
-    }
-}
-
-async function upsertParticipant(sessionId: string, userId: string, status: string): Promise<void> {
-    if (!supabase) return;
-
-    const { error } = await supabase
-        .from('participants')
-        .upsert({
-            session_id: sessionId,
-            user_id: userId,
-            status,
-            joined_at: new Date().toISOString()
-        }, { onConflict: 'user_id,session_id' });
-
-    if (error) {
-        logger.error('Participants DB upsert failed', { error, sessionId, userId });
-    }
-}
-
-async function updateParticipantStatus(sessionId: string, userId: string, status: string): Promise<void> {
-    if (!supabase) return;
-
-    const { error } = await supabase
-        .from('participants')
-        .update({ status })
-        .eq('session_id', sessionId)
-        .eq('user_id', userId);
-
-    if (error) {
-        logger.error('Participants DB update failed', { error, sessionId, userId });
     }
 }
 
@@ -120,16 +88,24 @@ function maybeStopPipeline(): void {
 }
 
 // =============================================================================
-// PUBLIC / USER ROUTES
+// USER ROUTES - Each user manages their own session
 // =============================================================================
 
-// GET /sessions - List all visible sessions
-// Protected: Only authenticated users needed
-router.get('/', requireAuth, validatePagination, (_req: AuthRequest, res: Response) => {
+// GET /sessions - List user's own sessions only
+router.get('/', requireAuth, validatePagination, (req: AuthRequest, res: Response) => {
     try {
-        const sessions = sessionRegistry.listSessions().map(serializeSession);
+        const userId = req.user?.id;
+        const isAdmin = req.user?.role === 'ADMIN';
+
+        let sessions = sessionRegistry.listSessions();
+
+        // Non-admin users only see their own sessions
+        if (!isAdmin) {
+            sessions = sessions.filter(s => s.admin_id === userId);
+        }
+
         res.json({
-            sessions,
+            sessions: sessions.map(serializeSession),
             total: sessions.length,
             message: 'Sessions retrieved successfully',
         });
@@ -139,7 +115,7 @@ router.get('/', requireAuth, validatePagination, (_req: AuthRequest, res: Respon
     }
 });
 
-// GET /sessions/active - Get active/running sessions for current user
+// GET /sessions/active - Get user's active session
 router.get('/active', requireAuth, (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
@@ -149,12 +125,10 @@ router.get('/active', requireAuth, (req: AuthRequest, res: Response) => {
         }
 
         const allSessions = sessionRegistry.listSessions();
-        const activeSession = allSessions.find((s: any) => {
-            const isParticipant = s.participants instanceof Map
-                ? s.participants.has(userId)
-                : s.participants?.some((p: any) => p.user_id === userId);
+        const activeSession = allSessions.find((s) => {
+            const isOwner = s.admin_id === userId;
             const isActive = s.status === 'ACTIVE' || s.status === 'RUNNING' || s.status === 'PAUSED';
-            return isActive && (s.admin_id === userId || isParticipant);
+            return isActive && isOwner;
         });
 
         if (!activeSession) {
@@ -169,73 +143,31 @@ router.get('/active', requireAuth, (req: AuthRequest, res: Response) => {
     }
 });
 
-// GET /sessions/:id - Get specific session details
+// GET /sessions/:id - Get specific session (only if owner or admin)
 router.get('/:id', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
+
     try {
         const session = sessionRegistry.getSessionState(id);
         if (!session) {
             res.status(404).json({ error: 'Session not found' });
             return;
         }
+
+        // Only owner or admin can view
+        if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
+            res.status(403).json({ error: 'Access denied' });
+            return;
+        }
+
         res.json(serializeSession(session));
     } catch (_error) {
         res.status(500).json({ error: 'Failed to retrieve session' });
     }
 });
 
-// POST /sessions/:id/join - User joins session
-router.post('/:id/join', requireAuth, (req: AuthRequest, res: Response) => {
-    const id = req.params.id;
-    if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
-
-    if (!req.user || !req.user.id) {
-        res.status(401).json({ error: 'Unauthorized: No user ID.' });
-        return;
-    }
-
-    try {
-        const participant = sessionRegistry.addParticipant(id, req.user.id);
-        void upsertParticipant(id, req.user.id, participant.status);
-        res.json({
-            success: true,
-            participant,
-            message: 'Joined session successfully'
-        });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// POST /sessions/:id/leave - User leaves session
-router.post('/:id/leave', requireAuth, (req: AuthRequest, res: Response) => {
-    const id = req.params.id;
-    if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
-
-    if (!req.user || !req.user.id) {
-        res.status(401).json({ error: 'Unauthorized' });
-        return;
-    }
-
-    try {
-        const success = sessionRegistry.removeParticipant(id, req.user.id);
-        if (!success) {
-            res.status(400).json({ error: 'User not in session' });
-            return;
-        }
-        void updateParticipantStatus(id, req.user.id, 'REMOVED');
-        res.json({ success: true, message: 'Left session successfully' });
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// =============================================================================
-// ADMIN ROUTES (RBAC) - Now also allows authenticated users
-// =============================================================================
-
-// POST /sessions - Create new session (Now allows any authenticated user)
+// POST /sessions - Create new session for current user
 router.post('/', requireAuth, validateSessionCreation, (req: AuthRequest, res: Response) => {
     try {
         if (!req.user || !req.user.id) {
@@ -249,7 +181,7 @@ router.post('/', requireAuth, validateSessionCreation, (req: AuthRequest, res: R
         const session = sessionRegistry.createSession({
             id: sessionId,
             config_json: config || {},
-            admin_id: req.user.id  // Creator becomes the session admin
+            admin_id: req.user.id  // User is the owner
         });
 
         void upsertSession(session);
@@ -264,20 +196,20 @@ router.post('/', requireAuth, validateSessionCreation, (req: AuthRequest, res: R
     }
 });
 
-// POST /sessions/:id/start - Start session (owner or admin)
+// POST /sessions/:id/start - Start session (owner only)
 router.post('/:id/start', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
 
-    // Check if user is session owner or admin
     const session = sessionRegistry.getSessionState(id);
     if (!session) {
         res.status(404).json({ error: 'Session not found' });
         return;
     }
 
-    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Only session owner or admin can start this session' });
+    // Only owner can start
+    if (session.admin_id !== req.user?.id) {
+        res.status(403).json({ error: 'Only session owner can start this session' });
         return;
     }
 
@@ -311,13 +243,12 @@ router.post('/:id/resume', requireAuth, (req: AuthRequest, res: Response) => {
         return;
     }
 
-    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Only session owner or admin can resume this session' });
+    if (session.admin_id !== req.user?.id) {
+        res.status(403).json({ error: 'Only session owner can resume this session' });
         return;
     }
 
     try {
-        // Resume transitions PAUSED -> RUNNING
         const updatedSession = sessionRegistry.updateSessionStatus(id, 'RUNNING');
         ensurePipelineStarted(updatedSession.config_json);
         void upsertSession(updatedSession);
@@ -331,7 +262,7 @@ router.post('/:id/resume', requireAuth, (req: AuthRequest, res: Response) => {
     }
 });
 
-// POST /sessions/:id/pause - Pause session (owner or admin)
+// POST /sessions/:id/pause - Pause session (owner only)
 router.post('/:id/pause', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
@@ -342,8 +273,8 @@ router.post('/:id/pause', requireAuth, (req: AuthRequest, res: Response) => {
         return;
     }
 
-    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Only session owner or admin can pause this session' });
+    if (session.admin_id !== req.user?.id) {
+        res.status(403).json({ error: 'Only session owner can pause this session' });
         return;
     }
 
@@ -361,7 +292,7 @@ router.post('/:id/pause', requireAuth, (req: AuthRequest, res: Response) => {
     }
 });
 
-// POST /sessions/:id/stop - Stop session (owner or admin)
+// POST /sessions/:id/stop - Stop session (owner only)
 router.post('/:id/stop', requireAuth, (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
@@ -372,8 +303,8 @@ router.post('/:id/stop', requireAuth, (req: AuthRequest, res: Response) => {
         return;
     }
 
-    if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Only session owner or admin can stop this session' });
+    if (session.admin_id !== req.user?.id) {
+        res.status(403).json({ error: 'Only session owner can stop this session' });
         return;
     }
 
@@ -391,7 +322,7 @@ router.post('/:id/stop', requireAuth, (req: AuthRequest, res: Response) => {
     }
 });
 
-// DELETE /sessions/:id - Delete session (owner or admin)
+// DELETE /sessions/:id - Delete session (owner only)
 router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const id = req.params.id;
     if (!id) { res.status(400).json({ error: 'Missing ID' }); return; }
@@ -403,7 +334,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     }
 
     if (session.admin_id !== req.user?.id && req.user?.role !== 'ADMIN') {
-        res.status(403).json({ error: 'Only session owner or admin can delete this session' });
+        res.status(403).json({ error: 'Only session owner can delete this session' });
         return;
     }
 
@@ -414,7 +345,6 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
             return;
         }
         if (supabase) {
-            await supabase.from('participants').delete().eq('session_id', id);
             await supabase.from('sessions').delete().eq('id', id);
         }
         maybeStopPipeline();
