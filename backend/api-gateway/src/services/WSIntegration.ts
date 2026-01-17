@@ -381,6 +381,21 @@ function integrateTradingEvents(): void {
     logger.info('Trading event wiring complete', { service: 'WSIntegration' });
 }
 
+/**
+ * Wire Market Data to QuantEngine
+ * Ensures ticks drive signal generation
+ */
+function integrateDataFlow(): void {
+    logger.info('Wiring Market Data -> QuantEngine', { service: 'WSIntegration' });
+
+    marketDataService.on('tick_received', (tick) => {
+        // Feed tick to QuantEngine for signal generation
+        // We do not pass session config here - signals are generated globally based on market heuristics
+        // Sessions filter these signals in AutoTradingService
+        quantEngine.processTick(tick);
+    });
+}
+
 // =============================================================================
 // EXPORTS
 // =============================================================================
@@ -397,6 +412,9 @@ export function integrateWSWithSessions(): void {
 
     // Wire trading pipeline events (CRITICAL for real-time UI)
     integrateTradingEvents();
+
+    // Wire data flow (CRITICAL for signal generation)
+    integrateDataFlow();
 }
 
 export function getIntegrationStats() {
