@@ -119,11 +119,11 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div
-                className="w-full max-w-lg rounded-xl border bg-card text-card-foreground overflow-hidden"
+                className="w-full max-w-lg rounded-xl border bg-card text-card-foreground flex flex-col max-h-[90vh] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="border-b p-6 bg-muted/40">
+                <div className="border-b p-6 bg-muted/40 flex-shrink-0">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold">Quick Trade</h2>
@@ -139,9 +139,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-6">
-                    {/* ... (Account Info & Market Selection same as before) ... */}
-
+                <div className="p-6 space-y-6 overflow-y-auto">
                     {/* Account Info */}
                     <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border">
                         <div>

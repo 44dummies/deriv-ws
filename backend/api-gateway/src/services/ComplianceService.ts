@@ -54,16 +54,16 @@ export class ComplianceService {
             }
         });
 
-        // Mock Rejection Stats (Ideally this comes from a 'signals' or 'rejections' table if we persisted rejected signals)
-        // Since we currently only log rejections in console/memory (RiskGuard), we might only be able to report on *logged* failures if we add a table.
-        // For now, we'll return a placeholder for rejections until we persist 'risk_check_failures' in DB.
+        // Note: Rejections are currently not persisted to the database.
+        // This functionality is deferred. Log a warning for visibility in reports.
+        logger.warn('[ComplianceService] Rejection stats requested but persistence is not yet implemented.');
 
         return {
             generatedAt: new Date().toISOString(),
             totalTrades: total,
             winRate: total > 0 ? (wins / total) : 0,
             avgExecutionLatency: latencyCount > 0 ? (totalLatency / latencyCount) : 0,
-            rejectionStats: {}, // TODO: Persist rejections to DB to query here
+            rejectionStats: {}, // deferred implementation
             riskViolations: 0
         };
     }

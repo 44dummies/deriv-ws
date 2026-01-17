@@ -6,12 +6,26 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import { marketDataService } from './MarketDataService.js';
-import { sessionRegistry } from './SessionRegistry.js';
+import { marketDataService } from './container.js'; // Singleton via container
+import { sessionRegistry } from './container.js';
 import { derivWSClient } from './DerivWSClient.js';
-import { executionCore, TradeResult } from './ExecutionCore.js';
-import { riskGuard, RiskCheck } from './RiskGuard.js';
-import { quantEngine, Signal } from './QuantEngine.js';
+import { executionCore, TradeResult } from './ExecutionCore.js'; // Type import from file, instance from container? No, importing executionCore from file is broken now.
+// We need to import TYPES from file, and INSTANCES from container.
+// But Wait. ExecutionCore CLASS is exported from ExecutionCore.ts. usage of executionCore singleton is what we fix.
+import { executionCore as executionCoreInstance, riskGuard as riskGuardInstance, quantEngine as quantEngineInstance } from './container.js';
+import { RiskCheck } from './RiskGuard.js';
+import { Signal } from './QuantEngine.js';
+// Correct way:
+import {
+    executionCore,
+    riskGuard,
+    quantEngine,
+    marketDataService,
+    sessionRegistry
+} from './container.js';
+import { TradeResult } from './ExecutionCore.js';
+import { RiskCheck } from './RiskGuard.js';
+import { Signal } from './QuantEngine.js';
 import { getWebSocketServer } from './WebSocketServer.js';
 import { logger } from '../utils/logger.js';
 
@@ -381,20 +395,16 @@ function integrateTradingEvents(): void {
     logger.info('Trading event wiring complete', { service: 'WSIntegration' });
 }
 
-/**
- * Wire Market Data to QuantEngine
- * Ensures ticks drive signal generation
- */
-function integrateDataFlow(): void {
-    logger.info('Wiring Market Data -> QuantEngine', { service: 'WSIntegration' });
-
-    marketDataService.on('tick_received', (tick) => {
-        // Feed tick to QuantEngine for signal generation
-        // We do not pass session config here - signals are generated globally based on market heuristics
-        // Sessions filter these signals in AutoTradingService
-        quantEngine.processTick(tick);
-    });
-}
+// function integrateDataFlow(): void {
+//     logger.info('Wiring Market Data -> QuantEngine', { service: 'WSIntegration' });
+//
+//     marketDataService.on('tick_received', (tick) => {
+//         // Feed tick to QuantEngine for signal generation
+//         // We do not pass session config here - signals are generated globally based on market heuristics
+//         // Sessions filter these signals in AutoTradingService
+//         quantEngine.processTick(tick);
+//     });
+// }
 
 // =============================================================================
 // EXPORTS
@@ -414,10 +424,18 @@ export function integrateWSWithSessions(): void {
     integrateTradingEvents();
 
     // Wire data flow (CRITICAL for signal generation)
-    integrateDataFlow();
+    // REMOVED: Managed by QuantEngineAdapter via container
+    // integrateDataFlow();
 }
 
-export function getIntegrationStats() {
-    return safetyLayer.getStats();
-}
+// function integrateDataFlow(): void {
+//     logger.info('Wiring Market Data -> QuantEngine', { service: 'WSIntegration' });
+//
+//     marketDataService.on('tick_received', (tick) => {
+//         // Feed tick to QuantEngine for signal generation
+//         // We do not pass session config here - signals are generated globally based on market heuristics
+//         // Sessions filter these signals in AutoTradingService
+//         quantEngine.processTick(tick);
+//     });
+// }
 

@@ -8,6 +8,7 @@
 
 import { EventEmitter } from 'eventemitter3';
 import { Signal } from './QuantEngine.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -82,7 +83,7 @@ const RISK_PROFILES: Record<RiskProfile, { maxStakeMultiplier: number; minConfid
 export class RiskGuard extends EventEmitter<RiskGuardEvents> {
     constructor() {
         super();
-        console.log('[RiskGuard] Initialized');
+        logger.info('RiskGuard Initialized');
     }
 
     // ---------------------------------------------------------------------------
@@ -143,7 +144,11 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         };
 
         this.emit('approved', approvedResult);
-        console.log(`[RiskGuard] Approved signal: ${signal.type} ${signal.market} (confidence: ${signal.confidence.toFixed(2)})`);
+        logger.info(`Approved signal: ${signal.type} ${signal.market}`, {
+            confidence: signal.confidence,
+            market: signal.market,
+            type: signal.type
+        });
 
         return approvedResult;
     }
@@ -249,7 +254,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         };
 
         this.emit('rejected', result);
-        console.log(`[RiskGuard] Rejected signal: ${reason}`);
+        logger.info(`Rejected signal: ${reason}`, { reason });
 
         return result;
     }

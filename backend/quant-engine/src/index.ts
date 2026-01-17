@@ -7,6 +7,7 @@
 
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { tradingPipeline, TradeEvent } from './services/TradingPipeline.js';
+import { logger } from './utils/logger.js';
 
 // =============================================================================
 // CONFIGURATION
@@ -19,17 +20,16 @@ const ENABLE_API_FORWARDING = process.env['ENABLE_API_FORWARDING'] !== 'false';
 // SETUP
 // =============================================================================
 
-console.log('Starting Quant Engine...'); // Trigger Deployment
+logger.info('Starting Quant Engine... // Trigger Deployment');
 
-
-console.log('═══════════════════════════════════════════════');
-console.log('  TraderMind QuantEngine v1.1');
-console.log('  MarketData → QuantEngine → RiskGuard → Events');
-console.log('═══════════════════════════════════════════════\n');
-
-console.log(`[Config] API Gateway: ${API_GATEWAY_URL}`);
-console.log(`[Config] API Forwarding: ${ENABLE_API_FORWARDING ? 'ENABLED' : 'DISABLED'}`);
-console.log('[Main] QuantEngine ready. Use /start endpoint to begin trading.\n');
+logger.info('TraderMind QuantEngine v1.1', {
+    flow: 'MarketData -> QuantEngine -> RiskGuard -> Events',
+    config: {
+        apiGateway: API_GATEWAY_URL,
+        apiForwarding: ENABLE_API_FORWARDING ? 'ENABLED' : 'DISABLED'
+    }
+});
+logger.info('QuantEngine ready. Use /start endpoint to begin trading.');
 
 // =============================================================================
 // API GATEWAY INTEGRATION
@@ -40,7 +40,7 @@ console.log('[Main] QuantEngine ready. Use /start endpoint to begin trading.\n')
  */
 async function forwardTradeToGateway(event: TradeEvent): Promise<void> {
     if (!ENABLE_API_FORWARDING) {
-        console.log(`[Forward] Skipping (forwarding disabled): ${event.type}`);
+        logger.debug(`Skipping forward (disabled): ${event.type}`);
         return;
     }
 
@@ -77,13 +77,13 @@ async function forwardTradeToGateway(event: TradeEvent): Promise<void> {
 
         if (response.ok) {
             const result = await response.json() as { tradeId?: string };
-            console.log(`[Forward] ✓ Trade forwarded to Gateway. TradeId: ${result.tradeId || 'pending'}`);
+            logger.info('Trade forwarded to Gateway', { tradeId: result.tradeId || 'pending' });
         } else {
             const error = await response.text();
-            console.error(`[Forward] ✗ Gateway rejected: ${response.status} - ${error}`);
+            logger.error('Gateway rejected trade', { status: response.status, error });
         }
     } catch (err) {
-        console.error(`[Forward] ✗ Failed to reach Gateway:`, err instanceof Error ? err.message : err);
+        logger.error('Failed to reach Gateway', { error: err instanceof Error ? err.message : err });
     }
 }
 
@@ -92,9 +92,11 @@ async function forwardTradeToGateway(event: TradeEvent): Promise<void> {
 // =============================================================================
 
 tradingPipeline.on('trade', (event) => {
-    console.log(`\n[Event] ${event.type} @ ${event.timestamp}`);
-    console.log(`  Session: ${event.sessionId}`);
-    console.log(`  Payload: ${JSON.stringify(event.payload).slice(0, 100)}...`);
+    logger.info(`Event: ${event.type}`, {
+        session: event.sessionId,
+        payload: event.payload,
+        timestamp: event.timestamp
+    });
 
     // Forward approved trades to API Gateway
     void forwardTradeToGateway(event);
@@ -147,9 +149,10 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 
 const PORT = process.env['PORT'] ?? 3001;
 server.listen(PORT, () => {
-    console.log(`[Main] QuantEngine HTTP server on port ${PORT}`);
-    console.log('[Main] Endpoints: /health, /stats, /start, /stop');
-    console.log('[Main] Ready for connections. Pipeline must be started manually via /start\n');
+    logger.info(`QuantEngine HTTP server running on port ${PORT}`, {
+        endpoints: ['/health', '/stats', '/start', '/stop']
+    });
+    logger.info('Ready for connections. Pipeline must be started manually via /start');
 });
 
 // =============================================================================
@@ -157,7 +160,7 @@ server.listen(PORT, () => {
 // =============================================================================
 
 process.on('SIGINT', () => {
-    console.log('\n[Main] Shutting down...');
+    logger.info('Shutting down...');
     tradingPipeline.stop();
     server.close();
     process.exit(0);

@@ -13,7 +13,7 @@ export function useDerivAccountInfo() {
     const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id);
 
     // NOTE: Direct WebSocket connection removed to enforce server-side token security.
-    // TODO: Implement server-side streaming or polling for real-time updates.
+    // Real-time updates are handled via periodic profile refreshes.
 
     useEffect(() => {
         // No-op: client-side connection disabled

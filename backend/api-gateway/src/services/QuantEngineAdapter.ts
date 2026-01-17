@@ -4,8 +4,8 @@
  */
 
 import { EventEmitter } from 'eventemitter3';
-import { marketDataService, NormalizedTick, NormalizedTickSchema } from './MarketDataService.js';
-import { quantEngine, Signal, SessionConfig } from './QuantEngine.js';
+import { MarketDataService, NormalizedTick, NormalizedTickSchema } from './MarketDataService.js';
+import { QuantEngine, Signal, SessionConfig } from './QuantEngine.js';
 import { logger } from '../utils/logger.js';
 
 // =============================================================================
@@ -54,7 +54,10 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     private signalsGenerated = 0;
     private lastTickTime: number | null = null;
 
-    constructor() {
+    constructor(
+        private marketDataService: MarketDataService,
+        private quantEngine: QuantEngine
+    ) {
         super();
         logger.info('Initialized', { service: 'QuantAdapter' });
     }
@@ -82,10 +85,10 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         };
 
         // Subscribe to MarketDataService ticks
-        marketDataService.on('tick_received', this.boundHandlers.tickReceived);
+        this.marketDataService.on('tick_received', this.boundHandlers.tickReceived);
 
         // Wire QuantEngine signals
-        quantEngine.on('signal', this.boundHandlers.signal);
+        this.quantEngine.on('signal', this.boundHandlers.signal);
 
         // Start batch processor
         this.processTimer = setInterval(() => {
@@ -93,7 +96,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         }, BATCH_PROCESS_INTERVAL);
 
         // AI layer has been removed from this codebase
-        quantEngine.setAIEnabled(false);
+        this.quantEngine.setAIEnabled(false);
 
         logger.info('Started', { service: 'QuantAdapter' });
     }
@@ -104,10 +107,10 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
 
         // Remove event listeners to prevent memory leaks
         if (this.boundHandlers.tickReceived) {
-            marketDataService.off('tick_received', this.boundHandlers.tickReceived);
+            this.marketDataService.off('tick_received', this.boundHandlers.tickReceived);
         }
         if (this.boundHandlers.signal) {
-            quantEngine.off('signal', this.boundHandlers.signal);
+            this.quantEngine.off('signal', this.boundHandlers.signal);
         }
 
         // Clear handler references
@@ -188,7 +191,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
             this.emit('new_tick', tick);
 
             // Process through QuantEngine
-            const signal = quantEngine.processTick(tick, this.activeConfig);
+            const signal = this.quantEngine.processTick(tick, this.activeConfig);
 
             this.ticksProcessed++;
 
@@ -214,7 +217,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         this.ticksReceived++;
         this.emit('new_tick', tick);
 
-        const signal = quantEngine.processTick(tick, this.activeConfig);
+        const signal = this.quantEngine.processTick(tick, this.activeConfig);
         this.ticksProcessed++;
 
         return signal;
@@ -261,9 +264,9 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
                 const data = await response.json() as any;
                 // If status is specifically DISABLED, respect it. Otherwise assume active.
                 if (data.status === 'DISABLED') {
-                    quantEngine.setAIEnabled(false);
+                    this.quantEngine.setAIEnabled(false);
                 } else {
-                    quantEngine.setAIEnabled(true);
+                    this.quantEngine.setAIEnabled(true);
                 }
             } else {
                 // Service reachable but returned error? logic debatable. 
@@ -273,7 +276,7 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
         } catch (_err) {
             // Network error implies AI is down
             logger.warn('AI Layer unreachable, disabling AI scoring temporarily', { service: 'QuantAdapter' });
-            quantEngine.setAIEnabled(false);
+            this.quantEngine.setAIEnabled(false);
         }
     }
 
@@ -299,5 +302,3 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
 }
 
 
-// Export singleton
-export const quantAdapter = new QuantEngineAdapter();

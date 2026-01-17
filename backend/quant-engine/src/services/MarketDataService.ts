@@ -5,6 +5,7 @@
 
 import WebSocket from 'ws';
 import { EventEmitter } from 'eventemitter3';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -78,7 +79,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
     constructor() {
         super();
-        console.log('[MarketDataService] Initialized');
+        logger.info('Initialized', { service: 'MarketDataService' });
     }
 
     // ---------------------------------------------------------------------------
@@ -90,7 +91,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
      */
     connect(): void {
         if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-            console.log('[MarketDataService] Already connected or connecting');
+            logger.info('Already connected or connecting');
             return;
         }
 
@@ -98,14 +99,14 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         this.shouldReconnect = true;
         const url = `${DERIV_WS_URL}?app_id=${getDerivAppId()}`;
 
-        console.log(`[MarketDataService] Connecting to ${url}`);
+        logger.info(`Connecting to ${url}`);
 
         this.ws = new WebSocket(url);
 
         this.ws.on('open', () => {
             this.isConnecting = false;
             this.reconnectAttempts = 0;
-            console.log('[MarketDataService] Connected to Deriv');
+            logger.info('Connected to Deriv');
             this.emit('connected');
 
             // Resubscribe to markets
@@ -120,7 +121,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
         this.ws.on('close', (code, reason) => {
             this.isConnecting = false;
-            console.log(`[MarketDataService] Disconnected: ${code} ${reason.toString()}`);
+            logger.info(`Disconnected: ${code} ${reason.toString()}`);
             this.emit('disconnected', reason.toString());
 
             if (this.shouldReconnect) {
@@ -129,7 +130,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         });
 
         this.ws.on('error', (error) => {
-            console.error('[MarketDataService] WebSocket error:', error.message);
+            logger.error('WebSocket error', { error: error.message });
             this.emit('error', error);
         });
     }
@@ -143,7 +144,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
             this.ws.close(1000, 'Intentional disconnect');
             this.ws = null;
         }
-        console.log('[MarketDataService] Disconnected');
+        logger.info('Disconnected');
     }
 
     private scheduleReconnect(): void {
@@ -153,7 +154,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         );
         this.reconnectAttempts++;
 
-        console.log(`[MarketDataService] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+        logger.info(`Reconnecting in ${delay}ms`, { attempt: this.reconnectAttempts });
         setTimeout(() => {
             if (this.shouldReconnect) {
                 this.connect();
@@ -176,7 +177,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
                 subscriptionId: null,
                 isActive: false,
             });
-            console.log(`[MarketDataService] Queued subscription: ${market}`);
+            logger.info(`Queued subscription: ${market}`);
             return;
         }
 
@@ -193,7 +194,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         });
         this.tickHistory.set(market, []);
 
-        console.log(`[MarketDataService] Subscribed to: ${market}`);
+        logger.info(`Subscribed to: ${market}`);
         this.emit('subscribed', market);
     }
 
@@ -212,7 +213,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
 
         this.subscriptions.delete(market);
         this.tickHistory.delete(market);
-        console.log(`[MarketDataService] Unsubscribed from: ${market}`);
+        logger.info(`Unsubscribed from: ${market}`);
         this.emit('unsubscribed', market);
     }
 
@@ -254,11 +255,11 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
             // Handle errors
             if (message['error']) {
                 const error = message['error'] as { message: string };
-                console.error('[MarketDataService] API error:', error.message);
+                logger.error('API error', { message: error.message });
                 this.emit('error', new Error(error.message));
             }
         } catch (err) {
-            console.error('[MarketDataService] Failed to parse message:', err);
+            logger.error('Failed to parse message', err);
         }
     }
 

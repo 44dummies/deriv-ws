@@ -7,6 +7,8 @@
  * - Jump Indices: JD_10, JD_25, JD_50, JD_75, JD_100
  */
 
+import { logger } from '../utils/logger.js';
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -490,7 +492,10 @@ export class StrategyManager {
             new AdaptiveStrategy(),
         ];
 
-        console.log(`[StrategyManager] Loaded ${this.strategies.length} trading strategies`);
+        logger.info(`Initialized ${this.strategies.length} strategies`, {
+            count: this.strategies.length,
+            strategies: this.strategies.map(s => s.name)
+        });
     }
 
     /**

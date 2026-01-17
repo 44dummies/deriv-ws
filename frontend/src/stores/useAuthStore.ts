@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { fetchWithAuth } from '../lib/api';
+import { logger } from '../lib/logger';
 // import { supabase } from '../lib/supabase';
 
 /**
@@ -84,7 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Not authenticated or error
             set({ loading: false, isAuthenticated: false });
         } catch (e) {
-            console.error("Session check failed:", e);
+            logger.error("Session check failed:", e);
             set({ loading: false, isAuthenticated: false });
         }
     },
@@ -115,9 +116,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // 2. Send tokens to backend via POST (tokens never stored client-side)
             const primaryAccount = accountInfos[0];
             if (!primaryAccount) throw new Error("Primary account not found");
-            
+
             const baseUrl = (import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:3000').replace(/\/+$/, '');
-            
+
             // Collect all tokens to send to backend
             const tokensPayload: { accountId: string; token: string; currency?: string; is_virtual?: boolean }[] = [];
             i = 1;
@@ -127,10 +128,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 const currencyValue = searchParams.get(`cur${i}`);
                 const is_virtual = accountId.startsWith('VR');
                 if (accountId && token) {
-                    const entry: { accountId: string; token: string; currency?: string; is_virtual?: boolean } = { 
-                        accountId, 
-                        token, 
-                        is_virtual 
+                    const entry: { accountId: string; token: string; currency?: string; is_virtual?: boolean } = {
+                        accountId,
+                        token,
+                        is_virtual
                     };
                     if (currencyValue) {
                         entry.currency = currencyValue;
@@ -158,16 +159,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const data = await response.json();
 
             // Backend sets httpOnly cookie - we just update local state (no tokens!)
-            const fullname = data.user?.fullname || 
-                             data.deriv_account?.fullname || 
-                             data.user?.email?.split('@')[0] || 
-                             'Trader';
+            const fullname = data.user?.fullname ||
+                data.deriv_account?.fullname ||
+                data.user?.email?.split('@')[0] ||
+                'Trader';
 
             // Merge backend account data with our parsed info
             const mergedAccounts = accountInfos.map(info => ({
                 ...info,
-                balance: data.deriv_account?.loginid === info.loginid 
-                    ? data.deriv_account?.balance || 0 
+                balance: data.deriv_account?.loginid === info.loginid
+                    ? data.deriv_account?.balance || 0
                     : 0
             }));
 
@@ -186,7 +187,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
         } catch (error) {
-            console.error('Deriv Login Error:', error);
+            logger.error('Deriv Login Error:', error);
             set({ loading: false, user: null, isAuthenticated: false });
             throw error;
         }
@@ -202,7 +203,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
             set({ user: { ...user, active_account_id: accountId } });
         } catch (error) {
-            console.error('Account switch failed:', error);
+            logger.error('Account switch failed:', error);
         }
     },
     updateBalance: (balance: number, currency: string) => {
@@ -223,7 +224,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 method: 'POST'
             });
         } catch (e) {
-            console.error('Logout request failed:', e);
+            logger.error('Logout request failed:', e);
         }
         // Clear local state regardless of request success
         set({ user: null, isAuthenticated: false, isAdmin: false });

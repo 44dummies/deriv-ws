@@ -4,13 +4,19 @@
  * This is the "Trading Loop" for automated sessions.
  */
 
-import { quantEngine, Signal } from './QuantEngine.js';
-import { riskGuard } from './RiskGuard.js';
-import { sessionRegistry } from './SessionRegistry.js';
+import { QuantEngine, Signal } from './QuantEngine.js';
+import { RiskGuard } from './RiskGuard.js';
+import { SessionRegistry } from './SessionRegistry.js';
 import { logger } from '../utils/logger.js';
 
-class AutoTradingService {
+export class AutoTradingService {
     private isIntegrated = false;
+
+    constructor(
+        private quantEngine: QuantEngine,
+        private riskGuard: RiskGuard,
+        private sessionRegistry: SessionRegistry
+    ) { }
 
     integrate(): void {
         if (this.isIntegrated) return;
@@ -19,19 +25,19 @@ class AutoTradingService {
         logger.info('Initializing Auto Trading Service (Signal -> Execution Wiring)');
 
         // Listen for signals (Technical Analysis)
-        quantEngine.on('signal', (signal: Signal) => {
+        this.quantEngine.on('signal', (signal: Signal) => {
             this.handleSignal(signal, 'TECHNICAL');
         });
 
         // Listen for AI signals
-        quantEngine.on('ai_signal', (signal: Signal) => {
+        this.quantEngine.on('ai_signal', (signal: Signal) => {
             this.handleSignal(signal, 'AI');
         });
     }
 
     private handleSignal(signal: Signal, source: 'TECHNICAL' | 'AI'): void {
         // 1. Get all active sessions
-        const activeSessions = sessionRegistry.getActiveSessions();
+        const activeSessions = this.sessionRegistry.getActiveSessions();
         if (activeSessions.length === 0) return;
 
         logger.debug('Processing signal for active sessions', {
@@ -57,7 +63,7 @@ class AutoTradingService {
 
             // 3. Trigger Risk Guard for this session
             // This starts the execution pipeline: RiskGuard -> ExecutionCore -> Deriv
-            riskGuard.evaluateAutoTrade({
+            this.riskGuard.evaluateAutoTrade({
                 sessionId: session.id,
                 userId: session.admin_id as string, // Checked above
                 signal: signal,
@@ -66,5 +72,3 @@ class AutoTradingService {
         }
     }
 }
-
-export const autoTradingService = new AutoTradingService();

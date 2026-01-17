@@ -4,6 +4,7 @@
  */
 
 import { io, Socket } from 'socket.io-client';
+import { logger } from './logger';
 
 // =============================================================================
 // WEBSOCKET CLIENT
@@ -15,11 +16,11 @@ let socket: Socket | null = null;
 
 export function connectWebSocket(): Socket {
     if (socket?.connected) {
-        console.log('WebSocket already connected');
+        logger.debug('WebSocket already connected');
         return socket;
     }
 
-    console.log(`Connecting to WebSocket: ${API_GATEWAY_URL}`);
+    logger.info(`Connecting to WebSocket: ${API_GATEWAY_URL}`);
 
     socket = io(API_GATEWAY_URL, {
         transports: ['websocket', 'polling'],
@@ -30,37 +31,37 @@ export function connectWebSocket(): Socket {
     });
 
     socket.on('connect', () => {
-        console.log(`✅ WebSocket connected: ${socket?.id}`);
+        logger.info(`✅ WebSocket connected: ${socket?.id}`);
     });
 
     socket.on('disconnect', (reason) => {
-        console.log(`WebSocket disconnected: ${reason}`);
+        logger.warn(`WebSocket disconnected: ${reason}`);
     });
 
     socket.on('connect_error', (error) => {
-        console.error('WebSocket connection error:', error.message);
+        logger.error('WebSocket connection error', error);
     });
 
     // Session events
     socket.on('session:created', (data) => {
-        console.log('Event: session:created', data);
+        logger.debug('Event: session:created', data);
     });
 
     socket.on('session:joined', (data) => {
-        console.log('Event: session:joined', data);
+        logger.debug('Event: session:joined', data);
     });
 
     // Validated Event Listeners (matches backend)
     socket.on('signal_emitted', (data) => {
-        console.log('Event: signal_emitted', data);
+        logger.info('Event: signal_emitted', data);
     });
 
     socket.on('trade_executed', (data) => {
-        console.log('Event: trade_executed', data);
+        logger.info('Event: trade_executed', data);
     });
 
     socket.on('risk_approved', (data) => {
-        console.log('Event: risk_approved', data);
+        logger.debug('Event: risk_approved', data);
     });
 
     return socket;
@@ -70,26 +71,26 @@ export function disconnectWebSocket(): void {
     if (socket) {
         socket.disconnect();
         socket = null;
-        console.log('WebSocket disconnected manually');
+        logger.info('WebSocket disconnected manually');
     }
 }
 
 export function joinSession(sessionId: string): void {
     if (!socket?.connected) {
-        console.error('WebSocket not connected');
+        logger.error('WebSocket not connected');
         return;
     }
     socket.emit('session:join', { sessionId });
-    console.log(`Joining session: ${sessionId}`);
+    logger.info(`Joining session: ${sessionId}`);
 }
 
 export function leaveSession(sessionId: string): void {
     if (!socket?.connected) {
-        console.error('WebSocket not connected');
+        logger.error('WebSocket not connected');
         return;
     }
     socket.emit('session:leave', { sessionId });
-    console.log(`Leaving session: ${sessionId}`);
+    logger.info(`Leaving session: ${sessionId}`);
 }
 
 export function getSocket(): Socket | null {
@@ -109,21 +110,21 @@ export async function testWebSocketHandshake(): Promise<boolean> {
         });
 
         const timeout = setTimeout(() => {
-            console.log('❌ WebSocket handshake timeout');
+            logger.error('❌ WebSocket handshake timeout');
             testSocket.disconnect();
             resolve(false);
         }, 5000);
 
         testSocket.on('connect', () => {
             clearTimeout(timeout);
-            console.log(`✅ WebSocket handshake successful: ${testSocket.id}`);
+            logger.info(`✅ WebSocket handshake successful: ${testSocket.id}`);
             testSocket.disconnect();
             resolve(true);
         });
 
         testSocket.on('connect_error', (error) => {
             clearTimeout(timeout);
-            console.log(`❌ WebSocket handshake failed: ${error.message}`);
+            logger.error(`❌ WebSocket handshake failed: ${error.message}`, error);
             testSocket.disconnect();
             resolve(false);
         });

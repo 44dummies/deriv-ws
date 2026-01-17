@@ -11,10 +11,11 @@
 
 import { EventEmitter } from 'eventemitter3';
 import { NormalizedTick } from './MarketDataService.js';
+import { logger } from '../utils/logger.js';
 import { FeatureBuilder } from './FeatureBuilder.js';
-import { 
-    StrategyManager, 
-    StrategySignal as _StrategySignal, 
+import {
+    StrategyManager,
+    StrategySignal as _StrategySignal,
     IndicatorSet,
     TradeHistory,
     ALL_MARKETS,
@@ -141,13 +142,13 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         this.featureBuilder = new FeatureBuilder();
         this.strategyManager = new StrategyManager();
         this.dbAdapter = dbAdapter;
-        
-        console.log('═══════════════════════════════════════════════════════════════');
-        console.log('[QuantEngine v2.0] Pure Quantitative Trading Engine Initialized');
-        console.log('[QuantEngine] Strategies Loaded:', this.strategyManager.getStrategies().map(s => s.name).join(', '));
-        console.log('[QuantEngine] Supported Markets:', ALL_MARKETS.join(', '));
-        console.log('[QuantEngine] Database Learning:', dbAdapter ? 'ENABLED' : 'DISABLED');
-        console.log('═══════════════════════════════════════════════════════════════');
+
+
+        logger.info('QuantEngine v2.0 Initialized', {
+            strategies: this.strategyManager.getStrategies().map(s => s.name),
+            markets: ALL_MARKETS,
+            dbLearning: !!dbAdapter
+        });
     }
 
     // ---------------------------------------------------------------------------
@@ -159,7 +160,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
      */
     async loadTradeHistory(markets: string[] = [...ALL_MARKETS]): Promise<void> {
         if (!this.dbAdapter) {
-            console.log('[QuantEngine] No database adapter, skipping history load');
+            logger.info('No database adapter, skipping history load');
             return;
         }
 
@@ -167,16 +168,16 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             try {
                 const history = await this.dbAdapter.getTradeHistory(market, 100);
                 tradeHistoryCache.set(market, history);
-                
+
                 // Calculate win rate
                 if (history.length > 0) {
                     const wins = history.filter(h => h.result === 'WIN').length;
                     this.marketWinRates.set(market, wins / history.length);
                 }
 
-                console.log(`[QuantEngine] Loaded ${history.length} trades for ${market}`);
+                logger.info(`Loaded trades for ${market}`, { count: history.length, market });
             } catch (error) {
-                console.error(`[QuantEngine] Failed to load history for ${market}:`, error);
+                logger.error(`Failed to load history for ${market}`, error);
             }
         }
     }
@@ -193,7 +194,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
      */
     async recordTradeResult(trade: Partial<TradeHistory>): Promise<void> {
         const market = trade.market || '';
-        
+
         // Update in-memory cache
         const history = tradeHistoryCache.get(market) || [];
         history.push(trade as TradeHistory);
@@ -209,7 +210,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             try {
                 await this.dbAdapter.logTrade(trade);
             } catch (error) {
-                console.error('[QuantEngine] Failed to log trade:', error);
+                logger.error('Failed to log trade', error);
             }
         }
 
@@ -256,7 +257,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
         // Validate market
         if (!this.isMarketSupported(market)) {
-            console.warn(`[QuantEngine] Market ${market} not supported. Only Jump and Volatility indices allowed.`);
+            logger.warn(`Market ${market} not supported`, { market });
             return null;
         }
 
@@ -580,7 +581,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
 
         const recentPrices = prices.slice(-BOLLINGER_PERIOD);
         const middle = recentPrices.reduce((a, b) => a + b, 0) / BOLLINGER_PERIOD;
-        
+
         const variance = recentPrices.reduce((sum, p) => sum + Math.pow(p - middle, 2), 0) / BOLLINGER_PERIOD;
         const stdDev = Math.sqrt(variance);
 
@@ -601,7 +602,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             const high = prices[i] ?? 0;
             const _low = prices[i] ?? 0;
             const prevClose = prices[i - 1] ?? 0;
-            
+
             // True Range = max(high - low, |high - prev close|, |low - prev close|)
             // Without OHLC, we approximate
             const range = Math.abs(high - prevClose);
@@ -657,7 +658,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         }
 
         const k = ((close - low) / (high - low)) * 100;
-        
+
         // D is 3-period SMA of K (simplified)
         const prevStoch = this.stochValues.get('temp') ?? { k: 50, d: 50 };
         const d = (k + prevStoch.k + prevStoch.d) / 3;
@@ -760,8 +761,8 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     /**
      * Get stats
      */
-    getStats(): { 
-        markets: string[]; 
+    getStats(): {
+        markets: string[];
         historySize: Record<string, number>;
         winRates: Record<string, number>;
         strategies: string[];

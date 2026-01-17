@@ -6,7 +6,7 @@
 import { EventEmitter } from 'eventemitter3';
 import { Redis } from 'ioredis';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { riskGuard, RiskCheck } from './RiskGuard.js';
+import { RiskGuard, RiskCheck } from './RiskGuard.js';
 import { memoryService } from './MemoryService.js';
 import { UserService } from './UserService.js';
 import { DerivWSClient } from './DerivWSClient.js';
@@ -107,7 +107,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     private supabase: SupabaseClient | null = null;
     private memoryIdempotency: Map<string, number> = new Map(); // Fallback when no Redis
 
-    constructor() {
+    constructor(private riskGuard: RiskGuard) {
         super();
         this.initRedis();
         this.initSupabase();
@@ -225,7 +225,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
     private initialize(): void {
         // Listen for approved risk checks
-        riskGuard.on('risk_check_completed', (check: RiskCheck) => {
+        this.riskGuard.on('risk_check_completed', (check: RiskCheck) => {
             if (check.result === 'APPROVED') {
                 // Fire and forget, but handle promise rejection logging if needed
                 this.handleApprovedTrade(check).catch(err => {
@@ -656,5 +656,4 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     }
 }
 
-// Export singleton
-export const executionCore = new ExecutionCore();
+

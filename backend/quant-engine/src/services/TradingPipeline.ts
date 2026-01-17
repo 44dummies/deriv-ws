@@ -7,6 +7,7 @@ import { EventEmitter } from 'eventemitter3';
 import { marketDataService, NormalizedTick } from './MarketDataService.js';
 import { quantEngine, Signal } from './QuantEngine.js';
 import { riskGuard, ApprovalResult, SessionRiskConfig, UserRiskConfig } from './RiskGuard.js';
+import { logger } from '../utils/logger.js';
 
 // =============================================================================
 // TYPES
@@ -49,7 +50,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
     constructor() {
         super();
         this.wireServices();
-        console.log('[TradingPipeline] Initialized');
+        logger.info('TradingPipeline Initialized');
     }
 
     // ---------------------------------------------------------------------------
@@ -63,12 +64,12 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
         });
 
         marketDataService.on('connected', () => {
-            console.log('[TradingPipeline] MarketData connected');
+            logger.info('MarketData connected');
             this.isMarketDataConnected = true;
         });
 
         marketDataService.on('disconnected', (reason) => {
-            console.log(`[TradingPipeline] MarketData disconnected: ${reason}`);
+            logger.warn(`MarketData disconnected: ${reason}`);
             this.isMarketDataConnected = false;
         });
 
@@ -81,7 +82,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
             this.handleRejection(result);
         });
 
-        console.log('[TradingPipeline] Services wired');
+        logger.info('Services wired');
     }
 
     // ---------------------------------------------------------------------------
@@ -95,13 +96,13 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
         if (!this.isRunning) return;
 
         if (this.tickCount % 10 === 0) {
-            console.log(`[Pipeline] Tick #${this.tickCount}: ${tick.market} @ ${tick.quote.toFixed(2)}`);
+            logger.debug(`Tick #${this.tickCount}: ${tick.market} @ ${tick.quote.toFixed(2)}`);
         }
 
         if (!this.isMarketDataConnected) {
             // Log once every 10 ticks to avoid spam if flood occurs
             if (this.tickCount % 10 === 0) {
-                console.warn('[Pipeline] Tick ignored - MarketData disconnected');
+                logger.warn('Tick ignored - MarketData disconnected');
             }
             return;
         }
@@ -127,17 +128,19 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
 
     private handleSignal(sessionId: string, session: DummySession, signal: Signal): void {
         this.signalCount++;
-        console.log(`\n[Pipeline] ═══ Signal #${this.signalCount} ═══`);
-        console.log(`  Session: ${sessionId}`);
-        console.log(`  Type: ${signal.type} | Market: ${signal.market}`);
-        console.log(`  Confidence: ${(signal.confidence * 100).toFixed(1)}%`);
-        console.log(`  Reason: ${signal.reason}`);
+        logger.info(`Signal #${this.signalCount} Emitted`, {
+            session: sessionId,
+            type: signal.type,
+            market: signal.market,
+            confidence: signal.confidence,
+            reason: signal.reason
+        });
 
         this.emit('signal', sessionId, signal);
 
         // Validate signal for each participant
         for (const [userId, userConfig] of session.participants) {
-            console.log(`\n  → Validating for user: ${userId}`);
+            logger.debug(`Validating for user: ${userId}`);
 
             const stake = riskGuard.calculateRecommendedStake(10, session.config, userConfig);
             const result = riskGuard.validate(signal, session.config, userConfig, stake);
@@ -153,8 +156,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
         const sessionId = (result as ApprovalResult & { sessionId?: string }).sessionId ?? 'unknown';
         const userId = (result as ApprovalResult & { userId?: string }).userId ?? 'unknown';
 
-        console.log(`  ✅ APPROVED for ${userId}`);
-        console.log(`     Stake: $${result.stake}`);
+        logger.info(`APPROVED for ${userId}`, { stake: result.stake });
 
         this.emit('approved', sessionId, result);
 
@@ -179,7 +181,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
         const sessionId = (result as ApprovalResult & { sessionId?: string }).sessionId ?? 'unknown';
         const userId = (result as ApprovalResult & { userId?: string }).userId ?? 'unknown';
 
-        console.log(`  ❌ REJECTED for ${userId}: ${result.reason}`);
+        logger.warn(`REJECTED for ${userId}: ${result.reason}`, { userId, reason: result.reason });
 
         this.emit('rejected', sessionId, result, result.reason ?? 'UNKNOWN');
 
@@ -249,7 +251,7 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
         }
 
         this.sessions.set(sessionId, session);
-        console.log(`[TradingPipeline] Created session: ${sessionId} with ${session.participants.size} participants`);
+        logger.info(`Created session: ${sessionId}`, { participants: session.participants.size });
 
         return session;
     }
@@ -270,14 +272,12 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
      */
     start(): void {
         if (this.isRunning) {
-            console.log('[TradingPipeline] Already running');
+            logger.warn('Already running');
             return;
         }
 
         this.isRunning = true;
-        console.log('\n[TradingPipeline] ══════════════════════════════════');
-        console.log('[TradingPipeline] Starting trading pipeline...');
-        console.log('[TradingPipeline] ══════════════════════════════════\n');
+        logger.info('Starting trading pipeline...');
 
         // Connect to market data
         marketDataService.connect();
@@ -292,18 +292,19 @@ export class TradingPipeline extends EventEmitter<PipelineEvents> {
      */
     stop(): void {
         if (!this.isRunning) {
-            console.log('[TradingPipeline] Not running');
+            logger.warn('Not running');
             return;
         }
 
         this.isRunning = false;
         marketDataService.disconnect();
 
-        console.log('\n[TradingPipeline] ══════════════════════════════════');
-        console.log('[TradingPipeline] Pipeline stopped');
-        console.log(`[TradingPipeline] Stats: ${this.tickCount} ticks, ${this.signalCount} signals`);
-        console.log(`[TradingPipeline] Approved: ${this.approvedCount}, Rejected: ${this.rejectedCount}`);
-        console.log('[TradingPipeline] ══════════════════════════════════\n');
+        logger.info('Pipeline stopped', {
+            ticks: this.tickCount,
+            signals: this.signalCount,
+            approved: this.approvedCount,
+            rejected: this.rejectedCount
+        });
     }
 
     /**

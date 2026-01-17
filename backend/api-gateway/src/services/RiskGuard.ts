@@ -1,6 +1,6 @@
 import { EventEmitter } from 'eventemitter3';
-import { Signal, quantEngine } from './QuantEngine.js';
-import { sessionRegistry } from './SessionRegistry.js';
+import { QuantEngine, Signal } from './QuantEngine.js';
+import { SessionRegistry } from './SessionRegistry.js';
 import { memoryService } from './MemoryService.js';
 import { randomUUID } from 'crypto';
 import { logger } from '../utils/logger.js';
@@ -37,7 +37,10 @@ type RiskGuardEvents = {
 // =============================================================================
 
 export class RiskGuard extends EventEmitter<RiskGuardEvents> {
-    constructor() {
+    constructor(
+        private quantEngine: QuantEngine,
+        private sessionRegistry: SessionRegistry
+    ) {
         super();
         this.initialize();
         logger.info('RiskGuard initialized');
@@ -45,19 +48,19 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
 
     private initialize(): void {
         // Listen for signals from QuantEngine
-        quantEngine.on('signal', (signal: Signal) => {
+        this.quantEngine.on('signal', (signal: Signal) => {
             this.handleSignal(signal);
         });
 
         // Also listen for AI signals
-        quantEngine.on('ai_signal', (signal: Signal) => {
+        this.quantEngine.on('ai_signal', (signal: Signal) => {
             this.handleSignal(signal);
         });
     }
 
     private handleSignal(signal: Signal): void {
         // Check all active sessions
-        const sessions = sessionRegistry.getActiveSessions();
+        const sessions = this.sessionRegistry.getActiveSessions();
         if (sessions.length === 0) {
             // console.log('[RiskGuard] No active sessions for signal:', signal.market);
             return;
@@ -67,7 +70,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
             // Evaluate if this session should trade this market
             if (session.config_json.allowed_markets?.includes(signal.market)) {
 
-                // Determine participants for this session (Stub: defaulting to a 'stub-user-id')
+                // Determine participants for this session (Stub: defaulting to 'stub-user-id')
                 // In a real implementation we iterate session.participants.keys()
                 // For "Day 2" verification we will simulate the check for a test user
 
@@ -80,7 +83,7 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
     }
 
     private evaluateSessionRisk(sessionId: string, signal: Signal): void {
-        const session = sessionRegistry.getSessionState(sessionId);
+        const session = this.sessionRegistry.getSessionState(sessionId);
         if (!session) return;
 
         // 1. Session Level Check (Global PnL)
@@ -301,4 +304,4 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
 }
 
 // Export singleton
-export const riskGuard = new RiskGuard();
+
