@@ -22,9 +22,11 @@ const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 // Paths that are exempt from CSRF (webhooks, OAuth callbacks, JWT-authenticated routes)
 // NOTE: These routes use JWT Bearer token authentication which provides CSRF protection
 const EXEMPT_PATHS = [
-    '/api/v1/auth/deriv/callback',
-    '/api/v1/sessions',  // Uses JWT auth
-    '/api/v1/trades',    // Uses JWT auth  
+    '/api/v1/auth',       // All auth routes use JWT
+    '/api/v1/sessions',   // Uses JWT auth
+    '/api/v1/trades',     // Uses JWT auth  
+    '/api/v1/stats',      // Uses JWT auth
+    '/api/v1/users',      // Uses JWT auth
     '/webhook',
     '/health'
 ];
