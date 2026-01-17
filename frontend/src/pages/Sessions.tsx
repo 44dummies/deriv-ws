@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Play, Pause, Square, History, Filter, Trash2, ShieldAlert, Loader2 } from 'lucide-react';
+import { Play, Pause, Square, History, Filter, Trash2, Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { fetchWithAuth } from '../lib/api';
+import { Link } from 'react-router-dom';
 
 export default function Sessions() {
     const [filter, setFilter] = useState('ALL');
-    const { isAdmin, user } = useAuthStore();
+    const { user } = useAuthStore();
     const queryClient = useQueryClient();
 
     // Fetch Sessions
@@ -21,15 +22,10 @@ export default function Sessions() {
     });
 
     const sessions = sessionData?.sessions || [];
-    const activeSession = sessions.find((s: any) => s.status === 'ACTIVE' || s.status === 'RUNNING');
-    const getParticipantCount = (session: any) => Array.isArray(session?.participants)
-        ? session.participants.length
-        : Object.keys(session?.participants || {}).length;
-    const isParticipant = activeSession
-        ? Array.isArray(activeSession.participants)
-            ? activeSession.participants.some((p: any) => p.user_id === user?.id)
-            : Boolean(activeSession.participants?.[user?.id || ''])
-        : false;
+    const activeSession = sessions.find((s: any) =>
+        (s.status === 'ACTIVE' || s.status === 'RUNNING' || s.status === 'PAUSED') &&
+        s.owner_id === user?.id
+    );
 
     // Mutations
     const mutationFn = async ({ path, method = 'POST', body }: { path: string, method?: string, body?: any }) => {
@@ -45,13 +41,8 @@ export default function Sessions() {
     });
 
     const controlSession = useMutation({
-        mutationFn: ({ id, action }: { id: string, action: 'start' | 'pause' | 'stop' }) =>
+        mutationFn: ({ id, action }: { id: string, action: 'start' | 'pause' | 'resume' | 'stop' }) =>
             mutationFn({ path: `${id}/${action}` }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] })
-    });
-
-    const joinSession = useMutation({
-        mutationFn: (id: string) => mutationFn({ path: `${id}/join` }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] })
     });
 
@@ -70,17 +61,19 @@ export default function Sessions() {
                 <div>
                     <h1 className="text-2xl font-semibold mb-2">Sessions</h1>
                     <p className="text-sm text-muted-foreground">
-                        Manage and control your trading sessions.
+                        Create and control your trading sessions.
                     </p>
                 </div>
-                <button
-                    onClick={() => createSession.mutate()}
-                    disabled={createSession.isPending}
-                    className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center gap-2 transition-colors duration-150 ease-out disabled:opacity-60"
-                >
-                    {createSession.isPending ? <Loader2 className="animate-spin" /> : <Play className="w-5 h-5" />}
-                    <span className="font-medium">Create session</span>
-                </button>
+                {!activeSession && (
+                    <button
+                        onClick={() => createSession.mutate()}
+                        disabled={createSession.isPending}
+                        className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md flex items-center gap-2 transition-colors duration-150 ease-out disabled:opacity-60"
+                    >
+                        {createSession.isPending ? <Loader2 className="animate-spin" /> : <Play className="w-5 h-5" />}
+                        <span className="font-medium">Create session</span>
+                    </button>
+                )}
             </div>
 
             {/* Active Session Card */}
@@ -90,65 +83,101 @@ export default function Sessions() {
                         <div>
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="relative">
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                    <span className={cn(
+                                        "relative inline-flex rounded-full h-2.5 w-2.5",
+                                        activeSession.status === 'PAUSED' ? "bg-yellow-500" : "bg-primary"
+                                    )}></span>
                                 </div>
-                                <h2 className="text-lg font-semibold">Active session</h2>
+                                <h2 className="text-lg font-semibold">
+                                    {activeSession.status === 'PAUSED' ? 'Paused Session' : 'Active Session'}
+                                </h2>
                             </div>
                             <p className="text-xs text-muted-foreground font-mono flex items-center gap-2">
                                 ID: <span className="text-foreground">{activeSession.id}</span> •
-                                Started {activeSession.started_at ? formatDistanceToNow(new Date(activeSession.started_at), { addSuffix: true }) : 'Just now'}
+                                {activeSession.started_at
+                                    ? `Started ${formatDistanceToNow(new Date(activeSession.started_at), { addSuffix: true })}`
+                                    : 'Not started yet'
+                                }
                             </p>
                         </div>
 
-                        {/* Controls - Show if admin OR if user owns the session */}
-                        {(isAdmin || activeSession.admin_id === user?.id) ? (
-                            <div className="flex gap-3">
+                        {/* Session Controls */}
+                        <div className="flex gap-3">
+                            {activeSession.status === 'PENDING' && (
+                                <button
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'start' })}
+                                    disabled={controlSession.isPending}
+                                    className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors duration-150 ease-out disabled:opacity-60 flex items-center gap-2"
+                                >
+                                    {controlSession.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Play className="w-4 h-4" />}
+                                    Start
+                                </button>
+                            )}
+                            {activeSession.status === 'PAUSED' && (
+                                <button
+                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'resume' })}
+                                    disabled={controlSession.isPending}
+                                    className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors duration-150 ease-out disabled:opacity-60 flex items-center gap-2"
+                                >
+                                    {controlSession.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Play className="w-4 h-4" />}
+                                    Resume
+                                </button>
+                            )}
+                            {(activeSession.status === 'RUNNING' || activeSession.status === 'ACTIVE') && (
                                 <button
                                     onClick={() => controlSession.mutate({ id: activeSession.id, action: 'pause' })}
-                                    className="p-2 border border-border rounded-md text-foreground hover:bg-muted/60 transition-colors duration-150 ease-out"
+                                    disabled={controlSession.isPending}
+                                    className="p-2 border border-border rounded-md text-foreground hover:bg-muted/60 transition-colors duration-150 ease-out disabled:opacity-60"
                                     title="Pause Session"
                                 >
                                     <Pause className="w-5 h-5" />
                                 </button>
-                                <button
-                                    onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })}
-                                    className="p-2 border border-border rounded-md text-destructive hover:bg-muted/60 transition-colors duration-150 ease-out"
-                                    title="Stop Session"
-                                >
-                                    <Square className="w-5 h-5" />
-                                </button>
-                            </div>
-                        ) : (
-                            !isParticipant ? (
-                                <button
-                                    onClick={() => joinSession.mutate(activeSession.id)}
-                                    className="px-4 py-2 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors duration-150 ease-out"
-                                >
-                                    Join Session
-                                </button>
-                            ) : (
-                                <div className="px-3 py-2 rounded-md bg-muted/40 border border-border text-sm text-foreground flex items-center gap-2">
-                                    <ShieldAlert className="w-4 h-4" />
-                                    Active Participant
-                                </div>
-                            )
-                        )}
+                            )}
+                            <button
+                                onClick={() => controlSession.mutate({ id: activeSession.id, action: 'stop' })}
+                                disabled={controlSession.isPending}
+                                className="p-2 border border-border rounded-md text-destructive hover:bg-muted/60 transition-colors duration-150 ease-out disabled:opacity-60"
+                                title="Stop Session"
+                            >
+                                <Square className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                         <div className="p-4 bg-muted/40 rounded-md border border-border">
-                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Strategy</div>
-                            <div className="font-medium text-sm">{activeSession.config_json?.risk_profile || 'Standard'}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Risk Profile</div>
+                            <div className="font-medium text-sm">{activeSession.config_json?.risk_profile || 'MODERATE'}</div>
                         </div>
                         <div className="p-4 bg-muted/40 rounded-md border border-border">
-                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Participants</div>
-                            <div className="font-medium text-sm">{getParticipantCount(activeSession)}</div>
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</div>
+                            <div className={cn(
+                                "font-medium text-sm",
+                                activeSession.status === 'RUNNING' || activeSession.status === 'ACTIVE' ? "text-green-500" :
+                                    activeSession.status === 'PAUSED' ? "text-yellow-500" : ""
+                            )}>
+                                {activeSession.status}
+                            </div>
+                        </div>
+                        <div className="p-4 bg-muted/40 rounded-md border border-border">
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Trades</div>
+                            <Link to="/statistics" className="font-medium text-sm text-primary flex items-center gap-1 hover:underline">
+                                View Stats <ArrowRight className="w-3 h-3" />
+                            </Link>
                         </div>
                     </div>
                 </div>
             ) : (
                 <div className="p-10 text-center border border-dashed border-border rounded-lg">
-                    <p className="text-sm text-muted-foreground">No active sessions. {isAdmin ? 'Start one now.' : 'Wait for an admin to start one.'}</p>
+                    <p className="text-sm text-muted-foreground mb-4">No active session. Create one to start automated trading.</p>
+                    <button
+                        onClick={() => createSession.mutate()}
+                        disabled={createSession.isPending}
+                        className="px-4 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md inline-flex items-center gap-2 transition-colors"
+                    >
+                        {createSession.isPending ? <Loader2 className="animate-spin" /> : <Play className="w-5 h-5" />}
+                        Create Session
+                    </button>
                 </div>
             )}
 
@@ -177,10 +206,9 @@ export default function Sessions() {
                         <tr>
                             <th className="p-5 font-medium">Session ID</th>
                             <th className="p-5 font-medium">Date</th>
-                            <th className="p-5 font-medium">Type</th>
-                            <th className="p-5 font-medium">Participants</th>
+                            <th className="p-5 font-medium">Risk Profile</th>
                             <th className="p-5 font-medium">Status</th>
-                            {isAdmin && <th className="p-5 font-medium text-right">Actions</th>}
+                            <th className="p-5 font-medium text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -190,32 +218,41 @@ export default function Sessions() {
                                 <td className="p-5 text-muted-foreground">{new Date(session.created_at).toLocaleDateString()}</td>
                                 <td className="p-5">
                                     <span className="px-3 py-1 rounded-full bg-muted/50 border border-border text-xs">
-                                        {session.config_json?.risk_profile || 'Standard'}
+                                        {session.config_json?.risk_profile || 'MODERATE'}
                                     </span>
                                 </td>
-                                <td className="p-5 text-muted-foreground font-mono">{getParticipantCount(session)}</td>
                                 <td className="p-5">
                                     <span className={cn(
                                         "px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wide uppercase border",
                                         session.status === 'COMPLETED' ? "bg-muted/40 text-muted-foreground border-border" :
-                                            session.status === 'ACTIVE' || session.status === 'RUNNING' ? "bg-primary/10 text-primary border-primary/20" :
-                                                "bg-muted/40 text-muted-foreground border-border"
+                                            session.status === 'RUNNING' || session.status === 'ACTIVE' ? "bg-primary/10 text-primary border-primary/20" :
+                                                session.status === 'PAUSED' ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" :
+                                                    "bg-muted/40 text-muted-foreground border-border"
                                     )}>
                                         {session.status}
                                     </span>
                                 </td>
-                                {isAdmin && (
-                                    <td className="p-5 text-right">
+                                <td className="p-5 text-right">
+                                    {session.status === 'COMPLETED' && (
                                         <button
                                             onClick={() => deleteSession.mutate(session.id)}
-                                            className="p-2 hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors opacity-0 group-hover:opacity-100"
+                                            disabled={deleteSession.isPending}
+                                            className="p-1.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                                            title="Delete"
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
-                                    </td>
-                                )}
+                                    )}
+                                </td>
                             </tr>
                         ))}
+                        {sessions.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="p-10 text-center text-muted-foreground">
+                                    No sessions yet
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
