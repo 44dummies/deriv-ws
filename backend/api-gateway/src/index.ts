@@ -35,6 +35,7 @@ import { Monitoring } from './services/Monitoring.js';
 import { integrateWSWithSessions } from './services/WSIntegration.js';
 import { executionCore } from './services/ExecutionCore.js';
 import { settlementSyncService } from './services/SettlementSyncService.js';
+import { autoTradingService } from './services/AutoTradingService.js';
 import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
 // Utils
@@ -77,6 +78,7 @@ app.set('trust proxy', 1);
 // Initialize WebSocket Server
 const wsServer = initWebSocketServer(httpServer);
 integrateWSWithSessions();
+autoTradingService.integrate();
 void executionCore;
 
 // =============================================================================

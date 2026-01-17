@@ -139,6 +139,15 @@ export class RiskGuard extends EventEmitter<RiskGuardEvents> {
         return this.evaluateUserRiskInternal(input.userId, input.sessionId, signal);
     }
 
+    public evaluateAutoTrade(input: {
+        userId: string;
+        sessionId: string;
+        signal: Signal;
+        source: 'TECHNICAL' | 'AI';
+    }): void {
+        this.evaluateUserRisk(input.userId, input.sessionId, input.signal);
+    }
+
     private evaluateUserRisk(userId: string, sessionId: string, signal: Signal): void {
         const check = this.evaluateUserRiskInternal(userId, sessionId, signal);
         this.emitRiskResult(check);

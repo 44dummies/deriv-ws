@@ -235,6 +235,9 @@ function integrateTradingEvents(): void {
         });
 
         wsServer.emitTradeExecuted(result.sessionId, result.userId, result);
+
+        // Also emit directly to the user (ensures visibility even if not in session room, e.g. manual trades)
+        wsServer.emitToUser(result.userId, 'TRADE_EXECUTED', result);
     });
 
     // -------------------------------------------------------------------------
@@ -256,6 +259,9 @@ function integrateTradingEvents(): void {
         // Use generic emitToSession or specific method if exists
         // Since WebSocketServer.ts might not have emitTradeSettled, using generic emitToSession
         wsServer.emitToSession(result.sessionId, 'TRADE_SETTLED', result);
+
+        // Also emit directly to the user
+        wsServer.emitToUser(result.userId, 'TRADE_SETTLED', result);
     });
 
     // -------------------------------------------------------------------------
