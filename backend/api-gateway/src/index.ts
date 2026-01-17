@@ -6,6 +6,7 @@
 // Load environment variables FIRST (before any other imports)
 import 'dotenv/config';
 
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
@@ -165,20 +166,9 @@ app.use(cors({
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-// Cookie parsing middleware
-app.use((req, _res, next) => {
-    const cookieHeader = req.headers.cookie;
-    (req as any).cookies = {};
-    if (cookieHeader) {
-        cookieHeader.split(";").forEach((cookie) => {
-            const [name, ...rest] = cookie.split("=");
-            if (name) {
-                (req as any).cookies[name.trim()] = rest.join("=").trim();
-            }
-        });
-    }
-    next();
-});
+
+// Cookie parsing middleware (handles URL decoding)
+app.use(cookieParser());
 
 // Request logging
 app.use(requestLogger);
