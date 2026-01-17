@@ -68,6 +68,10 @@ if (!process.env.DERIV_TOKEN_KEY) {
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy is required for Railway/Vercel (Load Balancers)
+// This ensures req.protocol is 'https' and IP is correct
+app.set('trust proxy', 1);
+
 // Initialize WebSocket Server
 const wsServer = initWebSocketServer(httpServer);
 integrateWSWithSessions();
@@ -76,7 +80,7 @@ void executionCore;
 // =============================================================================
 // CORS CONFIGURATION (Explicit, no wildcards in production)
 // =============================================================================
-const allowedOrigins = process.env.CORS_ORIGIN 
+const allowedOrigins = process.env.CORS_ORIGIN
     ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
     : ['http://localhost:5173', 'http://localhost:3000'];
 
@@ -90,18 +94,18 @@ const VERCEL_PRODUCTION_PATTERN = /^https:\/\/deriv-ws-frontend[\w-]*\.vercel\.a
 function isOriginAllowed(origin: string): boolean {
     // Exact match in allowed list
     if (allowedOrigins.includes(origin)) return true;
-    
+
     // Wildcard (only for development)
     if (allowedOrigins.includes('*')) return true;
-    
+
     // Vercel production domain pattern
     if (VERCEL_PRODUCTION_PATTERN.test(origin)) return true;
-    
+
     // Vercel preview deployments (only if explicitly enabled)
     if (process.env.ALLOW_VERCEL_PREVIEWS === 'true' && VERCEL_PREVIEW_PATTERN.test(origin)) {
         return true;
     }
-    
+
     return false;
 }
 
@@ -145,7 +149,7 @@ app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        
+
         if (isOriginAllowed(origin)) {
             callback(null, true);
         } else {
@@ -251,15 +255,15 @@ app.use((_req, res) => {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     // Capture to Sentry
     Monitoring.captureError(err, { source: 'express-error-handler' });
-    
+
     logger.error('Unhandled error', {}, err);
-    
+
     // CORS errors
     if (err.message === 'Not allowed by CORS') {
         res.status(403).json({ error: 'CORS policy violation' });
         return;
     }
-    
+
     res.status(500).json({ error: 'Internal server error' });
 });
 

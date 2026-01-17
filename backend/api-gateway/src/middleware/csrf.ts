@@ -42,17 +42,17 @@ function signToken(token: string, secret: string): string {
 
 function verifyTokenSignature(token: string, signature: string, secret: string): boolean {
     const expectedSignature = signToken(token, secret);
-    
+
     // Constant-time comparison to prevent timing attacks
     if (signature.length !== expectedSignature.length) {
         return false;
     }
-    
+
     let result = 0;
     for (let i = 0; i < signature.length; i++) {
         result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
     }
-    
+
     return result === 0;
 }
 
@@ -62,71 +62,79 @@ function verifyTokenSignature(token: string, signature: string, secret: string):
 
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
     const secret = process.env.SESSION_SECRET;
-    
+
     if (!secret) {
         logger.error('CSRF SESSION_SECRET not configured, CSRF protection disabled');
         return next();
     }
-    
+
     // Skip CSRF for safe methods
     if (SAFE_METHODS.includes(req.method)) {
         // Generate and send a new token on GET requests
         ensureCsrfToken(res, secret);
         return next();
     }
-    
+
     // Skip CSRF for exempt paths
     if (EXEMPT_PATHS.some(path => req.path.startsWith(path))) {
         return next();
     }
-    
+
     // For state-changing methods, verify the token
     const headerToken = req.headers[CSRF_HEADER_NAME] as string | undefined;
     const cookieToken = (req as any).cookies?.[CSRF_COOKIE_NAME];
-    
+
     // If no cookie set, reject but set token for next time
     if (!cookieToken) {
+        logger.warn('CSRF failed: Missing cookie', { headerPresent: !!headerToken });
         ensureCsrfToken(res, secret);
-        res.status(403).json({ 
+        res.status(403).json({
             error: 'CSRF token missing',
             message: 'Please fetch a CSRF token and retry'
         });
         return;
     }
-    
+
     // Verify header token matches signed cookie
     if (!headerToken) {
+        logger.warn('CSRF failed: Missing header');
         ensureCsrfToken(res, secret);
-        res.status(403).json({ 
+        res.status(403).json({
             error: 'CSRF token missing',
             message: 'Please include X-CSRF-Token header'
         });
         return;
     }
-    
+
     // Parse cookie token (format: token:signature)
     const [token, signature] = cookieToken.split(':');
-    
+
     if (!token || !signature) {
+        logger.warn('CSRF failed: Malformed cookie');
         ensureCsrfToken(res, secret);
         res.status(403).json({ error: 'Invalid CSRF cookie format' });
         return;
     }
-    
+
     // Verify signature
     if (!verifyTokenSignature(token, signature, secret)) {
+        logger.warn('CSRF failed: Invalid signature');
         ensureCsrfToken(res, secret);
         res.status(403).json({ error: 'Invalid CSRF token signature' });
         return;
     }
-    
+
     // Verify header matches token
     if (headerToken !== token) {
+        logger.warn('CSRF failed: Token mismatch', {
+            header: headerToken.substring(0, 6) + '...',
+            cookie: token.substring(0, 6) + '...'
+        });
         ensureCsrfToken(res, secret);
         res.status(403).json({ error: 'CSRF token mismatch' });
         return;
     }
-    
+
     // Token is valid, proceed
     next();
 }
@@ -135,9 +143,9 @@ function ensureCsrfToken(res: Response, secret: string): void {
     const token = generateToken();
     const signature = signToken(token, secret);
     const cookieValue = `${token}:${signature}`;
-    
+
     const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
-    
+
     // Set cookie with security flags
     // SECURITY: Use 'lax' instead of 'strict' to allow cross-origin preflight (Vercel → Railway)
     res.cookie(CSRF_COOKIE_NAME, cookieValue, {
@@ -147,7 +155,7 @@ function ensureCsrfToken(res: Response, secret: string): void {
         maxAge: TOKEN_EXPIRY_MS,
         path: '/'
     });
-    
+
     // Also expose token in response header for easy access
     res.setHeader('X-CSRF-Token', token);
 }
@@ -158,18 +166,18 @@ function ensureCsrfToken(res: Response, secret: string): void {
 
 export function getCsrfToken(req: Request, res: Response): void {
     const secret = process.env.SESSION_SECRET;
-    
+
     if (!secret) {
         res.status(500).json({ error: 'CSRF not configured' });
         return;
     }
-    
+
     const token = generateToken();
     const signature = signToken(token, secret);
     const cookieValue = `${token}:${signature}`;
-    
+
     const IS_PRODUCTION = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
-    
+
     res.cookie(CSRF_COOKIE_NAME, cookieValue, {
         httpOnly: false,
         secure: IS_PRODUCTION,
@@ -177,6 +185,6 @@ export function getCsrfToken(req: Request, res: Response): void {
         maxAge: TOKEN_EXPIRY_MS,
         path: '/'
     });
-    
+
     res.json({ csrfToken: token });
 }
