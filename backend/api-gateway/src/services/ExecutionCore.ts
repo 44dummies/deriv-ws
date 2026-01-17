@@ -79,9 +79,9 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
         this.initRedis();
         this.initSupabase();
         this.initialize();
-        logger.info('ExecutionCore initialized', { 
-            redis: !!this.redis, 
-            supabase: !!this.supabase 
+        logger.info('ExecutionCore initialized', {
+            redis: !!this.redis,
+            supabase: !!this.supabase
         });
     }
 
@@ -94,7 +94,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                     logger.warn('ExecutionCore Redis error, falling back to memory', { err: err.message });
                     this.redis = null;
                 });
-            } catch (err) {
+            } catch (_err) {
                 logger.warn('ExecutionCore Redis connection failed, using memory fallback');
                 this.redis = null;
             }
@@ -245,7 +245,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
 
     private async isDuplicate(key: string): Promise<boolean> {
         const redisKey = `tradermind:exec:idempotency:${key}`;
-        
+
         // Use Redis if available
         if (this.redis) {
             try {
@@ -253,11 +253,11 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
                 // Returns 'OK' if set, null if already exists (which means duplicate)
                 const result = await this.redis.set(redisKey, '1', 'EX', 3600, 'NX');
                 return result === null;
-            } catch (err) {
+            } catch (_err) {
                 logger.warn('Redis isDuplicate failed, using memory fallback');
             }
         }
-        
+
         // Fallback to in-memory check
         const now = Date.now();
         const expiresAt = this.memoryIdempotency.get(redisKey);
@@ -281,25 +281,25 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     private calculateStake(check: RiskCheck): number {
         // Get config from session or use defaults
         const config = { ...DEFAULT_STAKE_CONFIG };
-        
+
         // Check if session has custom stake config in metadata
         const sessionMeta = check.meta as any;
         if (sessionMeta?.stakeConfig) {
             Object.assign(config, sessionMeta.stakeConfig);
         }
-        
+
         let stake = config.baseStake;
-        
+
         // Apply confidence multiplier if enabled
         if (config.confidenceMultiplier && check.proposedTrade.confidence) {
             // Scale stake based on confidence (0.5 = half stake, 1.0 = full stake)
             const confidenceMultiplier = Math.max(0.5, check.proposedTrade.confidence);
             stake = stake * confidenceMultiplier;
         }
-        
+
         // Clamp to min/max
         stake = Math.max(config.minStake, Math.min(config.maxStake, stake));
-        
+
         // Round to 2 decimal places
         return Math.round(stake * 100) / 100;
     }
@@ -310,27 +310,27 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
     private calculateDuration(check: RiskCheck): DurationConfig {
         // Get duration from signal metadata if available
         const signalMeta = check.proposedTrade.metadata as any;
-        
+
         if (signalMeta?.duration) {
             return {
                 value: signalMeta.duration.value ?? DEFAULT_DURATION.value,
                 unit: signalMeta.duration.unit ?? DEFAULT_DURATION.unit
             };
         }
-        
+
         // Market-specific defaults
         const market = check.proposedTrade.market;
-        
+
         // Volatility indices typically need shorter durations
         if (market.startsWith('R_') || market.startsWith('1HZ')) {
             return { value: 1, unit: 'm' };
         }
-        
+
         // Forex pairs might need longer durations
         if (market.includes('USD') || market.includes('EUR')) {
             return { value: 5, unit: 'm' };
         }
-        
+
         return DEFAULT_DURATION;
     }
 
@@ -383,7 +383,7 @@ export class ExecutionCore extends EventEmitter<ExecutionCoreEvents> {
             // Parameters based on Signal/RiskCheck with dynamic stake from risk config
             const stake = this.calculateStake(check);
             const duration = this.calculateDuration(check);
-            
+
             const buyParams = {
                 contract_type: check.proposedTrade.type,
                 symbol: check.proposedTrade.market,
