@@ -1,5 +1,4 @@
 {
-    "extends": "../tsconfig.json",
     "compilerOptions": {
         "target": "ES2020",
         "lib": [
@@ -11,6 +10,7 @@
         "moduleResolution": "bundler",
         "jsx": "react-jsx",
         "strict": true,
+        "skipLibCheck": true,
         "noImplicitAny": true,
         "exactOptionalPropertyTypes": true,
         "noUnusedLocals": true,

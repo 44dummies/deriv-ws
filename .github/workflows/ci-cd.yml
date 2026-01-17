@@ -1,0 +1,89 @@
+name: CI/CD - Build, Test & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "20.x"
+
+jobs:
+  # ============================================
+  # TYPE CHECK & LINT
+  # ============================================
+  typecheck:
+    name: TypeCheck & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Schemas Package
+        run: pnpm --filter @tradermind/schemas build
+
+      - name: TypeCheck Frontend
+        run: pnpm --filter @tradermind/frontend exec tsc --noEmit
+
+      - name: TypeCheck API Gateway
+        run: pnpm --filter @tradermind/api-gateway exec tsc --noEmit
+
+      - name: TypeCheck Quant Engine
+        run: pnpm --filter @tradermind/quant-engine exec tsc --noEmit
+
+      - name: Lint API Gateway
+        run: pnpm --filter @tradermind/api-gateway run lint
+
+  # ============================================
+  # POST-DEPLOY SMOKE TESTS
+  # ============================================
+  smoke-tests:
+    name: Smoke Tests
+    needs: typecheck
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Wait for Deployments
+        run: sleep 120 # Wait 2 minutes for Vercel/Railway to deploy
+
+      - name: Check Backend Health
+        run: |
+          BACKEND_URL="${{ secrets.BACKEND_URL }}"
+          if [ -z "$BACKEND_URL" ]; then
+            echo "BACKEND_URL secret not set, skipping health check"
+            exit 0
+          fi
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/api/v1/health")
+          if [ "$response" != "200" ]; then
+            echo "Backend health check failed with status $response"
+            exit 1
+          fi
+          echo "Backend health check passed ✓"
+
+      - name: Check Frontend
+        run: |
+          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
+          if [ -z "$FRONTEND_URL" ]; then
+            echo "FRONTEND_URL secret not set, skipping"
+            exit 0
+          fi
+
+          response=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL")
+          if [ "$response" != "200" ]; then
+            echo "Frontend check failed with status $response"
+            exit 1
+          fi
+          echo "Frontend health check passed ✓"

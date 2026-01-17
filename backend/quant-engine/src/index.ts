@@ -19,6 +19,9 @@ const ENABLE_API_FORWARDING = process.env['ENABLE_API_FORWARDING'] !== 'false';
 // SETUP
 // =============================================================================
 
+console.log('Starting Quant Engine...'); // Trigger Deployment
+
+
 console.log('═══════════════════════════════════════════════');
 console.log('  TraderMind QuantEngine v1.1');
 console.log('  MarketData → QuantEngine → RiskGuard → Events');
