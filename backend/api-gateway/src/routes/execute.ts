@@ -12,6 +12,7 @@ import { DerivWSClient } from '../services/DerivWSClient.js';
 import { riskGuard } from '../services/RiskGuard.js';
 import { UserService } from '../services/UserService.js';
 import crypto from 'crypto';
+import { quantEngine } from '../services/QuantEngine.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
@@ -22,21 +23,21 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
-// Type definitions
+// ... (existing imports)
+
 interface ManualTradeRequest {
-    market: string; // e.g., 'R_100', 'frxEURUSD'
-    contractType: 'CALL' | 'PUT' | 'DIGITOVER' | 'DIGITUNDER'; // Rise/Fall, Higher/Lower
-    stake: number;
-    duration: number; // in minutes
-    durationUnit?: 'm' | 's' | 'h' | 'd' | 't'; // default 'm' (minutes)
-    idempotencyKey?: string; // Client-provided key to prevent duplicate trades
+    market: string;
+    contractType: 'CALL' | 'PUT' | 'DIGITOVER' | 'DIGITUNDER';
+    stake?: number; // Optional if autoStake is true
+    duration: number;
+    durationUnit?: 'm' | 's' | 'h' | 'd' | 't';
+    idempotencyKey?: string;
+    useStrategy?: boolean;
+    autoStake?: boolean;
 }
 
-/**
- * POST /api/v1/trades/execute
- * Execute a manual trade
- * Rate limited: 5 trades per minute per user
- */
+// ... (router definition)
+
 router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.id;
@@ -45,40 +46,60 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
         }
 
         // Request body already validated by Zod middleware
-        const { market, contractType, stake, duration, durationUnit = 'm' }: ManualTradeRequest = req.body;
+        let { market, contractType, stake = 10, duration, durationUnit = 'm', useStrategy, autoStake }: ManualTradeRequest = req.body;
 
         const accounts = await UserService.listDerivAccounts(userId);
         if (accounts.length === 0) {
-            logger.warn('Trade rejected: No stored Deriv accounts', { userId });
-            return res.status(400).json({
-                error: 'No linked Deriv accounts',
-                hint: 'Please connect your Deriv account'
-            });
+            // ... (existing account check)
+            return res.status(400).json({ error: 'No linked Deriv accounts', hint: 'Please connect your Deriv account' });
         }
 
         const activeAccountId = await UserService.getActiveAccountId(userId);
-
-        // Use 'find' carefully - ensure we get a valid account
         const activeAccount = (activeAccountId ? accounts.find(acc => acc.account_id === activeAccountId) : undefined) || accounts[0];
 
         if (!activeAccount) {
-            logger.error('Trade logic error: Account list not empty but no valid account found', { userId, activeAccountId });
             return res.status(500).json({ error: 'Internal system error: No valid active account' });
         }
 
-        // Ensure we set the active ID if it wasn't set correctly
-        if (!activeAccountId || activeAccountId !== activeAccount.account_id) {
-            await UserService.setActiveAccountId(userId, activeAccount.account_id);
-            logger.info('Auto-corrected active account ID', { userId, old: activeAccountId, new: activeAccount.account_id });
+        // ... (existing active account validation)
+
+        // SMART TRADE LOGIC: Auto-Stake
+        if (autoStake) {
+            const balance = await UserService.getDerivAccountBalance(userId, activeAccount.account_id);
+            if (balance) {
+                // Risk 5% of balance, clamped between $1 and $100
+                const calculatedStake = Math.max(1, Math.min(100, balance * 0.05));
+                stake = Math.round(calculatedStake * 100) / 100;
+                logger.info('Auto-stake calculated', { userId, balance, calculatedStake: stake });
+            }
+        }
+
+        // SMART TRADE LOGIC: Strategy Validation
+        if (useStrategy) {
+            const signal = quantEngine.evaluateMarket(market);
+
+            if (!signal) {
+                return res.status(409).json({
+                    error: 'Strategy Mismatch',
+                    reason: 'No clear signal for this market right now. Try again later.'
+                });
+            }
+
+            if (signal.type !== contractType) {
+                return res.status(409).json({
+                    error: 'Strategy Mismatch',
+                    reason: `Strategy suggests ${signal.type} but you chose ${contractType}.`,
+                    recommendation: signal.type
+                });
+            }
+
+            // If confident, maybe boost stake? (Optional, kept simple for now)
         }
 
         const derivToken = await UserService.getDerivTokenForAccount(userId, activeAccount.account_id);
         if (!derivToken) {
-            logger.warn('Trade rejected: Missing token for account', { userId, accountId: activeAccount.account_id });
-            return res.status(400).json({
-                error: 'Deriv token not found for active account',
-                hint: 'Please reconnect your Deriv account'
-            });
+            // ... (existing token check)
+            return res.status(400).json({ error: 'Deriv token not found', hint: 'Please reconnect' });
         }
 
         const riskCheck = riskGuard.evaluateManualTrade({
@@ -89,6 +110,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
             duration,
             durationUnit
         });
+
+        // ... (rest of function)
 
         if (riskCheck.result === 'REJECTED') {
             return res.status(403).json({

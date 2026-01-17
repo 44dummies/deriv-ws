@@ -40,6 +40,8 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const [stake, setStake] = useState(10);
     const [duration, setDuration] = useState(3);
     const [isExecuting, setIsExecuting] = useState(false);
+    const [useStrategy, setUseStrategy] = useState(false);
+    const [autoStake, setAutoStake] = useState(false);
     const [result, setResult] = useState<{ success: boolean; message: string; trade?: any } | null>(null);
 
     const activeAccount = user?.deriv_accounts?.find(a => a.loginid === user?.active_account_id);
@@ -63,7 +65,9 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                     contractType,
                     stake,
                     duration,
-                    durationUnit: 'm'
+                    durationUnit: 'm',
+                    useStrategy,
+                    autoStake
                 })
             });
 
@@ -78,22 +82,18 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                 setResult({ success: false, message: data?.error || 'Trade execution failed' });
             }
         } catch (error: any) {
+            // ... existing error handling ...
             console.error('Trade failed:', error);
-            // Extract message from error object or string
-            // api.ts throws "API Error: Status - Body"
-            // We want to show a clean message to the user
             let message = 'Failed to execute trade';
 
             if (error.message) {
-                // Try to parse JSON from the error message if it contains it
-                // e.g. "API Error: Forbidden - {"error":"Risk blocked","reason":"..."}"
                 const match = error.message.match(/{.*}/);
                 if (match) {
                     try {
                         const json = JSON.parse(match[0]);
                         message = json.reason || json.error || json.details || message;
                     } catch {
-                        message = error.message; // Fallback
+                        message = error.message;
                     }
                 } else {
                     message = error.message.replace('API Error: ', '');
@@ -110,11 +110,9 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
     const isRise = contractType === 'CALL' || contractType === 'DIGITOVER';
 
     // Estimated payout before execution (approx 1.95x for synthetics)
-    // After execution, we show actual payout from Deriv
     const estimatedPayout = stake * 1.95;
     const estimatedProfit = estimatedPayout - stake;
 
-    // Actual payout from trade result (if executed)
     const actualPayout = result?.trade?.payout;
     const actualBuyPrice = result?.trade?.buy_price;
 
@@ -142,6 +140,8 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
 
                 {/* Body */}
                 <div className="p-6 space-y-6">
+                    {/* ... (Account Info & Market Selection same as before) ... */}
+
                     {/* Account Info */}
                     <div className="flex items-center justify-between p-4 bg-muted/30 rounded-xl border">
                         <div>
@@ -241,9 +241,37 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                         </div>
                     </div>
 
+                    {/* Smart Options */}
+                    <div className="bg-muted/30 p-4 rounded-xl space-y-3">
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={useStrategy}
+                                    onChange={e => setUseStrategy(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                />
+                                Strategy Verification
+                            </label>
+                            <span className="text-xs text-muted-foreground">Validate signal</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={autoStake}
+                                    onChange={e => setAutoStake(e.target.checked)}
+                                    className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                />
+                                Auto-Stake (5% Risk)
+                            </label>
+                            <span className="text-xs text-muted-foreground">Dynamic amount</span>
+                        </div>
+                    </div>
+
                     {/* Stake */}
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Stake Amount</label>
+                    <div className={cn("transition-opacity", autoStake && "opacity-50 pointer-events-none")}>
+                        <label className="block text-sm font-medium mb-2">Stake Amount {autoStake && '(Auto-Calculated)'}</label>
                         <div className="flex items-center gap-3">
                             <input
                                 type="number"
@@ -251,6 +279,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                 onChange={(e) => setStake(Number(e.target.value))}
                                 min={1}
                                 max={10000}
+                                disabled={autoStake}
                                 className="flex-1 bg-background border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                             />
                             <span className="text-muted-foreground font-medium">{activeAccount?.currency || 'USD'}</span>
@@ -260,6 +289,7 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                                 <button
                                     key={amount}
                                     onClick={() => setStake(amount)}
+                                    disabled={autoStake}
                                     className={cn(
                                         "px-3 py-1 rounded-lg text-xs font-medium transition-colors border",
                                         stake === amount

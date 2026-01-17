@@ -24,7 +24,8 @@ export default function Sessions() {
         risk_profile: 'MODERATE',
         max_stake: 50,
         stop_loss: 100,
-        take_profit: 200
+        take_profit: 200,
+        duration_minutes: 60
     });
 
     // Fetch Sessions
@@ -148,6 +149,27 @@ export default function Sessions() {
                                         onChange={e => setConfig({ ...config, take_profit: Number(e.target.value) })}
                                         className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
                                         min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Stop Loss ($)</label>
+                                    <input
+                                        type="number"
+                                        value={config.stop_loss}
+                                        onChange={e => setConfig({ ...config, stop_loss: Number(e.target.value) })}
+                                        className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Duration (min)</label>
+                                    <input
+                                        type="number"
+                                        value={config.duration_minutes}
+                                        onChange={e => setConfig({ ...config, duration_minutes: Number(e.target.value) })}
+                                        className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-1 focus:ring-primary outline-none"
+                                        min="1"
+                                        max="1440"
                                     />
                                 </div>
                             </div>

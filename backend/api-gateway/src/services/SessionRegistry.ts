@@ -19,6 +19,7 @@ export interface SessionConfig {
     risk_profile?: 'LOW' | 'MEDIUM' | 'HIGH';
     allowed_markets?: string[];
     global_loss_threshold?: number;
+    duration_minutes?: number;
 }
 
 export interface Participant {
@@ -35,6 +36,7 @@ export interface SessionState {
     created_at: string;
     started_at: string | null;
     completed_at: string | null;
+    scheduled_end_time: string | null;
     participants: Map<string, Participant>;
     admin_id: string | null;
 }
@@ -75,6 +77,7 @@ export class SessionRegistry {
             created_at: new Date().toISOString(),
             started_at: null,
             completed_at: null,
+            scheduled_end_time: null,
             participants: new Map(),
             admin_id,
         };
@@ -108,8 +111,11 @@ export class SessionRegistry {
         const updated: SessionState = {
             ...session,
             status,
-            started_at: status === 'ACTIVE' ? new Date().toISOString() : session.started_at,
+            started_at: (status === 'ACTIVE' || status === 'RUNNING') && !session.started_at ? new Date().toISOString() : session.started_at,
             completed_at: status === 'COMPLETED' ? new Date().toISOString() : session.completed_at,
+            scheduled_end_time: (status === 'ACTIVE' || status === 'RUNNING') && !session.scheduled_end_time && session.config_json.duration_minutes
+                ? new Date(Date.now() + session.config_json.duration_minutes * 60000).toISOString()
+                : session.scheduled_end_time,
             participants: new Map(session.participants),
         };
 
@@ -362,6 +368,7 @@ export class SessionRegistry {
                     created_at: dbSession.created_at,
                     started_at: dbSession.started_at,
                     completed_at: dbSession.completed_at,
+                    scheduled_end_time: null, // DB doesn't have this column yet, simple fallback
                     participants: participantMap,
                     admin_id: dbSession.admin_id // Assuming DB has this column, if not it might be null
                 };

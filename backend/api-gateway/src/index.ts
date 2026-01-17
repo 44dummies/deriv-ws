@@ -299,6 +299,31 @@ httpServer.listen(Number(PORT), '0.0.0.0', () => {
             source: 'unhandled-rejection'
         });
     });
+
+    // Session Timer Monitor
+    setInterval(() => {
+        const activeSessions = sessionRegistry.getActiveSessions();
+        const now = Date.now();
+        for (const session of activeSessions) {
+            if (session.scheduled_end_time && new Date(session.scheduled_end_time).getTime() < now) {
+                logger.info('Session expired, auto-stopping', { sessionId: session.id });
+                try {
+                    sessionRegistry.updateSessionStatus(session.id, 'COMPLETED');
+                    const wsServer = getWebSocketServer();
+                    if (wsServer) {
+                        wsServer.emitToSession(session.id, 'SESSION_UPDATED', {
+                            session_id: session.id,
+                            status: 'COMPLETED',
+                            reason: 'TIME_LIMIT_REACHED',
+                            updated_at: new Date().toISOString()
+                        });
+                    }
+                } catch (err) {
+                    logger.error('Failed to auto-stop session', { sessionId: session.id }, err instanceof Error ? err : undefined);
+                }
+            }
+        }
+    }, 10000); // Check every 10 seconds
 });
 
 // Recover state in background - DO NOT BLOCK server startup

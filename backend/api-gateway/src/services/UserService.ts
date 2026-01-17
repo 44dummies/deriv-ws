@@ -83,6 +83,21 @@ export const UserService = {
         return decrypt(data.encrypted_token);
     },
 
+    async getDerivAccountBalance(userId: string, accountId: string): Promise<number | null> {
+        const { data, error } = await getSupabaseAdmin()
+            .from('user_deriv_tokens')
+            .select('last_balance')
+            .eq('user_id', userId)
+            .eq('account_id', accountId)
+            .single();
+
+        if (error || !data) {
+            return null;
+        }
+
+        return data.last_balance ?? null;
+    },
+
     /**
      * Get Deriv token for a specific account (for multi-account support)
      */

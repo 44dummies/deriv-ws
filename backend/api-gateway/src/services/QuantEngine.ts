@@ -135,6 +135,9 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
     /**
      * Generate signal from normalized ticks and session config
      */
+    /**
+     * Generate signal from normalized ticks and session config
+     */
     generateSignal(ticks: NormalizedTick[], config?: SessionConfig): Signal | null {
         if (ticks.length === 0) {
             return null;
@@ -165,6 +168,19 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         }
 
         return signal;
+    }
+
+    /**
+     * Evaluate current market state using stored history
+     */
+    evaluateMarket(market: string, config?: SessionConfig): Signal | null {
+        const history = this.priceHistory.get(market);
+        if (!history || history.length < EMA_SLOW_PERIOD + 5) {
+            return null;
+        }
+
+        const indicators = this.calculateIndicators(market);
+        return this.evaluateIndicators(market, indicators, config);
     }
 
     /**
@@ -529,7 +545,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             reason = 'RSI_OVERSOLD';
             confidence =
                 ((thresholds.rsi.oversold - rsi) / thresholds.rsi.oversold) *
-                    thresholds.confidence.baseMultiplier +
+                thresholds.confidence.baseMultiplier +
                 thresholds.confidence.baseOffset;
         } else if (rsi > thresholds.rsi.overbought) {
             type = 'PUT';
@@ -537,7 +553,7 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
             confidence =
                 ((rsi - thresholds.rsi.overbought) /
                     (100 - thresholds.rsi.overbought)) *
-                    thresholds.confidence.baseMultiplier +
+                thresholds.confidence.baseMultiplier +
                 thresholds.confidence.baseOffset;
         }
 
