@@ -46,11 +46,20 @@ export interface ChartDataPoint {
     pnl: number;
 }
 
+// Log Definition
+export interface LogEntry {
+    id: string;
+    timestamp: number;
+    message: string;
+    type: 'INFO' | 'SUCCESS' | 'ERROR' | 'WARNING';
+}
+
 interface RealTimeState {
     isConnected: boolean;
     signals: WSDetail<SignalPayload>[];
     trades: WSDetail<TradePayload>[];
     riskEvents: WSDetail<RiskRiskPayload>[];
+    logs: LogEntry[]; // New Logs Array
 
     // Analytics State
     history: ChartDataPoint[];
@@ -65,13 +74,16 @@ interface RealTimeState {
     setSessionStatus: (status: 'ACTIVE' | 'PAUSED' | 'COMPLETED') => void;
     addSignal: (payload: SignalPayload) => void;
     addTrade: (payload: TradePayload) => void;
+    settleTrade: (payload: { tradeId: string; status: string; profit: number }) => void; // New Settle Action
     addRiskEvent: (payload: RiskRiskPayload) => void;
+    addLog: (message: string, type?: 'INFO' | 'SUCCESS' | 'ERROR' | 'WARNING') => void; // New Log Action
     clearEvents: () => void;
     pruneExpiredData: () => void;
 }
 
 // Max number of events to keep in memory
 const MAX_EVENTS = 50;
+const MAX_LOGS = 100;
 const MAX_CHART_POINTS = 100;
 const SIGNAL_TTL = 300000; // 5 minutes
 
@@ -89,6 +101,7 @@ export const useRealTimeStore = create<RealTimeStore>()(
             signals: [],
             trades: [],
             riskEvents: [],
+            logs: [],
             history: [{ time: 'Start', timestamp: Date.now(), balance: 10000, pnl: 0 }],
             currentBalance: 10000,
             totalPnL: 0,
@@ -96,6 +109,15 @@ export const useRealTimeStore = create<RealTimeStore>()(
 
             setConnected: (status: boolean) => set({ isConnected: status }),
             setSessionStatus: (status) => set({ sessionStatus: status }),
+
+            addLog: (message, type = 'INFO') => set((state) => ({
+                logs: [{
+                    id: Date.now().toString() + Math.random(),
+                    timestamp: Date.now(),
+                    message,
+                    type
+                }, ...state.logs].slice(0, MAX_LOGS)
+            })),
 
             addSignal: (payload: SignalPayload) => set((state) => {
                 const newSignals = [{
@@ -108,14 +130,8 @@ export const useRealTimeStore = create<RealTimeStore>()(
             }),
 
             addTrade: (payload: TradePayload) => set((state) => {
-                const profit = payload.profit || 0;
-                let newPnL = state.totalPnL;
-                let newBalance = state.currentBalance;
-
-                if (payload.status === 'SUCCESS') {
-                    newPnL += profit;
-                    newBalance += profit;
-                }
+                // If pure execution update (OPEN), don't update PnL yet
+                // PnL updates happen on settle
 
                 // Add to trade history
                 const newTrades = [{
@@ -123,6 +139,27 @@ export const useRealTimeStore = create<RealTimeStore>()(
                     timestamp: Date.now(),
                     payload
                 }, ...state.trades].slice(0, MAX_EVENTS);
+
+                return { trades: newTrades };
+            }),
+
+            settleTrade: (payload) => set((state) => {
+                const { tradeId, status, profit } = payload;
+
+                // Update trade in list
+                const newTrades = state.trades.map(t => {
+                    if (t.payload.tradeId === tradeId) {
+                        return {
+                            ...t,
+                            payload: { ...t.payload, status: status as any, profit }
+                        };
+                    }
+                    return t;
+                });
+
+                // Update Balances
+                let newPnL = state.totalPnL + profit;
+                let newBalance = state.currentBalance + profit;
 
                 // Add to chart history
                 const now = new Date();
@@ -156,6 +193,7 @@ export const useRealTimeStore = create<RealTimeStore>()(
                 signals: [],
                 trades: [],
                 riskEvents: [],
+                logs: [],
                 history: [{ time: 'Start', timestamp: Date.now(), balance: 10000, pnl: 0 }],
                 currentBalance: 10000,
                 totalPnL: 0
@@ -177,6 +215,7 @@ export const useRealTimeStore = create<RealTimeStore>()(
                 signals: state.signals,
                 trades: state.trades,
                 riskEvents: state.riskEvents,
+                logs: state.logs,
                 history: state.history,
                 currentBalance: state.currentBalance,
                 totalPnL: state.totalPnL,

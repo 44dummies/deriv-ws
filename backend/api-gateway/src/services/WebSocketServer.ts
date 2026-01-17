@@ -21,6 +21,7 @@ export type WSEventType =
     | 'SESSION_TERMINATED'
     | 'SIGNAL_EMITTED'
     | 'TRADE_EXECUTED'
+    | 'TRADE_SETTLED'
     | 'RISK_APPROVED'
     | 'RISK_REJECTED'
     | 'ERROR';

@@ -34,6 +34,7 @@ import { sessionRegistry } from './services/SessionRegistry.js';
 import { Monitoring } from './services/Monitoring.js';
 import { integrateWSWithSessions } from './services/WSIntegration.js';
 import { executionCore } from './services/ExecutionCore.js';
+import { settlementSyncService } from './services/SettlementSyncService.js';
 import './services/ShadowLogger.js'; // Initialize Shadow Logger
 
 // Utils
@@ -332,6 +333,16 @@ sessionRegistry.recoverStateFromDB().then((count) => {
 }).catch(err => {
     logger.error('Failed to recover state from DB (Non-fatal)', {}, err instanceof Error ? err : undefined);
     // Do not exit, allow server to run for diagnostics
+});
+
+// Recover/Sync Open Trades (Prevent Zombies)
+settlementSyncService.syncAllOpenTrades().then((results) => {
+    const totalUpdated = results.reduce((acc, r) => acc + r.updated, 0);
+    if (totalUpdated > 0) {
+        logger.info('Synced open trades on startup', { totalUpdated, totalUsers: results.length });
+    }
+}).catch(err => {
+    logger.error('Failed to sync open trades (Non-fatal)', {}, err instanceof Error ? err : undefined);
 });
 
 export { app, httpServer, getWebSocketServer, sessionRegistry };

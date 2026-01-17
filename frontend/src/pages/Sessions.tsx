@@ -13,6 +13,9 @@ const RISK_PROFILES = [
     { id: 'AGGRESSIVE', label: 'Aggressive', desc: 'Higher stakes, higher potential returns' }
 ];
 
+import { LiveTradeFeed } from '../components/LiveTradeFeed'; // Import Feed
+import { useRealTimeData } from '../hooks/useRealTimeData'; // Import Hook
+
 export default function Sessions() {
     const [filter, setFilter] = useState('ALL');
     const { user } = useAuthStore();
@@ -42,6 +45,9 @@ export default function Sessions() {
         (s.status === 'ACTIVE' || s.status === 'RUNNING' || s.status === 'PAUSED') &&
         s.owner_id === user?.id
     );
+
+    // Initialize Real-Time Connection if session active
+    useRealTimeData(activeSession?.id || '');
 
     // Mutations
     const mutationFn = async ({ path, method = 'POST', body }: { path: string, method?: string, body?: any }) => {
@@ -263,7 +269,7 @@ export default function Sessions() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                         <div className="p-4 bg-muted/40 rounded-md border border-border">
                             <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Risk Profile</div>
                             <div className="font-medium text-sm">{activeSession.config_json?.risk_profile || 'MODERATE'}</div>
@@ -284,6 +290,11 @@ export default function Sessions() {
                                 View Stats <ArrowRight className="w-3 h-3" />
                             </Link>
                         </div>
+                    </div>
+
+                    {/* Live Trade Feed */}
+                    <div className="mt-6">
+                        <LiveTradeFeed />
                     </div>
                 </div>
             ) : (

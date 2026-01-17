@@ -238,6 +238,27 @@ function integrateTradingEvents(): void {
     });
 
     // -------------------------------------------------------------------------
+    // ExecutionCore: TRADE_SETTLED → WebSocket clients
+    // Fixes Live Feed: Settlement details now reach the UI
+    // -------------------------------------------------------------------------
+    executionCore.on('TRADE_SETTLED', (result) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        logger.info('Forwarding TRADE_SETTLED to WebSocket', {
+            service: 'WSIntegration',
+            sessionId: result.sessionId,
+            tradeId: result.tradeId,
+            profit: result.profit,
+            status: result.status
+        });
+
+        // Use generic emitToSession or specific method if exists
+        // Since WebSocketServer.ts might not have emitTradeSettled, using generic emitToSession
+        wsServer.emitToSession(result.sessionId, 'TRADE_SETTLED', result);
+    });
+
+    // -------------------------------------------------------------------------
     // QuantEngine: signal → WebSocket clients
     // Fixes Critical Bug #2: Signals now reach the UI
     // -------------------------------------------------------------------------
