@@ -51,14 +51,54 @@ router.post('/logout', (_req: Request, res: Response) => {
 });
 
 // GET /auth/session - Check current session status (cookie-based)
+// GET /auth/session - Check current session status (cookie-based)
 router.get('/session', requireAuth, async (req: AuthRequest, res: Response) => {
     if (!req.user) {
         res.status(401).json({ authenticated: false });
         return;
     }
 
-    const accounts = await UserService.listDerivAccounts(req.user.id);
+    let accounts = await UserService.listDerivAccounts(req.user.id);
     const activeAccountId = await UserService.getActiveAccountId(req.user.id);
+
+    // LIVE SYNC: Attempt to fetch fresh balance for active account
+    if (activeAccountId) {
+        try {
+            const token = await UserService.getDerivTokenForAccount(req.user.id, activeAccountId);
+            if (token) {
+                const client = new DerivWSClient();
+                // Short timeout for sync to avoid blocking UI
+                await new Promise<void>((resolve, reject) => {
+                    const t = setTimeout(() => reject(new Error('Timeout')), 3000);
+                    client.once('connected', () => { clearTimeout(t); resolve(); });
+                    client.connect();
+                });
+
+                const derivData = await client.authorize(token);
+                client.disconnect();
+
+                if (derivData) {
+                    // Update DB with fresh data
+                    await UserService.storeDerivToken({
+                        userId: req.user.id,
+                        derivToken: token, // Re-encrypt/store (optimized upsert)
+                        accountId: activeAccountId,
+                        currency: derivData.currency,
+                        isVirtual: Boolean(derivData.is_virtual),
+                        fullname: derivData.fullname,
+                        email: derivData.email,
+                        lastBalance: Number(derivData.balance)
+                    });
+
+                    // Refresh accounts list after update
+                    accounts = await UserService.listDerivAccounts(req.user.id);
+                }
+            }
+        } catch (err) {
+            logger.warn('Failed to sync live balance', { userId: req.user.id, error: err instanceof Error ? err.message : 'Unknown' });
+            // Fallback to existing DB data (accounts variable)
+        }
+    }
 
     // Return user info without sensitive data
     res.json({
@@ -164,7 +204,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
             const accountIsVirtual = acc.is_virtual ?? (isPrimaryAccount ? derivAccount?.is_virtual : undefined);
             const accountFullname = acc.fullname || (isPrimaryAccount ? derivAccount?.fullname : undefined);
             const accountBalance = isPrimaryAccount ? Number(derivAccount?.balance || 0) : undefined;
-            
+
             await UserService.storeDerivToken({
                 userId: user.id,
                 derivToken: acc.token,
@@ -227,7 +267,7 @@ router.post('/switch-account', requireAuth, validateAccountSwitch, async (req: A
     try {
         // Verify user has access to this account by checking stored tokens
         const token = await UserService.getDerivTokenForAccount(userId, account_id);
-        
+
         if (!token) {
             res.status(403).json({ error: 'Account not linked to this user' });
             return;

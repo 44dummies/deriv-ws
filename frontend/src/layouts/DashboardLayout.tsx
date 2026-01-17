@@ -15,6 +15,7 @@ import {
 import { useAuthStore } from '../stores/useAuthStore';
 import { useThemeStore } from '../stores/useThemeStore';
 import { cn } from '../lib/utils';
+import AccountSwitcher from '../components/AccountSwitcher';
 
 export default function DashboardLayout() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -128,13 +129,18 @@ export default function DashboardLayout() {
                 </div>
             )}
 
+
             {/* Main Content */}
             <main className="flex-1 overflow-y-auto pt-20 md:pt-0">
-                <div className="border-b border-border bg-background/95 sticky top-0 z-10">
-                    <div className="px-6 md:px-10 py-3 flex items-center justify-between text-xs text-muted-foreground">
-                        {!isProduction && <div>Environment: {import.meta.env.MODE}</div>}
-                        <div className={isProduction ? '' : ''}>{isProduction ? '' : null}</div>
-                        <div>Account: {user?.active_account_id || '—'}</div>
+                <div className="border-b border-border bg-background/95 sticky top-0 z-10 backdrop-blur-sm">
+                    <div className="px-6 md:px-10 py-3 flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground flex items-center gap-4">
+                            {!isProduction && <div className="px-2 py-0.5 rounded bg-muted font-mono">DEV: {import.meta.env.MODE}</div>}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <AccountSwitcher />
+                        </div>
                     </div>
                 </div>
                 <div className="p-6 md:p-10 max-w-7xl mx-auto min-h-full">
