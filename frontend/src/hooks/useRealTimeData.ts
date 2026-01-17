@@ -38,9 +38,9 @@ export const useRealTimeData = (sessionId: string) => {
             addRiskEvent(data.payload);
         };
 
-        const onStatusChange = (status: 'ACTIVE' | 'PAUSED' | 'COMPLETED') => {
-            console.log('Hook: Session status changed', status);
-            useRealTimeStore.getState().setSessionStatus(status);
+        const onStatusChange = (data: { payload: { status: 'ACTIVE' | 'PAUSED' | 'COMPLETED'; reason?: string } }) => {
+            console.log('Hook: Session status changed', data.payload.status);
+            useRealTimeStore.getState().setSessionStatus(data.payload.status);
         };
 
         // Listeners

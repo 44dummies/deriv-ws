@@ -36,6 +36,7 @@ export {
     SignalEmittedPayloadSchema,
     TradeExecutedPayloadSchema,
     RiskApprovedPayloadSchema,
+    SessionStatusUpdatePayloadSchema,
     SessionTerminatedPayloadSchema,
     type WebSocketEventTypeName,
     type WebSocketEvent,
@@ -44,6 +45,7 @@ export {
     type SignalEmittedPayload,
     type TradeExecutedPayload,
     type RiskApprovedPayload,
+    type SessionStatusUpdatePayload,
     type SessionTerminatedPayload,
 } from './events.js';
 

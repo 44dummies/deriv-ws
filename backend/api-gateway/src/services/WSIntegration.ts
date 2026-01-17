@@ -1,6 +1,7 @@
 /**
  * TraderMind WebSocket Integration
  * Wires MarketDataService events to SessionRegistry
+ * Wires ExecutionCore, QuantEngine, and RiskGuard events to WebSocket clients
  * Includes circuit breaker safety layer with auto-resume
  */
 
@@ -8,7 +9,12 @@ import { EventEmitter } from 'eventemitter3';
 import { marketDataService } from './MarketDataService.js';
 import { sessionRegistry } from './SessionRegistry.js';
 import { derivWSClient } from './DerivWSClient.js';
+import { executionCore, TradeResult } from './ExecutionCore.js';
+import { riskGuard, RiskCheck } from './RiskGuard.js';
+import { quantEngine, Signal } from './QuantEngine.js';
+import { getWebSocketServer } from './WebSocketServer.js';
 import { logger } from '../utils/logger.js';
+
 
 // =============================================================================
 // TYPES
@@ -192,16 +198,181 @@ class SafetyLayer extends EventEmitter<SafetyLayerEvents> {
 }
 
 // =============================================================================
+// TRADING EVENT INTEGRATION
+// =============================================================================
+
+let tradingEventsWired = false;
+
+/**
+ * Wire trading pipeline events to WebSocket clients.
+ * This is the CRITICAL integration that enables real-time UI updates.
+ */
+function integrateTradingEvents(): void {
+    if (tradingEventsWired) {
+        logger.info('Trading events already wired, skipping', { service: 'WSIntegration' });
+        return;
+    }
+    tradingEventsWired = true;
+
+    logger.info('Wiring trading pipeline events to WebSocket', { service: 'WSIntegration' });
+
+    // -------------------------------------------------------------------------
+    // ExecutionCore: TRADE_EXECUTED → WebSocket clients
+    // Fixes Critical Bug #1: Trade executions now reach the UI
+    // -------------------------------------------------------------------------
+    executionCore.on('TRADE_EXECUTED', (result: TradeResult) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) {
+            logger.warn('WebSocket server not available for trade event', { service: 'WSIntegration' });
+            return;
+        }
+
+        logger.info('Forwarding TRADE_EXECUTED to WebSocket', {
+            service: 'WSIntegration',
+            sessionId: result.sessionId,
+            tradeId: result.tradeId,
+            status: result.status
+        });
+
+        wsServer.emitTradeExecuted(result.sessionId, result.userId, result);
+    });
+
+    // -------------------------------------------------------------------------
+    // QuantEngine: signal → WebSocket clients
+    // Fixes Critical Bug #2: Signals now reach the UI
+    // -------------------------------------------------------------------------
+    quantEngine.on('signal', (signal: Signal) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        // Determine which sessions should receive this signal
+        // Signal needs to be sent to all active sessions that subscribe to this market
+        const activeSessions = sessionRegistry.getActiveSessions();
+        for (const session of activeSessions) {
+            if (session.config_json?.allowed_markets?.includes(signal.market)) {
+                logger.debug('Forwarding signal to session', {
+                    service: 'WSIntegration',
+                    sessionId: session.id,
+                    signalType: signal.type,
+                    market: signal.market
+                });
+                wsServer.emitSignal(session.id, signal);
+            }
+        }
+    });
+
+    // AI signals follow the same pattern
+    quantEngine.on('ai_signal', (signal: Signal) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        const activeSessions = sessionRegistry.getActiveSessions();
+        for (const session of activeSessions) {
+            if (session.config_json?.allowed_markets?.includes(signal.market)) {
+                logger.debug('Forwarding AI signal to session', {
+                    service: 'WSIntegration',
+                    sessionId: session.id,
+                    signalType: signal.type,
+                    market: signal.market,
+                    isAI: true
+                });
+                wsServer.emitSignal(session.id, { ...signal, source: 'AI' });
+            }
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // RiskGuard: risk_check_completed → WebSocket clients
+    // Fixes Critical Bug #3: Risk events now reach the UI
+    // -------------------------------------------------------------------------
+    riskGuard.on('risk_check_completed', (check: RiskCheck) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        logger.debug('Forwarding risk check to WebSocket', {
+            service: 'WSIntegration',
+            sessionId: check.sessionId,
+            result: check.result
+        });
+
+        // Emit risk approved or rejected based on result
+        if (check.result === 'APPROVED') {
+            wsServer.emitRiskApproved(check.sessionId, check);
+        } else {
+            // Emit rejected as well - use the session emit for flexibility
+            wsServer.emitToSession(check.sessionId, 'RISK_REJECTED', {
+                session_id: check.sessionId,
+                user_id: check.userId,
+                reason: check.reason,
+                signal: check.proposedTrade,
+                rejected_at: new Date().toISOString()
+            });
+        }
+    });
+
+    // -------------------------------------------------------------------------
+    // Session Status Updates
+    // Fixes Wiring Issue #1: session_status_update now emitted
+    // -------------------------------------------------------------------------
+    safetyLayer.on('session_paused', (sessionId: string, reason: string) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        wsServer.emitToSession(sessionId, 'SESSION_UPDATED', {
+            session_id: sessionId,
+            status: 'PAUSED',
+            reason,
+            updated_at: new Date().toISOString()
+        });
+
+        // Also emit the specific event the frontend listens for
+        wsServer.getIO().to(`session:${sessionId}`).emit('session_status_update', {
+            type: 'SESSION_STATUS_UPDATE',
+            payload: { status: 'PAUSED', reason },
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    safetyLayer.on('session_resumed', (sessionId: string) => {
+        const wsServer = getWebSocketServer();
+        if (!wsServer) return;
+
+        wsServer.emitToSession(sessionId, 'SESSION_UPDATED', {
+            session_id: sessionId,
+            status: 'ACTIVE',
+            updated_at: new Date().toISOString()
+        });
+
+        // Also emit the specific event the frontend listens for
+        wsServer.getIO().to(`session:${sessionId}`).emit('session_status_update', {
+            type: 'SESSION_STATUS_UPDATE',
+            payload: { status: 'ACTIVE' },
+            timestamp: new Date().toISOString()
+        });
+    });
+
+    logger.info('Trading event wiring complete', { service: 'WSIntegration' });
+}
+
+// =============================================================================
 // EXPORTS
 // =============================================================================
 
 export const safetyLayer = new SafetyLayer();
 
-// Convenience function for backward compatibility
+/**
+ * Main integration function - wires ALL WebSocket integrations.
+ * Call this once during server startup after WebSocket server is initialized.
+ */
 export function integrateWSWithSessions(): void {
+    // Wire safety layer (circuit breaker, market data events)
     safetyLayer.integrate();
+
+    // Wire trading pipeline events (CRITICAL for real-time UI)
+    integrateTradingEvents();
 }
 
 export function getIntegrationStats() {
     return safetyLayer.getStats();
 }
+

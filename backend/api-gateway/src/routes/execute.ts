@@ -29,6 +29,7 @@ interface ManualTradeRequest {
     stake: number;
     duration: number; // in minutes
     durationUnit?: 'm' | 's' | 'h' | 'd' | 't'; // default 'm' (minutes)
+    idempotencyKey?: string; // Client-provided key to prevent duplicate trades
 }
 
 /**
@@ -101,8 +102,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
             }
         } catch (authError) {
             derivClient.disconnect();
-            return res.status(401).json({ 
-                error: 'Deriv authorization failed', 
+            return res.status(401).json({
+                error: 'Deriv authorization failed',
                 details: authError instanceof Error ? authError.message : 'Unknown error'
             });
         }
@@ -124,8 +125,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
             buyResponse = await derivClient.buyContract(contractParams);
         } catch (buyError) {
             derivClient.disconnect();
-            return res.status(500).json({ 
-                error: 'Trade execution failed', 
+            return res.status(500).json({
+                error: 'Trade execution failed',
                 details: buyError instanceof Error ? buyError.message : 'Unknown error'
             });
         }
@@ -143,7 +144,7 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
 
         // Get or create active session for this user
         let sessionId: string | null = null;
-        
+
         const { data: activeSessions } = await supabase
             .from('sessions')
             .select('id')
@@ -160,9 +161,9 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
                 .insert({
                     admin_id: userId,
                     status: 'ACTIVE',
-                    config_json: { 
-                        type: 'MANUAL', 
-                        risk_profile: 'USER_CONTROLLED' 
+                    config_json: {
+                        type: 'MANUAL',
+                        risk_profile: 'USER_CONTROLLED'
                     },
                     started_at: new Date().toISOString()
                 })
@@ -174,6 +175,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
 
         // Persist trade to database
         const tradeId = crypto.randomUUID();
+        const { idempotencyKey } = req.body as ManualTradeRequest;
+
         const { data: trade, error: tradeError } = await supabase
             .from('trades')
             .insert({
@@ -187,6 +190,7 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
                 contract_id: contractId.toString(),
                 deriv_transaction_id: transactionId?.toString(),
                 entry_price: buyPrice,
+                idempotency_key: idempotencyKey || null, // For retry safety
                 metadata_json: {
                     duration,
                     duration_unit: durationUnit,
@@ -227,8 +231,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
 
     } catch (error) {
         logger.error('TradeExecution unexpected error', { error });
-        return res.status(500).json({ 
-            error: 'Internal server error', 
+        return res.status(500).json({
+            error: 'Internal server error',
             details: error instanceof Error ? error.message : 'Unknown error'
         });
     }
@@ -239,8 +243,8 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
  * TODO: Add proper contract subscription method to DerivWSClient
  */
 async function monitorContractSettlement(
-    derivClient: DerivWSClient, 
-    contractId: number, 
+    derivClient: DerivWSClient,
+    contractId: number,
     tradeId: string
 ): Promise<void> {
     try {
@@ -250,7 +254,7 @@ async function monitorContractSettlement(
             if (settledContractId === contractId) {
                 // FIX: Use WON/LOST to match DB constraint, not WIN/LOSS
                 const status = result === 'win' ? 'WON' : 'LOST';
-                
+
                 await supabase
                     .from('trades')
                     .update({
@@ -261,7 +265,7 @@ async function monitorContractSettlement(
                     .eq('id', tradeId);
 
                 logger.info('TradeExecution contract settled', { contractId, status, profit });
-                
+
                 // Disconnect after settlement
                 derivClient.disconnect();
             }

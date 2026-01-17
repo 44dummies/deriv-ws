@@ -1,0 +1,10 @@
+services:
+  vite:
+    image: vite
+    build:
+      context: frontend/node_modules/vite
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+    ports:
+      - 3000:3000

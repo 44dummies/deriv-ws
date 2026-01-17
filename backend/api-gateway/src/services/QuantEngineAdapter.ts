@@ -63,19 +63,29 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     // LIFECYCLE
     // ---------------------------------------------------------------------------
 
+    // Stored listener references for cleanup
+    private boundHandlers: {
+        tickReceived?: (tick: NormalizedTick) => void;
+        signal?: (signal: Signal) => void;
+    } = {};
+
     start(config?: SessionConfig): void {
         if (this._isRunning) return;
         this._isRunning = true;
         this.activeConfig = config;
 
-        // Subscribe to MarketDataService ticks
-        marketDataService.on('tick_received', this.handleTickReceived.bind(this));
-
-        // Wire QuantEngine signals
-        quantEngine.on('signal', (signal: Signal) => {
+        // Create and store bound handlers for later removal
+        this.boundHandlers.tickReceived = this.handleTickReceived.bind(this);
+        this.boundHandlers.signal = (signal: Signal) => {
             this.signalsGenerated++;
             this.emit('signal', signal);
-        });
+        };
+
+        // Subscribe to MarketDataService ticks
+        marketDataService.on('tick_received', this.boundHandlers.tickReceived);
+
+        // Wire QuantEngine signals
+        quantEngine.on('signal', this.boundHandlers.signal);
 
         // Start batch processor
         this.processTimer = setInterval(() => {
@@ -91,6 +101,17 @@ export class QuantEngineAdapter extends EventEmitter<QuantAdapterEvents> {
     stop(): void {
         if (!this._isRunning) return;
         this._isRunning = false;
+
+        // Remove event listeners to prevent memory leaks
+        if (this.boundHandlers.tickReceived) {
+            marketDataService.off('tick_received', this.boundHandlers.tickReceived);
+        }
+        if (this.boundHandlers.signal) {
+            quantEngine.off('signal', this.boundHandlers.signal);
+        }
+
+        // Clear handler references
+        this.boundHandlers = {};
 
         if (this.processTimer) {
             clearInterval(this.processTimer);

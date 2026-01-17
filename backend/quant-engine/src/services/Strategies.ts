@@ -1,4 +1,4 @@
-/**
+55/**
  * TraderMind Trading Strategies
  * Comprehensive strategy library for Jump and Volatility indices
  * 

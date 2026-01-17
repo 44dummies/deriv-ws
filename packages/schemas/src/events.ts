@@ -28,7 +28,8 @@ export const WebSocketEventType = {
 export type WebSocketEventTypeName = keyof typeof WebSocketEventType;
 
 // ============================================================
-// EVENT PAYLOADS
+// EVENT PAYLOADS (Updated for flattened structure)
+// The payload IS the entity itself, not wrapped
 // ============================================================
 
 export const SessionCreatedPayloadSchema = z.object({
@@ -40,21 +41,41 @@ export const SessionJoinedPayloadSchema = z.object({
     session_id: z.string(),
 });
 
-export const SignalEmittedPayloadSchema = z.object({
-    signal: SignalSchema,
-    session_id: z.string(),
+// Signal payload IS the signal itself (flattened)
+export const SignalEmittedPayloadSchema = SignalSchema.extend({
+    source: z.enum(['RULE', 'AI']).optional(),
+    expiry: z.string().optional(),
 });
 
+// Trade payload IS the trade result itself (flattened)
 export const TradeExecutedPayloadSchema = z.object({
-    trade: TradeResultSchema,
-    session_id: z.string(),
-    user_id: z.string(),
+    tradeId: z.string(),
+    userId: z.string(),
+    sessionId: z.string(),
+    status: z.enum(['SUCCESS', 'FAILED', 'PARTIAL']),
+    profit: z.number(),
+    executedAt: z.string(),
+    metadata_json: z.object({
+        market: z.string(),
+        entryPrice: z.number().optional(),
+        reason: z.string().optional(),
+        risk_confidence: z.number().optional(),
+        contract_id: z.union([z.number(), z.string()]).optional(),
+        deriv_ref: z.union([z.number(), z.string()]).optional(),
+    }),
 });
 
+// Risk payload matches frontend RiskRiskPayload
 export const RiskApprovedPayloadSchema = z.object({
-    signal: SignalSchema,
-    session_id: z.string(),
-    approved_at: z.string(),
+    checkPassed: z.boolean(),
+    reason: z.string().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+// Session status update (new event for frontend)
+export const SessionStatusUpdatePayloadSchema = z.object({
+    status: z.enum(['ACTIVE', 'PAUSED', 'COMPLETED']),
+    reason: z.string().optional(),
 });
 
 export const SessionTerminatedPayloadSchema = z.object({
@@ -68,6 +89,7 @@ export type SessionJoinedPayload = z.infer<typeof SessionJoinedPayloadSchema>;
 export type SignalEmittedPayload = z.infer<typeof SignalEmittedPayloadSchema>;
 export type TradeExecutedPayload = z.infer<typeof TradeExecutedPayloadSchema>;
 export type RiskApprovedPayload = z.infer<typeof RiskApprovedPayloadSchema>;
+export type SessionStatusUpdatePayload = z.infer<typeof SessionStatusUpdatePayloadSchema>;
 export type SessionTerminatedPayload = z.infer<typeof SessionTerminatedPayloadSchema>;
 
 // ============================================================

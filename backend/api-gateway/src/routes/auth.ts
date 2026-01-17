@@ -14,6 +14,15 @@ import { logger } from '../utils/logger.js';
 
 const router = Router();
 
+type DerivAccountPayload = {
+    accountId: string;
+    token: string;
+    currency?: string;
+    is_virtual?: boolean;
+    fullname?: string;
+    email?: string;
+};
+
 // Cookie configuration for JWT
 // NOTE: sameSite 'none' required for cross-origin (Vercel frontend -> Railway backend)
 // SECURITY: Always use secure + sameSite=none in Railway/Vercel deployment (cross-origin)
@@ -91,7 +100,7 @@ router.post('/deriv/callback', async (req: Request, res: Response) => {
     // Determine which format was used
     let primaryToken: string;
     let primaryAccountId: string;
-    let allAccounts: { accountId: string; token: string; currency?: string; is_virtual?: boolean; fullname?: string; email?: string }[] = [];
+    let allAccounts: DerivAccountPayload[] = [];
 
     if (accounts && Array.isArray(accounts) && accounts.length > 0) {
         // New secure format

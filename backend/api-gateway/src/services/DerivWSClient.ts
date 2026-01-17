@@ -284,7 +284,11 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
 
         // Step 1: Get proposal first (required by Deriv API)
         const proposal = await this.getProposal(parameters);
-        logger.info('Got proposal', { service: 'DerivWSClient', proposalId: proposal.proposal_id, askPrice: proposal.ask_price });
+        logger.info('Got proposal', {
+            service: 'DerivWSClient',
+            proposalId: proposal.proposal_id,
+            askPrice: proposal.ask_price
+        });
 
         // Step 2: Buy using proposal_id
         const buyPayload = {
@@ -451,8 +455,14 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     }
 
     private stopHeartbeat(): void {
-        if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
-        if (this.heartbeatTimeoutTimer) { clearTimeout(this.heartbeatTimeoutTimer); this.heartbeatTimeoutTimer = null; }
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+        if (this.heartbeatTimeoutTimer) {
+            clearTimeout(this.heartbeatTimeoutTimer);
+            this.heartbeatTimeoutTimer = null;
+        }
     }
 
     private sendPing(): void {
@@ -468,7 +478,10 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
     }
 
     private handlePong(): void {
-        if (this.heartbeatTimeoutTimer) { clearTimeout(this.heartbeatTimeoutTimer); this.heartbeatTimeoutTimer = null; }
+        if (this.heartbeatTimeoutTimer) {
+            clearTimeout(this.heartbeatTimeoutTimer);
+            this.heartbeatTimeoutTimer = null;
+        }
         this.emit('heartbeat', Date.now() - this.lastPingSent);
     }
 
@@ -588,8 +601,13 @@ export class DerivWSClient extends EventEmitter<DerivWSEvents> implements IDeriv
         if (sub) {
             sub.lastTickEpoch = epoch;
             sub.isActive = true;
-            if (message.subscription?.id) sub.subscriptionId = message.subscription.id;
-            if (!sub.subscriptionId && message.subscription?.id) {
+
+            // Emit 'subscribed' only when we first receive a subscription ID
+            const wasUnsubscribed = !sub.subscriptionId;
+            if (message.subscription?.id) {
+                sub.subscriptionId = message.subscription.id;
+            }
+            if (wasUnsubscribed && sub.subscriptionId) {
                 logger.info('Subscribed to symbol', { service: 'DerivWSClient', symbol });
                 this.emit('subscribed', symbol);
             }

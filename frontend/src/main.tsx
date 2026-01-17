@@ -30,8 +30,15 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     });
 }
 
+type ErrorFallbackProps = {
+    error: unknown;
+    componentStack: string;
+    eventId: string;
+    resetError: () => void;
+};
+
 // Error fallback component for Sentry ErrorBoundary
-function ErrorFallback({ error, componentStack, resetError }: { error: unknown; componentStack: string; eventId: string; resetError: () => void }) {
+function ErrorFallback({ error, componentStack, resetError }: ErrorFallbackProps) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-8">

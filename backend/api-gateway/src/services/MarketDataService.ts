@@ -100,24 +100,43 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     // LIFECYCLE
     // ---------------------------------------------------------------------------
 
+    // Stored listener references for cleanup
+    private boundHandlers: {
+        tick?: (tick: Tick) => void;
+        heartbeat?: () => void;
+        circuitBreaker?: (reason: string) => void;
+        disconnected?: (reason: string) => void;
+        subscribed?: (market: string) => void;
+        unsubscribed?: (market: string) => void;
+    } = {};
+
     start(): void {
         if (this._isRunning) return;
         this._isRunning = true;
 
-        derivWSClient.on('tick', (tick: Tick) => this.handleTick(tick));
-        derivWSClient.on('heartbeat', () => this.handleHeartbeat());
-        derivWSClient.on('circuitBreaker', (reason: string) => this.handleCircuitBreaker(reason));
-        derivWSClient.on('disconnected', (reason: string) => this.handleDisconnect(reason));
-        derivWSClient.on('subscribed', (market: string) => {
+        // Create and store bound handlers for later removal
+        this.boundHandlers.tick = (tick: Tick) => this.handleTick(tick);
+        this.boundHandlers.heartbeat = () => this.handleHeartbeat();
+        this.boundHandlers.circuitBreaker = (reason: string) => this.handleCircuitBreaker(reason);
+        this.boundHandlers.disconnected = (reason: string) => this.handleDisconnect(reason);
+        this.boundHandlers.subscribed = (market: string) => {
             this.activeSubscriptions.add(market);
             this.emit('subscribed', market);
             logger.info('Subscribed to market', { service: 'MarketDataService', market });
-        });
-        derivWSClient.on('unsubscribed', (market: string) => {
+        };
+        this.boundHandlers.unsubscribed = (market: string) => {
             this.activeSubscriptions.delete(market);
             this.emit('unsubscribed', market);
             logger.info('Unsubscribed from market', { service: 'MarketDataService', market });
-        });
+        };
+
+        // Attach listeners
+        derivWSClient.on('tick', this.boundHandlers.tick);
+        derivWSClient.on('heartbeat', this.boundHandlers.heartbeat);
+        derivWSClient.on('circuitBreaker', this.boundHandlers.circuitBreaker);
+        derivWSClient.on('disconnected', this.boundHandlers.disconnected);
+        derivWSClient.on('subscribed', this.boundHandlers.subscribed);
+        derivWSClient.on('unsubscribed', this.boundHandlers.unsubscribed);
 
         derivWSClient.connect();
         logger.info('Started', { service: 'MarketDataService' });
@@ -126,6 +145,17 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
     stop(): void {
         if (!this._isRunning) return;
         this._isRunning = false;
+
+        // Remove event listeners to prevent memory leaks
+        if (this.boundHandlers.tick) derivWSClient.off('tick', this.boundHandlers.tick);
+        if (this.boundHandlers.heartbeat) derivWSClient.off('heartbeat', this.boundHandlers.heartbeat);
+        if (this.boundHandlers.circuitBreaker) derivWSClient.off('circuitBreaker', this.boundHandlers.circuitBreaker);
+        if (this.boundHandlers.disconnected) derivWSClient.off('disconnected', this.boundHandlers.disconnected);
+        if (this.boundHandlers.subscribed) derivWSClient.off('subscribed', this.boundHandlers.subscribed);
+        if (this.boundHandlers.unsubscribed) derivWSClient.off('unsubscribed', this.boundHandlers.unsubscribed);
+
+        // Clear handler references
+        this.boundHandlers = {};
 
         for (const timer of this.tickTimeoutTimers.values()) {
             clearTimeout(timer);
@@ -136,6 +166,7 @@ export class MarketDataService extends EventEmitter<MarketDataEvents> {
         derivWSClient.disconnect();
         logger.info('Stopped', { service: 'MarketDataService' });
     }
+
 
     // ---------------------------------------------------------------------------
     // SUBSCRIPTION MANAGEMENT

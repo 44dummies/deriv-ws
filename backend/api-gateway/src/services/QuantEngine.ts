@@ -71,7 +71,14 @@ export interface IndicatorValues {
 type QuantEngineEvents = {
     signal: (signal: Signal) => void;
     ai_signal: (signal: Signal, aiResponse: AIInferenceResponse) => void;
-    shadow_signal: (modelId: string, aiResponse: AIInferenceResponse, inputHash: string, market: string, sessionId: string, entryPrice: number) => void;
+    shadow_signal: (
+        modelId: string,
+        aiResponse: AIInferenceResponse,
+        inputHash: string,
+        market: string,
+        sessionId: string,
+        entryPrice: number
+    ) => void;
     ai_fallback: (reason: string) => void;
     indicators: (market: string, indicators: IndicatorValues) => void;
 };
@@ -190,7 +197,11 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         if (config?.useAI) {
             // Processing async but not waiting to block tick loop
             this.processTickWithAI(tick, indicators, config).catch(err => {
-                logger.error('AI processing error', { service: 'QuantEngine' }, err instanceof Error ? err : undefined);
+                logger.error(
+                    'AI processing error',
+                    { service: 'QuantEngine' },
+                    err instanceof Error ? err : undefined
+                );
             });
         }
 
@@ -247,7 +258,11 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
                     // >>> SHADOW MODE INJECTION <<<
                     // Run candidates asynchronously without blocking main thread
                     this.executeShadowModels(tick, indicators, sessionId, inputHash).catch(err => {
-                        logger.error('Shadow execution error', { service: 'QuantEngine' }, err instanceof Error ? err : undefined);
+                        logger.error(
+                            'Shadow execution error',
+                            { service: 'QuantEngine' },
+                            err instanceof Error ? err : undefined
+                        );
                     });
 
                     // Check minimum confidence
@@ -289,19 +304,44 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
                 if (shadowResponse) {
                     // Check if it's actually in Shadow Mode (Backend confirms)
                     if (shadowResponse.mode === 'SHADOW') {
-                        logger.info('Shadow signal generated', { service: 'QuantEngine', modelId, signalBias: shadowResponse.signal_bias, confidence: shadowResponse.confidence });
+                        logger.info('Shadow signal generated', {
+                            service: 'QuantEngine',
+                            modelId,
+                            signalBias: shadowResponse.signal_bias,
+                            confidence: shadowResponse.confidence
+                        });
 
                         // Emit event for persistence
-                        this.emit('shadow_signal', modelId, shadowResponse, inputHash, tick.market, sessionId, tick.quote);
+                        this.emit(
+                            'shadow_signal',
+                            modelId,
+                            shadowResponse,
+                            inputHash,
+                            tick.market,
+                            sessionId,
+                            tick.quote
+                        );
 
                         // Log hash for parity check
-                        if (shadowResponse.request_hash && shadowResponse.request_hash !== inputHash && shadowResponse.request_hash !== 'hash_placeholder') {
-                            logger.warn('Parity mismatch detected', { service: 'QuantEngine', sentHash: inputHash.substring(0, 8), recvHash: shadowResponse.request_hash.substring(0, 8) });
+                        if (
+                            shadowResponse.request_hash &&
+                            shadowResponse.request_hash !== inputHash &&
+                            shadowResponse.request_hash !== 'hash_placeholder'
+                        ) {
+                            logger.warn('Parity mismatch detected', {
+                                service: 'QuantEngine',
+                                sentHash: inputHash.substring(0, 8),
+                                recvHash: shadowResponse.request_hash.substring(0, 8)
+                            });
                         }
                     }
                 }
             } catch (err) {
-                logger.warn('Shadow execution failed', { service: 'QuantEngine', modelId }, err instanceof Error ? err : undefined);
+                logger.warn(
+                    'Shadow execution failed',
+                    { service: 'QuantEngine', modelId },
+                    err instanceof Error ? err : undefined
+                );
             }
         });
 
@@ -487,11 +527,18 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         if (rsi < thresholds.rsi.oversold) {
             type = 'CALL';
             reason = 'RSI_OVERSOLD';
-            confidence = (thresholds.rsi.oversold - rsi) / thresholds.rsi.oversold * thresholds.confidence.baseMultiplier + thresholds.confidence.baseOffset;
+            confidence =
+                ((thresholds.rsi.oversold - rsi) / thresholds.rsi.oversold) *
+                    thresholds.confidence.baseMultiplier +
+                thresholds.confidence.baseOffset;
         } else if (rsi > thresholds.rsi.overbought) {
             type = 'PUT';
             reason = 'RSI_OVERBOUGHT';
-            confidence = (rsi - thresholds.rsi.overbought) / (100 - thresholds.rsi.overbought) * thresholds.confidence.baseMultiplier + thresholds.confidence.baseOffset;
+            confidence =
+                ((rsi - thresholds.rsi.overbought) /
+                    (100 - thresholds.rsi.overbought)) *
+                    thresholds.confidence.baseMultiplier +
+                thresholds.confidence.baseOffset;
         }
 
         // EMA crossover signals (stronger than RSI)
@@ -502,13 +549,19 @@ export class QuantEngine extends EventEmitter<QuantEngineEvents> {
         if (prevFast <= prevSlow && emaFast > emaSlow) {
             type = 'CALL';
             reason = 'EMA_CROSS_UP';
-            confidence = Math.min(thresholds.confidence.crossMax, 0.7 + Math.abs(momentum) * thresholds.weights.momentum);
+            confidence = Math.min(
+                thresholds.confidence.crossMax,
+                0.7 + Math.abs(momentum) * thresholds.weights.momentum
+            );
         }
         // Bearish crossover: fast crosses below slow
         else if (prevFast >= prevSlow && emaFast < emaSlow) {
             type = 'PUT';
             reason = 'EMA_CROSS_DOWN';
-            confidence = Math.min(thresholds.confidence.crossMax, 0.7 + Math.abs(momentum) * thresholds.weights.momentum);
+            confidence = Math.min(
+                thresholds.confidence.crossMax,
+                0.7 + Math.abs(momentum) * thresholds.weights.momentum
+            );
         }
 
         // Adjust confidence based on volatility

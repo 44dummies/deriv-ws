@@ -84,7 +84,7 @@ export class WebSocketServer {
             try {
                 // Verify JWT token using AuthService
                 const payload = await AuthService.verifySessionToken(token);
-                
+
                 if (payload) {
                     socket.userId = payload.userId;
                     socket.userEmail = payload.email;
@@ -97,7 +97,7 @@ export class WebSocketServer {
                 // Token verification failed
                 logger.warn('Invalid token for socket', { socketId: socket.id });
                 return next(new Error('Invalid or expired token'));
-                
+
             } catch (error) {
                 logger.error('Auth error', { socketId: socket.id }, error instanceof Error ? error : undefined);
                 return next(new Error('Authentication failed'));
@@ -298,34 +298,36 @@ export class WebSocketServer {
 
     /**
      * Emit SIGNAL_EMITTED event
+     * Payload shape fixed to match frontend expectation (data.payload = signal)
      */
     emitSignal(sessionId: string, signal: unknown): void {
-        this.emitToSession(sessionId, 'SIGNAL_EMITTED', {
-            session_id: sessionId,
-            signal,
-        });
+        // Frontend expects data.payload to BE the signal object itself
+        this.emitToSession(sessionId, 'SIGNAL_EMITTED', signal);
     }
 
     /**
      * Emit TRADE_EXECUTED event
+     * Payload shape fixed to match frontend expectation (data.payload = trade)
      */
     emitTradeExecuted(sessionId: string, userId: string, trade: unknown): void {
-        this.emitToSession(sessionId, 'TRADE_EXECUTED', {
-            session_id: sessionId,
-            user_id: userId,
-            trade,
-        });
+        // Frontend expects data.payload to BE the trade object itself
+        // userId is already part of the trade object (TradeResult)
+        this.emitToSession(sessionId, 'TRADE_EXECUTED', trade);
     }
 
     /**
      * Emit RISK_APPROVED event
+     * Payload shape fixed to match frontend expectation
      */
-    emitRiskApproved(sessionId: string, signal: unknown): void {
-        this.emitToSession(sessionId, 'RISK_APPROVED', {
-            session_id: sessionId,
-            signal,
-            approved_at: new Date().toISOString(),
-        });
+    emitRiskApproved(sessionId: string, riskCheck: unknown): void {
+        // Frontend expects: { checkPassed: boolean, reason?: string, metadata?: ... }
+        const check = riskCheck as { result: string; reason?: string; meta?: Record<string, unknown> };
+        const payload = {
+            checkPassed: check.result === 'APPROVED',
+            reason: check.reason,
+            metadata: check.meta
+        };
+        this.emitToSession(sessionId, 'RISK_APPROVED', payload);
     }
 
     /**
