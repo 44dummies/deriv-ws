@@ -19,9 +19,12 @@ const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 // Safe methods that don't need CSRF protection
 const SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
 
-// Paths that are exempt from CSRF (webhooks, OAuth callbacks)
+// Paths that are exempt from CSRF (webhooks, OAuth callbacks, JWT-authenticated routes)
+// NOTE: These routes use JWT Bearer token authentication which provides CSRF protection
 const EXEMPT_PATHS = [
     '/api/v1/auth/deriv/callback',
+    '/api/v1/sessions',  // Uses JWT auth
+    '/api/v1/trades',    // Uses JWT auth  
     '/webhook',
     '/health'
 ];
