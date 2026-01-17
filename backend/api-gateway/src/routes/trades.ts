@@ -7,9 +7,42 @@ import { Router, Response } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { requireAuth, AuthRequest } from '../middleware/auth.js';
 import { validatePagination } from '../middleware/validation.js';
+import { settlementSyncService } from '../services/SettlementSyncService.js';
 import { logger } from '../utils/logger.js';
 
 const router = Router();
+
+// =============================================================================
+// SYNC ENDPOINT - Must be before /:id route to avoid conflict
+// =============================================================================
+
+// POST /trades/sync - Sync open trade statuses from Deriv
+router.post('/sync', requireAuth, async (req: AuthRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ error: 'Unauthorized' });
+            return;
+        }
+
+        logger.info('Trade sync requested', { userId });
+        const result = await settlementSyncService.syncUserTrades(userId);
+
+        res.json({
+            success: true,
+            message: `Synced ${result.synced} trades, updated ${result.updated}`,
+            ...result
+        });
+    } catch (error) {
+        logger.error('Trade sync error', { error });
+        res.status(500).json({ error: 'Failed to sync trades' });
+    }
+});
+
+// =============================================================================
+// SUPABASE CLIENT
+// =============================================================================
+
 
 // Initialize Supabase Client
 const getSupabase = () => {
@@ -129,7 +162,7 @@ router.get('/stats/summary', requireAuth, async (req: AuthRequest, res: Response
         const isAdmin = req.user?.role === 'ADMIN';
 
         let query = getSupabase().from('trades').select('pnl, status, created_at');
-        
+
         if (!isAdmin) {
             query = query.eq('user_id', userId);
         }

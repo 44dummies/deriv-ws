@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Activity, TrendingUp, TrendingDown, Wallet, Plus, Zap } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Activity, TrendingUp, TrendingDown, Wallet, Plus, Zap, RefreshCw } from 'lucide-react';
+import { fetchWithAuth } from '../lib/api';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useDerivBalance } from '../hooks/useDerivBalance';
@@ -40,11 +41,21 @@ function useRecentTrades() {
 
 export default function Dashboard() {
     const { user } = useAuthStore();
+    const queryClient = useQueryClient();
     const { data: summary } = useSummaryStats();
     const { data: recentTrades } = useRecentTrades();
     const { mutate: createSession, isPending } = useCreateSession();
     const { ticks, connected } = useDerivTicks({ symbols: watchlist });
     const [showTrade, setShowTrade] = useState(false);
+
+    // Sync trades mutation
+    const syncTrades = useMutation({
+        mutationFn: () => fetchWithAuth('/trades/sync', { method: 'POST' }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['recent-trades'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        }
+    });
 
     useDerivBalance();
 
@@ -203,7 +214,18 @@ export default function Dashboard() {
                 >
                     <Card className="border-border/50">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-semibold">Recent trades</CardTitle>
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base font-semibold">Recent trades</CardTitle>
+                                <button
+                                    onClick={() => syncTrades.mutate()}
+                                    disabled={syncTrades.isPending}
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border rounded-md hover:bg-muted/60 transition-colors disabled:opacity-50"
+                                    title="Sync trade statuses from Deriv"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${syncTrades.isPending ? 'animate-spin' : ''}`} />
+                                    {syncTrades.isPending ? 'Syncing...' : 'Sync'}
+                                </button>
+                            </div>
                         </CardHeader>
                         <CardContent className="pt-0">
                             <div className="space-y-2">
