@@ -40,7 +40,7 @@ export default function Sessions() {
     };
 
     const createSession = useMutation({
-        mutationFn: () => mutationFn({ path: '', body: { config: { risk_profile: 'MEDIUM' } } }),
+        mutationFn: () => mutationFn({ path: '', body: { config: { risk_profile: 'MODERATE' } } }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sessions'] })
     });
 

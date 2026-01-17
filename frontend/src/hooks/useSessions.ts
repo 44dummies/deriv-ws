@@ -34,7 +34,7 @@ export function useCreateSession() {
     return useMutation({
         mutationFn: () => fetchWithAuth('/sessions', {
             method: 'POST',
-            body: JSON.stringify({ config: { risk_profile: 'MEDIUM' } }),
+            body: JSON.stringify({ config: { risk_profile: 'MODERATE' } }),
         }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['sessions'] });
