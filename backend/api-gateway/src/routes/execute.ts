@@ -49,27 +49,34 @@ router.post('/execute', requireAuth, tradeRateLimiter, validateTradeExecution, a
 
         const accounts = await UserService.listDerivAccounts(userId);
         if (accounts.length === 0) {
+            logger.warn('Trade rejected: No stored Deriv accounts', { userId });
             return res.status(400).json({
                 error: 'No linked Deriv accounts',
-                hint: 'Please reconnect your Deriv account'
+                hint: 'Please connect your Deriv account'
             });
         }
 
         const activeAccountId = await UserService.getActiveAccountId(userId);
-        const activeAccount = accounts.find(acc => acc.account_id === activeAccountId) || accounts[0];
+
+        // Use 'find' carefully - ensure we get a valid account
+        const activeAccount = (activeAccountId ? accounts.find(acc => acc.account_id === activeAccountId) : undefined) || accounts[0];
 
         if (!activeAccount) {
-            return res.status(400).json({ error: 'No active Deriv account available' });
+            logger.error('Trade logic error: Account list not empty but no valid account found', { userId, activeAccountId });
+            return res.status(500).json({ error: 'Internal system error: No valid active account' });
         }
 
-        if (!activeAccountId) {
+        // Ensure we set the active ID if it wasn't set correctly
+        if (!activeAccountId || activeAccountId !== activeAccount.account_id) {
             await UserService.setActiveAccountId(userId, activeAccount.account_id);
+            logger.info('Auto-corrected active account ID', { userId, old: activeAccountId, new: activeAccount.account_id });
         }
 
         const derivToken = await UserService.getDerivTokenForAccount(userId, activeAccount.account_id);
         if (!derivToken) {
+            logger.warn('Trade rejected: Missing token for account', { userId, accountId: activeAccount.account_id });
             return res.status(400).json({
-                error: 'Deriv token not found',
+                error: 'Deriv token not found for active account',
                 hint: 'Please reconnect your Deriv account'
             });
         }

@@ -3,6 +3,7 @@ import { ChevronDown, Check, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../stores/useAuthStore';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 
 export default function AccountSwitcher() {
     const { user, switchAccount } = useAuthStore();
@@ -32,8 +33,10 @@ export default function AccountSwitcher() {
             return;
         }
         await switchAccount(accountId);
+        await useAuthStore.getState().initialize(); // Force refresh to get updated balance/token context
         setIsOpen(false);
         // Optional: Trigger a toast notification or reliance on global state update
+        toast.success(`Switched to account ${accountId}`);
     };
 
     return (

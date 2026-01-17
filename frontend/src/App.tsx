@@ -19,6 +19,7 @@ import AdminLogs from './pages/admin/AdminLogs';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminQuantMonitor from './pages/admin/AdminQuantMonitor';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode, role?: 'admin' | 'user' }) {
     const { user, loading, isAdmin } = useAuthStore();
@@ -148,6 +149,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>
+            <Toaster position="top-right" richColors />
         </ErrorBoundary>
     );
 }

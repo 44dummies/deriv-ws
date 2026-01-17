@@ -59,8 +59,9 @@ jobs:
         run: sleep 120 # Wait 2 minutes for Vercel/Railway to deploy
 
       - name: Check Backend Health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
-          BACKEND_URL="${{ secrets.BACKEND_URL }}"
           if [ -z "$BACKEND_URL" ]; then
             echo "BACKEND_URL secret not set, skipping health check"
             exit 0
@@ -74,8 +75,9 @@ jobs:
           echo "Backend health check passed ✓"
 
       - name: Check Frontend
+        env:
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         run: |
-          FRONTEND_URL="${{ secrets.FRONTEND_URL }}"
           if [ -z "$FRONTEND_URL" ]; then
             echo "FRONTEND_URL secret not set, skipping"
             exit 0

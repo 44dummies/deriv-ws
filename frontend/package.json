@@ -25,6 +25,7 @@
         "socket.io-client": "^4.8.3",
         "tailwind-merge": "^2.2.1",
         "tailwindcss-animate": "^1.0.7",
+        "sonner": "^1.4.0",
         "zustand": "4.5.0"
     },
     "devDependencies": {

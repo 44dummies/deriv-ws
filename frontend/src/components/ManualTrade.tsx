@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, X, Loader2, AlertTriangle, CheckCircle2, Wifi } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 import { useAuthStore } from '../stores/useAuthStore';
 import { fetchWithAuth } from '../lib/api';
 import { useDerivTicks } from '../hooks/useDerivTicks';
@@ -71,11 +72,35 @@ export default function ManualTrade({ market: initialMarket, onClose, onTradeExe
                 if (onTradeExecuted) {
                     onTradeExecuted(data.trade);
                 }
+                // Refresh balance immediately
+                useAuthStore.getState().initialize();
             } else {
                 setResult({ success: false, message: data?.error || 'Trade execution failed' });
             }
-        } catch (error) {
-            setResult({ success: false, message: error instanceof Error ? error.message : 'Network error' });
+        } catch (error: any) {
+            console.error('Trade failed:', error);
+            // Extract message from error object or string
+            // api.ts throws "API Error: Status - Body"
+            // We want to show a clean message to the user
+            let message = 'Failed to execute trade';
+
+            if (error.message) {
+                // Try to parse JSON from the error message if it contains it
+                // e.g. "API Error: Forbidden - {"error":"Risk blocked","reason":"..."}"
+                const match = error.message.match(/{.*}/);
+                if (match) {
+                    try {
+                        const json = JSON.parse(match[0]);
+                        message = json.reason || json.error || json.details || message;
+                    } catch {
+                        message = error.message; // Fallback
+                    }
+                } else {
+                    message = error.message.replace('API Error: ', '');
+                }
+            }
+
+            toast.error(message);
         } finally {
             setIsExecuting(false);
         }
