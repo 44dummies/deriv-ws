@@ -50,7 +50,9 @@ logger.info('Sentry monitoring initialized');
 // =============================================================================
 const REQUIRED_ENV = [
     'SUPABASE_URL',
-    'SUPABASE_SERVICE_ROLE_KEY'
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'SESSION_SECRET',
+    'DERIV_TOKEN_KEY'
 ];
 
 const missingEnv = REQUIRED_ENV.filter(key => !process.env[key]);
@@ -60,9 +62,7 @@ if (missingEnv.length > 0) {
 }
 
 // Warn about optional but important env vars
-if (!process.env.DERIV_TOKEN_KEY) {
-    logger.warn('DERIV_TOKEN_KEY not set. Token encryption will fail until configured.');
-}
+// NOTE: AI layer is optional; enable with ENABLE_AI_LAYER=true
 
 // NOTE: AI layer is optional; enable with ENABLE_AI_LAYER=true
 
@@ -110,9 +110,15 @@ function isOriginAllowed(origin: string): boolean {
     return false;
 }
 
-if (process.env.NODE_ENV === 'production' && (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === '*')) {
-    logger.fatal('CORS_ORIGIN must be explicitly set in production (not *)');
-    process.exit(1);
+if (process.env.NODE_ENV === 'production') {
+    if (process.env.ALLOW_VERCEL_PREVIEWS === 'true') {
+        logger.warn('⚠️ SECURITY: ALLOW_VERCEL_PREVIEWS is enabled in production. This allows any Vercel deployment to access the API.');
+    }
+
+    if (!process.env.CORS_ORIGIN || process.env.CORS_ORIGIN === '*') {
+        logger.fatal('CORS_ORIGIN must be explicitly set in production (not *)');
+        process.exit(1);
+    }
 }
 
 // =============================================================================
